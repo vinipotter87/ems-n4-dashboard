@@ -1,0 +1,3502 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EMS | Dashboard N4 — Nexus & Vital</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--red:#C8102E;--red-d:#8B0B1F;--red-l:#fce8ec;--orange:#E87722;--orange-l:#FFF3E0;
+--nexus:#1A3A6B;--nexus-l:#EEF2FA;--green:#15693A;--green-l:#E8F5EE;
+--yellow:#9C6D00;--yellow-l:#FFF7E0;--dark:#111827;--gray:#6B7280;
+--light:#F3F4F6;--border:#E5E7EB;--white:#FFFFFF}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark);min-height:100vh}
+.hdr{background:linear-gradient(135deg,var(--red-d),var(--red) 55%,#D93050);position:sticky;top:0;z-index:200;box-shadow:0 2px 16px rgba(0,0,0,.25)}
+.hdr-inner{display:flex;align-items:center;padding:12px 28px;gap:16px}
+.logo{background:#fff;padding:4px 10px;border-radius:6px;font-size:20px;font-weight:900;color:var(--red);letter-spacing:-1px}
+.hdr-sep{width:1px;height:36px;background:rgba(255,255,255,.2)}
+.hdr-text h1{color:#fff;font-size:15px;font-weight:700}
+.hdr-text p{color:rgba(255,255,255,.65);font-size:11px;margin-top:2px}
+.hdr-pills{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap;align-items:center}
+.hpill{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600}
+.hpill.hi{background:#fff;color:var(--red)}
+.cycle-bar{background:#fff;border-bottom:1px solid var(--border);padding:8px 28px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.cycle-btn{padding:6px 18px;border-radius:8px;border:2px solid var(--border);background:#fff;font-size:12px;font-weight:700;cursor:pointer;color:var(--gray);font-family:inherit;transition:all .15s}
+.cycle-btn.active{border-color:var(--red);color:var(--red);background:var(--red-l)}
+.cycle-btn:hover:not(.active){border-color:#ccc;color:var(--dark)}
+.main{padding:22px 28px;max-width:1440px;margin:0 auto}
+
+/* Loading */
+.loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,.92);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+.loading-spinner{width:48px;height:48px;border:4px solid var(--red-l);border-top:4px solid var(--red);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-txt{font-size:14px;font-weight:600;color:var(--gray)}
+
+/* KPIs */
+.kpi-row{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:22px}
+.kpi{background:#fff;border-radius:10px;padding:14px 16px;box-shadow:0 1px 6px rgba(0,0,0,.06);border-top:3px solid var(--border)}
+.kpi.r{border-top-color:var(--red)}.kpi.n{border-top-color:var(--nexus)}.kpi.g{border-top-color:var(--green)}.kpi.o{border-top-color:var(--orange)}
+.kpi-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:var(--gray);font-weight:600;margin-bottom:5px}
+.kpi-val{font-size:22px;font-weight:800;line-height:1}.kpi-sub{font-size:10px;color:#aaa;margin-top:4px}
+
+/* Section header */
+.sec-hdr{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.sec-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px}
+.sec-line{flex:1;height:1px;background:var(--border)}
+.badge{padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700}
+.badge.n{background:var(--nexus-l);color:var(--nexus);border:1px solid #C0CDEA}
+.badge.v{background:var(--red-l);color:var(--red);border:1px solid #F0B0BC}
+
+/* District cards */
+.dgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:12px}
+.dcard{background:#fff;border-radius:12px;overflow:hidden;cursor:pointer;transition:transform .15s,box-shadow .15s,border-color .15s;border:2px solid transparent;box-shadow:0 1px 8px rgba(0,0,0,.07)}
+.dcard:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.12);border-color:var(--red)}
+.dcard.ativo{border-color:var(--red);box-shadow:0 4px 16px rgba(200,16,46,.2)}
+.dcard-hd{padding:14px 16px 12px;color:#fff;position:relative}
+.nc .dcard-hd{background:linear-gradient(135deg,#152E58,#1A3A6B)}
+.vc .dcard-hd{background:linear-gradient(135deg,#7A0A1C,#C8102E)}
+.dcard-linha{font-size:9px;font-weight:700;letter-spacing:1.5px;opacity:.7;margin-bottom:3px}
+.dcard-nome{font-size:13px;font-weight:700;line-height:1.3}
+.dcard-cod{font-size:10px;opacity:.55;margin-top:3px}
+.prod-badge{position:absolute;right:14px;top:50%;transform:translateY(-50%);width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.4);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.pb-n{font-size:12px;font-weight:800;color:#fff;line-height:1}.pb-l{font-size:8px;color:rgba(255,255,255,.7);margin-top:1px}
+.dcard-body{padding:12px 16px}
+.diag{font-size:10px;padding:5px 8px;border-radius:5px;border-left:3px solid;margin-bottom:8px}
+.diag.crit{background:var(--red-l);color:var(--red);border-color:var(--red)}
+.diag.warn{background:var(--yellow-l);color:var(--yellow);border-color:var(--orange)}
+.diag.ok{background:var(--green-l);color:var(--green);border-color:var(--green)}
+.dcard-ft{padding:8px 16px;background:var(--light);display:flex;align-items:center;justify-content:space-between;font-size:10px}
+.dcard-reps{color:var(--gray);font-weight:600}.dcard-cta{color:var(--red);font-weight:700;font-size:11px}
+.jornada-mini{margin-top:6px;display:flex;flex-wrap:wrap;gap:3px}
+
+/* District detail panel */
+.distrito-detalhe{background:#fff;border-radius:12px;padding:20px 24px;box-shadow:0 4px 24px rgba(200,16,46,.15);margin-bottom:20px;display:none;border:2px solid var(--red)}
+.distrito-detalhe.open{display:block}
+.dd-hdr{display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+.dd-linha-tag{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;padding:3px 10px;border-radius:20px}
+.dd-title{font-size:16px;font-weight:800}
+.dd-cod{font-size:11px;color:var(--gray)}
+.dd-close{margin-left:auto;cursor:pointer;color:var(--gray);font-size:20px;font-weight:400;background:none;border:1px solid var(--border);border-radius:6px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;line-height:1;font-family:inherit;transition:all .15s}
+.dd-close:hover{background:var(--red-l);color:var(--red);border-color:var(--red)}
+.dd-section-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--gray);margin-bottom:8px;margin-top:16px}
+.dd-rep-table{width:100%;border-collapse:collapse;font-size:12px}
+.dd-rep-table th{background:var(--light);padding:8px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)}
+.dd-rep-table td{padding:8px 10px;border-bottom:1px solid #f5f5f5;vertical-align:middle}
+.dd-rep-table tr:last-child td{border-bottom:none}
+.dd-rep-table tr:hover td{background:#fafafa}
+
+/* Jornada */
+.card-title{font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;margin-bottom:16px}
+.cc-bar{width:4px;height:16px;background:var(--red);border-radius:2px;flex-shrink:0}
+.jbadge{display:inline-block;padding:2px 9px;border-radius:10px;font-size:10px;font-weight:700;border:1px solid}
+/* Jornada — novo panorama 3 colunas */
+.jornada-wrap{margin-bottom:24px}
+.jornada-sec-hdr{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.jpanorama{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.jpcol{border-radius:14px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,.10);display:flex;flex-direction:column}
+/* headers por etapa */
+.jpcol-hdr{padding:16px 20px 14px;color:#fff;position:relative}
+.jpcol.destaque  .jpcol-hdr{background:linear-gradient(135deg,#064e3b,#059669)}
+.jpcol.performance .jpcol-hdr{background:linear-gradient(135deg,#78350f,#d97706)}
+.jpcol.start     .jpcol-hdr{background:linear-gradient(135deg,#7f1d1d,#ef4444)}
+.jpcol-icon{font-size:22px;margin-bottom:4px}
+.jpcol-titulo{font-size:16px;font-weight:800;letter-spacing:.2px}
+.jpcol-subtit{font-size:10px;opacity:.75;margin-top:1px;font-weight:500}
+.jpcol-count{position:absolute;right:18px;top:16px;text-align:right}
+.jpcol-num{font-size:32px;font-weight:900;line-height:1}
+.jpcol-label{font-size:9px;opacity:.7;text-transform:uppercase;letter-spacing:.8px}
+/* stats row */
+.jpcol-stats{display:flex;border-bottom:1px solid var(--border);background:#fff}
+.jpcol-stat{flex:1;padding:10px 8px;text-align:center;border-right:1px solid var(--border)}
+.jpcol-stat:last-child{border-right:none}
+.jpcol-stat-val{font-size:16px;font-weight:800;line-height:1}
+.jpcol-stat-lbl{font-size:9px;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-top:3px}
+/* lista de reps */
+.jpcol-list{flex:1;max-height:320px;overflow-y:auto;background:#fff}
+.jpcol-list::-webkit-scrollbar{width:4px}.jpcol-list::-webkit-scrollbar-thumb{background:#ddd;border-radius:2px}
+.jrep2{display:flex;align-items:center;padding:8px 14px;border-bottom:1px solid #f5f5f5;gap:10px;transition:background .1s}
+.jrep2:hover{background:#fafafa}
+.jrep2:last-child{border-bottom:none}
+.jrep2-nome{flex:1;font-size:12px;font-weight:600;color:var(--dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.jrep2-gd{font-size:10px;color:var(--gray);white-space:nowrap;margin-right:4px}
+.jrep2-prod{font-size:12px;font-weight:800;min-width:48px;text-align:right}
+/* PEX — 5 colunas de medalhas */
+.pex-wrap{margin-bottom:24px}
+.pex-panorama{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.pexcol{border-radius:14px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,.10);display:flex;flex-direction:column}
+.pexcol-hdr{padding:14px 16px 12px;color:#fff;position:relative}
+.pexcol.ouro     .pexcol-hdr{background:linear-gradient(135deg,#78570a,#d4a017)}
+.pexcol.prata    .pexcol-hdr{background:linear-gradient(135deg,#374151,#6B7280)}
+.pexcol.bronze   .pexcol-hdr{background:linear-gradient(135deg,#6B3A1F,#CD7F32)}
+.pexcol.atencao  .pexcol-hdr{background:linear-gradient(135deg,#78350f,#f97316)}
+.pexcol.critico  .pexcol-hdr{background:linear-gradient(135deg,#7f1d1d,#ef4444)}
+.pexcol-icon{font-size:20px;margin-bottom:2px}
+.pexcol-titulo{font-size:14px;font-weight:800;letter-spacing:.2px}
+.pexcol-count{position:absolute;right:14px;top:12px;text-align:right}
+.pexcol-num{font-size:28px;font-weight:900;line-height:1}
+.pexcol-label{font-size:8px;opacity:.7;text-transform:uppercase;letter-spacing:.8px}
+.pexcol-range{font-size:9px;opacity:.65;margin-top:2px}
+.pexcol-list{flex:1;max-height:300px;overflow-y:auto;background:#fff}
+.pexcol-list::-webkit-scrollbar{width:4px}.pexcol-list::-webkit-scrollbar-thumb{background:#ddd;border-radius:2px}
+.pexrep{display:flex;align-items:center;padding:7px 12px;border-bottom:1px solid #f5f5f5;gap:8px;transition:background .1s}
+.pexrep:hover{background:#fafafa}
+.pexrep:last-child{border-bottom:none}
+.pexrep-nome{flex:1;font-size:11px;font-weight:600;color:var(--dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pexrep-gd{font-size:10px;color:var(--gray);white-space:nowrap}
+.pexrep-pts{font-size:11px;font-weight:800;min-width:40px;text-align:right}
+.pex-empty{padding:20px;text-align:center;color:var(--gray);font-size:12px;background:#fff}
+/* mini badge para cards de distrito */
+.jdist-block{border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.jdist-hdr{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--light);cursor:pointer;user-select:none}
+.jdist-hdr:hover{background:#e8e9eb}
+.jdist-nome{font-size:12px;font-weight:700;flex:1}
+.jdist-arrow{font-size:11px;color:var(--gray);transition:transform .2s}
+.jdist-arrow.open{transform:rotate(90deg)}
+.jdist-body{display:none;padding:8px 0}
+.jdist-body.open{display:block}
+.jrep-row{display:flex;align-items:center;justify-content:space-between;padding:6px 14px;font-size:12px;border-bottom:1px solid #f5f5f5}
+.jrep-row:last-child{border-bottom:none}
+.jrep-nome{flex:1;font-weight:500}
+.jrep-setor{font-size:10px;color:#bbb;margin-right:10px}
+
+/* Produto atingimento */
+.prod-ating-card{background:#fff;border-radius:12px;padding:18px 20px;box-shadow:0 1px 8px rgba(0,0,0,.07);margin-bottom:24px}
+.prod-tabs-row{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.ptab{padding:6px 16px;border-radius:8px;border:2px solid var(--border);background:#fff;font-size:11px;font-weight:700;cursor:pointer;color:var(--gray);font-family:inherit;transition:all .15s}
+.ptab:hover:not(.active){border-color:#ccc;color:var(--dark)}
+.ptab.active{border-color:var(--red);color:var(--red);background:var(--red-l)}
+.ptab.linha-nexus.active{border-color:var(--nexus);color:var(--nexus);background:var(--nexus-l)}
+.ptab-sep{width:1px;height:28px;background:var(--border);margin:0 4px;align-self:center}
+.prod-dist-pills{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.pdist-btn{padding:4px 12px;border-radius:6px;border:1px solid var(--border);background:#fff;font-size:11px;font-weight:600;cursor:pointer;color:var(--gray);font-family:inherit;transition:all .12s}
+.pdist-btn:hover{border-color:#aaa}
+.pdist-btn.active{border-color:var(--nexus);color:var(--nexus);background:var(--nexus-l)}
+.prod-table{width:100%;border-collapse:collapse;font-size:12px}
+.prod-table th{background:var(--light);padding:8px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray);white-space:nowrap}
+.prod-table th.r{text-align:right}
+.prod-table td{padding:8px 10px;border-bottom:1px solid #f5f5f5;vertical-align:middle}
+.prod-table td.r{text-align:right}
+.prod-table tr:last-child td{border-bottom:none}
+.prod-table tr:hover td{background:#fafafa}
+.at-ok{color:var(--green);font-weight:700}
+.at-warn{color:var(--yellow);font-weight:700}
+.at-crit{color:var(--red);font-weight:700}
+.prod-table .prod-nome{font-weight:600}
+.prod-empty{text-align:center;padding:32px;color:var(--gray);font-size:13px}
+
+/* Achados */
+.achados{background:#fff;border-radius:12px;padding:18px 20px;box-shadow:0 1px 8px rgba(0,0,0,.07);margin-bottom:24px}
+.achado{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:8px;font-size:12px;margin-bottom:6px}
+.achado:last-child{margin-bottom:0}
+.achado.r{background:#fef2f4;border-left:3px solid var(--red)}.achado.y{background:#fffbf0;border-left:3px solid var(--orange)}
+.achado.b{background:#f0f4ff;border-left:3px solid var(--nexus)}.achado.g{background:var(--green-l);border-left:3px solid var(--green)}
+.achado-dim{font-weight:800;font-size:10px;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;min-width:110px;margin-top:2px}
+.achado-txt{color:var(--gray);line-height:1.5}
+
+/* Chart card */
+.chart-card{background:#fff;border-radius:12px;padding:18px 20px;box-shadow:0 1px 8px rgba(0,0,0,.07);margin-bottom:24px}
+
+/* Error state */
+.error-card{background:#fff;border-radius:12px;padding:40px;text-align:center;box-shadow:0 1px 8px rgba(0,0,0,.07)}
+.error-icon{font-size:48px;margin-bottom:16px}
+.error-title{font-size:18px;font-weight:700;color:var(--dark);margin-bottom:8px}
+.error-sub{font-size:13px;color:var(--gray)}
+
+/* ── Análise & Alertas ── */
+.analise-wrap{margin-bottom:24px}
+/* Preview card (no dashboard principal) */
+.analise-preview{background:#fff;border-radius:12px;padding:18px 22px;box-shadow:0 1px 8px rgba(0,0,0,.07);margin-bottom:24px;cursor:pointer;border:2px solid transparent;transition:all .18s;display:flex;align-items:center;gap:18px}
+.analise-preview:hover{border-color:var(--red);box-shadow:0 4px 20px rgba(200,16,46,.15);transform:translateY(-2px)}
+.analise-preview-icon{font-size:36px;flex-shrink:0}
+.analise-preview-body{flex:1}
+.analise-preview-title{font-size:15px;font-weight:800;color:var(--dark)}
+.analise-preview-sub{font-size:11px;color:var(--gray);margin-top:3px}
+.analise-preview-alert{font-size:11px;font-weight:600;margin-top:6px}
+.analise-preview-cta{font-size:13px;font-weight:800;color:var(--red);white-space:nowrap;flex-shrink:0}
+/* Header da página de análise */
+.analise-page-hdr{display:flex;align-items:center;gap:14px;margin-bottom:22px;padding:16px 22px;background:#fff;border-radius:12px;box-shadow:0 1px 8px rgba(0,0,0,.07)}
+.analise-back-btn{display:flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;border:2px solid var(--border);background:#fff;font-size:12px;font-weight:700;cursor:pointer;color:var(--gray);font-family:inherit;transition:all .15s;white-space:nowrap}
+.analise-back-btn:hover{border-color:var(--red);color:var(--red);background:var(--red-l)}
+/* Card de evolução mês a mês */
+.evo-card{background:#fff;border-radius:12px;padding:18px 20px;box-shadow:0 1px 8px rgba(0,0,0,.07);margin-bottom:14px}
+.evo-card-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px}
+.evo-card-title{font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px}
+.evo-regional-delta{font-size:13px;font-weight:800;padding:4px 12px;border-radius:20px;background:var(--light)}
+.evo-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.evo-dist-item{border-radius:10px;padding:12px 14px;border:1px solid var(--border);transition:box-shadow .15s}
+.evo-dist-item:hover{box-shadow:0 3px 12px rgba(0,0,0,.09)}
+.evo-dist-linha{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:2px}
+.evo-dist-nome{font-size:12px;font-weight:700;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.evo-dist-prods{font-size:12px;margin-bottom:4px;display:flex;align-items:center;gap:4px}
+.evo-dist-delta{font-size:13px;font-weight:800}
+/* Card de alertas */
+.alertas-card{background:#fff;border-radius:12px;padding:18px 20px;box-shadow:0 1px 8px rgba(0,0,0,.07)}
+.alerta-dist-bloco{border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px}
+.alerta-dist-bloco:last-child{margin-bottom:0}
+.alerta-dist-titulo{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--light);border-bottom:1px solid var(--border)}
+.alerta-dist-linha{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px}
+.alerta-dist-nome{font-size:13px;font-weight:700;flex:1}
+.alerta-dist-prod{font-size:13px;font-weight:800}
+.alerta-subsec{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray);padding:6px 14px;background:#fafafa;border-bottom:1px solid #f0f0f0}
+.alerta-rep{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;border-bottom:1px solid #f5f5f5;gap:10px}
+.alerta-rep:last-child{border-bottom:none}
+.alerta-rep.r{background:#fff8f8;border-left:3px solid #ef4444}
+.alerta-rep.y{background:#fffdf0;border-left:3px solid #f59e0b}
+.alerta-rep-nome{font-size:12px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.alerta-rep-info{display:flex;align-items:center;gap:6px;font-size:12px;flex-shrink:0}
+.alerta-ok{padding:20px;text-align:center;color:var(--gray);font-size:13px}
+@media(max-width:900px){.evo-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){.evo-grid{grid-template-columns:repeat(2,1fr)}}
+
+@media(max-width:1200px){.pex-panorama{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:900px){.pex-panorama{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){.pex-panorama{grid-template-columns:1fr}}
+@media(max-width:1100px){.jpanorama{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:1100px){.kpi-row[style]{grid-template-columns:repeat(3,1fr)!important}}
+@media(max-width:900px){.kpi-row{grid-template-columns:repeat(3,1fr)}.dgrid{grid-template-columns:repeat(2,1fr)}.jpanorama{grid-template-columns:1fr}.kpi-row[style]{grid-template-columns:repeat(2,1fr)!important}}
+@media(max-width:600px){.kpi-row{grid-template-columns:repeat(2,1fr)}.dgrid{grid-template-columns:1fr}.main{padding:14px 14px}.jpanorama{grid-template-columns:1fr}.kpi-row[style]{grid-template-columns:repeat(2,1fr)!important}}
+
+/* ── Visão Anual ── */
+.anual-page-hdr{display:flex;align-items:center;gap:14px;margin-bottom:22px;padding:16px 22px;background:#fff;border-radius:12px;box-shadow:0 1px 8px rgba(0,0,0,.07)}
+.anual-back-btn{display:flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;border:2px solid var(--border);background:#fff;font-size:12px;font-weight:700;cursor:pointer;color:var(--gray);font-family:inherit;transition:all .15s;white-space:nowrap}
+.anual-back-btn:hover{border-color:var(--red);color:var(--red);background:var(--red-l)}
+.anual-sec{margin-bottom:28px}
+.anual-sec-hdr{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.anual-table-wrap{overflow-x:auto;border-radius:12px;box-shadow:0 1px 8px rgba(0,0,0,.07)}
+.anual-table{width:100%;border-collapse:collapse;font-size:12px;background:#fff}
+.anual-table th{padding:8px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;background:var(--light);color:var(--gray);white-space:nowrap;border-bottom:2px solid var(--border)}
+.anual-table th.mes-col{text-align:center;cursor:pointer;transition:background .12s;min-width:72px}
+.anual-table th.mes-col:hover{background:#dde1e8;color:var(--dark)}
+.anual-table td{padding:7px 10px;border-bottom:1px solid #f5f5f5;vertical-align:middle}
+.anual-table td.cell-val{text-align:center;padding:5px 6px}
+.anual-table tr:last-child td{border-bottom:none}
+.anual-table .row-regional td{background:#f3f4f6;font-weight:700;border-bottom:1px solid #dde1e8}
+.anual-table .row-linha td{background:#eef2fa;font-weight:700;font-size:10px;letter-spacing:.8px;padding:5px 12px;border-bottom:1px solid #c8d4f0;color:var(--nexus)}
+.anual-table .row-linha.vital td{background:#fcedf0;color:var(--red);border-bottom-color:#f0b0bc}
+.anual-table .row-nexus-avg td{background:#f5f7ff}
+.anual-table .row-vital-avg td{background:#fff5f5}
+.anual-table .row-dist td{font-size:11px}
+.anual-table .row-dist:hover td{background:#fafafa}
+.anual-dist-label{display:flex;align-items:center;gap:6px;white-space:nowrap}
+.anual-dist-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.anual-cell{display:inline-block;text-align:center;font-weight:700;white-space:nowrap;border-radius:6px;padding:3px 7px;font-size:11px;line-height:1.4}
+.cell-ok{background:#dcfce7;color:#15803d}
+.cell-warn{background:#fef9c3;color:#854d0e}
+.cell-crit{background:#fee2e2;color:#b91c1c}
+.cell-na{color:#d1d5db;font-weight:400;font-size:11px}
+.cell-ouro{background:#fef3c7;color:#92400e}
+.cell-prata{background:#f3f4f6;color:#374151}
+.cell-bronze{background:#fef0e6;color:#7c4a1f}
+.cell-atencao{background:#fff7ed;color:#c2410c}
+.cell-critico{background:#fee2e2;color:#b91c1c}
+.anual-trend{font-size:9px;font-weight:600;margin-left:1px;vertical-align:middle}
+.cycle-btn.anual-btn{border-color:var(--nexus);color:var(--nexus)}
+.cycle-btn.anual-btn.active{background:var(--nexus-l);border-color:var(--nexus);color:var(--nexus)}
+
+/* ── Visão Anual — gráficos ── */
+.anual-chart-card{background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.08);margin-bottom:28px;overflow:hidden}
+.anual-chart-hdr{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
+.anual-chart-hdr-title{font-size:14px;font-weight:800;display:flex;align-items:center;gap:8px}
+.anual-canvas-wrap{padding:16px 20px 20px;height:340px;position:relative}
+.anual-filter-bar{padding:12px 20px;background:#fafafa;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:10px}
+.anual-filter-groups{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.afbtn{padding:5px 13px;border-radius:8px;border:2px solid var(--border);background:#fff;font-size:11px;font-weight:700;cursor:pointer;color:var(--gray);font-family:inherit;transition:all .12s;line-height:1}
+.afbtn:hover:not(.active){border-color:#aaa;color:var(--dark)}
+.afbtn.active{border-color:var(--dark);color:var(--dark);background:#f0f0f0}
+.afbtn-nexus{}.afbtn-nexus.active{border-color:var(--nexus)!important;color:var(--nexus)!important;background:var(--nexus-l)!important}
+.afbtn-vital{}.afbtn-vital.active{border-color:var(--red)!important;color:var(--red)!important;background:var(--red-l)!important}
+.anual-filter-dists{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.adtbtn{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;border:1.5px solid #e5e7eb;background:#fff;font-size:11px;font-weight:600;cursor:pointer;color:#6b7280;font-family:inherit;transition:all .12s;opacity:.35}
+.adtbtn.active{border-color:var(--dt-color,#aaa);color:var(--dark);opacity:1}
+.adtbtn:hover{opacity:.75}
+.adt-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.anual-filter-sep{display:inline-block;width:1px;height:18px;background:var(--border);flex-shrink:0;margin:0 2px}
+.aleg{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--gray);font-weight:600;white-space:nowrap}
+.aleg-line{display:inline-block;width:22px;height:3px;border-radius:2px;flex-shrink:0}
+.aleg-dashed{height:0;background:transparent!important;border-top:2.5px dashed}
+
+/* ── Evolução de Cota ── */
+.cycle-btn.cota-btn{border-color:#7c3aed;color:#7c3aed}
+.cycle-btn.cota-btn.active{background:#f5f3ff;border-color:#7c3aed;color:#7c3aed}
+.cota-page-hdr{display:flex;align-items:center;gap:14px;margin-bottom:22px;padding:16px 22px;background:#fff;border-radius:12px;box-shadow:0 1px 8px rgba(0,0,0,.07)}
+.cota-back-btn{display:flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;border:2px solid var(--border);background:#fff;font-size:12px;font-weight:700;cursor:pointer;color:var(--gray);font-family:inherit;transition:all .15s;white-space:nowrap}
+.cota-back-btn:hover{border-color:var(--red);color:var(--red);background:var(--red-l)}
+.cota-ytd-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:28px}
+.cota-ytd-card{background:#fff;border-radius:14px;padding:18px 22px;box-shadow:0 2px 12px rgba(0,0,0,.08)}
+.cota-ytd-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--gray);margin-bottom:6px}
+.cota-ytd-row2{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+.cota-ytd-real{font-size:20px;font-weight:800;color:var(--dark)}
+.cota-ytd-de{font-size:12px;color:var(--gray)}
+.cota-ytd-cota{font-size:13px;color:var(--gray)}
+.cota-ytd-pct{display:inline-block;font-size:12px;font-weight:800;padding:3px 12px;border-radius:12px;margin-top:6px}
+.cota-ytd-pct.ok{background:#dcfce7;color:#15803d}
+.cota-ytd-pct.warn{background:#fef9c3;color:#854d0e}
+.cota-ytd-pct.crit{background:#fee2e2;color:#b91c1c}
+.cota-section{margin-bottom:36px}
+.cota-section-hdr{font-size:14px;font-weight:800;display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:10px;border-bottom:2px solid var(--border)}
+.cota-charts-row{display:grid;grid-template-columns:3fr 2fr;gap:20px;margin-bottom:20px}
+.cota-chart-card{background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.08);overflow:hidden;margin-bottom:20px}
+.cota-chart-hdr{padding:14px 18px;border-bottom:1px solid var(--border);font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.cota-filter-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 18px;background:#fafafa;border-bottom:1px solid var(--border)}
+.cota-canvas-wrap{padding:14px 18px 18px;height:280px;position:relative}
+.cota-table-wrap{overflow-x:auto;border-radius:12px;box-shadow:0 1px 8px rgba(0,0,0,.07);margin-bottom:20px}
+.cota-table{width:100%;border-collapse:collapse;font-size:11.5px;background:#fff;white-space:nowrap}
+.cota-table th{padding:6px 10px;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;background:var(--light);color:var(--gray);border-bottom:2px solid var(--border);text-align:right}
+.cota-table th.th-label{text-align:left;min-width:130px}
+.cota-table th.th-mes-hdr{text-align:center;border-left:1px solid var(--border);padding:5px 8px}
+.cota-table th.th-ytd-hdr{text-align:center;border-left:2px solid #7c3aed;background:#f5f3ff;color:#7c3aed}
+.cota-table th.th-sub{text-align:right;border-left:1px solid #f5f5f5;padding:4px 8px;font-weight:600;text-transform:none;letter-spacing:0;color:#9ca3af}
+.cota-table th.th-sub-ytd{text-align:right;border-left:1px solid #ddd6fe;padding:4px 8px;font-weight:600;text-transform:none;letter-spacing:0;color:#7c3aed}
+.cota-table td{padding:5px 8px;border-bottom:1px solid #f5f5f5;text-align:right;vertical-align:middle}
+.cota-table td.td-label{text-align:left;font-weight:600;padding:5px 10px}
+.cota-table td.td-mes-sep{border-left:1px solid #f0f0f0}
+.cota-table td.td-ytd{border-left:2px solid #7c3aed;background:#faf9ff}
+.cota-table td.td-ytd-pct{border-left:1px solid #ddd6fe;background:#faf9ff;font-weight:700}
+.cota-table .row-total td{background:#f3f4f6;font-weight:700;border-bottom:2px solid var(--border)}
+.cota-table .row-nexus td{background:#eef2fa;font-weight:600}
+.cota-table .row-vital td{background:#fcedf0;font-weight:600}
+.cota-table .row-dist:hover td{background:#fafafa}
+.cota-table .row-prod:hover td{background:#fafafa}
+.cota-table .row-prod-chave td{background:#fffdf5}
+.cota-table .row-prod-chave td.td-label{border-left:3px solid #f59e0b}
+.cota-pct-ok{color:#15803d;font-weight:700}
+.cota-pct-warn{color:#854d0e;font-weight:700}
+.cota-pct-crit{color:#b91c1c;font-weight:700}
+.cota-tabs{display:flex;gap:6px;margin-bottom:16px}
+.cota-tab{padding:6px 18px;border-radius:8px;border:2px solid var(--border);background:#fff;font-size:11px;font-weight:700;cursor:pointer;color:var(--gray);font-family:inherit;transition:all .12s}
+.cota-tab.an{border-color:var(--nexus);color:var(--nexus);background:var(--nexus-l)}
+.cota-tab.av{border-color:var(--red);color:var(--red);background:var(--red-l)}
+
+/* Marcas chave — destaque nas tabelas de produto */
+.prod-chave td{background:#fffdf5}
+.prod-chave td:first-child{border-left:3px solid #f59e0b!important}
+.prod-table .prod-chave:hover td{background:#fff9e0}
+.mc-badge{display:inline-block;background:#fef3c7;color:#92400e;font-size:9px;font-weight:800;padding:1px 6px;border-radius:4px;margin-left:6px;vertical-align:middle;letter-spacing:.3px;white-space:nowrap}
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loading">
+  <div class="loading-spinner"></div>
+  <div class="loading-txt" id="loading-txt">Carregando dados…</div>
+</div>
+
+<div class="hdr">
+  <div class="hdr-inner">
+    <div class="logo">EMS</div>
+    <div class="hdr-sep"></div>
+    <div class="hdr-text">
+      <h1>Dashboard N4 — Nexus &amp; Vital</h1>
+      <p>Regional SPI OESTE · Cardiometabólico</p>
+    </div>
+    <div class="hdr-pills">
+      <span class="hpill hi" id="pill-mes">—</span>
+      <span class="hpill" id="pill-atualizacao">—</span>
+    </div>
+  </div>
+</div>
+
+<div class="cycle-bar" id="cycle-bar">
+  <!-- Botões de mês injetados dinamicamente -->
+</div>
+
+<div class="main" id="main-content">
+  <!-- Conteúdo injetado dinamicamente -->
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════
+//  EMS N4 Dashboard v5 — Dynamic (reads from Google Sheets)
+//  Novas features: Jornada da Evolução | Meses ao vivo | Produto por nível
+// ══════════════════════════════════════════════════════════════════
+
+var CONFIG = null;
+var DADOS_CACHE = {};
+var JORNADA_CACHE = null;
+var MES_ATUAL = null;
+var CHART_PROD = null;
+var ANUAL_CHARTS = {};
+var DISTRITO_ATIVO = null;
+var PROD_LINHA = 'NEXUS';
+var PROD_NIVEL = 'regional';
+var PROD_DIST_SEL = null;
+var VIEW_ATUAL = 'principal'; // 'principal' | 'analise'
+
+// Jornada stages — cores e ordem de hierarquia
+var JORNADA_ORDER = ['Destaque','Performance','Start'];
+var JORNADA_CFG = {
+  'Destaque':    {bg:'#D1FAE5', color:'#065f46', border:'#6EE7B7', cls:'destaque',    icon:'⭐', sub:'Sênior'},
+  'Performance': {bg:'#FEF3C7', color:'#78350F', border:'#FCD34D', cls:'performance', icon:'📈', sub:'Pleno'},
+  'Start':       {bg:'#FEE2E2', color:'#7f1d1d', border:'#FCA5A5', cls:'start',       icon:'🌱', sub:'Júnior'}
+};
+
+// Ordem dos meses para navegação e comparação
+var MES_ORDER = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+
+// Marcas chave — produtos prioritários por linha
+var MARCAS_CHAVE_NEXUS = ['BRAMICAR','BRAMICAR HCT','OLIRE','LYBERDIA'];
+var MARCAS_CHAVE_VITAL = ['BRASART HCT','BRASART BCC','LINADIB','LINADIB DUO','BUPIUM XL'];
+function normProd(n) { return (n || '').toUpperCase().trim().replace(/\s+/g, ' '); }
+function isMarcaChave(nome, linha) {
+  var n = normProd(nome);
+  if (linha === 'NEXUS') return MARCAS_CHAVE_NEXUS.indexOf(n) >= 0;
+  if (linha === 'VITAL') return MARCAS_CHAVE_VITAL.indexOf(n) >= 0;
+  return MARCAS_CHAVE_NEXUS.indexOf(n) >= 0 || MARCAS_CHAVE_VITAL.indexOf(n) >= 0;
+}
+
+function getMesAnterior(mes) {
+  var idx = MES_ORDER.indexOf((mes || '').toUpperCase());
+  return idx > 0 ? MES_ORDER[idx - 1] : null;
+}
+
+// ── Helpers ──────────────────────────────────────────────────────
+
+function safeFloat(v) {
+  if (v === null || v === undefined || v === '') return null;
+  var f = parseFloat(v);
+  return isNaN(f) ? null : f;
+}
+
+function pct(v) {
+  var f = safeFloat(v);
+  return f !== null ? f.toFixed(1) + '%' : '—';
+}
+
+function atClass(v) {
+  var f = safeFloat(v);
+  if (f === null) return '';
+  if (f >= 100) return 'at-ok';
+  if (f >= 80)  return 'at-warn';
+  return 'at-crit';
+}
+
+function prodColor(v) {
+  var f = safeFloat(v);
+  if (f === null) return 'color:#aaa';
+  if (f >= 100) return 'color:var(--green)';
+  if (f >= 85)  return 'color:var(--yellow)';
+  return 'color:var(--red)';
+}
+
+function dgClass(dg) { return dg === 'ok' ? 'ok' : dg === 'warn' ? 'warn' : 'crit'; }
+function dgIcon(dg)  { return dg === 'ok' ? '✔' : dg === 'warn' ? '⚠' : '✘'; }
+
+function numBR(v) {
+  if (v === null || v === undefined || v === '') return '—';
+  return parseFloat(v).toLocaleString('pt-BR');
+}
+
+// ── Jornada helpers ──────────────────────────────────────────────
+
+function jornadaCfg(stage) {
+  return JORNADA_CFG[stage] || JORNADA_CFG['Start'];
+}
+
+function jornadaBadge(stage) {
+  var s = stage || 'Start';
+  var c = jornadaCfg(s);
+  return '<span class="jbadge" style="background:' + c.bg + ';color:' + c.color + ';border-color:' + c.border + '">' + s + '</span>';
+}
+
+function getJornadaRep(setor_id, nome) {
+  if (!JORNADA_CACHE || !JORNADA_CACHE.length) return 'Start';
+  var rep = null;
+  // 1. Busca por nome (principal — arquivo de jornada tem nome completo)
+  if (nome) {
+    var nomeLow = nome.trim().toLowerCase();
+    rep = JORNADA_CACHE.find(function(j) {
+      return j.nome && j.nome.trim().toLowerCase() === nomeLow;
+    });
+    // Busca parcial: nome do arquivo contém o nome do rep (ou vice-versa)
+    if (!rep) {
+      rep = JORNADA_CACHE.find(function(j) {
+        if (!j.nome) return false;
+        var jn = j.nome.trim().toLowerCase();
+        return jn.includes(nomeLow) || nomeLow.includes(jn);
+      });
+    }
+  }
+  // 2. Fallback: busca por setor_id
+  if (!rep && setor_id) {
+    rep = JORNADA_CACHE.find(function(j) { return j.setor_id && j.setor_id === setor_id; });
+  }
+  return rep ? (rep.classificacao || 'Start') : 'Start';
+}
+
+// ── Navegação de views ────────────────────────────────────────────
+
+function alternarView(view) {
+  VIEW_ATUAL = view;
+  var dados = DADOS_CACHE[MES_ATUAL];
+  if (!dados) return;
+  DISTRITO_ATIVO = null;
+  if (view === 'analise') {
+    renderViewAnalise(dados, MES_ATUAL);
+  } else {
+    renderTudo(dados, MES_ATUAL);
+  }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function renderViewAnalise(dados, mes) {
+  var html = '<div class="analise-page-hdr">' +
+    '<button class="analise-back-btn" onclick="alternarView(\'principal\')">← Voltar ao Dashboard</button>' +
+    '<div>' +
+      '<div style="font-size:16px;font-weight:800">Análise &amp; Alertas</div>' +
+      '<div style="font-size:11px;color:var(--gray);margin-top:2px">' + mes + '/2026 · Regional SPI OESTE · Cardiometabólico</div>' +
+    '</div>' +
+  '</div>';
+  html += renderAnalise(dados, mes);
+  document.getElementById('main-content').innerHTML = html;
+}
+
+function renderBotaoAnalise(dados, mes) {
+  var reps     = (dados.reps || []).filter(function(r){ return r.vago !== 'True' && r.vago !== true && r.vago !== '1'; });
+  var semMDV   = reps.filter(function(r){ var p = safeFloat(r.prod); return p !== null && p < 100; }).length;
+  var criticos = reps.filter(function(r){ var p = safeFloat(r.prod); return p !== null && p < 80; }).length;
+  var mesAnt   = getMesAnterior(mes);
+  var temComp  = !!(mesAnt && DADOS_CACHE[mesAnt]);
+
+  var alertHtml = criticos > 0
+    ? '<div class="analise-preview-alert" style="color:#ef4444">🔴 ' + criticos + ' rep(s) abaixo de 80% MDV &nbsp;·&nbsp; ' + semMDV + ' sem MDV 12</div>'
+    : semMDV > 0
+      ? '<div class="analise-preview-alert" style="color:#d97706">⚠ ' + semMDV + ' rep(s) não atingiram MDV 12</div>'
+      : '<div class="analise-preview-alert" style="color:#059669">✅ Sem alertas críticos MDV</div>';
+
+  var subTxt = 'Evolução MDV · Bimestres (Q1–Q4) · Produto'
+    + (temComp ? ' <span style="color:#6b7280">vs ' + mesAnt + '</span>' : '');
+
+  return '<div class="analise-preview" onclick="alternarView(\'analise\')">' +
+    '<div class="analise-preview-icon">📊</div>' +
+    '<div class="analise-preview-body">' +
+      '<div class="analise-preview-title">Análise &amp; Alertas</div>' +
+      '<div class="analise-preview-sub">' + subTxt + '</div>' +
+      alertHtml +
+    '</div>' +
+    '<div class="analise-preview-cta">Abrir →</div>' +
+  '</div>';
+}
+
+// ── Sheets API ────────────────────────────────────────────────────
+
+function sheetsUrl(aba) {
+  return 'https://sheets.googleapis.com/v4/spreadsheets/' + CONFIG.spreadsheet_id +
+    '/values/' + encodeURIComponent(aba) + '?key=' + CONFIG.api_key;
+}
+
+async function fetchAba(aba) {
+  var res = await fetch(sheetsUrl(aba));
+  if (!res.ok) throw new Error('Erro ao buscar aba: ' + aba + ' (' + res.status + ')');
+  var json = await res.json();
+  var rows = json.values || [];
+  if (rows.length < 2) return [];
+  var headers = rows[0];
+  return rows.slice(1).map(function(row) {
+    var obj = {};
+    headers.forEach(function(h, i) { obj[h] = row[i] !== undefined ? row[i] : null; });
+    return obj;
+  });
+}
+
+// ── Carregar Jornada (estática, uma vez) ─────────────────────────
+
+async function carregarJornada() {
+  if (JORNADA_CACHE !== null) return;
+  try {
+    JORNADA_CACHE = await fetchAba('jornada');
+  } catch(e) {
+    JORNADA_CACHE = [];
+    console.warn('Aba jornada não encontrada — todos os reps serão Start.');
+  }
+}
+
+// ── Carregar dados do mês ─────────────────────────────────────────
+
+async function carregarMes(mes) {
+  if (DADOS_CACHE[mes]) return DADOS_CACHE[mes];
+
+  setLoadingTxt('Carregando ' + mes + '/2026…');
+
+  var [distritos, reps, prodNex, prodVit,
+       prodDistNex, prodDistVit,
+       prodRepNex,  prodRepVit, pex] = await Promise.all([
+    fetchAba('distritos_' + mes).catch(function() { return []; }),
+    fetchAba('reps_' + mes).catch(function() { return []; }),
+    fetchAba('produtos_NEXUS_' + mes).catch(function() { return []; }),
+    fetchAba('produtos_VITAL_' + mes).catch(function() { return []; }),
+    fetchAba('produtos_dist_NEXUS_' + mes).catch(function() { return []; }),
+    fetchAba('produtos_dist_VITAL_' + mes).catch(function() { return []; }),
+    fetchAba('produtos_rep_NEXUS_' + mes).catch(function() { return []; }),
+    fetchAba('produtos_rep_VITAL_' + mes).catch(function() { return []; }),
+    fetchAba('pex_' + mes).catch(function() { return []; })
+  ]);
+
+  DADOS_CACHE[mes] = { distritos, reps, prodNex, prodVit,
+                       prodDistNex, prodDistVit, prodRepNex, prodRepVit, pex };
+  return DADOS_CACHE[mes];
+}
+
+// ── Renderização: KPIs ────────────────────────────────────────────
+
+function renderKPIs(dados) {
+  var distritos = dados.distritos || [];
+  var reps      = dados.reps      || [];
+  var ativos    = reps.filter(function(r){
+    return r.vago !== 'True' && r.vago !== true && r.vago !== '1';
+  });
+
+  // ── MDV (Produtividade) ──────────────────────────────────────────
+  var ok   = distritos.filter(function(d) { return d.diagnostico === 'ok';   }).length;
+  var warn = distritos.filter(function(d) { return d.diagnostico === 'warn'; }).length;
+  var crit = distritos.filter(function(d) { return d.diagnostico === 'crit'; }).length;
+
+  function mediaMDVLinha(linha) {
+    var ds   = distritos.filter(function(d){ return d.linha === linha; });
+    var vals = ds.map(function(d){ return safeFloat(d.prod); }).filter(function(v){ return v !== null; });
+    return vals.length ? vals.reduce(function(a,b){return a+b;},0) / vals.length * 100 : null;
+  }
+  var prodNexM = mediaMDVLinha('NEXUS');
+  var prodVitM = mediaMDVLinha('VITAL');
+  var allVals  = distritos.map(function(d){ return safeFloat(d.prod); }).filter(function(v){ return v !== null; });
+  var prodRegM = allVals.length ? allVals.reduce(function(a,b){return a+b;},0) / allVals.length * 100 : null;
+
+  // Reps que não entregam MDV (prod < 100% = abaixo do objetivo de 12 visitas)
+  var repsSemMDV = ativos.filter(function(r){
+    var p = safeFloat(r.prod);
+    return p !== null && p < 100;
+  }).length;
+
+  // ── Atingimento de Produto ───────────────────────────────────────
+  function mediaAtProd(prodData) {
+    var vals = (prodData || [])
+      .map(function(r){ return safeFloat(r.ating_pct); })
+      .filter(function(v){ return v !== null && v > 0; });
+    return vals.length ? vals.reduce(function(a,b){return a+b;},0) / vals.length : null;
+  }
+  var atProdNex = mediaAtProd(dados.prodNex);
+  var atProdVit = mediaAtProd(dados.prodVit);
+
+  function fmt(v) { return v !== null ? v.toFixed(1) + '%' : '—'; }
+
+  // Linha 1: produtividade MDV + produto
+  var row1 = '<div class="kpi-row" style="grid-template-columns:repeat(5,1fr);margin-bottom:10px">' +
+    kpiCard('r', 'ATING. PROD. REGIONAL', fmt(prodRegM), 'MDV · 8 distritos') +
+    kpiCard('n', 'ATING. PROD. NEXUS',    fmt(prodNexM), 'MDV · 4 distritos') +
+    kpiCard('r', 'ATING. PROD. VITAL',    fmt(prodVitM), 'MDV · 4 distritos') +
+    kpiCard('n', 'ATING. PRODUTO NEXUS',  fmt(atProdNex), 'Média produtos linha') +
+    kpiCard('r', 'ATING. PRODUTO VITAL',  fmt(atProdVit), 'Média produtos linha') +
+  '</div>';
+
+  // Linha 2: status + alerta MDV
+  var semMDVCls = repsSemMDV === 0 ? 'g' : repsSemMDV <= 10 ? 'o' : 'r';
+  var row2 = '<div class="kpi-row" style="grid-template-columns:repeat(4,1fr)">' +
+    kpiCard('g', 'OK',            ok,          'distritos ≥ 100% MDV') +
+    kpiCard('o', 'ATENÇÃO',       warn,        'distritos 80–99% MDV') +
+    kpiCard('r', 'CRÍTICO',       crit,        'distritos < 80% MDV') +
+    kpiCard(semMDVCls, 'REPS SEM MDV 12', repsSemMDV, 'abaixo do obj. — prod < 100%') +
+  '</div>';
+
+  return row1 + row2;
+}
+
+function kpiCard(cls, lbl, val, sub) {
+  return '<div class="kpi ' + cls + '"><div class="kpi-lbl">' + lbl + '</div>' +
+    '<div class="kpi-val">' + val + '</div><div class="kpi-sub">' + sub + '</div></div>';
+}
+
+// ── Renderização: Mês ─────────────────────────────────────────────
+
+function renderCycleBar(meses, mesAtual) {
+  var bar = document.getElementById('cycle-bar');
+  var isAnual = VIEW_ATUAL === 'anual';
+  var isCota  = VIEW_ATUAL === 'cota';
+  var btns = meses.map(function(m) {
+    return '<button class="cycle-btn' + (m === mesAtual && !isAnual && !isCota ? ' active' : '') +
+      '" onclick="trocarMes(\'' + m + '\')">' + m + '/2026</button>';
+  }).join('');
+  btns += '<span style="display:inline-block;width:1px;height:22px;background:var(--border);margin:0 6px;align-self:center"></span>';
+  btns += '<button class="cycle-btn anual-btn' + (isAnual ? ' active' : '') +
+    '" onclick="abrirVisaoAnual()">📅 Visão Anual</button>';
+  btns += '<button class="cycle-btn cota-btn' + (isCota ? ' active' : '') +
+    '" onclick="abrirEvolucaoCota()">📈 Cota</button>';
+  bar.innerHTML = btns;
+}
+
+// ── Renderização: Jornada da Evolução ─────────────────────────────
+
+function getGDAbrev(distrito_id, distritos) {
+  if (!distritos || !distritos.length) return '';
+  var d = distritos.find(function(x) { return String(x.distrito_id) === String(distrito_id); });
+  return d ? (d.ab || d.nm || '') : '';
+}
+
+function renderJornada(reps, distritos) {
+  var ativos = reps.filter(function(r) {
+    return r.vago !== 'True' && r.vago !== true && r.vago !== '1';
+  });
+
+  // Enriquece com etapa e nome do GD
+  var repsJ = ativos.map(function(r) {
+    var etapa = getJornadaRep(r.setor_id, r.nome);
+    var gd    = getGDAbrev(r.distrito_id, distritos);
+    var _pf   = parseFloat(r.prod);
+    var prod  = (r.prod !== null && r.prod !== '' && r.prod !== undefined && !isNaN(_pf))
+                 ? _pf : null;
+    return Object.assign({}, r, { etapa: etapa, gdAbrev: gd, prodVal: prod });
+  });
+
+  var totalReps = repsJ.length;
+
+  // Monta cada coluna por etapa
+  function buildColuna(stage) {
+    var cfg  = jornadaCfg(stage);
+    var grup = repsJ.filter(function(r) { return r.etapa === stage; });
+    // Ordenar por prod% desc (null vai para o final)
+    grup.sort(function(a, b) {
+      if (a.prodVal === null && b.prodVal === null) return 0;
+      if (a.prodVal === null) return 1;
+      if (b.prodVal === null) return -1;
+      return b.prodVal - a.prodVal;
+    });
+
+    var n        = grup.length;
+    var prods    = grup.filter(function(r) { return r.prodVal !== null && !isNaN(r.prodVal); }).map(function(r) { return r.prodVal; });
+    var _soma    = prods.reduce(function(a,b){return a+b;},0);
+    var media    = (prods.length && !isNaN(_soma)) ? (_soma / prods.length).toFixed(1) : '—';
+    var acima100 = prods.filter(function(v){ return v >= 100; }).length;
+    var abaixo80 = prods.filter(function(v){ return v < 80;  }).length;
+
+    var mediaColor = (media !== '—')
+      ? (parseFloat(media) >= 100 ? 'color:#065f46' : parseFloat(media) >= 80 ? 'color:#78350f' : 'color:#7f1d1d')
+      : 'color:var(--gray)';
+
+    var linhas = grup.map(function(r) {
+      var pc = r.prodVal;
+      var pcStr = pc !== null ? pc.toFixed(1) + '%' : '—';
+      var pcCol = pc === null ? 'color:#bbb'
+                : pc >= 100  ? 'color:#059669'
+                : pc >= 80   ? 'color:#d97706'
+                :              'color:#ef4444';
+      return '<div class="jrep2">' +
+        '<span class="jrep2-nome" title="' + (r.nome||'') + '">' + (r.nome||'—') + '</span>' +
+        '<span class="jrep2-gd">' + (r.gdAbrev||'') + '</span>' +
+        '<span class="jrep2-prod" style="' + pcCol + '">' + pcStr + '</span>' +
+      '</div>';
+    }).join('');
+
+    return '<div class="jpcol ' + cfg.cls + '">' +
+      // Header
+      '<div class="jpcol-hdr">' +
+        '<div class="jpcol-icon">' + cfg.icon + '</div>' +
+        '<div class="jpcol-titulo">' + stage + '</div>' +
+        '<div class="jpcol-subtit">' + cfg.sub + '</div>' +
+        '<div class="jpcol-count">' +
+          '<div class="jpcol-num">' + n + '</div>' +
+          '<div class="jpcol-label">Representantes</div>' +
+        '</div>' +
+      '</div>' +
+      // Stats
+      '<div class="jpcol-stats">' +
+        '<div class="jpcol-stat">' +
+          '<div class="jpcol-stat-val" style="' + mediaColor + '">' + (media !== '—' ? media + '%' : '—') + '</div>' +
+          '<div class="jpcol-stat-lbl">Prod. Média</div>' +
+        '</div>' +
+        '<div class="jpcol-stat">' +
+          '<div class="jpcol-stat-val" style="color:#059669">' + acima100 + '</div>' +
+          '<div class="jpcol-stat-lbl">≥ 100%</div>' +
+        '</div>' +
+        '<div class="jpcol-stat">' +
+          '<div class="jpcol-stat-val" style="color:#ef4444">' + abaixo80 + '</div>' +
+          '<div class="jpcol-stat-lbl">< 80%</div>' +
+        '</div>' +
+      '</div>' +
+      // Lista
+      '<div class="jpcol-list">' + (linhas || '<div style="padding:20px;text-align:center;color:var(--gray);font-size:12px">Nenhum representante</div>') + '</div>' +
+    '</div>';
+  }
+
+  var colunasHtml = JORNADA_ORDER.map(buildColuna).join('');
+
+  return '<div class="jornada-wrap">' +
+    '<div class="jornada-sec-hdr">' +
+      '<div class="sec-title" style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px">Panorama — Jornada de Evolução</div>' +
+      '<div class="sec-line" style="flex:1;height:1px;background:var(--border)"></div>' +
+      '<span style="font-size:10px;color:var(--gray)">% = Ating. Produtividade MDV</span>' +
+      '<span style="font-size:11px;color:var(--gray);font-weight:600;margin-left:12px">' + totalReps + ' reps ativos</span>' +
+    '</div>' +
+    '<div class="jpanorama">' + colunasHtml + '</div>' +
+  '</div>';
+}
+
+// ── Renderização: PEX ────────────────────────────────────────────
+
+var PEX_ORDER  = ['OURO','PRATA','BRONZE','ATENÇÃO','CRÍTICO'];
+var PEX_CFG = {
+  'OURO':    { cls:'ouro',    icon:'🥇', range:'≥ 99,5 pts' },
+  'PRATA':   { cls:'prata',   icon:'🥈', range:'95 – 99,5 pts' },
+  'BRONZE':  { cls:'bronze',  icon:'🥉', range:'80 – 95 pts' },
+  'ATENÇÃO': { cls:'atencao', icon:'⚠️', range:'75 – 80 pts' },
+  'CRÍTICO': { cls:'critico', icon:'🚨', range:'< 75 pts' }
+};
+var PEX_PT_COLOR = {
+  'OURO':    'color:#b8860b',
+  'PRATA':   'color:#374151',
+  'BRONZE':  'color:#7c4a1f',
+  'ATENÇÃO': 'color:#c2410c',
+  'CRÍTICO': 'color:#b91c1c'
+};
+
+function renderPEX(pex, distritos) {
+  if (!pex || !pex.length) {
+    return '<div class="pex-wrap">' +
+      '<div class="jornada-sec-hdr">' +
+        '<div class="sec-title" style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px">Panorama — PEX</div>' +
+        '<div class="sec-line" style="flex:1;height:1px;background:var(--border)"></div>' +
+      '</div>' +
+      '<div style="background:#fff;border-radius:12px;padding:28px;text-align:center;color:var(--gray);font-size:13px;box-shadow:0 1px 8px rgba(0,0,0,.06)">' +
+        '📊 Dados de PEX ainda não disponíveis para este mês.<br>' +
+        '<span style="font-size:11px;margin-top:6px;display:inline-block">Execute: <code>python scripts/ingest.py --pex --mes ' + (MES_ATUAL||'MES') + '</code></span>' +
+      '</div>' +
+    '</div>';
+  }
+
+  // Agrupa por medalha
+  var grupos = {};
+  PEX_ORDER.forEach(function(m) { grupos[m] = []; });
+  pex.forEach(function(r) {
+    var med = (r.medalha || 'CRÍTICO').toUpperCase();
+    // normaliza acentuação
+    if (med === 'ATENCAO' || med === 'ATENÇAO' || med === 'ATENÇÃO') med = 'ATENÇÃO';
+    if (med === 'CRITICO' || med === 'CRÍTICO') med = 'CRÍTICO';
+    if (!grupos[med]) med = 'CRÍTICO';
+    grupos[med].push(r);
+  });
+
+  var totalReps = pex.length;
+
+  function buildPexCol(medal) {
+    var cfg   = PEX_CFG[medal];
+    var ptCol = PEX_PT_COLOR[medal] || 'color:var(--gray)';
+    var grup  = grupos[medal] || [];
+
+    // Ordena por pts desc
+    grup.sort(function(a, b) {
+      var pa = parseFloat(a.pts) || 0;
+      var pb = parseFloat(b.pts) || 0;
+      return pb - pa;
+    });
+
+    var n = grup.length;
+
+    var linhas = grup.map(function(r) {
+      var pts    = (r.pts !== null && r.pts !== undefined && r.pts !== '') ? parseFloat(r.pts) : null;
+      var ptsStr = pts !== null ? pts.toFixed(1) : '—';
+      // Busca GD abreviado pelo distrito_id do rep
+      var gd = r.ab || getGDAbrev(r.distrito_id, distritos) || '';
+      return '<div class="pexrep">' +
+        '<span class="pexrep-nome" title="' + (r.nome||'') + '">' + (r.nome||'—') + '</span>' +
+        '<span class="pexrep-gd">' + gd + '</span>' +
+        '<span class="pexrep-pts" style="' + ptCol + '">' + ptsStr + '</span>' +
+      '</div>';
+    }).join('');
+
+    return '<div class="pexcol ' + cfg.cls + '">' +
+      // Header
+      '<div class="pexcol-hdr">' +
+        '<div class="pexcol-icon">' + cfg.icon + '</div>' +
+        '<div class="pexcol-titulo">' + medal + '</div>' +
+        '<div class="pexcol-range">' + cfg.range + '</div>' +
+        '<div class="pexcol-count">' +
+          '<div class="pexcol-num">' + n + '</div>' +
+          '<div class="pexcol-label">Reps</div>' +
+        '</div>' +
+      '</div>' +
+      // Lista
+      '<div class="pexcol-list">' +
+        (linhas || '<div class="pex-empty">Nenhum representante</div>') +
+      '</div>' +
+    '</div>';
+  }
+
+  var colunasHtml = PEX_ORDER.map(buildPexCol).join('');
+
+  return '<div class="pex-wrap">' +
+    '<div class="jornada-sec-hdr">' +
+      '<div class="sec-title" style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px">Panorama — PEX</div>' +
+      '<div class="sec-line" style="flex:1;height:1px;background:var(--border)"></div>' +
+      '<span style="font-size:11px;color:var(--gray);font-weight:600">' + totalReps + ' reps avaliados</span>' +
+    '</div>' +
+    '<div class="pex-panorama">' + colunasHtml + '</div>' +
+  '</div>';
+}
+
+// ── Renderização: Análise & Alertas ──────────────────────────────
+
+function mediaProdDistritos(dists) {
+  var vals = (dists || [])
+    .map(function(d){ var f = safeFloat(d.prod); return f !== null ? f * 100 : null; })
+    .filter(function(v){ return v !== null; });
+  return vals.length ? vals.reduce(function(a,b){return a+b;},0) / vals.length : null;
+}
+
+// ── Helpers de produto para análise ──────────────────────────────
+
+function mediaAtProdArr(arr) {
+  var vals = (arr || []).map(function(r){ return safeFloat(r.ating_pct); })
+                        .filter(function(v){ return v !== null && v > 0; });
+  return vals.length ? vals.reduce(function(a,b){return a+b;},0) / vals.length : null;
+}
+
+function mediaAtProdDist(arr, distId) {
+  return mediaAtProdArr((arr || []).filter(function(r){ return r.distrito_id === distId; }));
+}
+
+// Helper: média de um campo Q para os reps de um distrito
+function mediaQDist(repsArr, distId, qKey) {
+  var vals = repsArr
+    .filter(function(r){ return r.distrito_id === distId; })
+    .map(function(r){ return safeFloat(r[qKey]); })
+    .filter(function(v){ return v !== null; });
+  return vals.length ? vals.reduce(function(a,b){return a+b;},0) / vals.length : null;
+}
+
+// Grid de 8 distritos mostrando Q1-Q4 com delta vs mês anterior
+function buildEvoGridQ(dists, repsAtu, repsAnt) {
+  var QS = [
+    { key:'q1', label:'Q1' }, { key:'q2', label:'Q2' },
+    { key:'q3', label:'Q3' }, { key:'q4', label:'Q4' }
+  ];
+  var html = '<div class="evo-grid">';
+  dists.forEach(function(d) {
+    var linhaClr = d.linha === 'NEXUS' ? 'var(--nexus)' : 'var(--red)';
+    var algumQ   = false;
+    var rows     = '';
+    QS.forEach(function(qItem) {
+      var pAt = mediaQDist(repsAtu, d.distrito_id, qItem.key);
+      var pAn = mediaQDist(repsAnt, d.distrito_id, qItem.key);
+      if (pAt === null && pAn === null) return;
+      algumQ = true;
+      var del     = (pAt !== null && pAn !== null) ? pAt - pAn : null;
+      var delCls  = del === null ? 'color:#aaa' : del >= 1 ? 'color:#059669' : del <= -1 ? 'color:#ef4444' : 'color:#d97706';
+      var delIcon = del === null ? '' : del >= 1 ? '▲' : del <= -1 ? '▼' : '●';
+      var delStr  = del !== null ? (del >= 0 ? '+' : '') + del.toFixed(1) + 'pp' : '—';
+      rows += '<div style="display:flex;align-items:center;gap:4px;font-size:11px;border-top:1px solid #f0f0f0;padding:3px 0">' +
+        '<span style="color:var(--gray);font-weight:700;min-width:18px">' + qItem.label + '</span>' +
+        '<span style="color:#bbb;font-size:10px">' + (pAn !== null ? pAn.toFixed(1)+'%' : '—') + '</span>' +
+        '<span style="color:#ddd;font-size:10px">→</span>' +
+        '<span style="font-weight:800;flex:1">' + (pAt !== null ? pAt.toFixed(1)+'%' : '—') + '</span>' +
+        '<span style="' + delCls + ';font-weight:700;font-size:10px;white-space:nowrap">' + delIcon + (del !== null ? ' '+delStr : '') + '</span>' +
+      '</div>';
+    });
+    html += '<div class="evo-dist-item" style="background:#f9fafb">' +
+      '<div class="evo-dist-linha" style="color:' + linhaClr + '">' + d.linha + '</div>' +
+      '<div class="evo-dist-nome" title="' + (d.nm||d.ab||d.distrito_id) + '">' + (d.ab||d.distrito_id) + '</div>' +
+      (algumQ ? rows : '<div style="font-size:10px;color:#ccc;margin-top:6px">Sem dados Q</div>') +
+    '</div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+// Retorna badge de delta (evo card) — reutilizável
+function evoBadge(del, suffix) {
+  suffix = suffix || 'pp';
+  var cls  = del === null ? 'color:#aaa' : del >=  0.5 ? 'color:#059669' : del <= -0.5 ? 'color:#ef4444' : 'color:#d97706';
+  var icon = del === null ? '' : del >= 0.5 ? '▲ +' : del <= -0.5 ? '▼ ' : '● ±';
+  var str  = del !== null ? Math.abs(del).toFixed(1) + suffix : '—';
+  var bg   = del === null ? '#f3f4f6' : del >= 0.5 ? '#f0fdf4' : del <= -0.5 ? '#fff1f2' : '#fffbeb';
+  return { cls: cls, icon: icon, str: str, bg: bg };
+}
+
+// Monta grid de 8 distritos para evo card
+function buildEvoGrid(dists, getAt, getAn) {
+  var html = '<div class="evo-grid">';
+  dists.forEach(function(d) {
+    var pAt = getAt(d);
+    var pAn = getAn(d);
+    var del = (pAt !== null && pAn !== null) ? pAt - pAn : null;
+    var delCls  = del === null ? 'color:#aaa' : del >=  1 ? 'color:#059669' : del <= -1 ? 'color:#ef4444' : 'color:#d97706';
+    var delIcon = del === null ? '—' : del >= 1 ? '▲' : del <= -1 ? '▼' : '●';
+    var delStr  = del !== null ? (del >= 0 ? '+' : '') + del.toFixed(1) + 'pp' : '—';
+    var bgItem  = del === null ? '#f9f9f9' : del >= 2 ? '#f0fdf4' : del <= -2 ? '#fff1f2' : '#fffbeb';
+    var linhaClr = d.linha === 'NEXUS' ? 'var(--nexus)' : 'var(--red)';
+    html += '<div class="evo-dist-item" style="background:' + bgItem + '">' +
+      '<div class="evo-dist-linha" style="color:' + linhaClr + '">' + d.linha + '</div>' +
+      '<div class="evo-dist-nome" title="' + (d.nm||d.ab||d.distrito_id) + '">' + (d.ab||d.distrito_id) + '</div>' +
+      '<div class="evo-dist-prods">' +
+        '<span style="color:#aaa;font-size:11px">' + (pAn !== null ? pAn.toFixed(1)+'%' : '—') + '</span>' +
+        '<span style="color:#ccc;font-size:10px">→</span>' +
+        '<span style="font-weight:800;font-size:13px">' + (pAt !== null ? pAt.toFixed(1)+'%' : '—') + '</span>' +
+      '</div>' +
+      '<div class="evo-dist-delta" style="' + delCls + '">' + delIcon + ' ' + delStr + '</div>' +
+    '</div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+function renderAnalise(dados, mes) {
+  var mesAnt    = getMesAnterior(mes);
+  var dadosAnt  = mesAnt && DADOS_CACHE[mesAnt] ? DADOS_CACHE[mesAnt] : null;
+  var distritos = dados.distritos || [];
+  var reps      = dados.reps      || [];
+  var ativos    = reps.filter(function(r){
+    return r.vago !== 'True' && r.vago !== true && r.vago !== '1';
+  });
+
+  var html = '<div class="analise-wrap">';
+  html += '<div class="sec-hdr"><div class="sec-title">Análise &amp; Alertas</div><div class="sec-line"></div></div>';
+
+  if (dadosAnt) {
+    html += renderEvolucao(dados, dadosAnt, mes, mesAnt, distritos);
+  } else if (mesAnt) {
+    html += '<div style="background:#fff;border-radius:10px;padding:14px 18px;margin-bottom:14px;font-size:12px;color:var(--gray);box-shadow:0 1px 6px rgba(0,0,0,.06)">' +
+      '📅 Dados de <strong>' + mesAnt + '</strong> ainda não carregados — clique no mês anterior e volte para ver a comparação.' +
+    '</div>';
+  }
+
+  html += renderAlertas(dados, dadosAnt, ativos, mes, mesAnt, distritos);
+  html += '</div>';
+  return html;
+}
+
+function renderEvolucao(dados, dadosAnt, mes, mesAnt, distritos) {
+  var dists    = distritos;
+  var distsAnt = dadosAnt.distritos || [];
+
+  // ── MDV ──────────────────────────────────────────────────────────
+  var mdvAt  = mediaProdDistritos(dists);
+  var mdvAn  = mediaProdDistritos(distsAnt);
+  var mdvDel = (mdvAt !== null && mdvAn !== null) ? mdvAt - mdvAn : null;
+  var mdvB   = evoBadge(mdvDel);
+
+  // ── Produto ───────────────────────────────────────────────────────
+  var allProdAtu = (dados.prodDistNex    || []).concat(dados.prodDistVit    || []);
+  var allProdAnt = (dadosAnt.prodDistNex || []).concat(dadosAnt.prodDistVit || []);
+  var temProd    = allProdAtu.length > 0;
+
+  var atProdAtu  = mediaAtProdArr(allProdAtu);
+  var atProdAnt  = mediaAtProdArr(allProdAnt);
+  var atProdDel  = (atProdAtu !== null && atProdAnt !== null) ? atProdAtu - atProdAnt : null;
+  var atProdB    = evoBadge(atProdDel);
+
+  var html = '<div class="evo-card">';
+
+  // — MDV section —
+  html += '<div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">' +
+    '<div>' +
+      '<div class="evo-card-title"><div class="cc-bar"></div>Evolução ' + mesAnt + ' → ' + mes + '</div>' +
+    '</div>' +
+  '</div>';
+
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">' +
+    '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--gray)">📊 Produtividade (MDV)</span>' +
+    '<span class="evo-regional-delta" style="' + mdvB.cls + ';background:' + mdvB.bg + '">' + mdvB.icon + mdvB.str + ' &nbsp;Regional MDV</span>' +
+  '</div>';
+  html += buildEvoGrid(dists,
+    function(d){ var v = safeFloat(d.prod); return v !== null ? v*100 : null; },
+    function(d){ var dAn = distsAnt.find(function(x){ return x.distrito_id === d.distrito_id; }); var v = dAn ? safeFloat(dAn.prod) : null; return v !== null ? v*100 : null; }
+  );
+
+  // — Q1-Q4 section —
+  var repsAtu = (dados.reps||[]).filter(function(r){ return r.vago !== 'True' && r.vago !== true && r.vago !== '1'; });
+  var repsAntQ = (dadosAnt.reps||[]).filter(function(r){ return r.vago !== 'True' && r.vago !== true; });
+  var temQ = repsAtu.some(function(r){ return safeFloat(r.q1) !== null || safeFloat(r.q2) !== null; });
+  if (temQ) {
+    // Média geral de todos os Qs disponíveis na regional (para badge)
+    function avgQRegional(repsArr) {
+      var vals = [];
+      ['q1','q2','q3','q4'].forEach(function(q){
+        repsArr.forEach(function(r){ var v = safeFloat(r[q]); if (v !== null) vals.push(v); });
+      });
+      return vals.length ? vals.reduce(function(a,b){return a+b;},0)/vals.length : null;
+    }
+    var qRegAt = avgQRegional(repsAtu);
+    var qRegAn = avgQRegional(repsAntQ);
+    var qRegDel = (qRegAt !== null && qRegAn !== null) ? qRegAt - qRegAn : null;
+    var qRegB = evoBadge(qRegDel);
+
+    html += '<div style="border-top:1px solid var(--border);margin:14px 0 10px"></div>';
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">' +
+      '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--gray)">📋 Bimestres (Q1 · Q2 · Q3 · Q4)</span>' +
+      '<span class="evo-regional-delta" style="' + qRegB.cls + ';background:' + qRegB.bg + '">' + qRegB.icon + qRegB.str + ' &nbsp;Média Qs Regional</span>' +
+    '</div>';
+    html += buildEvoGridQ(dists, repsAtu, repsAntQ);
+  }
+
+  // — Produto section —
+  if (temProd) {
+    html += '<div style="border-top:1px solid var(--border);margin:14px 0 10px"></div>';
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">' +
+      '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--gray)">📦 Atingimento de Produto</span>' +
+      '<span class="evo-regional-delta" style="' + atProdB.cls + ';background:' + atProdB.bg + '">' + atProdB.icon + atProdB.str + ' &nbsp;Regional Produto</span>' +
+    '</div>';
+    html += buildEvoGrid(dists,
+      function(d){ return mediaAtProdDist(allProdAtu, d.distrito_id); },
+      function(d){ return mediaAtProdDist(allProdAnt, d.distrito_id); }
+    );
+  }
+
+  html += '</div>'; // evo-card
+  return html;
+}
+
+function renderAlertas(dados, dadosAnt, ativos, mes, mesAnt, distritos) {
+  var repsAnt    = dadosAnt ? (dadosAnt.reps||[]).filter(function(r){ return r.vago !== 'True' && r.vago !== true; }) : [];
+  var allProdDist = (dados.prodDistNex||[]).concat(dados.prodDistVit||[]);
+  var allProdRep  = (dados.prodRepNex ||[]).concat(dados.prodRepVit ||[]);
+  var allProdDistAnt = dadosAnt ? (dadosAnt.prodDistNex||[]).concat(dadosAnt.prodDistVit||[]) : [];
+  var temProdDist = allProdDist.length > 0;
+  var temProdRep  = allProdRep.length  > 0;
+
+  var html = '<div class="alertas-card">';
+  html += '<div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px">' +
+    '<div class="card-title" style="margin-bottom:0"><div class="cc-bar"></div>Alertas da Regional</div>' +
+    '<span style="font-size:10px;color:var(--gray)">MDV = Produtividade &nbsp;|&nbsp; Produto = Atingimento médio dos produtos</span>' +
+  '</div>';
+
+  var temAlerta = false;
+
+  distritos.forEach(function(d) {
+    var prodD  = safeFloat(d.prod); if (prodD !== null) prodD *= 100;
+    var repsD  = ativos.filter(function(r){ return r.distrito_id === d.distrito_id; });
+    var prodsD = repsD.map(function(r){ return safeFloat(r.prod); }).filter(function(v){ return v !== null; });
+    var mediaD = prodsD.length ? prodsD.reduce(function(a,b){return a+b;},0)/prodsD.length : null;
+
+    // ── MDV: reps críticos ──
+    var criticosMDV = repsD.filter(function(r){
+      var p = safeFloat(r.prod);
+      if (p === null) return false;
+      return p < 80 || (mediaD !== null && p < mediaD - 15);
+    }).sort(function(a,b){ return (safeFloat(a.prod)||999)-(safeFloat(b.prod)||999); });
+
+    // ── MDV: regressão vs mês anterior ──
+    var regressoesMDV = [];
+    if (repsAnt.length) {
+      repsD.forEach(function(r){
+        var pAt = safeFloat(r.prod);
+        var rAn = repsAnt.find(function(x){ return x.setor_id === r.setor_id; });
+        var pAn = rAn ? safeFloat(rAn.prod) : null;
+        if (pAt !== null && pAn !== null && (pAt-pAn) <= -10)
+          regressoesMDV.push({ rep:r, pAt:pAt, pAn:pAn, delta:pAt-pAn });
+      });
+      regressoesMDV.sort(function(a,b){ return a.delta-b.delta; });
+    }
+
+    // ── Produto: produtos do distrito abaixo de 80% ──
+    var prodDistD     = allProdDist.filter(function(r){ return r.distrito_id === d.distrito_id; });
+    var prodAbaixo80  = prodDistD.filter(function(r){
+      var at = safeFloat(r.ating_pct);
+      return at !== null && at < 80;
+    }).sort(function(a,b){ return (safeFloat(a.ating_pct)||0)-(safeFloat(b.ating_pct)||0); });
+
+    // Média produto do distrito (para referência)
+    var mediaAtDistProd = mediaAtProdArr(prodDistD);
+
+    // ── Produto: regressão de produto por distrito ──
+    var regressoesProd = [];
+    if (allProdDistAnt.length && prodDistD.length) {
+      var atProdAtu = mediaAtProdArr(prodDistD);
+      var atProdAnt = mediaAtProdArr(allProdDistAnt.filter(function(r){ return r.distrito_id === d.distrito_id; }));
+      if (atProdAtu !== null && atProdAnt !== null && (atProdAtu - atProdAnt) <= -5) {
+        regressoesProd.push({ pAt: atProdAtu, pAn: atProdAnt, delta: atProdAtu - atProdAnt });
+      }
+    }
+
+    // ── Produto: reps puxando produto para baixo ──
+    var repsProdCrit = [];
+    if (temProdRep) {
+      var prodRepD = allProdRep.filter(function(r){ return r.distrito_id === d.distrito_id; });
+      // Agrupa por setor_id → média de ating_pct
+      var repGrp = {};
+      prodRepD.forEach(function(r){
+        if (!repGrp[r.setor_id]) repGrp[r.setor_id] = { nome: r.nome, vals: [] };
+        var at = safeFloat(r.ating_pct);
+        if (at !== null) repGrp[r.setor_id].vals.push(at);
+      });
+      var repAvgs = Object.keys(repGrp).map(function(sid){
+        var g = repGrp[sid];
+        var avg = g.vals.length ? g.vals.reduce(function(a,b){return a+b;},0)/g.vals.length : null;
+        return { setor_id: sid, nome: g.nome, avg: avg };
+      });
+      var mediaDistProdRep = (function(){
+        var v = repAvgs.map(function(r){return r.avg;}).filter(function(v){return v!==null;});
+        return v.length ? v.reduce(function(a,b){return a+b;},0)/v.length : null;
+      })();
+      repsProdCrit = repAvgs.filter(function(r){
+        return r.avg !== null && (r.avg < 80 || (mediaDistProdRep !== null && r.avg < mediaDistProdRep - 15));
+      }).sort(function(a,b){ return (a.avg||0)-(b.avg||0); });
+    }
+
+    // ── Q1-Q4: calcula antes do guard ────────────────────────────
+    var QS_ALERT = ['q1','q2','q3','q4'];
+    var repsQCrit = repsD.filter(function(r){
+      return QS_ALERT.some(function(q){ var v = safeFloat(r[q]); return v !== null && v < 80; });
+    }).sort(function(a,b){
+      var wA = Math.min.apply(null, QS_ALERT.map(function(q){ var v = safeFloat(a[q]); return v !== null ? v : 999; }));
+      var wB = Math.min.apply(null, QS_ALERT.map(function(q){ var v = safeFloat(b[q]); return v !== null ? v : 999; }));
+      return wA - wB;
+    });
+    var repsQReg = [];
+    if (repsAnt.length) {
+      repsD.forEach(function(r){
+        var rAn = repsAnt.find(function(x){ return x.setor_id === r.setor_id; });
+        if (!rAn) return;
+        QS_ALERT.forEach(function(q){
+          var pAt = safeFloat(r[q]); var pAn = safeFloat(rAn[q]);
+          if (pAt !== null && pAn !== null && (pAt - pAn) <= -10)
+            repsQReg.push({ nome: r.nome||r.setor_id, q: q.toUpperCase(), pAt:pAt, pAn:pAn, delta:pAt-pAn });
+        });
+      });
+      repsQReg.sort(function(a,b){ return a.delta-b.delta; });
+    }
+
+    // ── Guard: só exibe bloco se houver algo a mostrar ────────────
+    var temBlocoMDV  = criticosMDV.length || regressoesMDV.length;
+    var temBlocoQ    = repsQCrit.length   || repsQReg.length;
+    var temBlocoProd = prodAbaixo80.length || regressoesProd.length || repsProdCrit.length;
+    if (!temBlocoMDV && !temBlocoQ && !temBlocoProd) return;
+    temAlerta = true;
+
+    var linhaClr     = d.linha === 'NEXUS' ? 'var(--nexus)' : 'var(--red)';
+    var atProdDistStr = mediaAtDistProd !== null ? ' &nbsp;|&nbsp; Produto: ' + mediaAtDistProd.toFixed(1) + '%' : '';
+
+    html += '<div class="alerta-dist-bloco">';
+    html += '<div class="alerta-dist-titulo">' +
+      '<span class="alerta-dist-linha" style="color:' + linhaClr + '">' + d.linha + '</span>' +
+      '<span class="alerta-dist-nome">' + (d.ab||d.distrito_id) + '</span>' +
+      (prodD !== null ? '<span class="alerta-dist-prod" style="' + prodColor(prodD) + '">MDV: ' + prodD.toFixed(1) + '%</span>' : '') +
+      '<span style="font-size:10px;color:var(--gray);margin-left:2px">' + atProdDistStr + '</span>' +
+    '</div>';
+
+    // ─── MDV alerts ───────────────────────────────────────────────
+    if (criticosMDV.length) {
+      html += '<div class="alerta-subsec">🔴 MDV — Abaixo da meta ou puxando o distrito para baixo</div>';
+      criticosMDV.forEach(function(r){
+        var p = safeFloat(r.prod);
+        var dm = (mediaD !== null && p !== null) ? (p-mediaD) : null;
+        var motivo = p < 80 ? 'abaixo de 80%' : 'distante da média';
+        html += '<div class="alerta-rep r">' +
+          '<span class="alerta-rep-nome" title="Setor ' + (r.setor_id||'') + '">' + (r.nome||r.setor_id) + '</span>' +
+          '<span class="alerta-rep-info">' +
+            '<span style="color:#ef4444;font-weight:700">' + (p!==null?p.toFixed(1)+'%':'—') + '</span>' +
+            (dm!==null ? '<span style="color:#aaa;font-size:10px">' + dm.toFixed(1) + 'pp vs média</span>' : '') +
+            '<span style="font-size:10px;color:#aaa;padding:2px 6px;border-radius:8px;background:#fee2e2">' + motivo + '</span>' +
+          '</span>' +
+        '</div>';
+      });
+    }
+    if (regressoesMDV.length) {
+      html += '<div class="alerta-subsec">📉 MDV — Regressão vs ' + (mesAnt||'mês anterior') + '</div>';
+      regressoesMDV.forEach(function(item){
+        var sev = item.delta <= -20 ? 'color:#ef4444' : 'color:#f59e0b';
+        html += '<div class="alerta-rep y">' +
+          '<span class="alerta-rep-nome">' + (item.rep.nome||item.rep.setor_id) + '</span>' +
+          '<span class="alerta-rep-info">' +
+            '<span style="color:#aaa">' + item.pAn.toFixed(1) + '%</span>' +
+            '<span style="color:#ccc;font-size:10px">→</span>' +
+            '<span style="font-weight:700">' + item.pAt.toFixed(1) + '%</span>' +
+            '<span style="' + sev + ';font-weight:800">' + item.delta.toFixed(1) + 'pp</span>' +
+          '</span>' +
+        '</div>';
+      });
+    }
+
+    // ─── Q1-Q4 alerts ────────────────────────────────────────────
+    if (repsQCrit.length) {
+      html += '<div class="alerta-subsec">📋 Bimestre — Rep com Q abaixo de 80%</div>';
+      repsQCrit.forEach(function(r){
+        var qDetails = QS_ALERT.map(function(q){
+          var v = safeFloat(r[q]);
+          if (v === null) return null;
+          var cls = v < 80 ? 'color:#ef4444;font-weight:800' : 'color:#059669';
+          return '<span style="font-size:10px;' + cls + '">' + q.toUpperCase() + ':' + v.toFixed(0) + '%</span>';
+        }).filter(Boolean).join('<span style="color:#e5e7eb;margin:0 2px">|</span>');
+        html += '<div class="alerta-rep r">' +
+          '<span class="alerta-rep-nome">' + (r.nome||r.setor_id) + '</span>' +
+          '<span class="alerta-rep-info" style="gap:3px">' + qDetails + '</span>' +
+        '</div>';
+      });
+    }
+    if (repsQReg.length) {
+      html += '<div class="alerta-subsec">📉 Bimestre — Regressão de Q vs ' + (mesAnt||'mês anterior') + '</div>';
+      repsQReg.forEach(function(item){
+        var sev = item.delta <= -15 ? 'color:#ef4444' : 'color:#f59e0b';
+        html += '<div class="alerta-rep y">' +
+          '<span class="alerta-rep-nome">' + item.nome + '</span>' +
+          '<span class="alerta-rep-info">' +
+            '<span style="font-size:10px;color:var(--gray);font-weight:700">' + item.q + '</span>' +
+            '<span style="color:#aaa">' + item.pAn.toFixed(1) + '%</span>' +
+            '<span style="color:#ccc;font-size:10px">→</span>' +
+            '<span style="font-weight:700">' + item.pAt.toFixed(1) + '%</span>' +
+            '<span style="' + sev + ';font-weight:800">' + item.delta.toFixed(1) + 'pp</span>' +
+          '</span>' +
+        '</div>';
+      });
+    }
+
+    // ─── Produto alerts ───────────────────────────────────────────
+    if (regressoesProd.length) {
+      regressoesProd.forEach(function(item){
+        html += '<div class="alerta-subsec">📉 Produto — Regressão vs ' + (mesAnt||'mês anterior') + '</div>';
+        html += '<div class="alerta-rep y">' +
+          '<span class="alerta-rep-nome">Média geral dos produtos do distrito</span>' +
+          '<span class="alerta-rep-info">' +
+            '<span style="color:#aaa">' + item.pAn.toFixed(1) + '%</span>' +
+            '<span style="color:#ccc;font-size:10px">→</span>' +
+            '<span style="font-weight:700">' + item.pAt.toFixed(1) + '%</span>' +
+            '<span style="color:#f59e0b;font-weight:800">' + item.delta.toFixed(1) + 'pp</span>' +
+          '</span>' +
+        '</div>';
+      });
+    }
+    if (prodAbaixo80.length) {
+      html += '<div class="alerta-subsec">📦 Produto — Abaixo de 80% no distrito</div>';
+      prodAbaixo80.forEach(function(r){
+        var at = safeFloat(r.ating_pct);
+        html += '<div class="alerta-rep r">' +
+          '<span class="alerta-rep-nome">' + (r.produto||'—') + '</span>' +
+          '<span class="alerta-rep-info">' +
+            '<span style="color:#ef4444;font-weight:700">' + (at!==null?at.toFixed(1)+'%':'—') + '</span>' +
+          '</span>' +
+        '</div>';
+      });
+    }
+    if (repsProdCrit.length) {
+      html += '<div class="alerta-subsec">👤 Produto — Reps com atingimento baixo nos produtos</div>';
+      repsProdCrit.forEach(function(r){
+        var motivo = r.avg < 80 ? 'abaixo de 80%' : 'distante da média';
+        html += '<div class="alerta-rep r">' +
+          '<span class="alerta-rep-nome">' + (r.nome||r.setor_id) + '</span>' +
+          '<span class="alerta-rep-info">' +
+            '<span style="color:#ef4444;font-weight:700">' + (r.avg!==null?r.avg.toFixed(1)+'%':'—') + '</span>' +
+            '<span style="font-size:10px;color:#aaa;padding:2px 6px;border-radius:8px;background:#fee2e2">' + motivo + '</span>' +
+          '</span>' +
+        '</div>';
+      });
+    }
+
+    html += '</div>'; // alerta-dist-bloco
+  });
+
+  if (!temAlerta) {
+    html += '<div class="alerta-ok">✅ Nenhum alerta identificado para este período. Regional dentro dos parâmetros.</div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+// ── Visão Anual — helpers de célula ─────────────────────────────
+
+function getCellProd(mes, distId) {
+  var d = DADOS_CACHE[mes]; if (!d) return null;
+  var dist = (d.distritos||[]).find(function(x){ return x.distrito_id === distId; });
+  if (!dist) return null;
+  var v = safeFloat(dist.prod); return v !== null ? v * 100 : null;
+}
+function getCellProdLinha(mes, linha) {
+  var d = DADOS_CACHE[mes]; if (!d) return null;
+  var vals = (d.distritos||[]).filter(function(x){ return x.linha === linha; })
+    .map(function(x){ return safeFloat(x.prod); }).filter(function(v){ return v !== null; });
+  return vals.length ? vals.reduce(function(a,b){return a+b;},0)/vals.length*100 : null;
+}
+function getCellProdRegional(mes) {
+  var d = DADOS_CACHE[mes]; if (!d) return null;
+  var vals = (d.distritos||[]).map(function(x){ return safeFloat(x.prod); }).filter(function(v){ return v !== null; });
+  return vals.length ? vals.reduce(function(a,b){return a+b;},0)/vals.length*100 : null;
+}
+
+function getCellAtProd(mes, distId) {
+  var d = DADOS_CACHE[mes]; if (!d) return null;
+  var all = (d.prodDistNex||[]).concat(d.prodDistVit||[]);
+  return mediaAtProdDist(all, distId);
+}
+function getCellAtProdLinha(mes, linha) {
+  var d = DADOS_CACHE[mes]; if (!d) return null;
+  var arr = linha === 'NEXUS' ? (d.prodDistNex||[]) : (d.prodDistVit||[]);
+  return mediaAtProdArr(arr);
+}
+function getCellAtProdRegional(mes) {
+  var d = DADOS_CACHE[mes]; if (!d) return null;
+  return mediaAtProdArr((d.prodDistNex||[]).concat(d.prodDistVit||[]));
+}
+
+function getCellPex(mes, distId) {
+  var d = DADOS_CACHE[mes]; if (!d) return null;
+  var vals = (d.pex||[]).filter(function(r){ return r.distrito_id === distId; })
+    .map(function(r){ return safeFloat(r.pts); }).filter(function(v){ return v !== null; });
+  return vals.length ? vals.reduce(function(a,b){return a+b;},0)/vals.length : null;
+}
+function getCellPexLinha(mes, linha, pivotDists) {
+  var d = DADOS_CACHE[mes]; if (!d) return null;
+  var ids = pivotDists.filter(function(x){ return x.linha === linha; }).map(function(x){ return x.distrito_id; });
+  var vals = (d.pex||[]).filter(function(r){ return ids.indexOf(r.distrito_id) >= 0; })
+    .map(function(r){ return safeFloat(r.pts); }).filter(function(v){ return v !== null; });
+  return vals.length ? vals.reduce(function(a,b){return a+b;},0)/vals.length : null;
+}
+function getCellPexRegional(mes) {
+  var d = DADOS_CACHE[mes]; if (!d) return null;
+  var vals = (d.pex||[]).map(function(r){ return safeFloat(r.pts); }).filter(function(v){ return v !== null; });
+  return vals.length ? vals.reduce(function(a,b){return a+b;},0)/vals.length : null;
+}
+
+// ── Visão Anual — gráficos interativos ──────────────────────────
+
+var ANUAL_NEXUS_COLORS = ['#1e3a8a','#2563eb','#38bdf8','#06b6d4'];
+var ANUAL_VITAL_COLORS = ['#7f1d1d','#b91c1c','#f43f5e','#fb7185'];
+
+function buildAnualDatasets(meses, distritos, getRegional, getLinha, getDist) {
+  var nexusDists = distritos.filter(function(d){ return d.linha === 'NEXUS'; });
+  var vitalDists = distritos.filter(function(d){ return d.linha === 'VITAL'; });
+  var datasets = [];
+
+  // 0: Regional (linha grossa, escura)
+  datasets.push({
+    label: '📍 Regional',
+    data: meses.map(function(m){ return getRegional(m); }),
+    borderColor: '#111827', backgroundColor: 'rgba(17,24,39,.07)',
+    borderWidth: 3, pointRadius: 5, pointHoverRadius: 7,
+    tension: .35, fill: false, _group: 'regional'
+  });
+
+  // 1: NEXUS média (tracejada azul)
+  datasets.push({
+    label: 'NEXUS média',
+    data: meses.map(function(m){ return getLinha(m, 'NEXUS'); }),
+    borderColor: '#1A3A6B', backgroundColor: 'transparent',
+    borderWidth: 2.5, borderDash: [8,4],
+    pointRadius: 4, pointHoverRadius: 6,
+    tension: .35, fill: false, _group: 'nexus-avg'
+  });
+
+  // 2: VITAL média (tracejada vermelha)
+  datasets.push({
+    label: 'VITAL média',
+    data: meses.map(function(m){ return getLinha(m, 'VITAL'); }),
+    borderColor: '#7A0A1C', backgroundColor: 'transparent',
+    borderWidth: 2.5, borderDash: [8,4],
+    pointRadius: 4, pointHoverRadius: 6,
+    tension: .35, fill: false, _group: 'vital-avg'
+  });
+
+  // 3-6: NEXUS distritos
+  nexusDists.forEach(function(d, i) {
+    datasets.push({
+      label: d.ab || d.distrito_id,
+      data: meses.map(function(m){ return getDist(m, d.distrito_id); }),
+      borderColor: ANUAL_NEXUS_COLORS[i % ANUAL_NEXUS_COLORS.length],
+      backgroundColor: 'transparent',
+      borderWidth: 1.8, pointRadius: 3, pointHoverRadius: 5,
+      tension: .35, fill: false, _group: 'nexus', _distId: d.distrito_id
+    });
+  });
+
+  // 7-10: VITAL distritos
+  vitalDists.forEach(function(d, i) {
+    datasets.push({
+      label: d.ab || d.distrito_id,
+      data: meses.map(function(m){ return getDist(m, d.distrito_id); }),
+      borderColor: ANUAL_VITAL_COLORS[i % ANUAL_VITAL_COLORS.length],
+      backgroundColor: 'transparent',
+      borderWidth: 1.8, pointRadius: 3, pointHoverRadius: 5,
+      tension: .35, fill: false, _group: 'vital', _distId: d.distrito_id
+    });
+  });
+
+  return datasets;
+}
+
+function buildAnualChart(canvasId, datasets, meses, isPts, refLines) {
+  var el = document.getElementById(canvasId);
+  if (!el) return null;
+  if (ANUAL_CHARTS[canvasId]) { ANUAL_CHARTS[canvasId].destroy(); }
+
+  var chart = new Chart(el.getContext('2d'), {
+    type: 'line',
+    data: { labels: meses, datasets: datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(17,24,39,.93)',
+          titleFont: { size: 12, weight: '700' }, bodyFont: { size: 11 },
+          padding: 12, cornerRadius: 10,
+          itemSort: function(a, b) { return (b.parsed.y || 0) - (a.parsed.y || 0); },
+          callbacks: {
+            label: function(ctx) {
+              var v = ctx.parsed.y;
+              if (v === null || v === undefined) return null;
+              return '  ' + ctx.dataset.label + ':  ' + (isPts ? v.toFixed(1) + ' pts' : v.toFixed(1) + '%');
+            }
+          },
+          filter: function(item) { return item.parsed.y !== null && item.parsed.y !== undefined; }
+        }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { font: { size: 11, weight: '700' } }
+        },
+        y: {
+          grid: {
+            color: function(ctx) {
+              if (!refLines) return '#f0f0f0';
+              for (var i = 0; i < refLines.length; i++) {
+                if (Math.abs(ctx.tick.value - refLines[i].v) < 0.1) return refLines[i].color;
+              }
+              return '#f0f0f0';
+            },
+            lineWidth: function(ctx) {
+              if (!refLines) return 1;
+              for (var i = 0; i < refLines.length; i++) {
+                if (Math.abs(ctx.tick.value - refLines[i].v) < 0.1) return 1.8;
+              }
+              return 1;
+            }
+          },
+          ticks: {
+            callback: function(v) { return isPts ? v + ' pts' : v + '%'; },
+            font: { size: 11 }
+          }
+        }
+      },
+      spanGaps: true
+    }
+  });
+
+  ANUAL_CHARTS[canvasId] = chart;
+  return chart;
+}
+
+function anualSyncToggleBtns(filterBar, chart) {
+  filterBar.querySelectorAll('.adtbtn').forEach(function(b) {
+    var distId = b.getAttribute('data-dist');
+    var marca  = b.getAttribute('data-marca');
+    var datasets = chart.data.datasets;
+    for (var j = 0; j < datasets.length; j++) {
+      var ds = datasets[j];
+      if ((distId && ds._distId === distId) || (marca && ds._marca === marca)) {
+        b.classList.toggle('active', chart.isDatasetVisible(j));
+        break;
+      }
+    }
+  });
+}
+
+function anualFilter(chartId, mode, btn) {
+  var chart = ANUAL_CHARTS[chartId];
+  if (!chart) return;
+
+  if (btn) {
+    var grpBar = btn.closest('.anual-filter-groups');
+    if (grpBar) grpBar.querySelectorAll('.afbtn').forEach(function(b){ b.classList.remove('active'); });
+    btn.classList.add('active');
+  }
+
+  var datasets = chart.data.datasets;
+  datasets.forEach(function(ds, i) {
+    var g = ds._group;
+    var show = true;
+    if      (mode === 'medias') show = (g === 'regional' || g === 'nexus-avg' || g === 'vital-avg');
+    else if (mode === 'nexus')  show = (g === 'regional' || g === 'nexus-avg' || g === 'nexus');
+    else if (mode === 'vital')  show = (g === 'regional' || g === 'vital-avg' || g === 'vital');
+    chart.setDatasetVisibility(i, show);
+  });
+
+  if (btn) {
+    var fb = btn.closest('.anual-filter-bar');
+    if (fb) anualSyncToggleBtns(fb, chart);
+  }
+  chart.update();
+}
+
+function anualToggleDist(chartId, distId, btn) {
+  var chart = ANUAL_CHARTS[chartId];
+  if (!chart) return;
+  var datasets = chart.data.datasets;
+  for (var j = 0; j < datasets.length; j++) {
+    var ds = datasets[j];
+    var match = (distId === '__regional__')
+      ? (ds._group === 'regional')
+      : (ds._distId === distId);
+    if (match) {
+      var vis = chart.isDatasetVisible(j);
+      chart.setDatasetVisibility(j, !vis);
+      btn.classList.toggle('active', !vis);
+      break;
+    }
+  }
+  chart.update();
+}
+
+function buildAnualFilterBar(chartId, distritos) {
+  var nexusDists = distritos.filter(function(d){ return d.linha === 'NEXUS'; });
+  var vitalDists = distritos.filter(function(d){ return d.linha === 'VITAL'; });
+
+  var html = '<div class="anual-filter-bar">';
+
+  // Linha 1: presets de grupo + legenda das linhas de referência
+  html += '<div class="anual-filter-groups">';
+  html += '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)">Filtrar:</span>';
+  html += '<button class="afbtn active" onclick="anualFilter(\'' + chartId + '\',\'all\',this)">Todos</button>';
+  html += '<button class="afbtn" onclick="anualFilter(\'' + chartId + '\',\'medias\',this)">Médias</button>';
+  html += '<button class="afbtn afbtn-nexus" onclick="anualFilter(\'' + chartId + '\',\'nexus\',this)">NEXUS</button>';
+  html += '<button class="afbtn afbtn-vital" onclick="anualFilter(\'' + chartId + '\',\'vital\',this)">VITAL</button>';
+  html += '<span class="anual-filter-sep"></span>';
+  html += '<span class="aleg"><span class="aleg-line" style="background:#111827"></span>Regional</span>';
+  html += '<span class="aleg"><span class="aleg-line aleg-dashed" style="border-top-color:#1A3A6B"></span>NEXUS méd.</span>';
+  html += '<span class="aleg"><span class="aleg-line aleg-dashed" style="border-top-color:#7A0A1C"></span>VITAL méd.</span>';
+  html += '</div>';
+
+  // Linha 2: toggle por distrito
+  html += '<div class="anual-filter-dists">';
+  html += '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)">Distritos:</span>';
+  nexusDists.forEach(function(d, i) {
+    var c = ANUAL_NEXUS_COLORS[i % ANUAL_NEXUS_COLORS.length];
+    html += '<button class="adtbtn active" data-dist="' + d.distrito_id + '" style="--dt-color:' + c + '"' +
+      ' onclick="anualToggleDist(\'' + chartId + '\',\'' + d.distrito_id + '\',this)">' +
+      '<span class="adt-dot" style="background:' + c + '"></span>' + (d.ab || d.distrito_id) + '</button>';
+  });
+  html += '<span class="anual-filter-sep"></span>';
+  vitalDists.forEach(function(d, i) {
+    var c = ANUAL_VITAL_COLORS[i % ANUAL_VITAL_COLORS.length];
+    html += '<button class="adtbtn active" data-dist="' + d.distrito_id + '" style="--dt-color:' + c + '"' +
+      ' onclick="anualToggleDist(\'' + chartId + '\',\'' + d.distrito_id + '\',this)">' +
+      '<span class="adt-dot" style="background:' + c + '"></span>' + (d.ab || d.distrito_id) + '</button>';
+  });
+  html += '</div></div>';
+  return html;
+}
+
+// ── Marcas Chave — Visão Anual ───────────────────────────────────
+
+// Contexto anual compartilhado — preenchidos em renderVisaoAnual
+var ANUAL_MESES      = [];
+var ANUAL_DISTRITOS  = [];
+var MARCA_DIST_SEL   = 'BRAMICAR'; // marca ativa no gráfico por-distrito
+
+var MARCA_NEXUS_COLORS = {
+  'BRAMICAR':     '#1e3a8a',
+  'BRAMICAR HCT': '#6366f1',
+  'OLIRE':        '#0891b2',
+  'LYBERDIA':     '#0f766e'
+};
+var MARCA_VITAL_COLORS = {
+  'BRASART HCT':  '#7f1d1d',
+  'BRASART BCC':  '#ea580c',
+  'LINADIB':      '#b45309',
+  'LINADIB DUO':  '#d97706',
+  'BUPIUM XL':    '#9d174d'
+};
+
+function getCellMarcaRegional(mes, marca, linha) {
+  var d = DADOS_CACHE[mes]; if (!d) return null;
+  var arr = linha === 'NEXUS' ? (d.prodNex || []) : (d.prodVit || []);
+  var row = null;
+  for (var i = 0; i < arr.length; i++) {
+    if (normProd(arr[i].produto) === marca) { row = arr[i]; break; }
+  }
+  if (!row) return null;
+  var at = safeFloat(row.ating_pct);
+  if (at !== null) return at;
+  var cota = safeFloat(row.cota), real = safeFloat(row.realizado);
+  return (cota !== null && real !== null && cota > 0) ? real / cota * 100 : null;
+}
+
+function buildMarcaChaveDatasets(meses) {
+  var datasets = [];
+  MARCAS_CHAVE_NEXUS.forEach(function(marca) {
+    datasets.push({
+      label: marca + ' (N)',
+      data: meses.map(function(m){ return getCellMarcaRegional(m, marca, 'NEXUS'); }),
+      borderColor: MARCA_NEXUS_COLORS[marca] || '#1e3a8a',
+      backgroundColor: 'transparent',
+      borderWidth: 2.2, pointRadius: 4, pointHoverRadius: 6,
+      tension: .35, fill: false, _group: 'nexus', _marca: marca
+    });
+  });
+  MARCAS_CHAVE_VITAL.forEach(function(marca) {
+    datasets.push({
+      label: marca + ' (V)',
+      data: meses.map(function(m){ return getCellMarcaRegional(m, marca, 'VITAL'); }),
+      borderColor: MARCA_VITAL_COLORS[marca] || '#7f1d1d',
+      backgroundColor: 'transparent',
+      borderWidth: 2.2, pointRadius: 4, pointHoverRadius: 6,
+      tension: .35, fill: false, _group: 'vital', _marca: marca
+    });
+  });
+  return datasets;
+}
+
+function anualToggleMarca(chartId, marca, btn) {
+  var chart = ANUAL_CHARTS[chartId];
+  if (!chart) return;
+  var datasets = chart.data.datasets;
+  for (var j = 0; j < datasets.length; j++) {
+    if (datasets[j]._marca === marca) {
+      var vis = chart.isDatasetVisible(j);
+      chart.setDatasetVisibility(j, !vis);
+      btn.classList.toggle('active', !vis);
+      break;
+    }
+  }
+  chart.update();
+}
+
+function buildMarcaFilterBar(chartId) {
+  var html = '<div class="anual-filter-bar">';
+  html += '<div class="anual-filter-groups">';
+  html += '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)">Filtrar:</span>';
+  html += '<button class="afbtn active" onclick="anualFilter(\'' + chartId + '\',\'all\',this)">Todos</button>';
+  html += '<button class="afbtn afbtn-nexus" onclick="anualFilter(\'' + chartId + '\',\'nexus\',this)">NEXUS</button>';
+  html += '<button class="afbtn afbtn-vital" onclick="anualFilter(\'' + chartId + '\',\'vital\',this)">VITAL</button>';
+  html += '</div>';
+  html += '<div class="anual-filter-dists">';
+  html += '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)">Marcas:</span>';
+  MARCAS_CHAVE_NEXUS.forEach(function(marca) {
+    var c = MARCA_NEXUS_COLORS[marca] || '#1e3a8a';
+    html += '<button class="adtbtn active" data-marca="' + marca + '" style="--dt-color:' + c + '"' +
+      ' onclick="anualToggleMarca(\'' + chartId + '\',\'' + marca + '\',this)">' +
+      '<span class="adt-dot" style="background:' + c + '"></span>' + marca + '</button>';
+  });
+  html += '<span class="anual-filter-sep"></span>';
+  MARCAS_CHAVE_VITAL.forEach(function(marca) {
+    var c = MARCA_VITAL_COLORS[marca] || '#7f1d1d';
+    html += '<button class="adtbtn active" data-marca="' + marca + '" style="--dt-color:' + c + '"' +
+      ' onclick="anualToggleMarca(\'' + chartId + '\',\'' + marca + '\',this)">' +
+      '<span class="adt-dot" style="background:' + c + '"></span>' + marca + '</button>';
+  });
+  html += '</div></div>';
+  return html;
+}
+
+// ── Marcas Chave por Distrito ─────────────────────────────────────
+
+function getCellMarcaDist(mes, marca, linha, distId) {
+  var d = DADOS_CACHE[mes]; if (!d) return null;
+  var arr = linha === 'NEXUS' ? (d.prodDistNex || []) : (d.prodDistVit || []);
+  for (var i = 0; i < arr.length; i++) {
+    var r = arr[i];
+    if (r.distrito_id === distId && normProd(r.produto) === marca) {
+      var at = safeFloat(r.ating_pct);
+      if (at !== null) return at;
+      var cota = safeFloat(r.cota), real = safeFloat(r.realizado);
+      return (cota !== null && real !== null && cota > 0) ? real / cota * 100 : null;
+    }
+  }
+  return null;
+}
+
+function buildMarcaDistDatasets(marca, linha) {
+  var nexusDists = ANUAL_DISTRITOS.filter(function(d){ return d.linha === 'NEXUS'; });
+  var vitalDists = ANUAL_DISTRITOS.filter(function(d){ return d.linha === 'VITAL'; });
+  var datasets = [];
+  // Linha regional da marca (referência — apenas da linha correta)
+  datasets.push({
+    label: '📍 ' + marca + ' Regional',
+    data: ANUAL_MESES.map(function(m){ return getCellMarcaRegional(m, marca, linha); }),
+    borderColor: '#111827', backgroundColor: 'rgba(17,24,39,.07)',
+    borderWidth: 3, pointRadius: 5, pointHoverRadius: 7,
+    tension: .35, fill: false, _group: 'regional'
+  });
+  // 4 distritos NEXUS
+  nexusDists.forEach(function(d, i) {
+    var c = ANUAL_NEXUS_COLORS[i % ANUAL_NEXUS_COLORS.length];
+    datasets.push({
+      label: d.ab || d.nome || d.distrito_id,
+      data: ANUAL_MESES.map(function(m){ return getCellMarcaDist(m, marca, 'NEXUS', d.distrito_id); }),
+      borderColor: c, backgroundColor: 'transparent',
+      borderWidth: 2, pointRadius: 4, pointHoverRadius: 6,
+      tension: .35, fill: false, _group: 'nexus', _distId: d.distrito_id
+    });
+  });
+  // 4 distritos VITAL
+  vitalDists.forEach(function(d, i) {
+    var c = ANUAL_VITAL_COLORS[i % ANUAL_VITAL_COLORS.length];
+    datasets.push({
+      label: d.ab || d.nome || d.distrito_id,
+      data: ANUAL_MESES.map(function(m){ return getCellMarcaDist(m, marca, 'VITAL', d.distrito_id); }),
+      borderColor: c, backgroundColor: 'transparent',
+      borderWidth: 2, pointRadius: 4, pointHoverRadius: 6,
+      tension: .35, fill: false, _group: 'vital', _distId: d.distrito_id
+    });
+  });
+  return datasets;
+}
+
+function switchMarcaDist(marca, linha) {
+  MARCA_DIST_SEL = marca;
+  // Atualiza estado ativo das pílulas de marca
+  document.querySelectorAll('.mcd-brand-btn').forEach(function(b) {
+    b.classList.toggle('active', b.getAttribute('data-marca') === marca);
+  });
+  // Reconstrói pills com TODOS os 8 distritos (NEXUS + VITAL)
+  var nexusDists = ANUAL_DISTRITOS.filter(function(d){ return d.linha === 'NEXUS'; });
+  var vitalDists = ANUAL_DISTRITOS.filter(function(d){ return d.linha === 'VITAL'; });
+  var html = '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)">Distritos:</span>';
+  html += '<button class="adtbtn active" data-dist="__regional__" style="--dt-color:#111827"' +
+    ' onclick="anualToggleDist(\'chart-anual-marcas-dist\',\'__regional__\',this)">' +
+    '<span class="adt-dot" style="background:#111827"></span>Regional</button>';
+  nexusDists.forEach(function(d, i) {
+    var c = ANUAL_NEXUS_COLORS[i % ANUAL_NEXUS_COLORS.length];
+    html += '<button class="adtbtn active" data-dist="' + d.distrito_id + '" style="--dt-color:' + c + '"' +
+      ' onclick="anualToggleDist(\'chart-anual-marcas-dist\',\'' + d.distrito_id + '\',this)">' +
+      '<span class="adt-dot" style="background:' + c + '"></span>' + (d.ab || d.nome || d.distrito_id) + '</button>';
+  });
+  html += '<span class="anual-filter-sep"></span>';
+  vitalDists.forEach(function(d, i) {
+    var c = ANUAL_VITAL_COLORS[i % ANUAL_VITAL_COLORS.length];
+    html += '<button class="adtbtn active" data-dist="' + d.distrito_id + '" style="--dt-color:' + c + '"' +
+      ' onclick="anualToggleDist(\'chart-anual-marcas-dist\',\'' + d.distrito_id + '\',this)">' +
+      '<span class="adt-dot" style="background:' + c + '"></span>' + (d.ab || d.nome || d.distrito_id) + '</button>';
+  });
+  var pillsEl = document.getElementById('marcadist-dist-pills');
+  if (pillsEl) pillsEl.innerHTML = html;
+  // Reconstrói o gráfico com os 8 distritos
+  var ds = buildMarcaDistDatasets(marca, linha);
+  var refMDV = [{ v: 100, color: 'rgba(21,105,58,.45)' }, { v: 80, color: 'rgba(200,16,46,.3)' }];
+  buildAnualChart('chart-anual-marcas-dist', ds, ANUAL_MESES, false, refMDV);
+}
+
+function buildMarcaDistFilterBar() {
+  var html = '<div class="anual-filter-bar">';
+  // Linha 1: seletor de marca
+  html += '<div class="anual-filter-groups">';
+  html += '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)">Marca:</span>';
+  MARCAS_CHAVE_NEXUS.forEach(function(marca) {
+    var c = MARCA_NEXUS_COLORS[marca] || '#1e3a8a';
+    var isFirst = marca === MARCAS_CHAVE_NEXUS[0];
+    html += '<button class="adtbtn mcd-brand-btn' + (isFirst ? ' active' : '') + '" data-marca="' + marca + '"' +
+      ' style="--dt-color:' + c + ';font-size:10px" onclick="switchMarcaDist(\'' + marca + '\',\'NEXUS\')">' +
+      '<span class="adt-dot" style="background:' + c + '"></span>' + marca + '</button>';
+  });
+  html += '<span class="anual-filter-sep"></span>';
+  MARCAS_CHAVE_VITAL.forEach(function(marca) {
+    var c = MARCA_VITAL_COLORS[marca] || '#7f1d1d';
+    html += '<button class="adtbtn mcd-brand-btn" data-marca="' + marca + '"' +
+      ' style="--dt-color:' + c + ';font-size:10px" onclick="switchMarcaDist(\'' + marca + '\',\'VITAL\')">' +
+      '<span class="adt-dot" style="background:' + c + '"></span>' + marca + '</button>';
+  });
+  html += '</div>';
+  // Linha 2: pills de distrito (geradas dinamicamente por switchMarcaDist; populadas na init)
+  html += '<div class="anual-filter-dists" id="marcadist-dist-pills">';
+  html += '<span style="font-size:10px;color:var(--gray)">← Selecione uma marca acima</span>';
+  html += '</div>';
+  html += '</div>';
+  return html;
+}
+
+function renderVisaoAnual(meses, distritos) {
+  // Salva contexto para uso nos callbacks dos botões (switchMarcaDist etc.)
+  ANUAL_MESES     = meses;
+  ANUAL_DISTRITOS = distritos;
+  MARCA_DIST_SEL  = MARCAS_CHAVE_NEXUS[0]; // reset para primeira marca
+
+  var html = '<div class="anual-page-hdr">' +
+    '<button class="anual-back-btn" onclick="irParaMes(MES_ATUAL)">← Voltar ao Dashboard</button>' +
+    '<div>' +
+      '<div style="font-size:16px;font-weight:800">📅 Visão Anual · 2026</div>' +
+      '<div style="font-size:11px;color:var(--gray);margin-top:2px">' +
+        'Regional SPI OESTE · Cardiometabólico · Clique em um mês para abrir o detalhe' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+
+  function chartCard(titulo, icone, nota, chartId, filterBarHtml) {
+    var fb = (filterBarHtml !== undefined) ? filterBarHtml : buildAnualFilterBar(chartId, distritos);
+    return '<div class="anual-chart-card">' +
+      '<div class="anual-chart-hdr">' +
+        '<div class="anual-chart-hdr-title">' + icone + ' ' + titulo + '</div>' +
+        '<span style="font-size:10px;color:var(--gray)">' + nota + '</span>' +
+      '</div>' +
+      fb +
+      '<div class="anual-canvas-wrap"><canvas id="' + chartId + '"></canvas></div>' +
+    '</div>';
+  }
+
+  html += chartCard('Produtividade (MDV)', '📊',
+    '% atingimento MDV — objetivo 12 visitas · linha verde = meta 100% · linha vermelha = limite 80%',
+    'chart-anual-prod');
+  html += chartCard('Atingimento de Produto', '📦',
+    '% atingimento médio dos produtos do distrito',
+    'chart-anual-produto');
+  html += chartCard('PEX — Programa de Excelência', '🏅',
+    'Média de pontos dos reps do distrito · Ouro ≥99,5 · Prata ≥95 · Bronze ≥80 · Atenção ≥75 · Crítico <75',
+    'chart-anual-pex');
+  html += chartCard('Marcas Chave', '🌟',
+    '% atingimento das marcas estratégicas · Nexus: Bramicar, Bramicar HCT, Olire, Lyberdia · Vital: Brasart HCT, Brasart BCC, Linadib, Linadib Duo, Bupium XL',
+    'chart-anual-marcas',
+    buildMarcaFilterBar('chart-anual-marcas'));
+  html += chartCard('Marcas Chave por Distrito', '📍',
+    'Selecione uma marca para ver o atingimento distrito a distrito ao longo do ano · linha preta = média regional da marca',
+    'chart-anual-marcas-dist',
+    buildMarcaDistFilterBar());
+
+  document.getElementById('main-content').innerHTML = html;
+
+  var refMDV = [
+    { v: 100, color: 'rgba(21,105,58,.45)' },
+    { v: 80,  color: 'rgba(200,16,46,.3)' }
+  ];
+  var refPEX = [
+    { v: 99.5, color: 'rgba(212,160,23,.5)' },
+    { v: 95,   color: 'rgba(107,114,128,.3)' },
+    { v: 80,   color: 'rgba(200,16,46,.3)' }
+  ];
+
+  requestAnimationFrame(function() {
+    var ds1 = buildAnualDatasets(meses, distritos, getCellProdRegional, getCellProdLinha, getCellProd);
+    buildAnualChart('chart-anual-prod', ds1, meses, false, refMDV);
+
+    var ds2 = buildAnualDatasets(meses, distritos, getCellAtProdRegional, getCellAtProdLinha, getCellAtProd);
+    buildAnualChart('chart-anual-produto', ds2, meses, false, refMDV);
+
+    var ds3 = buildAnualDatasets(meses, distritos,
+      getCellPexRegional,
+      function(m, linha){ return getCellPexLinha(m, linha, distritos); },
+      getCellPex);
+    buildAnualChart('chart-anual-pex', ds3, meses, true, refPEX);
+
+    var ds4 = buildMarcaChaveDatasets(meses);
+    buildAnualChart('chart-anual-marcas', ds4, meses, false, refMDV);
+
+    // 5º gráfico: Marcas Chave por Distrito — inicia com a primeira marca NEXUS
+    switchMarcaDist(MARCA_DIST_SEL, 'NEXUS');
+  });
+}
+
+async function abrirVisaoAnual() {
+  VIEW_ATUAL = 'anual';
+  DISTRITO_ATIVO = null;
+
+  // Atualiza cycle bar: nenhum mês ativo, anual ativo
+  var meses = CONFIG._meses || [];
+  renderCycleBar(meses, null);
+
+  mostrarLoading(true);
+  try {
+    // Carrega todos os meses disponíveis em paralelo
+    setLoadingTxt('Carregando visão anual…');
+    var promises = meses.map(function(m){ return carregarMes(m).catch(function(){}); });
+    await Promise.all(promises);
+
+    // Usa o mês mais recente como pivot para estrutura de distritos
+    var mesPivot = meses[meses.length - 1];
+    var dadosPivot = DADOS_CACHE[mesPivot];
+    if (!dadosPivot) throw new Error('Sem dados para montar a visão anual.');
+
+    renderVisaoAnual(meses, dadosPivot.distritos || []);
+  } catch(e) {
+    renderErro(e.message);
+  }
+  mostrarLoading(false);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function irParaMes(mes) {
+  VIEW_ATUAL = 'principal';
+  DISTRITO_ATIVO = null;
+  MES_ATUAL = mes;
+  document.getElementById('pill-mes').textContent = mes + '/2026';
+  var meses = CONFIG._meses || [];
+  renderCycleBar(meses, mes);
+  mostrarLoading(true);
+  try {
+    var mesAnt = getMesAnterior(mes);
+    var promises = [carregarMes(mes)];
+    if (mesAnt) promises.push(carregarMes(mesAnt).catch(function(){}));
+    var resultados = await Promise.all(promises);
+    renderTudo(resultados[0], mes);
+  } catch(e) {
+    renderErro(e.message);
+  }
+  mostrarLoading(false);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── Evolução de Cota ─────────────────────────────────────────────
+
+var COTA_CHARTS  = {};
+var COTA_LINHA_BAR = 'TOTAL'; // estado do toggle do gráfico de barras
+
+function fmtBRL(v) {
+  if (v === null || v === undefined || isNaN(v) || v === 0) return '—';
+  return 'R$ ' + Math.round(v).toLocaleString('pt-BR');
+}
+
+function cotaPctClass(v) {
+  if (v === null || isNaN(v)) return '';
+  return v >= 100 ? 'cota-pct-ok' : v >= 80 ? 'cota-pct-warn' : 'cota-pct-crit';
+}
+
+function sumField(arr, field) {
+  return arr.reduce(function(s, r) {
+    var v = safeFloat(r[field]);
+    return s + (v !== null && v > 0 ? v : 0);
+  }, 0);
+}
+
+// Cota/Realizado regional por linha ('NEXUS','VITAL',null=total)
+function getCotaReg(mes, linha) {
+  var d = DADOS_CACHE[mes]; if (!d) return 0;
+  if (linha === 'NEXUS') return sumField(d.prodNex || [], 'cota');
+  if (linha === 'VITAL') return sumField(d.prodVit || [], 'cota');
+  return sumField((d.prodNex||[]).concat(d.prodVit||[]), 'cota');
+}
+function getRealReg(mes, linha) {
+  var d = DADOS_CACHE[mes]; if (!d) return 0;
+  if (linha === 'NEXUS') return sumField(d.prodNex || [], 'realizado');
+  if (linha === 'VITAL') return sumField(d.prodVit || [], 'realizado');
+  return sumField((d.prodNex||[]).concat(d.prodVit||[]), 'realizado');
+}
+
+// Cota/Realizado por distrito
+function getCotaDist(mes, distId, linhaD) {
+  var d = DADOS_CACHE[mes]; if (!d) return 0;
+  var arr = (linhaD === 'NEXUS' ? (d.prodDistNex||[]) : (d.prodDistVit||[]))
+    .filter(function(r){ return r.distrito_id === distId; });
+  return sumField(arr, 'cota');
+}
+function getRealDist(mes, distId, linhaD) {
+  var d = DADOS_CACHE[mes]; if (!d) return 0;
+  var arr = (linhaD === 'NEXUS' ? (d.prodDistNex||[]) : (d.prodDistVit||[]))
+    .filter(function(r){ return r.distrito_id === distId; });
+  return sumField(arr, 'realizado');
+}
+
+// Cota/Realizado por produto (regional)
+function getCotaProd(mes, produto, linha) {
+  var d = DADOS_CACHE[mes]; if (!d) return 0;
+  var arr = linha === 'NEXUS' ? (d.prodNex||[]) : (d.prodVit||[]);
+  for (var i = 0; i < arr.length; i++) {
+    if (normProd(arr[i].produto) === normProd(produto)) return safeFloat(arr[i].cota) || 0;
+  }
+  return 0;
+}
+function getRealProd(mes, produto, linha) {
+  var d = DADOS_CACHE[mes]; if (!d) return 0;
+  var arr = linha === 'NEXUS' ? (d.prodNex||[]) : (d.prodVit||[]);
+  for (var i = 0; i < arr.length; i++) {
+    if (normProd(arr[i].produto) === normProd(produto)) return safeFloat(arr[i].realizado) || 0;
+  }
+  return 0;
+}
+
+// YTD: soma de todos os meses disponíveis
+function calcYTD(meses, getFn) {
+  return meses.reduce(function(s, m) { return s + (getFn(m) || 0); }, 0);
+}
+
+// ── Chart: barras cota vs realizado ──────────────────────────────
+function buildCotaBarChart(canvasId, meses, cotaArr, realArr) {
+  var el = document.getElementById(canvasId); if (!el) return;
+  if (COTA_CHARTS[canvasId]) COTA_CHARTS[canvasId].destroy();
+  COTA_CHARTS[canvasId] = new Chart(el.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: meses,
+      datasets: [
+        { label: 'Cota',
+          data: cotaArr,
+          backgroundColor: 'rgba(107,114,128,.22)',
+          borderColor: 'rgba(107,114,128,.55)',
+          borderWidth: 1.5, borderRadius: 5, order: 2 },
+        { label: 'Realizado',
+          data: realArr,
+          backgroundColor: 'rgba(21,105,58,.65)',
+          borderColor: 'rgba(21,105,58,.9)',
+          borderWidth: 1.5, borderRadius: 5, order: 1 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: true, position: 'top', labels: { boxWidth: 12, font: { size: 11 }, padding: 16 } },
+        tooltip: {
+          backgroundColor: 'rgba(17,24,39,.93)',
+          titleFont: { size: 12, weight: '700' }, bodyFont: { size: 11 },
+          padding: 12, cornerRadius: 10,
+          callbacks: {
+            label: function(ctx) {
+              var v = ctx.parsed.y;
+              if (!v) return null;
+              return '  ' + ctx.dataset.label + ':  ' + fmtBRL(v);
+            },
+            afterBody: function(items) {
+              var c = items[0] ? items[0].parsed.y : 0;
+              var r = items[1] ? items[1].parsed.y : 0;
+              if (!c || !r) return [];
+              return ['  Atingimento:  ' + (r / c * 100).toFixed(1) + '%'];
+            }
+          }
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 11, weight: '700' } } },
+        y: {
+          ticks: { callback: function(v) {
+            if (v >= 1e6) return 'R$ ' + (v/1e6).toFixed(1) + 'M';
+            return 'R$ ' + (v/1e3).toFixed(0) + 'k';
+          }, font: { size: 10 } },
+          grid: { color: '#f0f0f0' }
+        }
+      }
+    }
+  });
+}
+
+// ── Chart: linha % atingimento regional ──────────────────────────
+function buildCotaAtingChart(canvasId, meses, fn) {
+  // fn(mes, linha) => pct or null
+  var datasets = [
+    { label: 'Total Regional',
+      data: meses.map(function(m){ var c=fn(m,null,'cota'),r=fn(m,null,'real'); return c>0?r/c*100:null; }),
+      borderColor: '#111827', borderWidth: 3, pointRadius: 5, tension: .35, fill: false, _group:'regional' },
+    { label: 'NEXUS',
+      data: meses.map(function(m){ var c=fn(m,'NEXUS','cota'),r=fn(m,'NEXUS','real'); return c>0?r/c*100:null; }),
+      borderColor: '#1A3A6B', borderWidth: 2.2, borderDash: [8,4], pointRadius: 4, tension: .35, fill: false },
+    { label: 'VITAL',
+      data: meses.map(function(m){ var c=fn(m,'VITAL','cota'),r=fn(m,'VITAL','real'); return c>0?r/c*100:null; }),
+      borderColor: '#b91c1c', borderWidth: 2.2, borderDash: [8,4], pointRadius: 4, tension: .35, fill: false }
+  ];
+  var el = document.getElementById(canvasId); if (!el) return;
+  if (COTA_CHARTS[canvasId]) COTA_CHARTS[canvasId].destroy();
+  var refLines = [{ v: 100, color: 'rgba(21,105,58,.4)' }, { v: 80, color: 'rgba(200,16,46,.25)' }];
+  COTA_CHARTS[canvasId] = new Chart(el.getContext('2d'), {
+    type: 'line', data: { labels: meses, datasets: datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: true, position: 'top', labels: { boxWidth: 14, font: { size: 11 }, padding: 16 } },
+        tooltip: {
+          backgroundColor: 'rgba(17,24,39,.93)',
+          titleFont: { size: 12, weight: '700' }, bodyFont: { size: 11 },
+          padding: 12, cornerRadius: 10,
+          filter: function(item) { return item.parsed.y !== null; },
+          callbacks: { label: function(ctx) {
+            var v = ctx.parsed.y;
+            return v !== null ? '  ' + ctx.dataset.label + ':  ' + v.toFixed(1) + '%' : null;
+          }}
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 11, weight: '700' } } },
+        y: {
+          ticks: { callback: function(v){ return v + '%'; }, font: { size: 10 } },
+          grid: {
+            color: function(ctx) {
+              for (var i=0;i<refLines.length;i++) if (Math.abs(ctx.tick.value-refLines[i].v)<.1) return refLines[i].color;
+              return '#f0f0f0';
+            },
+            lineWidth: function(ctx) {
+              for (var i=0;i<refLines.length;i++) if (Math.abs(ctx.tick.value-refLines[i].v)<.1) return 2;
+              return 1;
+            }
+          }
+        }
+      },
+      spanGaps: true
+    }
+  });
+}
+
+// ── Chart: % atingimento por distrito ────────────────────────────
+function buildCotaDistAtingChart(canvasId, meses, distritos) {
+  var nexusDists = distritos.filter(function(d){ return d.linha === 'NEXUS'; });
+  var vitalDists = distritos.filter(function(d){ return d.linha === 'VITAL'; });
+  var datasets = [];
+  nexusDists.forEach(function(d, i) {
+    var c = ANUAL_NEXUS_COLORS[i % ANUAL_NEXUS_COLORS.length];
+    datasets.push({
+      label: d.ab || d.nome || d.distrito_id,
+      data: meses.map(function(m){ var ct=getCotaDist(m,d.distrito_id,'NEXUS'),r=getRealDist(m,d.distrito_id,'NEXUS'); return ct>0?r/ct*100:null; }),
+      borderColor: c, backgroundColor: 'transparent',
+      borderWidth: 2, pointRadius: 4, pointHoverRadius: 6,
+      tension: .35, fill: false, _group: 'nexus', _distId: d.distrito_id
+    });
+  });
+  vitalDists.forEach(function(d, i) {
+    var c = ANUAL_VITAL_COLORS[i % ANUAL_VITAL_COLORS.length];
+    datasets.push({
+      label: d.ab || d.nome || d.distrito_id,
+      data: meses.map(function(m){ var ct=getCotaDist(m,d.distrito_id,'VITAL'),r=getRealDist(m,d.distrito_id,'VITAL'); return ct>0?r/ct*100:null; }),
+      borderColor: c, backgroundColor: 'transparent',
+      borderWidth: 2, pointRadius: 4, pointHoverRadius: 6,
+      tension: .35, fill: false, _group: 'vital', _distId: d.distrito_id
+    });
+  });
+  var el = document.getElementById(canvasId); if (!el) return;
+  if (COTA_CHARTS[canvasId]) COTA_CHARTS[canvasId].destroy();
+  var refLines = [{ v: 100, color: 'rgba(21,105,58,.4)' }, { v: 80, color: 'rgba(200,16,46,.25)' }];
+  COTA_CHARTS[canvasId] = new Chart(el.getContext('2d'), {
+    type: 'line', data: { labels: meses, datasets: datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: true, position: 'top', labels: { boxWidth: 12, font: { size: 11 }, padding: 10,
+          filter: function(item) { return !item.hidden; } } },
+        tooltip: {
+          backgroundColor: 'rgba(17,24,39,.93)',
+          titleFont: { size: 12, weight: '700' }, bodyFont: { size: 11 },
+          padding: 12, cornerRadius: 10,
+          filter: function(item) { return item.parsed.y !== null; },
+          itemSort: function(a,b){ return (b.parsed.y||0)-(a.parsed.y||0); },
+          callbacks: { label: function(ctx) {
+            var v = ctx.parsed.y;
+            return v !== null ? '  ' + ctx.dataset.label + ':  ' + v.toFixed(1) + '%' : null;
+          }}
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 11, weight: '700' } } },
+        y: {
+          ticks: { callback: function(v){ return v + '%'; }, font: { size: 10 } },
+          grid: {
+            color: function(ctx) {
+              for (var i=0;i<refLines.length;i++) if (Math.abs(ctx.tick.value-refLines[i].v)<.1) return refLines[i].color;
+              return '#f0f0f0';
+            },
+            lineWidth: function(ctx) {
+              for (var i=0;i<refLines.length;i++) if (Math.abs(ctx.tick.value-refLines[i].v)<.1) return 2;
+              return 1;
+            }
+          }
+        }
+      },
+      spanGaps: true
+    }
+  });
+}
+
+// ── Toggle do gráfico de barras regional ─────────────────────────
+function cotaSwitchBarLinha(linhaKey, btn, meses) {
+  COTA_LINHA_BAR = linhaKey;
+  document.querySelectorAll('.cota-bar-tab').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+  var getLinha = linhaKey === 'TOTAL' ? null : linhaKey;
+  var cotaArr = meses.map(function(m){ return getCotaReg(m, getLinha); });
+  var realArr = meses.map(function(m){ return getRealReg(m, getLinha); });
+  buildCotaBarChart('cota-chart-bar', meses, cotaArr, realArr);
+}
+
+// ── Tabela Regional ───────────────────────────────────────────────
+function renderCotaTableRegional(meses) {
+  var linhas = [
+    { key: 'TOTAL', label: 'Total Regional',   cls: 'row-total' },
+    { key: 'NEXUS', label: '↳ NEXUS',          cls: 'row-nexus' },
+    { key: 'VITAL', label: '↳ VITAL',          cls: 'row-vital' }
+  ];
+  var html = '<div class="cota-table-wrap"><table class="cota-table">';
+  // Header
+  html += '<thead><tr>';
+  html += '<th class="th-label" rowspan="2">Linha</th>';
+  meses.forEach(function(m) {
+    html += '<th class="th-mes-hdr" colspan="3">' + m + '</th>';
+  });
+  html += '<th class="th-ytd-hdr" colspan="3">YTD</th>';
+  html += '</tr><tr>';
+  meses.forEach(function() {
+    html += '<th class="th-sub">Cota</th><th class="th-sub">Realizado</th><th class="th-sub">%</th>';
+  });
+  html += '<th class="th-sub-ytd">Cota</th><th class="th-sub-ytd">Realizado</th><th class="th-sub-ytd">%</th>';
+  html += '</tr></thead><tbody>';
+  // Rows
+  linhas.forEach(function(lin) {
+    var getLinha = lin.key === 'TOTAL' ? null : lin.key;
+    var ytdC = 0, ytdR = 0;
+    html += '<tr class="' + lin.cls + '">';
+    html += '<td class="td-label">' + lin.label + '</td>';
+    meses.forEach(function(m, idx) {
+      var c = getCotaReg(m, getLinha);
+      var r = getRealReg(m, getLinha);
+      var pct = c > 0 ? r / c * 100 : null;
+      ytdC += c; ytdR += r;
+      var sep = idx === 0 ? '' : 'td-mes-sep';
+      html += '<td class="' + sep + '">' + fmtBRL(c) + '</td>';
+      html += '<td>' + fmtBRL(r) + '</td>';
+      html += '<td class="' + cotaPctClass(pct) + '">' + (pct !== null ? pct.toFixed(1) + '%' : '—') + '</td>';
+    });
+    var ytdPct = ytdC > 0 ? ytdR / ytdC * 100 : null;
+    html += '<td class="td-ytd">' + fmtBRL(ytdC) + '</td>';
+    html += '<td class="td-ytd">' + fmtBRL(ytdR) + '</td>';
+    html += '<td class="td-ytd-pct ' + cotaPctClass(ytdPct) + '">' + (ytdPct !== null ? ytdPct.toFixed(1) + '%' : '—') + '</td>';
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+  return html;
+}
+
+// ── Tabela por Distrito ───────────────────────────────────────────
+function renderCotaTableDist(meses, distritos) {
+  var nexusDists = distritos.filter(function(d){ return d.linha === 'NEXUS'; });
+  var vitalDists = distritos.filter(function(d){ return d.linha === 'VITAL'; });
+  var html = '<div class="cota-table-wrap"><table class="cota-table">';
+  html += '<thead><tr>';
+  html += '<th class="th-label" rowspan="2">Distrito</th>';
+  meses.forEach(function(m) { html += '<th class="th-mes-hdr" colspan="3">' + m + '</th>'; });
+  html += '<th class="th-ytd-hdr" colspan="3">YTD</th>';
+  html += '</tr><tr>';
+  meses.forEach(function() { html += '<th class="th-sub">Cota</th><th class="th-sub">Realizado</th><th class="th-sub">%</th>'; });
+  html += '<th class="th-sub-ytd">Cota</th><th class="th-sub-ytd">Realizado</th><th class="th-sub-ytd">%</th>';
+  html += '</tr></thead><tbody>';
+  function distRow(d, linhaD, nexusIdx, vitalIdx, rowCls, colorArr) {
+    var ci = linhaD === 'NEXUS' ? nexusIdx : vitalIdx;
+    var cor = colorArr[ci % colorArr.length];
+    var ytdC = 0, ytdR = 0;
+    var row = '<tr class="row-dist ' + rowCls + '">';
+    row += '<td class="td-label"><span style="display:inline-flex;align-items:center;gap:6px">' +
+      '<span style="width:8px;height:8px;border-radius:50%;background:' + cor + ';flex-shrink:0"></span>' +
+      (d.ab || d.nome || d.distrito_id) + '</span></td>';
+    meses.forEach(function(m, idx) {
+      var c = getCotaDist(m, d.distrito_id, linhaD);
+      var r = getRealDist(m, d.distrito_id, linhaD);
+      var pct = c > 0 ? r / c * 100 : null;
+      ytdC += c; ytdR += r;
+      var sep = idx === 0 ? '' : 'td-mes-sep';
+      row += '<td class="' + sep + '">' + fmtBRL(c) + '</td>';
+      row += '<td>' + fmtBRL(r) + '</td>';
+      row += '<td class="' + cotaPctClass(pct) + '">' + (pct !== null ? pct.toFixed(1) + '%' : '—') + '</td>';
+    });
+    var ytdPct = ytdC > 0 ? ytdR / ytdC * 100 : null;
+    row += '<td class="td-ytd">' + fmtBRL(ytdC) + '</td>';
+    row += '<td class="td-ytd">' + fmtBRL(ytdR) + '</td>';
+    row += '<td class="td-ytd-pct ' + cotaPctClass(ytdPct) + '">' + (ytdPct !== null ? ytdPct.toFixed(1) + '%' : '—') + '</td>';
+    row += '</tr>';
+    return row;
+  }
+  // Separador NEXUS
+  html += '<tr class="row-nexus"><td class="td-label" colspan="' + (meses.length * 3 + 4) + '" style="font-size:9.5px;letter-spacing:.8px;padding:6px 10px">NEXUS</td></tr>';
+  nexusDists.forEach(function(d, i) { html += distRow(d, 'NEXUS', i, 0, '', ANUAL_NEXUS_COLORS); });
+  // Separador VITAL
+  html += '<tr class="row-vital"><td class="td-label" colspan="' + (meses.length * 3 + 4) + '" style="font-size:9.5px;letter-spacing:.8px;padding:6px 10px">VITAL</td></tr>';
+  vitalDists.forEach(function(d, i) { html += distRow(d, 'VITAL', 0, i, '', ANUAL_VITAL_COLORS); });
+  html += '</tbody></table></div>';
+  return html;
+}
+
+// ── Tabela por Produto ────────────────────────────────────────────
+function renderCotaTableProduto(meses, linha) {
+  // Produto list = union of all months para a linha
+  var produtosSet = {};
+  meses.forEach(function(m) {
+    var d = DADOS_CACHE[m]; if (!d) return;
+    var arr = linha === 'NEXUS' ? (d.prodNex||[]) : (d.prodVit||[]);
+    arr.forEach(function(r) { if (r.produto) produtosSet[normProd(r.produto)] = r.produto; });
+  });
+  var produtos = Object.keys(produtosSet).sort(function(a, b) {
+    var ak = isMarcaChave(a, linha) ? 0 : 1;
+    var bk = isMarcaChave(b, linha) ? 0 : 1;
+    return ak !== bk ? ak - bk : a.localeCompare(b);
+  });
+  var html = '<div class="cota-table-wrap"><table class="cota-table">';
+  html += '<thead><tr>';
+  html += '<th class="th-label" rowspan="2">Produto</th>';
+  meses.forEach(function(m) { html += '<th class="th-mes-hdr" colspan="3">' + m + '</th>'; });
+  html += '<th class="th-ytd-hdr" colspan="3">YTD</th>';
+  html += '</tr><tr>';
+  meses.forEach(function() { html += '<th class="th-sub">Cota</th><th class="th-sub">Realizado</th><th class="th-sub">%</th>'; });
+  html += '<th class="th-sub-ytd">Cota</th><th class="th-sub-ytd">Realizado</th><th class="th-sub-ytd">%</th>';
+  html += '</tr></thead><tbody>';
+  produtos.forEach(function(pNorm) {
+    var pNome = produtosSet[pNorm];
+    var isMC = isMarcaChave(pNorm, linha);
+    var ytdC = 0, ytdR = 0;
+    html += '<tr class="row-prod' + (isMC ? ' row-prod-chave' : '') + '">';
+    html += '<td class="td-label">' + pNome + (isMC ? '<span class="mc-badge">★ CHAVE</span>' : '') + '</td>';
+    meses.forEach(function(m, idx) {
+      var c = getCotaProd(m, pNorm, linha);
+      var r = getRealProd(m, pNorm, linha);
+      var pct = c > 0 ? r / c * 100 : null;
+      ytdC += c; ytdR += r;
+      var sep = idx === 0 ? '' : 'td-mes-sep';
+      html += '<td class="' + sep + '">' + fmtBRL(c) + '</td>';
+      html += '<td>' + fmtBRL(r) + '</td>';
+      html += '<td class="' + cotaPctClass(pct) + '">' + (pct !== null ? pct.toFixed(1) + '%' : '—') + '</td>';
+    });
+    var ytdPct = ytdC > 0 ? ytdR / ytdC * 100 : null;
+    html += '<td class="td-ytd">' + fmtBRL(ytdC) + '</td>';
+    html += '<td class="td-ytd">' + fmtBRL(ytdR) + '</td>';
+    html += '<td class="td-ytd-pct ' + cotaPctClass(ytdPct) + '">' + (ytdPct !== null ? ytdPct.toFixed(1) + '%' : '—') + '</td>';
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+  return html;
+}
+
+// ── YTD KPI Card ──────────────────────────────────────────────────
+function renderCotaYTDCard(titulo, cor, meses, getLinha) {
+  var c = calcYTD(meses, function(m){ return getCotaReg(m, getLinha); });
+  var r = calcYTD(meses, function(m){ return getRealReg(m, getLinha); });
+  var pct = c > 0 ? r / c * 100 : null;
+  var pctCls = pct !== null ? (pct >= 100 ? 'ok' : pct >= 80 ? 'warn' : 'crit') : '';
+  return '<div class="cota-ytd-card" style="border-top:4px solid ' + cor + '">' +
+    '<div class="cota-ytd-label">' + titulo + '</div>' +
+    '<div class="cota-ytd-row2">' +
+      '<span class="cota-ytd-real">' + fmtBRL(r) + '</span>' +
+      '<span class="cota-ytd-de">de</span>' +
+      '<span class="cota-ytd-cota">' + fmtBRL(c) + '</span>' +
+    '</div>' +
+    '<span class="cota-ytd-pct ' + pctCls + '">' + (pct !== null ? pct.toFixed(1) + '%' : '—') + '</span>' +
+  '</div>';
+}
+
+// ── Incremento de Cota ───────────────────────────────────────────
+
+// Calcula array de deltas mês a mês: [{abs, pct}] — índice 0 = null (sem mês anterior)
+function calcIncrementos(meses, getCotaFn) {
+  return meses.map(function(m, i) {
+    if (i === 0) return null;
+    var prev = getCotaFn(meses[i - 1]);
+    var curr = getCotaFn(m);
+    if (!prev || !curr) return null;
+    return { abs: curr - prev, pct: (curr - prev) / prev * 100 };
+  });
+}
+
+// Gráfico de barras — Δ R$ por mês (verde positivo, vermelho negativo)
+var COTA_INCR_LINHA = 'TOTAL'; // estado do toggle
+
+function buildCotaIncrementoChart(canvasId, meses, linhaKey) {
+  var getLinha = linhaKey === 'TOTAL' ? null : linhaKey;
+  var incrs = calcIncrementos(meses, function(m){ return getCotaReg(m, getLinha); });
+  var absArr = incrs.map(function(d){ return d ? d.abs : null; });
+
+  var bgColors = absArr.map(function(v) {
+    if (v === null) return 'rgba(156,163,175,.25)';
+    return v >= 0 ? 'rgba(21,105,58,.6)' : 'rgba(185,28,28,.6)';
+  });
+  var bdColors = absArr.map(function(v) {
+    if (v === null) return 'rgba(156,163,175,.4)';
+    return v >= 0 ? 'rgba(21,105,58,.9)' : 'rgba(185,28,28,.9)';
+  });
+
+  var el = document.getElementById(canvasId); if (!el) return;
+  if (COTA_CHARTS[canvasId]) COTA_CHARTS[canvasId].destroy();
+  COTA_CHARTS[canvasId] = new Chart(el.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: meses,
+      datasets: [{
+        label: 'Δ Cota (R$)',
+        data: absArr,
+        backgroundColor: bgColors,
+        borderColor: bdColors,
+        borderWidth: 1.5, borderRadius: 5
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(17,24,39,.93)',
+          titleFont: { size: 12, weight: '700' }, bodyFont: { size: 11 },
+          padding: 12, cornerRadius: 10,
+          callbacks: { label: function(ctx) {
+            var v = ctx.parsed.y;
+            if (v === null) return '  Mês base (sem incremento)';
+            return '  Δ Cota:  ' + (v >= 0 ? '+' : '') + fmtBRL(Math.abs(v)).replace('R$ ', (v >= 0 ? '+R$ ' : '-R$ '));
+          }}
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 11, weight: '700' } } },
+        y: {
+          ticks: { callback: function(v) {
+            if (Math.abs(v) >= 1e6) return (v >= 0 ? '+' : '') + 'R$ ' + (v/1e6).toFixed(1) + 'M';
+            return (v >= 0 ? '+' : '') + 'R$ ' + (v/1e3).toFixed(0) + 'k';
+          }, font: { size: 10 } },
+          grid: {
+            color: function(ctx) { return Math.abs(ctx.tick.value) < 0.01 ? 'rgba(0,0,0,.25)' : '#f0f0f0'; },
+            lineWidth: function(ctx) { return Math.abs(ctx.tick.value) < 0.01 ? 2.5 : 1; }
+          }
+        }
+      }
+    }
+  });
+}
+
+// Gráfico de linhas — Δ% por mês, Total + NEXUS + VITAL sobrepostos
+function buildCotaIncrementoPctChart(canvasId, meses) {
+  var linhasInfo = [
+    { label: 'Total Regional', key: null, color: '#111827', width: 3, dash: [] },
+    { label: 'NEXUS',          key: 'NEXUS', color: '#1A3A6B', width: 2.2, dash: [8,4] },
+    { label: 'VITAL',          key: 'VITAL', color: '#b91c1c', width: 2.2, dash: [8,4] }
+  ];
+  var datasets = linhasInfo.map(function(l) {
+    var incrs = calcIncrementos(meses, function(m){ return getCotaReg(m, l.key); });
+    return {
+      label: l.label,
+      data: incrs.map(function(d){ return d ? d.pct : null; }),
+      borderColor: l.color, backgroundColor: 'transparent',
+      borderWidth: l.width, borderDash: l.dash,
+      pointRadius: 5, pointHoverRadius: 7,
+      pointBackgroundColor: incrs.map(function(d) {
+        if (!d) return l.color;
+        return d.pct >= 0 ? '#15803d' : '#b91c1c';
+      }),
+      tension: .3, fill: false
+    };
+  });
+
+  var el = document.getElementById(canvasId); if (!el) return;
+  if (COTA_CHARTS[canvasId]) COTA_CHARTS[canvasId].destroy();
+  COTA_CHARTS[canvasId] = new Chart(el.getContext('2d'), {
+    type: 'line',
+    data: { labels: meses, datasets: datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: true, position: 'top', labels: { boxWidth: 14, font: { size: 11 }, padding: 16 } },
+        tooltip: {
+          backgroundColor: 'rgba(17,24,39,.93)',
+          titleFont: { size: 12, weight: '700' }, bodyFont: { size: 11 },
+          padding: 12, cornerRadius: 10,
+          filter: function(item) { return item.parsed.y !== null; },
+          callbacks: { label: function(ctx) {
+            var v = ctx.parsed.y;
+            if (v === null) return null;
+            return '  ' + ctx.dataset.label + ':  ' + (v >= 0 ? '+' : '') + v.toFixed(2) + '%';
+          }}
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 11, weight: '700' } } },
+        y: {
+          ticks: { callback: function(v){ return (v >= 0 ? '+' : '') + v.toFixed(1) + '%'; }, font: { size: 10 } },
+          grid: {
+            color: function(ctx) { return Math.abs(ctx.tick.value) < 0.01 ? 'rgba(0,0,0,.25)' : '#f0f0f0'; },
+            lineWidth: function(ctx) { return Math.abs(ctx.tick.value) < 0.01 ? 2.5 : 1; }
+          }
+        }
+      },
+      spanGaps: true
+    }
+  });
+}
+
+// Tabela de incremento: Regional + NEXUS + VITAL + distritos
+// Helper compartilhado para cabeçalhos e células dos incrementos
+// Cada mês mostra: Cota | ΔR$ | Δ% (exceto o primeiro que só tem Cota)
+function _incrMakeHeaderCols(meses) {
+  return meses.map(function(m, i) {
+    return i === 0
+      ? '<th class="th-mes-hdr" colspan="1">' + m + '</th>'
+      : '<th class="th-mes-hdr" colspan="3">' + m + '</th>';
+  }).join('');
+}
+function _incrMakeSubCols(meses) {
+  return meses.map(function(m, i) {
+    return i === 0
+      ? '<th class="th-sub" style="border-left:1px solid #f5f5f5">Cota</th>'
+      : '<th class="th-sub">Cota</th><th class="th-sub">Δ R$</th><th class="th-sub">Δ%</th>';
+  }).join('');
+}
+function _incrRowCells(meses, getCotaFn) {
+  var cells = '', prev = null;
+  meses.forEach(function(m, i) {
+    var curr = getCotaFn(m);
+    if (i === 0) {
+      cells += '<td style="border-left:1px solid #f0f0f0;text-align:right">' + fmtBRL(curr) + '</td>';
+    } else {
+      var dAbs = (prev !== null && prev > 0) ? curr - prev : null;
+      var dPct = (prev !== null && prev > 0) ? (curr - prev) / prev * 100 : null;
+      var cls  = dAbs !== null ? (dAbs >= 0 ? 'cota-pct-ok' : 'cota-pct-crit') : '';
+      var absStr = dAbs !== null
+        ? (dAbs >= 0 ? '+R$ ' : '-R$ ') + Math.abs(Math.round(dAbs)).toLocaleString('pt-BR')
+        : '—';
+      var pctStr = dPct !== null ? (dPct >= 0 ? '+' : '') + dPct.toFixed(1) + '%' : '—';
+      cells += '<td class="td-mes-sep">' + fmtBRL(curr) + '</td>';
+      cells += '<td class="' + cls + '">' + absStr + '</td>';
+      cells += '<td class="' + cls + '">' + pctStr + '</td>';
+    }
+    prev = curr;
+  });
+  return cells;
+}
+
+function renderCotaIncrementoTable(meses, distritos) {
+  var nexusDists = distritos.filter(function(d){ return d.linha === 'NEXUS'; });
+  var vitalDists = distritos.filter(function(d){ return d.linha === 'VITAL'; });
+  // Total de colunas de dados: 1 (base) + (n-1)*3
+  var nDataCols = 1 + (meses.length - 1) * 3;
+
+  var html = '<div class="cota-table-wrap"><table class="cota-table">';
+  html += '<thead><tr>';
+  html += '<th class="th-label" rowspan="2">Nível / Distrito</th>';
+  html += _incrMakeHeaderCols(meses);
+  html += '</tr><tr>' + _incrMakeSubCols(meses) + '</tr></thead><tbody>';
+
+  // Regional / NEXUS / VITAL
+  html += '<tr class="row-total"><td class="td-label">Total Regional</td>' + _incrRowCells(meses, function(m){ return getCotaReg(m, null); }) + '</tr>';
+  html += '<tr class="row-nexus"><td class="td-label">↳ NEXUS</td>' + _incrRowCells(meses, function(m){ return getCotaReg(m, 'NEXUS'); }) + '</tr>';
+  html += '<tr class="row-vital"><td class="td-label">↳ VITAL</td>' + _incrRowCells(meses, function(m){ return getCotaReg(m, 'VITAL'); }) + '</tr>';
+
+  // Distritos NEXUS
+  html += '<tr class="row-nexus"><td class="td-label" colspan="' + (nDataCols + 1) + '" style="font-size:9.5px;letter-spacing:.8px;padding:6px 10px">NEXUS — distritos</td></tr>';
+  nexusDists.forEach(function(d, i) {
+    var cor = ANUAL_NEXUS_COLORS[i % ANUAL_NEXUS_COLORS.length];
+    html += '<tr class="row-dist"><td class="td-label"><span style="display:inline-flex;align-items:center;gap:6px">' +
+      '<span style="width:7px;height:7px;border-radius:50%;background:' + cor + ';flex-shrink:0"></span>' +
+      (d.ab || d.nome || d.distrito_id) + '</span></td>' +
+      _incrRowCells(meses, function(m){ return getCotaDist(m, d.distrito_id, 'NEXUS'); }) + '</tr>';
+  });
+
+  // Distritos VITAL
+  html += '<tr class="row-vital"><td class="td-label" colspan="' + (nDataCols + 1) + '" style="font-size:9.5px;letter-spacing:.8px;padding:6px 10px">VITAL — distritos</td></tr>';
+  vitalDists.forEach(function(d, i) {
+    var cor = ANUAL_VITAL_COLORS[i % ANUAL_VITAL_COLORS.length];
+    html += '<tr class="row-dist"><td class="td-label"><span style="display:inline-flex;align-items:center;gap:6px">' +
+      '<span style="width:7px;height:7px;border-radius:50%;background:' + cor + ';flex-shrink:0"></span>' +
+      (d.ab || d.nome || d.distrito_id) + '</span></td>' +
+      _incrRowCells(meses, function(m){ return getCotaDist(m, d.distrito_id, 'VITAL'); }) + '</tr>';
+  });
+
+  html += '</tbody></table></div>';
+  return html;
+}
+
+// Tabela de incremento por produto (NEXUS ou VITAL)
+function renderCotaIncrementoProdutoTable(meses, linha) {
+  // Coleta todos os produtos únicos (union dos meses)
+  var produtosSet = {};
+  meses.forEach(function(m) {
+    var d = DADOS_CACHE[m]; if (!d) return;
+    var arr = linha === 'NEXUS' ? (d.prodNex || []) : (d.prodVit || []);
+    arr.forEach(function(r) { if (r.produto) produtosSet[normProd(r.produto)] = r.produto; });
+  });
+  var produtos = Object.keys(produtosSet).sort(function(a, b) {
+    var ak = isMarcaChave(a, linha) ? 0 : 1;
+    var bk = isMarcaChave(b, linha) ? 0 : 1;
+    return ak !== bk ? ak - bk : a.localeCompare(b);
+  });
+
+  if (!produtos.length) {
+    return '<p style="color:var(--gray);font-size:12px;padding:12px 0">Sem dados de produto para ' + linha + '.</p>';
+  }
+
+  var nDataCols = 1 + (meses.length - 1) * 3;
+
+  var html = '<div class="cota-table-wrap"><table class="cota-table">';
+  html += '<thead><tr>';
+  html += '<th class="th-label" rowspan="2">Produto</th>';
+  html += _incrMakeHeaderCols(meses);
+  html += '</tr><tr>' + _incrMakeSubCols(meses) + '</tr></thead><tbody>';
+
+  produtos.forEach(function(pNorm) {
+    var pNome = produtosSet[pNorm];
+    var isMC  = isMarcaChave(pNorm, linha);
+    html += '<tr class="row-prod' + (isMC ? ' row-prod-chave' : '') + '">';
+    html += '<td class="td-label">' + pNome + (isMC ? '<span class="mc-badge">★ CHAVE</span>' : '') + '</td>';
+    html += _incrRowCells(meses, function(m){ return getCotaProd(m, pNorm, linha); });
+    html += '</tr>';
+  });
+
+  html += '</tbody></table></div>';
+  return html;
+}
+
+function cotaSwitchIncrProdTab(linha) {
+  document.getElementById('cota-incr-prod-tab-nex').className = 'cota-tab' + (linha === 'NEXUS' ? ' an' : '');
+  document.getElementById('cota-incr-prod-tab-vit').className = 'cota-tab' + (linha === 'VITAL' ? ' av' : '');
+  document.getElementById('cota-incr-prod-content').innerHTML =
+    renderCotaIncrementoProdutoTable(window._cotaMeses || [], linha);
+}
+
+// Toggle do gráfico de barras de incremento
+function cotaSwitchIncrLinha(linhaKey, btn) {
+  COTA_INCR_LINHA = linhaKey;
+  document.querySelectorAll('.cota-incr-tab').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+  buildCotaIncrementoChart('cota-chart-incr-bar', window._cotaMeses || [], linhaKey);
+}
+
+// ── Render Principal ──────────────────────────────────────────────
+function renderEvolucaoCota(meses, distritos) {
+  // Tab produto inicial
+  var _cotaProdTab = 'NEXUS';
+
+  var ytdHtml = '<div class="cota-ytd-row">' +
+    renderCotaYTDCard('📍 Total Regional', '#111827', meses, null) +
+    renderCotaYTDCard('🔵 NEXUS', '#1A3A6B', meses, 'NEXUS') +
+    renderCotaYTDCard('🔴 VITAL', '#b91c1c', meses, 'VITAL') +
+  '</div>';
+
+  // Gráfico barras regional — filtro de linha
+  var barTabs = '<div class="cota-filter-row">' +
+    '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)">Linha:</span>' +
+    '<button class="afbtn cota-bar-tab active" onclick="cotaSwitchBarLinha(\'TOTAL\',this,_cotaMeses)">Total</button>' +
+    '<button class="afbtn afbtn-nexus cota-bar-tab" onclick="cotaSwitchBarLinha(\'NEXUS\',this,_cotaMeses)">NEXUS</button>' +
+    '<button class="afbtn afbtn-vital cota-bar-tab" onclick="cotaSwitchBarLinha(\'VITAL\',this,_cotaMeses)">VITAL</button>' +
+  '</div>';
+
+  var sec1Html =
+    '<div class="cota-section">' +
+    '<div class="cota-section-hdr">📊 Evolução Regional</div>' +
+    '<div class="cota-charts-row">' +
+      '<div class="cota-chart-card">' +
+        '<div class="cota-chart-hdr"><span>Cota vs Realizado (R$)</span></div>' +
+        barTabs +
+        '<div class="cota-canvas-wrap"><canvas id="cota-chart-bar"></canvas></div>' +
+      '</div>' +
+      '<div class="cota-chart-card">' +
+        '<div class="cota-chart-hdr"><span>% Atingimento</span><span style="font-size:10px;color:var(--gray)">verde = 100% · vermelho = 80%</span></div>' +
+        '<div class="cota-canvas-wrap"><canvas id="cota-chart-ating-reg"></canvas></div>' +
+      '</div>' +
+    '</div>' +
+    renderCotaTableRegional(meses) +
+    '</div>';
+
+  // Seção Incremento de Cota
+  var incrBarTabs = '<div class="cota-filter-row">' +
+    '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)">Linha:</span>' +
+    '<button class="afbtn cota-incr-tab active" onclick="cotaSwitchIncrLinha(\'TOTAL\',this)">Total</button>' +
+    '<button class="afbtn afbtn-nexus cota-incr-tab" onclick="cotaSwitchIncrLinha(\'NEXUS\',this)">NEXUS</button>' +
+    '<button class="afbtn afbtn-vital cota-incr-tab" onclick="cotaSwitchIncrLinha(\'VITAL\',this)">VITAL</button>' +
+  '</div>';
+
+  var secIncrHtml =
+    '<div class="cota-section">' +
+    '<div class="cota-section-hdr">📐 Incremento de Cota Mensal' +
+      '<span style="font-size:11px;font-weight:400;color:var(--gray)">Variação da cota vs mês anterior · verde = crescimento · vermelho = redução</span>' +
+    '</div>' +
+    '<div class="cota-charts-row">' +
+      '<div class="cota-chart-card">' +
+        '<div class="cota-chart-hdr"><span>Δ Cota em R$ (vs mês anterior)</span></div>' +
+        incrBarTabs +
+        '<div class="cota-canvas-wrap"><canvas id="cota-chart-incr-bar"></canvas></div>' +
+      '</div>' +
+      '<div class="cota-chart-card">' +
+        '<div class="cota-chart-hdr"><span>Δ% Cota · Total · NEXUS · VITAL</span><span style="font-size:10px;color:var(--gray)">pontos = crescimento (verde) ou queda (vermelho)</span></div>' +
+        '<div class="cota-canvas-wrap"><canvas id="cota-chart-incr-pct"></canvas></div>' +
+      '</div>' +
+    '</div>' +
+    renderCotaIncrementoTable(meses, distritos) +
+    '<div style="font-size:13px;font-weight:700;display:flex;align-items:center;gap:10px;margin:24px 0 14px;padding-top:18px;border-top:1px solid var(--border)">' +
+      '<span>📦</span><span>Incremento por Produto</span>' +
+    '</div>' +
+    '<div class="cota-tabs">' +
+      '<button class="cota-tab an" id="cota-incr-prod-tab-nex" onclick="cotaSwitchIncrProdTab(\'NEXUS\')">NEXUS</button>' +
+      '<button class="cota-tab" id="cota-incr-prod-tab-vit" onclick="cotaSwitchIncrProdTab(\'VITAL\')">VITAL</button>' +
+    '</div>' +
+    '<div id="cota-incr-prod-content">' + renderCotaIncrementoProdutoTable(meses, 'NEXUS') + '</div>' +
+    '</div>';
+
+  var sec2Html =
+    '<div class="cota-section">' +
+    '<div class="cota-section-hdr">🏢 Evolução por Distrito</div>' +
+    '<div class="cota-chart-card">' +
+      '<div class="cota-chart-hdr"><span>% Atingimento por Distrito</span><span style="font-size:10px;color:var(--gray)">verde = 100% · vermelho = 80%</span></div>' +
+      '<div class="cota-canvas-wrap" style="height:320px"><canvas id="cota-chart-dist"></canvas></div>' +
+    '</div>' +
+    renderCotaTableDist(meses, distritos) +
+    '</div>';
+
+  var sec3Html =
+    '<div class="cota-section">' +
+    '<div class="cota-section-hdr">📦 Evolução por Produto</div>' +
+    '<div class="cota-tabs">' +
+      '<button class="cota-tab an" id="cota-tab-nex" onclick="cotaSwitchProdTab(\'NEXUS\')">NEXUS</button>' +
+      '<button class="cota-tab" id="cota-tab-vit" onclick="cotaSwitchProdTab(\'VITAL\')">VITAL</button>' +
+    '</div>' +
+    '<div id="cota-prod-content">' + renderCotaTableProduto(meses, 'NEXUS') + '</div>' +
+    '</div>';
+
+  var pageHdr =
+    '<div class="cota-page-hdr">' +
+    '<button class="cota-back-btn" onclick="irParaMes(MES_ATUAL)">← Voltar ao Dashboard</button>' +
+    '<div>' +
+      '<div style="font-size:16px;font-weight:800">📈 Evolução de Cota · 2026</div>' +
+      '<div style="font-size:11px;color:var(--gray);margin-top:2px">Regional SPI OESTE · Cardiometabólico · Cota vs Realizado mês a mês</div>' +
+    '</div>' +
+    '</div>';
+
+  document.getElementById('main-content').innerHTML =
+    pageHdr + ytdHtml + sec1Html + secIncrHtml + sec2Html + sec3Html;
+
+  // Expõe meses para os callbacks dos botões
+  window._cotaMeses = meses;
+
+  requestAnimationFrame(function() {
+    // Bar chart — Total inicial
+    buildCotaBarChart('cota-chart-bar',
+      meses,
+      meses.map(function(m){ return getCotaReg(m, null); }),
+      meses.map(function(m){ return getRealReg(m, null); }));
+
+    // % Atingimento regional
+    buildCotaAtingChart('cota-chart-ating-reg', meses, function(m, lin, field) {
+      return field === 'cota' ? getCotaReg(m, lin) : getRealReg(m, lin);
+    });
+
+    // % Atingimento por distrito
+    buildCotaDistAtingChart('cota-chart-dist', meses, distritos);
+
+    // Incremento de cota
+    buildCotaIncrementoChart('cota-chart-incr-bar', meses, 'TOTAL');
+    buildCotaIncrementoPctChart('cota-chart-incr-pct', meses);
+  });
+}
+
+function cotaSwitchProdTab(linha) {
+  document.getElementById('cota-tab-nex').className = 'cota-tab' + (linha === 'NEXUS' ? ' an' : '');
+  document.getElementById('cota-tab-vit').className = 'cota-tab' + (linha === 'VITAL' ? ' av' : '');
+  document.getElementById('cota-prod-content').innerHTML =
+    renderCotaTableProduto(window._cotaMeses || [], linha);
+}
+
+async function abrirEvolucaoCota() {
+  VIEW_ATUAL = 'cota';
+  DISTRITO_ATIVO = null;
+  var meses = CONFIG._meses || [];
+  renderCycleBar(meses, null);
+  mostrarLoading(true);
+  try {
+    setLoadingTxt('Carregando evolução de cota…');
+    var promises = meses.map(function(m){ return carregarMes(m).catch(function(){}); });
+    await Promise.all(promises);
+    var mesPivot = meses[meses.length - 1];
+    var dadosPivot = DADOS_CACHE[mesPivot];
+    if (!dadosPivot) throw new Error('Sem dados para montar a evolução de cota.');
+    renderEvolucaoCota(meses, dadosPivot.distritos || []);
+  } catch(e) {
+    renderErro(e.message);
+  }
+  mostrarLoading(false);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── Renderização: Distrito cards ──────────────────────────────────
+
+function renderDistritoCard(d, reps) {
+  var cls     = d.linha === 'NEXUS' ? 'nc' : 'vc';
+  var _dprod  = safeFloat(d.prod);
+  var prodPct = _dprod !== null ? (_dprod * 100).toFixed(1) : '—';
+  var ativo   = DISTRITO_ATIVO === d.distrito_id ? ' ativo' : '';
+
+  // Mini-jornada da equipe do distrito
+  var repsD = reps.filter(function(r) {
+    return r.distrito_id === d.distrito_id && r.vago !== 'True' && r.vago !== true;
+  });
+  var miniJ = {};
+  repsD.forEach(function(r) {
+    var e = getJornadaRep(r.setor_id, r.nome);
+    miniJ[e] = (miniJ[e] || 0) + 1;
+  });
+  var miniJHtml = '';
+  if (Object.keys(miniJ).length) {
+    miniJHtml = '<div class="jornada-mini">' +
+      JORNADA_ORDER.filter(function(s){return miniJ[s];}).map(function(s){
+        var c = jornadaCfg(s);
+        return '<span style="display:inline-block;padding:1px 6px;border-radius:8px;font-size:9px;font-weight:700;background:' + c.bg + ';color:' + c.color + ';border:1px solid ' + c.border + '">' + s + ' ' + miniJ[s] + '</span>';
+      }).join('') +
+    '</div>';
+  }
+
+  return '<div class="dcard ' + cls + ativo + '" onclick="abrirDistrito(\'' + d.distrito_id + '\')">' +
+    '<div class="dcard-hd">' +
+      '<div class="dcard-linha">' + d.linha + '</div>' +
+      '<div class="dcard-nome">' + (d.ab || d.nm || d.distrito_id) + '</div>' +
+      '<div class="dcard-cod">' + d.distrito_id + '</div>' +
+      '<div class="prod-badge"><div class="pb-n">' + prodPct + '%</div><div class="pb-l">PROD MDV</div></div>' +
+    '</div>' +
+    '<div class="dcard-body">' +
+      '<div class="diag ' + dgClass(d.diagnostico) + '">' + dgIcon(d.diagnostico) + ' ' +
+        (d.diagnostico === 'ok' ? 'Prod. 100%+' : d.diagnostico === 'warn' ? 'Prod. abaixo da meta' : 'Crítico — Plano urgente') +
+      '</div>' +
+      miniJHtml +
+    '</div>' +
+    '<div class="dcard-ft">' +
+      '<span class="dcard-reps">' + (d.reps_ativos || '—') + ' reps ativos</span>' +
+      '<span class="dcard-cta">' + (DISTRITO_ATIVO === d.distrito_id ? 'Fechar ✕' : 'Ver detalhes →') + '</span>' +
+    '</div>' +
+  '</div>';
+}
+
+// ── Distrito detalhe ─────────────────────────────────────────────
+
+function abrirDistrito(distritoId) {
+  // Toggle
+  if (DISTRITO_ATIVO === distritoId) {
+    fecharDistrito();
+    return;
+  }
+  fecharDistrito(true);
+  DISTRITO_ATIVO = distritoId;
+
+  var d = window._D;
+  if (!d) return;
+
+  var distrito = d.distritos.find(function(x) { return x.distrito_id === distritoId; });
+  if (!distrito) return;
+
+  var repsD = d.reps.filter(function(r) {
+    return r.distrito_id === distritoId && r.vago !== 'True' && r.vago !== true;
+  });
+
+  var isNexus = distrito.linha === 'NEXUS';
+  var linhaColor = isNexus ? 'var(--nexus)' : 'var(--red)';
+  var prodRepD = (isNexus ? d.prodRepNex : d.prodRepVit)
+    .filter(function(p) { return p.distrito_id === distritoId; });
+
+  // Header
+  var html = '<div class="dd-hdr">' +
+    '<span class="dd-linha-tag" style="background:' + (isNexus ? 'var(--nexus-l)' : 'var(--red-l)') + ';color:' + linhaColor + '">' + distrito.linha + '</span>' +
+    '<span class="dd-title">' + (distrito.ab || distrito.nm || distritoId) + '</span>' +
+    '<span class="dd-cod">' + distritoId + '</span>' +
+    '<button class="dd-close" onclick="fecharDistrito()">✕</button>' +
+  '</div>';
+
+  // Tabela de reps com jornada
+  html += '<div class="dd-section-lbl">Equipe &amp; Jornada da Evolução</div>';
+  html += '<div style="overflow-x:auto"><table class="dd-rep-table"><thead><tr>' +
+    '<th>Representante</th><th>Setor</th><th>Jornada</th>' +
+    '<th>Prod. %</th><th>Q1</th><th>Q2</th><th>Q3</th><th>Q4</th><th>Cob. Painel</th>' +
+    '</tr></thead><tbody>';
+
+  repsD.forEach(function(r) {
+    var etapa   = getJornadaRep(r.setor_id, r.nome);
+    var prodPct = safeFloat(r.prod);
+    html += '<tr>' +
+      '<td style="font-weight:600">' + (r.nome || '—') + '</td>' +
+      '<td style="color:var(--gray);font-size:11px">' + (r.setor_id || '—') + '</td>' +
+      '<td>' + jornadaBadge(etapa) + '</td>' +
+      '<td style="' + prodColor(prodPct) + ';font-weight:700">' + (prodPct !== null ? prodPct.toFixed(1) + '%' : '—') + '</td>' +
+      '<td>' + pct(r.q1) + '</td>' +
+      '<td>' + pct(r.q2) + '</td>' +
+      '<td>' + pct(r.q3) + '</td>' +
+      '<td>' + pct(r.q4) + '</td>' +
+      '<td>' + pct(r.cob_painel) + '</td>' +
+    '</tr>';
+  });
+  html += '</tbody></table></div>';
+
+  // Tabela de produto por rep (se disponível)
+  if (prodRepD.length) {
+    var produtos = [];
+    prodRepD.forEach(function(p) { if (produtos.indexOf(p.produto) < 0) produtos.push(p.produto); });
+    var linhaD = isNexus ? 'NEXUS' : 'VITAL';
+    // Marcas chave primeiro, depois restante alfabético
+    produtos.sort(function(a, b) {
+      var ak = isMarcaChave(a, linhaD) ? 0 : 1;
+      var bk = isMarcaChave(b, linhaD) ? 0 : 1;
+      if (ak !== bk) return ak - bk;
+      return a.localeCompare(b);
+    });
+
+    html += '<div class="dd-section-lbl" style="margin-top:18px">Atingimento por Produto — Representante</div>';
+    html += '<div style="overflow-x:auto"><table class="prod-table"><thead><tr><th>Produto</th>';
+    repsD.forEach(function(r) {
+      var primeiro = (r.nome || r.setor_id).split(' ')[0];
+      html += '<th class="r" title="' + (r.nome || r.setor_id) + '">' + primeiro + '</th>';
+    });
+    html += '</tr></thead><tbody>';
+
+    produtos.forEach(function(produto) {
+      var isMC = isMarcaChave(produto, linhaD);
+      html += '<tr' + (isMC ? ' class="prod-chave"' : '') + '>' +
+        '<td class="prod-nome">' + produto + (isMC ? '<span class="mc-badge">★ CHAVE</span>' : '') + '</td>';
+      repsD.forEach(function(r) {
+        var reg = prodRepD.find(function(p) { return p.produto === produto && p.setor_id === r.setor_id; });
+        if (reg && reg.ating_pct !== null && reg.ating_pct !== undefined && reg.ating_pct !== '') {
+          var at = parseFloat(reg.ating_pct);
+          html += '<td class="r ' + atClass(at) + '">' + at.toFixed(1) + '%</td>';
+        } else {
+          html += '<td class="r" style="color:#ccc">—</td>';
+        }
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+  } else {
+    html += '<div style="margin-top:12px;font-size:11px;color:var(--gray);padding:10px;background:var(--light);border-radius:6px">💡 Dados de produto por representante disponíveis após executar <code>ingest.py --mes ' + MES_ATUAL + '</code></div>';
+  }
+
+  // Exibe no painel correto
+  var panelId = isNexus ? 'detalhe-nexus' : 'detalhe-vital';
+  var panel   = document.getElementById(panelId);
+  if (panel) {
+    panel.innerHTML = html;
+    panel.classList.add('open');
+    // Re-renderiza os cards para marcar o ativo
+    reRenderGrids(d.distritos, d.reps);
+    setTimeout(function() { panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 50);
+  }
+}
+
+function fecharDistrito(silencioso) {
+  DISTRITO_ATIVO = null;
+  document.querySelectorAll('.distrito-detalhe').forEach(function(el) {
+    el.classList.remove('open');
+    el.innerHTML = '';
+  });
+  if (!silencioso && window._D) {
+    reRenderGrids(window._D.distritos, window._D.reps);
+  }
+}
+
+function reRenderGrids(distritos, reps) {
+  var nexus = distritos.filter(function(d){ return d.linha === 'NEXUS'; });
+  var vital = distritos.filter(function(d){ return d.linha === 'VITAL'; });
+  var gn = document.getElementById('grid-nexus');
+  var gv = document.getElementById('grid-vital');
+  if (gn) gn.innerHTML = nexus.map(function(d){ return renderDistritoCard(d, reps); }).join('');
+  if (gv) gv.innerHTML = vital.map(function(d){ return renderDistritoCard(d, reps); }).join('');
+}
+
+// ── Renderização: Produto Atingimento ────────────────────────────
+
+function renderProdutoAtingimento(dados) {
+  var html = '<div class="prod-ating-card" id="prod-ating">';
+  html += '<div class="card-title"><div class="cc-bar"></div>Atingimento por Produto</div>';
+
+  // Linha tabs (Nexus | Vital)
+  html += '<div class="prod-tabs-row">' +
+    '<button class="ptab linha-nexus' + (PROD_LINHA === 'NEXUS' ? ' active' : '') + '" onclick="switchProdLinha(\'NEXUS\')">NEXUS</button>' +
+    '<button class="ptab' + (PROD_LINHA === 'VITAL' ? ' active' : '') + '" onclick="switchProdLinha(\'VITAL\')">VITAL</button>' +
+    '<div class="ptab-sep"></div>' +
+    '<button class="ptab' + (PROD_NIVEL === 'regional' ? ' active' : '') + '" onclick="switchProdNivel(\'regional\')">Regional</button>' +
+    '<button class="ptab' + (PROD_NIVEL === 'distrito' ? ' active' : '') + '" onclick="switchProdNivel(\'distrito\')">Por Distrito</button>' +
+    '<button class="ptab' + (PROD_NIVEL === 'rep' ? ' active' : '') + '" onclick="switchProdNivel(\'rep\')">Por Representante</button>' +
+  '</div>';
+
+  html += '<div id="prod-content"></div>';
+  html += '</div>';
+  return html;
+}
+
+function switchProdLinha(linha) {
+  PROD_LINHA = linha;
+  PROD_DIST_SEL = null;
+  // Atualiza estilo dos botões de linha
+  document.querySelectorAll('.prod-ating-card .ptab.linha-nexus').forEach(function(b){
+    b.classList.toggle('active', linha === 'NEXUS');
+  });
+  document.querySelectorAll('.prod-ating-card .ptab:not(.linha-nexus)').forEach(function(b, i){
+    if (i === 0) b.classList.toggle('active', linha === 'VITAL');
+  });
+  atualizarProdContent();
+}
+
+function switchProdNivel(nivel) {
+  PROD_NIVEL = nivel;
+  PROD_DIST_SEL = null;
+  // Re-renderiza a seção inteira para atualizar estados dos botões
+  var card = document.getElementById('prod-ating');
+  if (card && window._D) {
+    var novoHtml = renderProdutoAtingimento(window._D);
+    card.outerHTML = novoHtml;
+    atualizarProdContent();
+  }
+}
+
+function selectProdDist(did) {
+  PROD_DIST_SEL = did;
+  atualizarProdContent();
+  // Atualiza visual dos botões de distrito
+  document.querySelectorAll('.pdist-btn').forEach(function(b) {
+    b.classList.toggle('active', b.getAttribute('data-did') === did);
+  });
+}
+
+function atualizarProdContent() {
+  var p = window._D;
+  if (!p) return;
+  var el = document.getElementById('prod-content');
+  if (!el) return;
+
+  var prodReg  = PROD_LINHA === 'NEXUS' ? p.prodNex      : p.prodVit;
+  var prodDist = PROD_LINHA === 'NEXUS' ? p.prodDistNex  : p.prodDistVit;
+  var prodRep  = PROD_LINHA === 'NEXUS' ? p.prodRepNex   : p.prodRepVit;
+  var distrLinha = p.distritos.filter(function(d){ return d.linha === PROD_LINHA; });
+
+  var html = '';
+
+  if (PROD_NIVEL === 'regional') {
+    html = renderProdTableSimples(prodReg, PROD_LINHA);
+
+  } else if (PROD_NIVEL === 'distrito') {
+    html += renderDistPills(distrLinha);
+    if (PROD_DIST_SEL) {
+      var filtrado = prodDist.filter(function(p) { return p.distrito_id === PROD_DIST_SEL; });
+      html += filtrado.length
+        ? renderProdTableSimples(filtrado, PROD_LINHA)
+        : '<div class="prod-empty">Sem dados de produto por distrito. Execute <code>ingest.py --mes ' + MES_ATUAL + '</code></div>';
+    } else {
+      html += '<div class="prod-empty">Selecione um distrito acima.</div>';
+    }
+
+  } else if (PROD_NIVEL === 'rep') {
+    html += renderDistPills(distrLinha);
+    if (PROD_DIST_SEL) {
+      var filtradoRep = prodRep.filter(function(p) { return p.distrito_id === PROD_DIST_SEL; });
+      html += filtradoRep.length
+        ? renderProdTablePorRep(filtradoRep, PROD_LINHA)
+        : '<div class="prod-empty">Sem dados de produto por representante. Execute <code>ingest.py --mes ' + MES_ATUAL + '</code></div>';
+    } else {
+      html += '<div class="prod-empty">Selecione um distrito acima.</div>';
+    }
+  }
+
+  el.innerHTML = html;
+}
+
+function renderDistPills(distritos) {
+  return '<div class="prod-dist-pills">' +
+    distritos.map(function(d) {
+      return '<button class="pdist-btn' + (PROD_DIST_SEL === d.distrito_id ? ' active' : '') +
+        '" data-did="' + d.distrito_id + '" onclick="selectProdDist(\'' + d.distrito_id + '\')">' +
+        (d.ab || d.distrito_id) + '</button>';
+    }).join('') +
+  '</div>';
+}
+
+function renderProdTableSimples(dados, linha) {
+  if (!dados || !dados.length) {
+    return '<div class="prod-empty">Sem dados de produto disponíveis para este período.</div>';
+  }
+  // Marcas chave primeiro, depois restante alfabético
+  var sorted = dados.slice().sort(function(a, b) {
+    var ak = isMarcaChave(a.produto, linha) ? 0 : 1;
+    var bk = isMarcaChave(b.produto, linha) ? 0 : 1;
+    if (ak !== bk) return ak - bk;
+    return (a.produto || '').localeCompare(b.produto || '');
+  });
+  var temAting = sorted.some(function(r) { return r.ating_pct !== null && r.ating_pct !== undefined && r.ating_pct !== ''; });
+  var temCresc  = sorted.some(function(r) { return r.crescimento !== null && r.crescimento !== undefined && r.crescimento !== ''; });
+  var temCob    = sorted.some(function(r) { return r.cobertura   !== null && r.cobertura   !== undefined && r.cobertura   !== ''; });
+
+  var html = '<div style="overflow-x:auto"><table class="prod-table"><thead><tr>' +
+    '<th>Produto</th><th class="r">Cota</th><th class="r">Realizado</th>';
+  if (temAting) html += '<th class="r">Ating. %</th>';
+  if (temCresc) html += '<th class="r">Cresc. %</th>';
+  if (temCob)   html += '<th class="r">Cob. %</th>';
+  html += '</tr></thead><tbody>';
+
+  sorted.forEach(function(r) {
+    var isMC = isMarcaChave(r.produto, linha);
+    var at = (r.ating_pct !== null && r.ating_pct !== '' && r.ating_pct !== undefined)
+      ? parseFloat(r.ating_pct) : null;
+    if (at === null && r.cota && r.realizado && parseFloat(r.cota) > 0) {
+      at = parseFloat(r.realizado) / parseFloat(r.cota) * 100;
+    }
+    html += '<tr' + (isMC ? ' class="prod-chave"' : '') + '>' +
+      '<td class="prod-nome">' + (r.produto || '—') +
+        (isMC ? '<span class="mc-badge">★ CHAVE</span>' : '') + '</td>' +
+      '<td class="r">' + numBR(r.cota) + '</td>' +
+      '<td class="r">' + numBR(r.realizado) + '</td>';
+    if (temAting) html += '<td class="r ' + atClass(at) + '">' + (at !== null ? at.toFixed(1) + '%' : '—') + '</td>';
+    if (temCresc) html += '<td class="r">' + pct(r.crescimento) + '</td>';
+    if (temCob)   html += '<td class="r">' + pct(r.cobertura)   + '</td>';
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+  return html;
+}
+
+function renderProdTablePorRep(dados, linha) {
+  if (!dados || !dados.length) {
+    return '<div class="prod-empty">Sem dados.</div>';
+  }
+  var produtos = [];
+  dados.forEach(function(p) { if (produtos.indexOf(p.produto) < 0) produtos.push(p.produto); });
+  // Marcas chave primeiro, depois restante alfabético
+  produtos.sort(function(a, b) {
+    var ak = isMarcaChave(a, linha) ? 0 : 1;
+    var bk = isMarcaChave(b, linha) ? 0 : 1;
+    if (ak !== bk) return ak - bk;
+    return a.localeCompare(b);
+  });
+
+  var repsIds = [];
+  var repNomes = {};
+  dados.forEach(function(r) {
+    if (repsIds.indexOf(r.setor_id) < 0) repsIds.push(r.setor_id);
+    repNomes[r.setor_id] = r.nome || r.setor_id;
+  });
+
+  var html = '<div style="overflow-x:auto"><table class="prod-table"><thead><tr><th>Produto</th>';
+  repsIds.forEach(function(rid) {
+    var primo = (repNomes[rid] || rid).split(' ')[0];
+    html += '<th class="r" title="' + (repNomes[rid] || rid) + '">' + primo + '</th>';
+  });
+  html += '</tr></thead><tbody>';
+
+  produtos.forEach(function(produto) {
+    var isMC = isMarcaChave(produto, linha);
+    html += '<tr' + (isMC ? ' class="prod-chave"' : '') + '>' +
+      '<td class="prod-nome">' + produto + (isMC ? '<span class="mc-badge">★ CHAVE</span>' : '') + '</td>';
+    repsIds.forEach(function(rid) {
+      var reg = dados.find(function(p) { return p.produto === produto && p.setor_id === rid; });
+      var at = null;
+      if (reg) {
+        if (reg.ating_pct !== null && reg.ating_pct !== undefined && reg.ating_pct !== '') {
+          at = parseFloat(reg.ating_pct);
+        } else if (reg.cota && reg.realizado && parseFloat(reg.cota) > 0) {
+          at = parseFloat(reg.realizado) / parseFloat(reg.cota) * 100;
+        }
+      }
+      if (at !== null) {
+        html += '<td class="r ' + atClass(at) + '">' + at.toFixed(1) + '%</td>';
+      } else {
+        html += '<td class="r" style="color:#ccc">—</td>';
+      }
+    });
+    html += '</tr>';
+  });
+
+  html += '</tbody></table></div>';
+  return html;
+}
+
+// ── Achados e Chart ───────────────────────────────────────────────
+
+function renderAchados(distritos) {
+  var criticos = distritos.filter(function(d){ return d.diagnostico === 'crit'; });
+  var destaque = distritos.filter(function(d){ return d.diagnostico === 'ok';   });
+  var atencao  = distritos.filter(function(d){ return d.diagnostico === 'warn'; });
+
+  var html = '<div class="achados"><div class="sec-hdr"><div class="sec-title">Achados Estratégicos</div><div class="sec-line"></div></div>';
+
+  if (criticos.length) {
+    html += '<div class="achado r"><div class="achado-dim">🔴 Crítico</div><div class="achado-txt">' +
+      criticos.map(function(d){ return (d.ab||d.distrito_id) + ' (' + d.linha + ')'; }).join(' · ') +
+      ' — produtividade abaixo de 80%. Plano de ação imediato.</div></div>';
+  }
+  if (atencao.length) {
+    html += '<div class="achado y"><div class="achado-dim">⚠ Atenção</div><div class="achado-txt">' +
+      atencao.map(function(d){ return (d.ab||d.distrito_id); }).join(' · ') +
+      ' — entre 80% e 99%. Monitorar tendência.</div></div>';
+  }
+  if (destaque.length) {
+    html += '<div class="achado g"><div class="achado-dim">✔ Destaque</div><div class="achado-txt">' +
+      destaque.map(function(d){ return (d.ab||d.distrito_id); }).join(' · ') +
+      ' — atingiram 100%+. Identificar e replicar boas práticas.</div></div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+function renderChartProdutividade(distritos, mes) {
+  return '<div class="chart-card">' +
+    '<div class="card-title"><div class="cc-bar"></div>Produtividade por Distrito — ' + mes + '/2026</div>' +
+    '<canvas id="chart-prod" height="80"></canvas>' +
+    '</div>';
+}
+
+function buildChartProdutividade(distritos) {
+  var el = document.getElementById('chart-prod');
+  if (!el) return;
+  if (CHART_PROD) { CHART_PROD.destroy(); CHART_PROD = null; }
+
+  var labels = distritos.map(function(d){ return (d.ab||d.distrito_id) + '\n' + d.linha; });
+  var valores = distritos.map(function(d){ return d.prod !== null ? parseFloat(d.prod)*100 : 0; });
+  var cores = distritos.map(function(d){
+    var p = parseFloat(d.prod)||0;
+    return p >= 1.0 ? 'rgba(21,105,58,.75)' : p >= 0.8 ? 'rgba(232,119,34,.75)' : 'rgba(200,16,46,.8)';
+  });
+
+  CHART_PROD = new Chart(el.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{ data: valores, backgroundColor: cores, borderRadius: 6, borderSkipped: false }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: function(c){ return c.parsed.y.toFixed(1)+'%'; } } }
+      },
+      scales: {
+        y: {
+          beginAtZero: true, max: 130,
+          ticks: { callback: function(v){ return v+'%'; } },
+          grid: { color: '#f0f0f0' }
+        },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+}
+
+// ── Controller ────────────────────────────────────────────────────
+
+function renderTudo(dados, mes) {
+  PROD_DIST_SEL = null; // reset seleção de distrito no produto
+
+  var distritos  = dados.distritos  || [];
+  var reps       = dados.reps       || [];
+  var nexus      = distritos.filter(function(d){ return d.linha === 'NEXUS'; });
+  var vital      = distritos.filter(function(d){ return d.linha === 'VITAL'; });
+
+  // Salva dados globalmente para uso nos painéis interativos
+  window._D = dados;
+
+  var html = '';
+
+  // 1. KPIs
+  html += renderKPIs(dados);
+
+  // 2. JORNADA DA EVOLUÇÃO
+  html += renderJornada(reps, distritos);
+
+  // 3. PEX
+  html += renderPEX(dados.pex || [], distritos);
+
+  // 4. ANÁLISE & ALERTAS (preview — abre página dedicada)
+  html += renderBotaoAnalise(dados, mes);
+
+  // 6. NEXUS – cards + painel de detalhe
+  html += '<div class="sec-hdr"><div class="sec-title">NEXUS</div><div class="sec-line"></div><span class="badge n">4 distritos</span></div>';
+  html += '<div class="dgrid" id="grid-nexus">' + nexus.map(function(d){ return renderDistritoCard(d, reps); }).join('') + '</div>';
+  html += '<div class="distrito-detalhe" id="detalhe-nexus"></div>';
+
+  // 5. VITAL – cards + painel de detalhe
+  html += '<div class="sec-hdr"><div class="sec-title">VITAL</div><div class="sec-line"></div><span class="badge v">4 distritos</span></div>';
+  html += '<div class="dgrid" id="grid-vital">' + vital.map(function(d){ return renderDistritoCard(d, reps); }).join('') + '</div>';
+  html += '<div class="distrito-detalhe" id="detalhe-vital"></div>';
+
+  // 6. PRODUTO ATINGIMENTO
+  html += renderProdutoAtingimento(dados);
+
+  // 7. Chart
+  html += renderChartProdutividade(distritos, mes);
+
+  // 8. Achados
+  html += renderAchados(distritos);
+
+  document.getElementById('main-content').innerHTML = html;
+
+  // Inicializa o conteúdo de produto
+  atualizarProdContent();
+
+  requestAnimationFrame(function(){ buildChartProdutividade(distritos); });
+}
+
+async function trocarMes(mes) {
+  var wasAnual = VIEW_ATUAL === 'anual';
+  var wasCota  = VIEW_ATUAL === 'cota';
+  if (wasAnual || wasCota) VIEW_ATUAL = 'principal';
+  if (MES_ATUAL === mes && !wasAnual && !wasCota) return;
+  MES_ATUAL = mes;
+  DISTRITO_ATIVO = null;
+
+  document.getElementById('pill-mes').textContent = mes + '/2026';
+  // Atualiza botões: mês ativo, anual inativo
+  document.querySelectorAll('.cycle-btn').forEach(function(btn){
+    if (btn.classList.contains('anual-btn') || btn.classList.contains('cota-btn')) {
+      btn.classList.remove('active');
+    } else {
+      btn.classList.toggle('active', btn.textContent.startsWith(mes));
+    }
+  });
+
+  mostrarLoading(true);
+  try {
+    var mesAnt = getMesAnterior(mes);
+    var promises = [carregarMes(mes)];
+    if (mesAnt) promises.push(carregarMes(mesAnt).catch(function(){}));
+    var resultados = await Promise.all(promises);
+    if (VIEW_ATUAL === 'analise') {
+      renderViewAnalise(resultados[0], mes);
+    } else {
+      renderTudo(resultados[0], mes);
+    }
+  } catch(e) {
+    renderErro(e.message);
+  }
+  mostrarLoading(false);
+}
+
+function renderErro(msg) {
+  document.getElementById('main-content').innerHTML =
+    '<div class="error-card">' +
+    '<div class="error-icon">⚠️</div>' +
+    '<div class="error-title">Erro ao carregar dados</div>' +
+    '<div class="error-sub">' + (msg || 'Verifique a conexão e as configurações.') + '</div>' +
+    '</div>';
+}
+
+function mostrarLoading(show) {
+  document.getElementById('loading').style.display = show ? 'flex' : 'none';
+}
+function setLoadingTxt(txt) {
+  var el = document.getElementById('loading-txt');
+  if (el) el.textContent = txt;
+}
+
+// ── Init ──────────────────────────────────────────────────────────
+
+async function init() {
+  mostrarLoading(true);
+
+  try {
+    // Carregar config local (credenciais)
+    setLoadingTxt('Carregando configuração…');
+    var res = await fetch('config.json');
+    if (!res.ok) throw new Error('config.json não encontrado. Execute python scripts/setup.py primeiro.');
+    CONFIG = await res.json();
+
+    if (!CONFIG.spreadsheet_id || !CONFIG.api_key) {
+      throw new Error('SPREADSHEET_ID ou API_KEY não configurados em config.json.');
+    }
+
+    // ── Item 1: Meses ao vivo direto do Sheets ──
+    setLoadingTxt('Buscando meses disponíveis…');
+    var meses = CONFIG.meses_disponiveis || [];
+    try {
+      var cfgRows = await fetchAba('config');
+      var mesesStr = '';
+      cfgRows.forEach(function(r) {
+        if (r.chave === 'meses_disponiveis') mesesStr = r.valor || '';
+      });
+      if (mesesStr) {
+        var mesesSheets = mesesStr.split(',').map(function(m){ return m.trim(); }).filter(Boolean);
+        if (mesesSheets.length) meses = mesesSheets; // usa o Sheets (mais atualizado)
+      }
+    } catch(e) {
+      console.warn('Não foi possível ler meses do Sheets — usando config.json');
+    }
+
+    if (!meses.length) throw new Error('Nenhum mês disponível. Execute pipeline.py primeiro.');
+
+    CONFIG._meses = meses; // guarda para uso em abrirVisaoAnual()
+
+    var mesInicial = CONFIG.mes_padrao || meses[meses.length - 1];
+    MES_ATUAL = mesInicial;
+
+    document.getElementById('pill-mes').textContent = mesInicial + '/2026';
+    document.getElementById('pill-atualizacao').textContent =
+      'Atualizado: ' + (CONFIG.ultima_atualizacao ? CONFIG.ultima_atualizacao.substring(0,10) : '—');
+
+    renderCycleBar(meses, mesInicial);
+
+    // Carrega jornada, mês atual e mês anterior (para análise comparativa) em paralelo
+    setLoadingTxt('Carregando dados do time…');
+    var mesAntInicial = getMesAnterior(mesInicial);
+    var initPromises = [carregarJornada(), carregarMes(mesInicial)];
+    if (mesAntInicial) initPromises.push(carregarMes(mesAntInicial).catch(function(){}));
+    await Promise.all(initPromises);
+
+    renderTudo(DADOS_CACHE[mesInicial], mesInicial);
+
+  } catch(e) {
+    renderErro(e.message);
+  }
+
+  mostrarLoading(false);
+}
+
+init();
+</script>
+</body>
+</html>

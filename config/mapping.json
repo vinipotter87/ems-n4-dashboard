@@ -1,0 +1,27 @@
+{
+  "regional": "SPI OESTE",
+  "divisao": "Cardiometabolico",
+  "drive_dados_folder": "1a_yM6ro5-ziGrqcS02sRk1_u7aInBIk-",
+  "distritos": {
+    "110301000": { "linha": "NEXUS", "ab": "Joao Rafael",       "nm": "Joao Rafael de Franca Nunes Leardini" },
+    "110302000": { "linha": "NEXUS", "ab": "Murillo Cesar",     "nm": "Murillo Cesar Barbosa dos Santos" },
+    "110303000": { "linha": "NEXUS", "ab": "Geovana Buttignon", "nm": "Geovana Buttignon" },
+    "110304000": { "linha": "NEXUS", "ab": "Vanessa Araujo",    "nm": "Vanessa Araujo Ferreira Lima" },
+    "116301000": { "linha": "VITAL", "ab": "Fabiano Machado",   "nm": "Fabiano Atanazio Machado" },
+    "116302000": { "linha": "VITAL", "ab": "Daniel Costa",      "nm": "Daniel Antonio Costa" },
+    "116303000": { "linha": "VITAL", "ab": "Clarissa Costa",    "nm": "Clarissa Costa Ribeiro de Carvalho" },
+    "116304000": { "linha": "VITAL", "ab": "Michael Mota",      "nm": "Michael Aparecido da Silva Mota" }
+  },
+  "prefixos_spi": {
+    "NEXUS": "11030",
+    "VITAL": "11630"
+  },
+  "produtos_nexus": ["LYBERDIA", "DEPOSTERON", "BRAMICAR", "BRAMICAR HCT", "LEFOR", "AGLITIL", "OLIRE", "LIRUX"],
+  "produtos_vital": ["BRASART", "BRASART BCC", "BRASART HCT", "BUPIUM XL", "CONCARDIO", "ESCILEX", "IMENSE", "LINADIB", "LINADIB DUO", "LIRUX", "OLIRE", "PATZ SL"],
+  "meses_ordem": ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"],
+  "diagnostico_thresholds": {
+    "ok":   1.00,
+    "warn": 0.80,
+    "crit": 0.00
+  }
+}
