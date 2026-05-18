@@ -884,6 +884,50 @@ function renderVisitasTable(meses, distritos) {
   return html;
 }
 
+// Seção resumida de Visitas GD para a página mensal principal
+function renderVisitasMes(dados, mes, distritos) {
+  var visitasNex = dados.visitasNex || [];
+  var visitasVit = dados.visitasVit || [];
+  var todos = visitasNex.concat(visitasVit);
+  if (!todos.length) return ''; // sem dados de visitas para este mês
+
+  var nexDists = distritos.filter(function(d){ return d.linha === 'NEXUS'; });
+  var vitDists = distritos.filter(function(d){ return d.linha === 'VITAL'; });
+
+  function buildRows(dists, linha, visitasArr) {
+    return dists.map(function(dist) {
+      var r = visitasArr.find(function(v){ return String(v.distrito_id) === String(dist.distrito_id); });
+      var obj  = r ? parseFloat(r.obj)     : null; if (isNaN(obj))  obj  = null;
+      var real = r ? parseFloat(r.real)    : null; if (isNaN(real)) real = null;
+      var cob  = r ? parseFloat(r.cob_pct) : null; if (isNaN(cob))  cob  = null;
+      var dias = r ? parseFloat(r.dias)    : null; if (isNaN(dias)) dias = null;
+      var cc   = cobClass(cob);
+      var rowCls = linha === 'NEXUS' ? 'row-nexus' : 'row-vital';
+      return '<tr class="' + rowCls + '">' +
+        '<td class="td-gd">' + (dist.ab || dist.nm || '') + '</td>' +
+        '<td>' + (obj  !== null ? Math.round(obj)  : '—') + '</td>' +
+        '<td>' + (real !== null ? Math.round(real) : '—') + '</td>' +
+        '<td class="' + cc + '">' + fmtCob(cob) + '</td>' +
+        '<td>' + (dias !== null ? Math.round(dias) : '—') + '</td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  var html = '<div style="margin:0 0 28px">';
+  html += '<div class="sec-hdr"><div class="sec-title">PANORAMA — VISITAS GD</div><div class="sec-line"></div>';
+  html += '<span style="font-size:11px;color:var(--gray)">' + mes + '/2026</span></div>';
+  html += '<div class="visitas-chart-wrap" style="margin-top:8px">';
+  html += '<div class="visitas-table-wrap"><table class="visitas-table"><thead>';
+  html += '<tr><th class="th-gd">GD</th><th class="th-mes">Obj</th><th class="th-mes">Real</th><th class="th-mes">Cob%</th><th class="th-mes">Dias</th></tr>';
+  html += '</thead><tbody>';
+  html += '<tr class="row-sep"><td colspan="5">🔵 NEXUS</td></tr>';
+  html += buildRows(nexDists, 'NEXUS', visitasNex);
+  html += '<tr class="row-sep"><td colspan="5">🔴 VITAL</td></tr>';
+  html += buildRows(vitDists, 'VITAL', visitasVit);
+  html += '</tbody></table></div></div></div>';
+  return html;
+}
+
 function renderVisitasGD(meses, distritos) {
   VIEW_ATUAL = 'visitas';
   window._visitasMeses    = meses;
@@ -961,11 +1005,10 @@ async function abrirVisitasGD() {
   VIEW_ATUAL = 'visitas';
   mostrarLoading(true);
   try {
-    var meses = window._mesesDisponiveis || [MES_ATUAL];
+    var meses = (CONFIG && CONFIG._meses && CONFIG._meses.length) ? CONFIG._meses : [MES_ATUAL];
     var proms = meses.map(function(m){ return carregarMes(m).catch(function(){}); });
     await Promise.all(proms);
 
-    // Coleta distritos do mês mais recente
     var mesSel = MES_ATUAL || meses[meses.length - 1];
     var dados  = DADOS_CACHE[mesSel] || {};
     var distritos = dados.distritos || [];
@@ -3628,7 +3671,10 @@ function renderTudo(dados, mes) {
   // 3. PEX
   html += renderPEX(dados.pex || [], distritos);
 
-  // 4. ANÁLISE & ALERTAS (preview — abre página dedicada)
+  // 4. VISITAS GD do mês
+  html += renderVisitasMes(dados, mes, distritos);
+
+  // 5. ANÁLISE & ALERTAS (preview — abre página dedicada)
   html += renderBotaoAnalise(dados, mes);
 
   // 6. NEXUS – cards + painel de detalhe
