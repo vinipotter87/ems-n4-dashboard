@@ -648,7 +648,8 @@ async function carregarMes(mes) {
 
   var [distritos, reps, prodNex, prodVit,
        prodDistNex, prodDistVit,
-       prodRepNex,  prodRepVit, pex] = await Promise.all([
+       prodRepNex,  prodRepVit, pex,
+       visitasNex,  visitasVit] = await Promise.all([
     fetchAba('distritos_' + mes).catch(function() { return []; }),
     fetchAba('reps_' + mes).catch(function() { return []; }),
     fetchAba('produtos_NEXUS_' + mes).catch(function() { return []; }),
