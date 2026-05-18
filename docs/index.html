@@ -363,6 +363,34 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
 .cota-pct-ok{color:#15803d;font-weight:700}
 .cota-pct-warn{color:#854d0e;font-weight:700}
 .cota-pct-crit{color:#b91c1c;font-weight:700}
+/* Visitas GD */
+.cycle-btn.visitas-btn{border-color:#0369a1;color:#0369a1}
+.cycle-btn.visitas-btn.active{background:#e0f2fe;border-color:#0369a1;color:#0369a1}
+.visitas-kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+.visitas-kpi{background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px 18px}
+.visitas-kpi.nexus{border-left:4px solid #1e3a8a}
+.visitas-kpi.vital{border-left:4px solid #7f1d1d}
+.visitas-kpi .vk-label{font-size:10px;font-weight:600;text-transform:uppercase;color:var(--gray);letter-spacing:.06em;margin-bottom:6px}
+.visitas-kpi .vk-val{font-size:26px;font-weight:700;color:var(--text)}
+.visitas-kpi .vk-sub{font-size:11px;color:var(--gray);margin-top:2px}
+.visitas-chart-wrap{background:#fff;border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin-bottom:24px}
+.visitas-chart-wrap h3{font-size:13px;font-weight:600;color:var(--text);margin:0 0 14px}
+.visitas-table-wrap{overflow-x:auto}
+.visitas-table{width:100%;border-collapse:collapse;font-size:12px}
+.visitas-table th{background:#f8f9fa;padding:7px 10px;text-align:center;font-weight:600;color:#555;border-bottom:2px solid var(--border);white-space:nowrap}
+.visitas-table th.th-gd{text-align:left;min-width:140px}
+.visitas-table th.th-linha-nexus{background:#dbeafe;color:#1e3a8a;border-left:2px solid #1e3a8a}
+.visitas-table th.th-linha-vital{background:#fee2e2;color:#7f1d1d;border-left:2px solid #7f1d1d}
+.visitas-table th.th-mes{background:#f1f5f9;color:#334155}
+.visitas-table td{padding:6px 10px;border-bottom:1px solid #f0f0f0;text-align:center;color:var(--text)}
+.visitas-table td.td-gd{text-align:left;font-weight:600}
+.visitas-table td.td-sep{border-left:2px solid var(--border)}
+.visitas-table tr.row-nexus td.td-gd{color:#1e3a8a}
+.visitas-table tr.row-vital td.td-gd{color:#7f1d1d}
+.visitas-table tr.row-sep td{background:#f8f9fa;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#555;padding:5px 10px}
+.visitas-cob-ok{color:#15803d;font-weight:700}
+.visitas-cob-warn{color:#854d0e;font-weight:700}
+.visitas-cob-crit{color:#b91c1c;font-weight:700}
 .cota-tabs{display:flex;gap:6px;margin-bottom:16px}
 .cota-tab{padding:6px 18px;border-radius:8px;border:2px solid var(--border);background:#fff;font-size:11px;font-weight:700;cursor:pointer;color:var(--gray);font-family:inherit;transition:all .12s}
 .cota-tab.an{border-color:var(--nexus);color:var(--nexus);background:var(--nexus-l)}
@@ -629,11 +657,14 @@ async function carregarMes(mes) {
     fetchAba('produtos_dist_VITAL_' + mes).catch(function() { return []; }),
     fetchAba('produtos_rep_NEXUS_' + mes).catch(function() { return []; }),
     fetchAba('produtos_rep_VITAL_' + mes).catch(function() { return []; }),
-    fetchAba('pex_' + mes).catch(function() { return []; })
+    fetchAba('pex_' + mes).catch(function() { return []; }),
+    fetchAba('visitas_NEXUS_' + mes).catch(function() { return []; }),
+    fetchAba('visitas_VITAL_' + mes).catch(function() { return []; })
   ]);
 
   DADOS_CACHE[mes] = { distritos, reps, prodNex, prodVit,
-                       prodDistNex, prodDistVit, prodRepNex, prodRepVit, pex };
+                       prodDistNex, prodDistVit, prodRepNex, prodRepVit, pex,
+                       visitasNex, visitasVit };
   return DADOS_CACHE[mes];
 }
 
@@ -705,14 +736,246 @@ function kpiCard(cls, lbl, val, sub) {
     '<div class="kpi-val">' + val + '</div><div class="kpi-sub">' + sub + '</div></div>';
 }
 
+// ── Visitas GD ────────────────────────────────────────────────────
+
+var VISITAS_CHART = null;
+
+function getVisitas(mes, linha) {
+  var d = DADOS_CACHE[mes]; if (!d) return [];
+  return linha === 'NEXUS' ? (d.visitasNex || []) : (d.visitasVit || []);
+}
+
+function getVisitasGDRow(mes, linha, distId) {
+  var arr = getVisitas(mes, linha);
+  return arr.find(function(r){ return String(r.distrito_id) === String(distId); }) || null;
+}
+
+function cobClass(pct) {
+  if (pct === null || pct === undefined) return '';
+  if (pct >= 100) return 'visitas-cob-ok';
+  if (pct >= 80)  return 'visitas-cob-warn';
+  return 'visitas-cob-crit';
+}
+
+function fmtCob(pct) {
+  if (pct === null || pct === undefined) return '—';
+  return pct.toFixed(1) + '%';
+}
+
+function buildVisitasChart(canvasId, meses, distritos) {
+  var ctx = document.getElementById(canvasId);
+  if (!ctx) return;
+  if (VISITAS_CHART) { VISITAS_CHART.destroy(); VISITAS_CHART = null; }
+
+  var NEX_COLORS = ['#1e3a8a','#2563eb','#38bdf8','#06b6d4'];
+  var VIT_COLORS = ['#7f1d1d','#b91c1c','#f43f5e','#fb7185'];
+  var nexDists = distritos.filter(function(d){ return d.linha === 'NEXUS'; });
+  var vitDists = distritos.filter(function(d){ return d.linha === 'VITAL'; });
+
+  var datasets = [];
+  nexDists.forEach(function(dist, i) {
+    datasets.push({
+      label: dist.ab || dist.nm || dist.distrito_id,
+      data: meses.map(function(m){
+        var r = getVisitasGDRow(m, 'NEXUS', dist.distrito_id);
+        return r ? r.cob_pct : null;
+      }),
+      borderColor: NEX_COLORS[i % 4],
+      backgroundColor: NEX_COLORS[i % 4] + '22',
+      tension: 0.3, borderWidth: 2, pointRadius: 4, spanGaps: true
+    });
+  });
+  vitDists.forEach(function(dist, i) {
+    datasets.push({
+      label: dist.ab || dist.nm || dist.distrito_id,
+      data: meses.map(function(m){
+        var r = getVisitasGDRow(m, 'VITAL', dist.distrito_id);
+        return r ? r.cob_pct : null;
+      }),
+      borderColor: VIT_COLORS[i % 4],
+      backgroundColor: VIT_COLORS[i % 4] + '22',
+      tension: 0.3, borderWidth: 2, pointRadius: 4, spanGaps: true
+    });
+  });
+
+  VISITAS_CHART = new Chart(ctx, {
+    type: 'line',
+    data: { labels: meses, datasets: datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) {
+              return ctx.dataset.label + ': ' + (ctx.raw !== null ? ctx.raw.toFixed(1) + '%' : '—');
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          ticks: { callback: function(v){ return v + '%'; }, font: { size: 11 } },
+          grid: { color: '#f0f0f0' }
+        },
+        x: { ticks: { font: { size: 11 } } }
+      }
+    }
+  });
+}
+
+function renderVisitasTable(meses, distritos) {
+  var nexDists = distritos.filter(function(d){ return d.linha === 'NEXUS'; });
+  var vitDists = distritos.filter(function(d){ return d.linha === 'VITAL'; });
+  var nMeses   = meses.length;
+
+  var html = '<div class="visitas-table-wrap"><table class="visitas-table"><thead>';
+  // Linha 1: GD + meses
+  html += '<tr><th class="th-gd" rowspan="2">GD</th>';
+  meses.forEach(function(m) {
+    html += '<th class="th-mes" colspan="4">' + m + '</th>';
+  });
+  html += '</tr>';
+  // Linha 2: sub-colunas
+  html += '<tr>';
+  meses.forEach(function() {
+    html += '<th class="th-mes">Obj</th><th class="th-mes">Real</th><th class="th-mes">Cob%</th><th class="th-mes">Dias</th>';
+  });
+  html += '</tr></thead><tbody>';
+
+  function buildRow(dist, linha, cls) {
+    var row = '<tr class="' + cls + '">';
+    row += '<td class="td-gd">' + (dist.ab || dist.nm || dist.distrito_id) + '</td>';
+    meses.forEach(function(m, mi) {
+      var r = getVisitasGDRow(m, linha, dist.distrito_id);
+      var obj  = r ? r.obj  : null;
+      var real = r ? r.real : null;
+      var cob  = r ? r.cob_pct : null;
+      var dias = r ? r.dias : null;
+      var sepCls = mi === 0 ? ' td-sep' : '';
+      var cc = cobClass(cob);
+      row += '<td class="' + sepCls + '">' + (obj  !== null ? Math.round(obj)  : '—') + '</td>';
+      row += '<td>' + (real !== null ? Math.round(real) : '—') + '</td>';
+      row += '<td class="' + cc + '">' + fmtCob(cob) + '</td>';
+      row += '<td>' + (dias !== null ? Math.round(dias) : '—') + '</td>';
+    });
+    row += '</tr>';
+    return row;
+  }
+
+  // Separador NEXUS
+  html += '<tr class="row-sep"><td colspan="' + (1 + nMeses * 4) + '">🔵 NEXUS</td></tr>';
+  nexDists.forEach(function(d){ html += buildRow(d, 'NEXUS', 'row-nexus'); });
+
+  // Separador VITAL
+  html += '<tr class="row-sep"><td colspan="' + (1 + nMeses * 4) + '">🔴 VITAL</td></tr>';
+  vitDists.forEach(function(d){ html += buildRow(d, 'VITAL', 'row-vital'); });
+
+  html += '</tbody></table></div>';
+  return html;
+}
+
+function renderVisitasGD(meses, distritos) {
+  VIEW_ATUAL = 'visitas';
+  window._visitasMeses    = meses;
+  window._visitasDistritos = distritos;
+
+  var mesSel = MES_ATUAL || meses[meses.length - 1];
+
+  // KPIs do mês selecionado
+  function avgCob(linha) {
+    var arr = getVisitas(mesSel, linha).filter(function(r){ return r.cob_pct !== null && r.cob_pct !== undefined; });
+    if (!arr.length) return null;
+    return arr.reduce(function(s,r){ return s + r.cob_pct; }, 0) / arr.length;
+  }
+  function avgDias(linha) {
+    var arr = getVisitas(mesSel, linha).filter(function(r){ return r.dias !== null && r.dias !== undefined; });
+    if (!arr.length) return null;
+    return arr.reduce(function(s,r){ return s + r.dias; }, 0) / arr.length;
+  }
+  function sumReal(linha) {
+    return getVisitas(mesSel, linha).reduce(function(s,r){ return s + (r.real || 0); }, 0);
+  }
+  function sumObj(linha) {
+    return getVisitas(mesSel, linha).reduce(function(s,r){ return s + (r.obj || 0); }, 0);
+  }
+
+  function kpiCard(titulo, val, sub, cls) {
+    return '<div class="visitas-kpi ' + cls + '">' +
+      '<div class="vk-label">' + titulo + '</div>' +
+      '<div class="vk-val">' + val + '</div>' +
+      '<div class="vk-sub">' + sub + '</div></div>';
+  }
+
+  var nCobN = avgCob('NEXUS'); var nCobV = avgCob('VITAL');
+  var nDiasN = avgDias('NEXUS'); var nDiasV = avgDias('VITAL');
+
+  var html = '<div style="padding:24px">';
+  html += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">';
+  html += '<h2 style="margin:0;font-size:17px;font-weight:700;color:var(--text)">👁 Visitas GD — Acompanhamento</h2>';
+  html += '<span style="font-size:12px;background:#e0f2fe;color:#0369a1;padding:3px 10px;border-radius:20px;font-weight:600">' + mesSel + '/2026</span>';
+  html += '</div>';
+
+  // KPIs
+  html += '<div class="visitas-kpi-grid">';
+  html += kpiCard('NEXUS · Cob. Média', nCobN !== null ? nCobN.toFixed(1) + '%' : '—',
+    sumReal('NEXUS') + ' / ' + sumObj('NEXUS') + ' acomp.', 'nexus');
+  html += kpiCard('NEXUS · Média Dias', nDiasN !== null ? nDiasN.toFixed(1) : '—',
+    'dias/GD no mês', 'nexus');
+  html += kpiCard('VITAL · Cob. Média', nCobV !== null ? nCobV.toFixed(1) + '%' : '—',
+    sumReal('VITAL') + ' / ' + sumObj('VITAL') + ' acomp.', 'vital');
+  html += kpiCard('VITAL · Média Dias', nDiasV !== null ? nDiasV.toFixed(1) : '—',
+    'dias/GD no mês', 'vital');
+  html += '</div>';
+
+  // Gráfico evolução
+  html += '<div class="visitas-chart-wrap">';
+  html += '<h3>📈 Evolução da Cobertura de Acompanhamento (%)</h3>';
+  html += '<div style="height:260px"><canvas id="chart-visitas-cob"></canvas></div>';
+  html += '</div>';
+
+  // Tabela completa
+  html += '<div class="visitas-chart-wrap">';
+  html += '<h3>📋 Detalhamento por GD e Mês</h3>';
+  html += renderVisitasTable(meses, distritos);
+  html += '</div>';
+
+  html += '</div>';
+
+  document.getElementById('main-content').innerHTML = html;
+  requestAnimationFrame(function(){
+    buildVisitasChart('chart-visitas-cob', meses, distritos);
+  });
+}
+
+async function abrirVisitasGD() {
+  VIEW_ATUAL = 'visitas';
+  mostrarLoading(true);
+  try {
+    var meses = window._mesesDisponiveis || [MES_ATUAL];
+    var proms = meses.map(function(m){ return carregarMes(m).catch(function(){}); });
+    await Promise.all(proms);
+
+    // Coleta distritos do mês mais recente
+    var mesSel = MES_ATUAL || meses[meses.length - 1];
+    var dados  = DADOS_CACHE[mesSel] || {};
+    var distritos = dados.distritos || [];
+
+    renderCycleBar(meses, mesSel);
+    renderVisitasGD(meses, distritos);
+  } catch(e) { renderErro(e.message); }
+  finally    { mostrarLoading(false); }
+}
+
 // ── Renderização: Mês ─────────────────────────────────────────────
 
 function renderCycleBar(meses, mesAtual) {
   var bar = document.getElementById('cycle-bar');
-  var isAnual = VIEW_ATUAL === 'anual';
-  var isCota  = VIEW_ATUAL === 'cota';
+  var isAnual    = VIEW_ATUAL === 'anual';
+  var isCota     = VIEW_ATUAL === 'cota';
+  var isVisitas  = VIEW_ATUAL === 'visitas';
   var btns = meses.map(function(m) {
-    return '<button class="cycle-btn' + (m === mesAtual && !isAnual && !isCota ? ' active' : '') +
+    return '<button class="cycle-btn' + (m === mesAtual && !isAnual && !isCota && !isVisitas ? ' active' : '') +
       '" onclick="trocarMes(\'' + m + '\')">' + m + '/2026</button>';
   }).join('');
   btns += '<span style="display:inline-block;width:1px;height:22px;background:var(--border);margin:0 6px;align-self:center"></span>';
@@ -720,6 +983,8 @@ function renderCycleBar(meses, mesAtual) {
     '" onclick="abrirVisaoAnual()">📅 Visão Anual</button>';
   btns += '<button class="cycle-btn cota-btn' + (isCota ? ' active' : '') +
     '" onclick="abrirEvolucaoCota()">📈 Cota</button>';
+  btns += '<button class="cycle-btn visitas-btn' + (isVisitas ? ' active' : '') +
+    '" onclick="abrirVisitasGD()">👁 Visitas GD</button>';
   bar.innerHTML = btns;
 }
 
@@ -1973,8 +2238,8 @@ async function abrirVisaoAnual() {
   VIEW_ATUAL = 'anual';
   DISTRITO_ATIVO = null;
 
-  // Atualiza cycle bar: nenhum mês ativo, anual ativo
   var meses = CONFIG._meses || [];
+  window._mesesDisponiveis = meses;
   renderCycleBar(meses, null);
 
   mostrarLoading(true);
@@ -2824,6 +3089,7 @@ function renderEvolucaoCota(meses, distritos) {
 
   // Expõe meses para os callbacks dos botões
   window._cotaMeses = meses;
+  window._mesesDisponiveis = meses;
 
   requestAnimationFrame(function() {
     // Bar chart — Total inicial
@@ -2857,6 +3123,7 @@ async function abrirEvolucaoCota() {
   VIEW_ATUAL = 'cota';
   DISTRITO_ATIVO = null;
   var meses = CONFIG._meses || [];
+  window._mesesDisponiveis = meses;
   renderCycleBar(meses, null);
   mostrarLoading(true);
   try {
@@ -3383,17 +3650,17 @@ function renderTudo(dados, mes) {
 }
 
 async function trocarMes(mes) {
-  var wasAnual = VIEW_ATUAL === 'anual';
-  var wasCota  = VIEW_ATUAL === 'cota';
-  if (wasAnual || wasCota) VIEW_ATUAL = 'principal';
-  if (MES_ATUAL === mes && !wasAnual && !wasCota) return;
+  var wasAnual   = VIEW_ATUAL === 'anual';
+  var wasCota    = VIEW_ATUAL === 'cota';
+  var wasVisitas = VIEW_ATUAL === 'visitas';
+  if (wasAnual || wasCota || wasVisitas) VIEW_ATUAL = 'principal';
+  if (MES_ATUAL === mes && !wasAnual && !wasCota && !wasVisitas) return;
   MES_ATUAL = mes;
   DISTRITO_ATIVO = null;
 
   document.getElementById('pill-mes').textContent = mes + '/2026';
-  // Atualiza botões: mês ativo, anual inativo
   document.querySelectorAll('.cycle-btn').forEach(function(btn){
-    if (btn.classList.contains('anual-btn') || btn.classList.contains('cota-btn')) {
+    if (btn.classList.contains('anual-btn') || btn.classList.contains('cota-btn') || btn.classList.contains('visitas-btn')) {
       btn.classList.remove('active');
     } else {
       btn.classList.toggle('active', btn.textContent.startsWith(mes));
