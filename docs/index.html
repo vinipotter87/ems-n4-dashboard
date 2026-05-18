@@ -752,15 +752,17 @@ function getVisitasGDRow(mes, linha, distId) {
 }
 
 function cobClass(pct) {
-  if (pct === null || pct === undefined) return '';
-  if (pct >= 100) return 'visitas-cob-ok';
-  if (pct >= 80)  return 'visitas-cob-warn';
+  var v = parseFloat(pct);
+  if (isNaN(v)) return '';
+  if (v >= 100) return 'visitas-cob-ok';
+  if (v >= 80)  return 'visitas-cob-warn';
   return 'visitas-cob-crit';
 }
 
 function fmtCob(pct) {
-  if (pct === null || pct === undefined) return '—';
-  return pct.toFixed(1) + '%';
+  var v = parseFloat(pct);
+  if (isNaN(v)) return '—';
+  return v.toFixed(1) + '%';
 }
 
 function buildVisitasChart(canvasId, meses, distritos) {
@@ -779,7 +781,8 @@ function buildVisitasChart(canvasId, meses, distritos) {
       label: dist.ab || dist.nm || dist.distrito_id,
       data: meses.map(function(m){
         var r = getVisitasGDRow(m, 'NEXUS', dist.distrito_id);
-        return r ? r.cob_pct : null;
+        if (!r) return null;
+        var v = parseFloat(r.cob_pct); return isNaN(v) ? null : v;
       }),
       borderColor: NEX_COLORS[i % 4],
       backgroundColor: NEX_COLORS[i % 4] + '22',
@@ -791,7 +794,8 @@ function buildVisitasChart(canvasId, meses, distritos) {
       label: dist.ab || dist.nm || dist.distrito_id,
       data: meses.map(function(m){
         var r = getVisitasGDRow(m, 'VITAL', dist.distrito_id);
-        return r ? r.cob_pct : null;
+        if (!r) return null;
+        var v = parseFloat(r.cob_pct); return isNaN(v) ? null : v;
       }),
       borderColor: VIT_COLORS[i % 4],
       backgroundColor: VIT_COLORS[i % 4] + '22',
@@ -849,10 +853,14 @@ function renderVisitasTable(meses, distritos) {
     row += '<td class="td-gd">' + (dist.ab || dist.nm || dist.distrito_id) + '</td>';
     meses.forEach(function(m, mi) {
       var r = getVisitasGDRow(m, linha, dist.distrito_id);
-      var obj  = r ? r.obj  : null;
-      var real = r ? r.real : null;
-      var cob  = r ? r.cob_pct : null;
-      var dias = r ? r.dias : null;
+      var obj  = r ? parseFloat(r.obj)     : NaN;
+      var real = r ? parseFloat(r.real)    : NaN;
+      var cob  = r ? parseFloat(r.cob_pct) : NaN;
+      var dias = r ? parseFloat(r.dias)    : NaN;
+      if (isNaN(obj))  obj  = null;
+      if (isNaN(real)) real = null;
+      if (isNaN(cob))  cob  = null;
+      if (isNaN(dias)) dias = null;
       var sepCls = mi === 0 ? ' td-sep' : '';
       var cc = cobClass(cob);
       row += '<td class="' + sepCls + '">' + (obj  !== null ? Math.round(obj)  : '—') + '</td>';
@@ -885,20 +893,20 @@ function renderVisitasGD(meses, distritos) {
 
   // KPIs do mês selecionado
   function avgCob(linha) {
-    var arr = getVisitas(mesSel, linha).filter(function(r){ return r.cob_pct !== null && r.cob_pct !== undefined; });
+    var arr = getVisitas(mesSel, linha).map(function(r){ return parseFloat(r.cob_pct); }).filter(function(v){ return !isNaN(v); });
     if (!arr.length) return null;
-    return arr.reduce(function(s,r){ return s + r.cob_pct; }, 0) / arr.length;
+    return arr.reduce(function(s,v){ return s + v; }, 0) / arr.length;
   }
   function avgDias(linha) {
-    var arr = getVisitas(mesSel, linha).filter(function(r){ return r.dias !== null && r.dias !== undefined; });
+    var arr = getVisitas(mesSel, linha).map(function(r){ return parseFloat(r.dias); }).filter(function(v){ return !isNaN(v); });
     if (!arr.length) return null;
-    return arr.reduce(function(s,r){ return s + r.dias; }, 0) / arr.length;
+    return arr.reduce(function(s,v){ return s + v; }, 0) / arr.length;
   }
   function sumReal(linha) {
-    return getVisitas(mesSel, linha).reduce(function(s,r){ return s + (r.real || 0); }, 0);
+    return getVisitas(mesSel, linha).reduce(function(s,r){ var v = parseFloat(r.real); return s + (isNaN(v) ? 0 : v); }, 0);
   }
   function sumObj(linha) {
-    return getVisitas(mesSel, linha).reduce(function(s,r){ return s + (r.obj || 0); }, 0);
+    return getVisitas(mesSel, linha).reduce(function(s,r){ var v = parseFloat(r.obj); return s + (isNaN(v) ? 0 : v); }, 0);
   }
 
   function kpiCard(titulo, val, sub, cls) {
