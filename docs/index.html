@@ -391,6 +391,40 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
 .visitas-cob-ok{color:#15803d;font-weight:700}
 .visitas-cob-warn{color:#854d0e;font-weight:700}
 .visitas-cob-crit{color:#b91c1c;font-weight:700}
+/* Glossário */
+.cycle-btn.gloss-btn{border-color:#64748b;color:#64748b}
+.cycle-btn.gloss-btn.active{background:#f1f5f9;border-color:#64748b;color:#334155}
+.gloss-wrap{padding:28px;max-width:900px;margin:0 auto}
+.gloss-wrap h1{font-size:20px;font-weight:700;color:var(--text);margin:0 0 6px}
+.gloss-wrap .gloss-sub{font-size:13px;color:var(--gray);margin-bottom:28px}
+.gloss-search{width:100%;padding:9px 14px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--text);outline:none;margin-bottom:28px;box-sizing:border-box}
+.gloss-search:focus{border-color:#1e3a8a}
+.gloss-section{margin-bottom:32px}
+.gloss-section-title{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--text);margin-bottom:14px;padding-bottom:8px;border-bottom:2px solid var(--border)}
+.gloss-section-title .gs-icon{font-size:18px}
+.gloss-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:12px}
+.gloss-card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px 18px;transition:box-shadow .15s}
+.gloss-card:hover{box-shadow:0 2px 12px rgba(0,0,0,.08)}
+.gloss-card.hidden{display:none}
+.gloss-card .gc-term{font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px}
+.gloss-card .gc-abbr{font-size:11px;font-weight:600;color:#fff;background:#475569;border-radius:4px;padding:1px 6px;margin-left:6px;vertical-align:middle}
+.gloss-card .gc-desc{font-size:12px;color:#444;line-height:1.6;margin-bottom:8px}
+.gloss-card .gc-formula{font-size:11px;background:#f8f9fa;border-left:3px solid #cbd5e1;padding:5px 10px;border-radius:0 4px 4px 0;color:#555;margin-bottom:8px;font-family:monospace}
+.gloss-card .gc-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.gloss-card .gc-tag{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:600}
+.gc-tag.t-prod{background:#dbeafe;color:#1e3a8a}
+.gc-tag.t-pex{background:#fef3c7;color:#92400e}
+.gc-tag.t-jornada{background:#dcfce7;color:#166534}
+.gc-tag.t-visitas{background:#e0f2fe;color:#0369a1}
+.gc-tag.t-estrutura{background:#f3e8ff;color:#6b21a8}
+.gc-tag.t-nexus{background:#dbeafe;color:#1e3a8a}
+.gc-tag.t-vital{background:#fee2e2;color:#7f1d1d}
+.gloss-semaforo{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+.gloss-sem-item{display:flex;align-items:center;gap:6px;font-size:12px;color:#444}
+.gloss-sem-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.gloss-card.nexus-accent{border-left:4px solid #1e3a8a}
+.gloss-card.vital-accent{border-left:4px solid #7f1d1d}
+.gloss-card.neutral-accent{border-left:4px solid #64748b}
 .cota-tabs{display:flex;gap:6px;margin-bottom:16px}
 .cota-tab{padding:6px 18px;border-radius:8px;border:2px solid var(--border);background:#fff;font-size:11px;font-weight:700;cursor:pointer;color:var(--gray);font-family:inherit;transition:all .12s}
 .cota-tab.an{border-color:var(--nexus);color:var(--nexus);background:var(--nexus-l)}
@@ -1026,17 +1060,17 @@ function renderCycleBar(meses, mesAtual) {
   var isAnual    = VIEW_ATUAL === 'anual';
   var isCota     = VIEW_ATUAL === 'cota';
   var isVisitas  = VIEW_ATUAL === 'visitas';
+  var isGloss    = VIEW_ATUAL === 'glossario';
+  var nenhuma    = isAnual || isCota || isVisitas || isGloss;
   var btns = meses.map(function(m) {
-    return '<button class="cycle-btn' + (m === mesAtual && !isAnual && !isCota && !isVisitas ? ' active' : '') +
+    return '<button class="cycle-btn' + (m === mesAtual && !nenhuma ? ' active' : '') +
       '" onclick="trocarMes(\'' + m + '\')">' + m + '/2026</button>';
   }).join('');
   btns += '<span style="display:inline-block;width:1px;height:22px;background:var(--border);margin:0 6px;align-self:center"></span>';
-  btns += '<button class="cycle-btn anual-btn' + (isAnual ? ' active' : '') +
-    '" onclick="abrirVisaoAnual()">📅 Visão Anual</button>';
-  btns += '<button class="cycle-btn cota-btn' + (isCota ? ' active' : '') +
-    '" onclick="abrirEvolucaoCota()">📈 Cota</button>';
-  btns += '<button class="cycle-btn visitas-btn' + (isVisitas ? ' active' : '') +
-    '" onclick="abrirVisitasGD()">👁 Visitas GD</button>';
+  btns += '<button class="cycle-btn anual-btn'   + (isAnual   ? ' active' : '') + '" onclick="abrirVisaoAnual()">📅 Visão Anual</button>';
+  btns += '<button class="cycle-btn cota-btn'    + (isCota    ? ' active' : '') + '" onclick="abrirEvolucaoCota()">📈 Cota</button>';
+  btns += '<button class="cycle-btn visitas-btn' + (isVisitas ? ' active' : '') + '" onclick="abrirVisitasGD()">👁 Visitas GD</button>';
+  btns += '<button class="cycle-btn gloss-btn'   + (isGloss   ? ' active' : '') + '" onclick="abrirGlossario()">📖 Glossário</button>';
   bar.innerHTML = btns;
 }
 
@@ -3708,14 +3742,16 @@ async function trocarMes(mes) {
   var wasAnual   = VIEW_ATUAL === 'anual';
   var wasCota    = VIEW_ATUAL === 'cota';
   var wasVisitas = VIEW_ATUAL === 'visitas';
-  if (wasAnual || wasCota || wasVisitas) VIEW_ATUAL = 'principal';
-  if (MES_ATUAL === mes && !wasAnual && !wasCota && !wasVisitas) return;
+  var wasGloss   = VIEW_ATUAL === 'glossario';
+  if (wasAnual || wasCota || wasVisitas || wasGloss) VIEW_ATUAL = 'principal';
+  if (MES_ATUAL === mes && !wasAnual && !wasCota && !wasVisitas && !wasGloss) return;
   MES_ATUAL = mes;
   DISTRITO_ATIVO = null;
 
   document.getElementById('pill-mes').textContent = mes + '/2026';
   document.querySelectorAll('.cycle-btn').forEach(function(btn){
-    if (btn.classList.contains('anual-btn') || btn.classList.contains('cota-btn') || btn.classList.contains('visitas-btn')) {
+    if (btn.classList.contains('anual-btn') || btn.classList.contains('cota-btn') ||
+        btn.classList.contains('visitas-btn') || btn.classList.contains('gloss-btn')) {
       btn.classList.remove('active');
     } else {
       btn.classList.toggle('active', btn.textContent.startsWith(mes));
@@ -3816,6 +3852,212 @@ async function init() {
   }
 
   mostrarLoading(false);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  GLOSSÁRIO
+// ═══════════════════════════════════════════════════════════════
+
+function abrirGlossario() {
+  VIEW_ATUAL = 'glossario';
+  var meses = (CONFIG && CONFIG._meses && CONFIG._meses.length) ? CONFIG._meses : [MES_ATUAL];
+  renderCycleBar(meses, MES_ATUAL);
+  renderGlossario();
+}
+
+function renderGlossario() {
+  var main = document.getElementById('main');
+
+  // ── helpers ──────────────────────────────────────────────────
+  function card(term, abbr, desc, formula, tags, accent) {
+    var abbrHtml = abbr ? '<span class="gc-abbr">' + abbr + '</span>' : '';
+    var formulaHtml = formula ? '<div class="gc-formula">' + formula + '</div>' : '';
+    var tagsHtml = tags.length
+      ? '<div class="gc-tags">' + tags.map(function(t){ return '<span class="gc-tag ' + t.cls + '">' + t.lbl + '</span>'; }).join('') + '</div>'
+      : '';
+    return '<div class="gloss-card ' + (accent||'neutral-accent') + '">' +
+      '<div class="gc-term">' + term + abbrHtml + '</div>' +
+      '<div class="gc-desc">' + desc + '</div>' +
+      formulaHtml + tagsHtml +
+    '</div>';
+  }
+
+  function section(icon, title, cards) {
+    return '<div class="gloss-section">' +
+      '<div class="gloss-section-title"><span class="gs-icon">' + icon + '</span>' + title + '</div>' +
+      '<div class="gloss-grid">' + cards.join('') + '</div>' +
+    '</div>';
+  }
+
+  var T = {
+    prod:      {cls:'gc-tag t-prod',     lbl:'Produtividade'},
+    produto:   {cls:'gc-tag t-prod',     lbl:'Produto'},
+    pex:       {cls:'gc-tag t-pex',      lbl:'PEX'},
+    jornada:   {cls:'gc-tag t-jornada',  lbl:'Jornada'},
+    visitas:   {cls:'gc-tag t-visitas',  lbl:'Visitas GD'},
+    estrutura: {cls:'gc-tag t-estrutura',lbl:'Estrutura'},
+    nexus:     {cls:'gc-tag t-nexus',    lbl:'NEXUS'},
+    vital:     {cls:'gc-tag t-vital',    lbl:'VITAL'},
+  };
+
+  // ── Seção 1 — Estrutura ──────────────────────────────────────
+  var s1 = section('🏗', 'Estrutura da Regional', [
+    card('Regional', null,
+      'Unidade de negócios que agrupa múltiplas linhas de produto. Este dashboard cobre a regional <strong>SPI OESTE</strong>, divisão Cardiometabólico.',
+      null, [T.estrutura]),
+    card('Linha', null,
+      '<strong>NEXUS</strong> e <strong>VITAL</strong> são as duas linhas de produto da regional. Cada linha tem portfólio de medicamentos distinto e quatro distritos.',
+      null, [T.estrutura, T.nexus, T.vital]),
+    card('Distrito', null,
+      'Unidade territorial gerenciada por um Gerente Distrital (GD). Identificado por um código de 9 dígitos (ex: <em>110301000</em>). SPI OESTE tem 4 distritos NEXUS e 4 distritos VITAL.',
+      null, [T.estrutura]),
+    card('GD', 'Gerente Distrital',
+      'Responsável por um distrito. Lidera a equipe de representantes, acompanha visitas em campo, treina e desenvolve o time comercial.',
+      null, [T.estrutura, T.visitas]),
+    card('Setor', null,
+      'Subdivisão do distrito atribuída a um único Representante. Cada setor tem seu próprio painel de médicos e cota de vendas.',
+      null, [T.estrutura]),
+    card('Rep', 'Representante',
+      'Profissional de vendas responsável por visitar médicos nos estabelecimentos de saúde dentro do seu setor. É a unidade base de análise do dashboard.',
+      null, [T.estrutura, T.prod, T.produto]),
+  ]);
+
+  // ── Seção 2 — Produtividade ──────────────────────────────────
+  var s2 = section('📊', 'Produtividade', [
+    card('MDV', 'Média de Visitação Diária',
+      'Quantidade média de médicos visitados por dia de campo no mês. Quanto maior, mais eficiente o aproveitamento dos dias trabalhados.',
+      'MDV = Total de Visitas ÷ Dias Trabalhados', [T.prod]),
+    card('Dias Trabalhados', null,
+      'Número de dias com atividade de campo registrada pelo rep no mês. Dias sem registro (férias, treinamento, administrativo) não contam.',
+      null, [T.prod]),
+    card('Q1', 'Quadrante 1',
+      'Médicos de <strong>altíssimo potencial</strong> de prescrição. São a prioridade máxima de visita — frequência alta e abordagem personalizada.',
+      null, [T.prod]),
+    card('Q2', 'Quadrante 2',
+      'Médicos de <strong>alto potencial</strong> de prescrição. Segunda prioridade de visita, frequência regular.',
+      null, [T.prod]),
+    card('Q3', 'Quadrante 3',
+      'Médicos de <strong>médio potencial</strong> de prescrição. Visitados com frequência menor, mas presentes no painel ativo.',
+      null, [T.prod]),
+    card('Q4', 'Quadrante 4',
+      'Médicos de <strong>baixo potencial</strong> ou especialidades secundárias. Visitados de forma mais esporádica.',
+      null, [T.prod]),
+    card('Cobertura de Painel', 'Cob%',
+      '% dos médicos cadastrados no painel do rep que foram visitados ao menos uma vez no mês. Indica a amplitude do trabalho de campo.',
+      'Cob% = Médicos visitados ÷ Total do painel × 100', [T.prod]),
+    card('Total de Visitas', null,
+      'Soma de todas as visitas médicas realizadas pelo rep no mês, independente do quadrante.',
+      null, [T.prod]),
+  ]);
+
+  // ── Seção 3 — Produto ────────────────────────────────────────
+  var s3 = section('💊', 'Produto (Vendas)', [
+    card('Cota', null,
+      'Meta de vendas em R$ estabelecida para o rep ou distrito no ciclo/mês. É a referência para cálculo do atingimento.',
+      null, [T.produto]),
+    card('Realizado', null,
+      'Valor efetivamente vendido em R$ no período. Comparado com a cota para apurar o atingimento.',
+      null, [T.produto]),
+    card('Atingimento', 'Ating%',
+      '% de cumprimento da cota. Valor ≥ 100% significa meta batida. Abaixo de 80% é considerado zona crítica.',
+      'Ating% = Realizado ÷ Cota × 100', [T.produto]),
+    card('Crescimento em Valor', 'ΔR$',
+      'Diferença em reais entre o mês atual e o mês de referência (base). Valor positivo = crescimento. Valor negativo = queda.',
+      'ΔR$ = Realizado (mês atual) − Realizado (mês base)', [T.produto]),
+    card('Crescimento Percentual', 'Δ%',
+      'Variação percentual em relação ao mês de referência. Indica o ritmo de crescimento ou retração.',
+      'Δ% = (Realizado atual − Realizado base) ÷ Realizado base × 100', [T.produto]),
+    card('Cobertura de Produto', null,
+      '% dos produtos do portfólio presentes no faturamento do período. Alta cobertura indica boa distribuição de vendas entre os produtos.',
+      null, [T.produto]),
+  ]);
+
+  // ── Seção 4 — Jornada da Evolução ────────────────────────────
+  var s4 = section('🌟', 'Jornada da Evolução', [
+    card('Start / Júnior', null,
+      'Nível inicial da jornada. Rep em formação técnica e de abordagem comercial. Foco em aprender os protocolos de visita e o portfólio de produtos.',
+      null, [T.jornada]),
+    card('Performance / Pleno', null,
+      'Nível intermediário. Rep com domínio técnico consolidado e processo de visita estruturado. Capaz de argumentar clinicamente e conduzir abordagens complexas.',
+      null, [T.jornada]),
+    card('Destaque / Sênior', null,
+      'Nível mais avançado. Rep referência em técnica de vendas e conhecimento clínico. Elegível para programas de reconhecimento e mentoria de colegas.',
+      null, [T.jornada]),
+  ]);
+
+  // ── Seção 5 — PEX ────────────────────────────────────────────
+  var s5 = section('🏅', 'PEX — Programa de Excelência', [
+    card('PEX', 'Pontuação de Excelência',
+      'Programa de pontuação que mede a excelência do rep em múltiplos critérios: visitas realizadas, atingimento de cota, cobertura de painel, atividades e desenvolvimento. Escala de 0 a 100 pontos.',
+      null, [T.pex]),
+    card('Medalhas PEX', null,
+      '<strong>Classificação por faixa de pontuação:</strong>' +
+      '<div style="margin-top:8px;display:flex;flex-direction:column;gap:5px">' +
+        '<div style="display:flex;align-items:center;gap:8px"><span style="font-size:16px">🥇</span><span><strong>Ouro</strong> — ≥ 99,5 pontos</span></div>' +
+        '<div style="display:flex;align-items:center;gap:8px"><span style="font-size:16px">🥈</span><span><strong>Prata</strong> — ≥ 95 pontos</span></div>' +
+        '<div style="display:flex;align-items:center;gap:8px"><span style="font-size:16px">🥉</span><span><strong>Bronze</strong> — ≥ 80 pontos</span></div>' +
+        '<div style="display:flex;align-items:center;gap:8px"><span style="font-size:16px">⚠️</span><span><strong>Atenção</strong> — ≥ 75 pontos</span></div>' +
+        '<div style="display:flex;align-items:center;gap:8px"><span style="font-size:16px">🔴</span><span><strong>Crítico</strong> — &lt; 75 pontos</span></div>' +
+      '</div>',
+      null, [T.pex]),
+  ]);
+
+  // ── Seção 6 — Visitas GD ─────────────────────────────────────
+  var s6 = section('👁', 'Visitas GD — Acompanhamentos em Campo', [
+    card('Obj. Acomp.', 'Objetivo de Acompanhamento',
+      'Número de visitas de campo que o GD tem como meta realizar junto ao rep no mês. Define a expectativa de desenvolvimento e suporte ao representante.',
+      null, [T.visitas]),
+    card('Real. Acomp.', 'Realizado de Acompanhamento',
+      'Número efetivo de visitas realizadas pelo GD junto ao rep em campo no mês.',
+      null, [T.visitas]),
+    card('Cob. Acomp.', 'Cobertura de Acompanhamento',
+      '% de cumprimento do objetivo de acompanhamentos do GD. ≥ 100% significa que o GD realizou todas as visitas planejadas.',
+      'Cob% = Real. Acomp. ÷ Obj. Acomp. × 100', [T.visitas]),
+    card('Dias de Acomp.', null,
+      'Número de dias distintos em que o GD esteve em campo com o representante no mês.',
+      null, [T.visitas]),
+  ]);
+
+  // ── Seção 7 — Guia de Cores ──────────────────────────────────
+  var s7 = section('🎨', 'Guia de Cores — Semáforo de Desempenho', [
+    card('Semáforo de Atingimento', null,
+      'A maioria dos indicadores usa um sistema de cores para sinalizar o nível de desempenho de forma rápida:' +
+      '<div class="gloss-semaforo">' +
+        '<div class="gloss-sem-item"><div class="gloss-sem-dot" style="background:#16a34a"></div><strong>Verde</strong> — ≥ 100% &nbsp;Meta batida ou superada.</div>' +
+        '<div class="gloss-sem-item"><div class="gloss-sem-dot" style="background:#d97706"></div><strong>Amarelo</strong> — 80–99% &nbsp;Abaixo da meta, zona de atenção.</div>' +
+        '<div class="gloss-sem-item"><div class="gloss-sem-dot" style="background:#dc2626"></div><strong>Vermelho</strong> — &lt; 80% &nbsp;Resultado crítico, intervenção necessária.</div>' +
+      '</div>',
+      null, []),
+    card('Crescimento Positivo / Negativo', null,
+      'Para indicadores de variação (Δ% e ΔR$), a cor sinaliza a direção:' +
+      '<div class="gloss-semaforo">' +
+        '<div class="gloss-sem-item"><div class="gloss-sem-dot" style="background:#16a34a"></div><strong>Verde</strong> — Crescimento em relação ao mês base.</div>' +
+        '<div class="gloss-sem-item"><div class="gloss-sem-dot" style="background:#dc2626"></div><strong>Vermelho</strong> — Queda em relação ao mês base.</div>' +
+      '</div>',
+      null, []),
+  ]);
+
+  // ── Monta página ─────────────────────────────────────────────
+  var html = '<div class="gloss-wrap">' +
+    '<h1>📖 Glossário do Dashboard</h1>' +
+    '<p class="gloss-sub">Entenda o significado de cada indicador. Use a busca para encontrar um termo rapidamente.</p>' +
+    '<input class="gloss-search" id="gloss-search-input" type="text" placeholder="🔍  Buscar termo, sigla ou descrição…" autocomplete="off">' +
+    s1 + s2 + s3 + s4 + s5 + s6 + s7 +
+  '</div>';
+
+  main.innerHTML = html;
+
+  // ── Filtro de busca ──────────────────────────────────────────
+  document.getElementById('gloss-search-input').addEventListener('input', function() {
+    var q = this.value.toLowerCase().trim();
+    document.querySelectorAll('.gloss-card').forEach(function(c) {
+      c.classList.toggle('hidden', !!(q && !c.textContent.toLowerCase().includes(q)));
+    });
+    document.querySelectorAll('.gloss-section').forEach(function(sec) {
+      var vis = sec.querySelectorAll('.gloss-card:not(.hidden)').length > 0;
+      sec.style.display = (q && !vis) ? 'none' : '';
+    });
+  });
 }
 
 init();
