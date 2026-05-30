@@ -5,10 +5,11 @@
     "JAN",
     "FEV",
     "MAR",
-    "ABR"
+    "ABR",
+    "MAI"
   ],
-  "mes_padrao": "ABR",
-  "ultima_atualizacao": "2026-05-21T23:42:20.642077",
+  "mes_padrao": "MAI",
+  "ultima_atualizacao": "2026-05-30T12:11:41.634136",
   "versao": "4.1",
   "regional": "SPI OESTE",
   "divisao": "Cardiometabolico"
