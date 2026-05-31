@@ -187,12 +187,26 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
 
 /* Achados */
 .achados{background:#fff;border-radius:12px;padding:18px 20px;box-shadow:0 1px 8px rgba(0,0,0,.07);margin-bottom:24px}
-.achado{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:8px;font-size:12px;margin-bottom:6px}
+.achado{display:flex;align-items:flex-start;gap:10px;padding:12px 16px;border-radius:10px;font-size:12px;margin-bottom:8px}
 .achado:last-child{margin-bottom:0}
-.achado.r{background:#fef2f4;border-left:3px solid var(--red)}.achado.y{background:#fffbf0;border-left:3px solid var(--orange)}
-.achado.b{background:#f0f4ff;border-left:3px solid var(--nexus)}.achado.g{background:var(--green-l);border-left:3px solid var(--green)}
+.achado.r{background:#fef2f4;border-left:4px solid var(--red)}.achado.y{background:#fffbf0;border-left:4px solid var(--orange)}
+.achado.b{background:#f0f4ff;border-left:4px solid var(--nexus)}.achado.g{background:var(--green-l);border-left:4px solid var(--green)}
 .achado-dim{font-weight:800;font-size:10px;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;min-width:110px;margin-top:2px}
 .achado-txt{color:var(--gray);line-height:1.5}
+/* Achados — cards detalhados */
+.achado.achado-bloco{flex-direction:column;align-items:stretch}
+.achado-titulo{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:800;margin-bottom:3px}
+.achado-msg{font-size:11px;color:#777;margin-bottom:12px;padding-left:2px}
+.adc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}
+.achado-dist-card{background:rgba(255,255,255,.75);border:1px solid rgba(0,0,0,.09);border-radius:9px;padding:10px 13px}
+.adc-hdr{display:flex;align-items:center;gap:7px;margin-bottom:9px}
+.adc-nome{font-size:12px;font-weight:700;color:var(--dark);flex:1}
+.adc-reps{font-size:10px;color:var(--gray);font-weight:600;white-space:nowrap}
+.adc-metrics{display:flex;gap:16px;flex-wrap:wrap}
+.adc-metric{min-width:58px}
+.adc-mlbl{font-size:9px;color:#999;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px;white-space:nowrap}
+.adc-mval{font-size:13px;font-weight:800;color:var(--dark);white-space:nowrap;display:flex;align-items:center;gap:4px}
+.adc-delta{font-size:9px;font-weight:600}
 
 /* Chart card */
 .chart-card{background:#fff;border-radius:12px;padding:18px 20px;box-shadow:0 1px 8px rgba(0,0,0,.07);margin-bottom:24px}
@@ -3612,27 +3626,93 @@ function renderProdTablePorRep(dados, linha) {
 
 // ── Achados e Chart ───────────────────────────────────────────────
 
-function renderAchados(distritos) {
+function renderAchados(dados, mes) {
+  var distritos   = (dados && dados.distritos)    || [];
+  var pex         = (dados && dados.pex)          || [];
+  var allVisitas  = ((dados && dados.visitasNex)  || []).concat((dados && dados.visitasVit)  || []);
+  var allProdDist = ((dados && dados.prodDistNex) || []).concat((dados && dados.prodDistVit) || []);
+
+  var mesAnt   = getMesAnterior(mes);
+  var dadosAnt = (mesAnt && DADOS_CACHE[mesAnt]) ? DADOS_CACHE[mesAnt] : null;
+
   var criticos = distritos.filter(function(d){ return d.diagnostico === 'crit'; });
-  var destaque = distritos.filter(function(d){ return d.diagnostico === 'ok';   });
   var atencao  = distritos.filter(function(d){ return d.diagnostico === 'warn'; });
+  var destaque = distritos.filter(function(d){ return d.diagnostico === 'ok';   });
+
+  function pctCol(v, ok, warn) {
+    if (v === null || isNaN(v)) return '';
+    return v >= ok ? 'color:#059669' : v >= warn ? 'color:#d97706' : 'color:#ef4444';
+  }
+
+  function metricas(d) {
+    var mdv = (d.prod != null && d.prod !== '') ? parseFloat(d.prod) * 100 : null;
+
+    var dp  = allProdDist.filter(function(p){ return String(p.distrito_id) === String(d.distrito_id); });
+    var ats = dp.map(function(p){ return parseFloat(p.ating_pct); }).filter(function(v){ return !isNaN(v) && isFinite(v); });
+    var avgAt = ats.length ? ats.reduce(function(a,b){return a+b;},0)/ats.length : null;
+
+    var vis  = allVisitas.find(function(v){ return String(v.distrito_id) === String(d.distrito_id); });
+    var cobV = vis ? parseFloat(vis.cob_pct) : null;
+    var diasV = vis ? parseInt(vis.dias) : null;
+
+    var dp2  = pex.filter(function(p){ return String(p.distrito_id) === String(d.distrito_id); });
+    var ppts = dp2.map(function(p){ return parseFloat(p.pts); }).filter(function(v){ return !isNaN(v) && isFinite(v); });
+    var avgPex = ppts.length ? ppts.reduce(function(a,b){return a+b;},0)/ppts.length : null;
+
+    var mdvAnt = null;
+    if (dadosAnt && dadosAnt.distritos) {
+      var da = dadosAnt.distritos.find(function(x){ return String(x.distrito_id) === String(d.distrito_id); });
+      if (da && da.prod != null) mdvAnt = parseFloat(da.prod) * 100;
+    }
+    return { mdv:mdv, avgAt:avgAt, cobV:cobV, diasV:diasV, avgPex:avgPex, mdvAnt:mdvAnt, reps:parseInt(d.reps_ativos)||0 };
+  }
+
+  function distCard(d) {
+    var m   = metricas(d);
+    var lnc = d.linha === 'NEXUS' ? 'n' : 'v';
+    var mdvStr = m.mdv !== null ? m.mdv.toFixed(1) + '%' : '—';
+    var mdvCol = pctCol(m.mdv, 100, 80);
+
+    var deltaHtml = '';
+    if (m.mdv !== null && m.mdvAnt !== null) {
+      var delta = m.mdv - m.mdvAnt;
+      var dSign = delta >= 0 ? '▲' : '▼';
+      var dCol  = delta >= 0 ? '#059669' : '#ef4444';
+      deltaHtml = '<span class="adc-delta" style="color:' + dCol + '">' + dSign + Math.abs(delta).toFixed(1) + 'pp vs ' + mesAnt + '</span>';
+    }
+
+    function met(lbl, val, col, extra) {
+      return '<div class="adc-metric"><div class="adc-mlbl">' + lbl + '</div>' +
+        '<div class="adc-mval" style="' + col + '">' + val + (extra||'') + '</div></div>';
+    }
+
+    var mets = met('Prod. MDV', mdvStr, mdvCol, deltaHtml);
+    if (m.avgAt  !== null) mets += met('Produto Ating.',   m.avgAt.toFixed(1)+'%',    pctCol(m.avgAt,100,80),  '');
+    if (m.cobV   !== null) mets += met('Visitas GD',       m.cobV.toFixed(1)+'%',     pctCol(m.cobV,100,80),
+      (m.diasV ? '&nbsp;<span style="font-size:10px;color:#888;font-weight:600">'+m.diasV+'d</span>' : ''));
+    if (m.avgPex !== null) mets += met('PEX médio',        m.avgPex.toFixed(1)+' pts', pctCol(m.avgPex,95,80), '');
+
+    return '<div class="achado-dist-card">' +
+      '<div class="adc-hdr"><span class="badge ' + lnc + '">' + d.linha + '</span>' +
+      '<span class="adc-nome">' + (d.ab||d.nm||d.distrito_id) + '</span>' +
+      (m.reps ? '<span class="adc-reps">' + m.reps + ' reps</span>' : '') + '</div>' +
+      '<div class="adc-metrics">' + mets + '</div></div>';
+  }
+
+  function grupo(list, icone, cls, titulo, msg) {
+    if (!list.length) return '';
+    return '<div class="achado ' + cls + ' achado-bloco">' +
+      '<div class="achado-titulo">' + icone + ' <span>' + titulo + '</span></div>' +
+      '<div class="achado-msg">' + msg + '</div>' +
+      '<div class="adc-grid">' + list.map(distCard).join('') + '</div></div>';
+  }
 
   var html = '<div class="achados"><div class="sec-hdr"><div class="sec-title">Achados Estratégicos</div><div class="sec-line"></div></div>';
-
-  if (criticos.length) {
-    html += '<div class="achado r"><div class="achado-dim">🔴 Crítico</div><div class="achado-txt">' +
-      criticos.map(function(d){ return (d.ab||d.distrito_id) + ' (' + d.linha + ')'; }).join(' · ') +
-      ' — produtividade abaixo de 80%. Plano de ação imediato.</div></div>';
-  }
-  if (atencao.length) {
-    html += '<div class="achado y"><div class="achado-dim">⚠ Atenção</div><div class="achado-txt">' +
-      atencao.map(function(d){ return (d.ab||d.distrito_id); }).join(' · ') +
-      ' — entre 80% e 99%. Monitorar tendência.</div></div>';
-  }
-  if (destaque.length) {
-    html += '<div class="achado g"><div class="achado-dim">✔ Destaque</div><div class="achado-txt">' +
-      destaque.map(function(d){ return (d.ab||d.distrito_id); }).join(' · ') +
-      ' — atingiram 100%+. Identificar e replicar boas práticas.</div></div>';
+  html += grupo(criticos, '🔴', 'r', 'Crítico',  'Produtividade abaixo de 80% — plano de ação imediato.');
+  html += grupo(atencao,  '⚠️', 'y', 'Atenção',  'Entre 80% e 99% — monitorar e intensificar acompanhamento.');
+  html += grupo(destaque, '✅', 'g', 'Destaque', 'Atingiram 100%+ em produtividade — identificar e replicar boas práticas.');
+  if (!criticos.length && !atencao.length && !destaque.length) {
+    html += '<p style="color:var(--gray);font-size:13px;padding:8px 0">Sem dados disponíveis.</p>';
   }
   html += '</div>';
   return html;
@@ -3728,7 +3808,7 @@ function renderTudo(dados, mes) {
   html += renderChartProdutividade(distritos, mes);
 
   // 8. Achados
-  html += renderAchados(distritos);
+  html += renderAchados(dados, mes);
 
   document.getElementById('main-content').innerHTML = html;
 
