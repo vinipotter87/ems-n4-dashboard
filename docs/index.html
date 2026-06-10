@@ -462,6 +462,13 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
 .mtz-ytd-toggle{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden}
 .mtz-ytd-btn{padding:5px 13px;font-size:11px;font-weight:700;cursor:pointer;background:#fff;border:none;color:var(--gray);font-family:inherit;transition:all .12s}
 .mtz-ytd-btn.active{background:#0369a1;color:#fff}
+/* ── Correlação MDV × Cota ── */
+.mtz-corr-stats{background:#fff;border:1px solid var(--border);border-radius:14px;padding:22px 28px;margin-bottom:16px;display:flex;align-items:center;gap:28px;box-shadow:0 1px 8px rgba(0,0,0,.05)}
+.mtz-r2-big{font-size:54px;font-weight:900;line-height:1;min-width:100px;text-align:center}
+.mtz-r2-info{flex:1}
+.mtz-r2-label{font-size:10px;color:var(--gray);font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px}
+.mtz-r2-interp{font-size:15px;font-weight:800;margin-bottom:4px}
+.mtz-r2-sub{font-size:12px;color:var(--gray)}
 /* ── Matriz na view principal ── */
 .mtz-p-wrap{margin-bottom:24px}
 .mtz-p-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
@@ -4105,13 +4112,15 @@ async function init() {
 //  MATRIZ DE PERFORMANCE
 // ═══════════════════════════════════════════════════════════════
 
-var _mtzMes    = null;
-var _mtzLinha  = null;   // null = ambas
-var _mtzThrMdv = 80;
-var _mtzThrAt  = 100;
-var _mtzYtd    = false;  // false = mês atual, true = YTD acumulado
-var _mtzReps   = [];
-var _mtzChart  = null;
+var _mtzMes      = null;
+var _mtzLinha    = null;   // null = ambas
+var _mtzThrMdv   = 80;
+var _mtzThrAt    = 100;
+var _mtzYtd      = false;  // false = mês atual, true = YTD acumulado
+var _mtzView     = 'quadrantes'; // 'quadrantes' | 'correlacao'
+var _mtzReps     = [];
+var _mtzChart    = null;
+var _mtzCorrChart = null;
 
 async function abrirMatrizPerformance() {
   VIEW_ATUAL = 'matrix';
@@ -4180,12 +4189,31 @@ function _mtzRenderPage() {
           '</select>' +
         '</div>' +
       '</div>' +
-      '<div class="mtz-scatter-wrap"><canvas id="mtz-chart"></canvas></div>' +
-      '<div id="mtz-cards">' + _mtzBuildCards(_mtzReps) + '</div>' +
+      '<div class="gap-ctrl-group"><label class="gap-ctrl-label">Visão</label>' +
+          '<div class="mtz-ytd-toggle">' +
+            '<button class="mtz-ytd-btn' + (_mtzView==='quadrantes'?' active':'') + '" onclick="mtzTabView(\'quadrantes\')">📊 Quadrantes</button>' +
+            '<button class="mtz-ytd-btn' + (_mtzView==='correlacao'?' active':'') + '" onclick="mtzTabView(\'correlacao\')">🔗 Correlação</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div id="mtz-body">' + _mtzBodyHtml(_mtzReps) + '</div>' +
     '</div>';
 
   document.getElementById('main-content').innerHTML = html;
-  setTimeout(function(){ _mtzBuildChart(_mtzReps); }, 60);
+  _mtzMountCharts(_mtzReps);
+}
+
+function _mtzBodyHtml(reps) {
+  if (_mtzView === 'correlacao') return _mtzCorrSection(reps);
+  return '<div class="mtz-scatter-wrap"><canvas id="mtz-chart"></canvas></div>' +
+         '<div id="mtz-cards">' + _mtzBuildCards(reps) + '</div>';
+}
+
+function _mtzMountCharts(reps) {
+  setTimeout(function(){
+    if (_mtzView === 'correlacao') _mtzBuildCorrChart(reps);
+    else _mtzBuildChart(reps);
+  }, 60);
 }
 
 // ── Helpers ──────────────────────────────────────────────────────
@@ -4455,6 +4483,122 @@ function _mtzPct(v) {
 
 // ── Controles interativos ──────────────────────────────────────
 
+// ── Correlação MDV × Cota ─────────────────────────────────────────
+
+function _mtzCalcRegression(reps) {
+  var pts = reps.filter(function(r){ return r._mdv !== null && r._at !== null; });
+  var n = pts.length;
+  if (n < 3) return null;
+  var sx=0, sy=0, sxy=0, sx2=0, sy2=0;
+  pts.forEach(function(p){
+    sx  += p._mdv; sy  += p._at;
+    sxy += p._mdv * p._at;
+    sx2 += p._mdv * p._mdv;
+    sy2 += p._at  * p._at;
+  });
+  var denom = Math.sqrt((n*sx2 - sx*sx) * (n*sy2 - sy*sy));
+  var R  = denom > 0 ? (n*sxy - sx*sy) / denom : 0;
+  var R2 = R * R;
+  var b  = (n*sx2 - sx*sx) !== 0 ? (n*sxy - sx*sy) / (n*sx2 - sx*sx) : 0;
+  var a  = (sy - b*sx) / n;
+  var xs = pts.map(function(p){ return p._mdv; });
+  return { R: R, R2: R2, a: a, b: b, n: n,
+           minX: Math.min.apply(null,xs), maxX: Math.max.apply(null,xs) };
+}
+
+function _mtzCorrInterpret(R2) {
+  if (R2 >= 0.64) return {txt:'Correlação forte',    cor:'#15803d', ico:'📈'};
+  if (R2 >= 0.36) return {txt:'Correlação moderada', cor:'#d97706', ico:'📊'};
+  if (R2 >= 0.09) return {txt:'Correlação fraca',    cor:'#b91c1c', ico:'📉'};
+  return              {txt:'Sem correlação',          cor:'#6b7280', ico:'➖'};
+}
+
+function _mtzCorrSection(reps) {
+  var reg = _mtzCalcRegression(reps);
+  if (!reg) return '<div class="mtz-p-loading">Dados insuficientes para calcular correlação (mínimo 3 reps com MDV e Cota).</div>';
+  var intp = _mtzCorrInterpret(reg.R2);
+  var r2pct = (reg.R2 * 100).toFixed(1);
+  var rVal  = (Math.abs(reg.R)).toFixed(2);
+  return '<div class="mtz-corr-stats">' +
+    '<div class="mtz-r2-big" style="color:' + intp.cor + '">' + r2pct + '%</div>' +
+    '<div class="mtz-r2-info">' +
+      '<div class="mtz-r2-label">R² — Coeficiente de Determinação</div>' +
+      '<div class="mtz-r2-interp" style="color:' + intp.cor + '">' + intp.ico + ' ' + intp.txt + ' (R = ' + rVal + ')</div>' +
+      '<div class="mtz-r2-sub">MDV explica <strong>' + r2pct + '%</strong> da variação no atingimento de cota &nbsp;·&nbsp; ' + reg.n + ' reps analisados</div>' +
+    '</div>' +
+  '</div>' +
+  '<div class="mtz-scatter-wrap"><canvas id="mtz-corr-chart"></canvas></div>';
+}
+
+function _mtzBuildCorrChart(reps) {
+  var el = document.getElementById('mtz-corr-chart'); if (!el) return;
+  if (_mtzCorrChart) { _mtzCorrChart.destroy(); _mtzCorrChart = null; }
+  var reg = _mtzCalcRegression(reps);
+  var buckets = [[], [], [], []];
+  reps.filter(function(r){ return r._mdv!==null && r._at!==null; })
+      .forEach(function(r){ buckets[_mtzQuad(r)].push(r); });
+  var datasets = _MTZ_QUADS.map(function(q,i){
+    return {
+      label: q.icon+' '+q.label+' ('+buckets[i].length+')',
+      data:  buckets[i].map(function(r){ return {x:r._mdv, y:r._at, rep:r}; }),
+      backgroundColor: q.bg, borderColor: q.bd,
+      borderWidth:1.5, pointRadius:9, pointHoverRadius:12,
+    };
+  });
+  if (reg) {
+    datasets.push({
+      type:'line', label:'Tendência (y='+reg.b.toFixed(2)+'x+'+(reg.a.toFixed(1))+')',
+      data:[{x:reg.minX-2, y:reg.a+reg.b*(reg.minX-2)}, {x:reg.maxX+2, y:reg.a+reg.b*(reg.maxX+2)}],
+      borderColor:'rgba(100,100,100,.55)', borderDash:[7,4],
+      borderWidth:2, pointRadius:0, fill:false, order:-1,
+    });
+  }
+  _mtzCorrChart = new Chart(el.getContext('2d'), {
+    type:'scatter', data:{datasets:datasets},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:true, position:'top', labels:{boxWidth:11,font:{size:11},padding:12}},
+        tooltip:{
+          backgroundColor:'rgba(17,24,39,.95)',
+          titleFont:{size:12,weight:'700'}, bodyFont:{size:11},
+          padding:12, cornerRadius:10,
+          callbacks:{
+            title:function(it){ var r=it[0]&&it[0].raw&&it[0].raw.rep; return r?(r.nome||r.setor_id):'Tendência'; },
+            label:function(it){
+              var r=it.raw&&it.raw.rep; if(!r) return ' Linha de tendência';
+              return [' MDV: '+r._mdv.toFixed(1)+'%', ' Cota: '+r._at.toFixed(1)+'%',
+                      ' '+r._dist+' · '+r.linha];
+            }
+          }
+        }
+      },
+      scales:{
+        x:{title:{display:true, text:'MDV%', font:{size:11,weight:'700'}},
+           grid:{color:'rgba(0,0,0,.06)'}},
+        y:{title:{display:true, text:'Ating. Cota%', font:{size:11,weight:'700'}},
+           grid:{color:'rgba(0,0,0,.06)'}}
+      }
+    }
+  });
+}
+
+function mtzTabView(v) {
+  _mtzView = v;
+  document.querySelectorAll('.mtz-ytd-btn').forEach(function(b,i){
+    var targets = ['quadrantes','correlacao'];
+    if (b.textContent.includes('Quadrante') || b.textContent.includes('Correlação')) {
+      b.classList.toggle('active', b.textContent.includes(v==='quadrantes'?'Quadrante':'Correlação'));
+    }
+  });
+  var body = document.getElementById('mtz-body');
+  if (!body) return;
+  body.innerHTML = _mtzBodyHtml(_mtzReps);
+  _mtzMountCharts(_mtzReps);
+}
+
+// ── Controles interativos ─────────────────────────────────────────
+
 function mtzLinha(linha) {
   _mtzLinha = linha;
   document.getElementById('mtz-nex').className = 'gap-tab gap-tab-nex' + (linha==='NEXUS'?' active':'');
@@ -4465,24 +4609,17 @@ function mtzLinha(linha) {
 
 function mtzToggleYtd(ytd) {
   _mtzYtd = ytd;
-  // Atualiza botões do toggle
-  document.querySelectorAll('.mtz-ytd-btn').forEach(function(b, i){
-    b.className = 'mtz-ytd-btn' + ((ytd ? i===1 : i===0) ? ' active' : '');
-  });
-  // Re-calcula reps e re-renderiza scatter + cards
   var meses = CONFIG._meses || [_mtzMes];
   var dados = DADOS_CACHE[_mtzMes] || {};
-  _mtzReps  = _mtzYtd
-    ? _mtzBuildRepsYtd(meses, _mtzLinha)
-    : _mtzBuildReps(_mtzMes, dados, _mtzLinha);
-  // Atualiza título
+  _mtzReps  = _mtzYtd ? _mtzBuildRepsYtd(meses,_mtzLinha) : _mtzBuildReps(_mtzMes,dados,_mtzLinha);
   var titulo = _mtzYtd
-    ? 'Matriz de Performance — YTD ' + (meses[0]||'') + '→' + (meses[meses.length-1]||'') + '/2026'
-    : 'Matriz de Performance — ' + _mtzMes + '/2026';
+    ? 'Matriz de Performance — YTD '+(meses[0]||'')+'→'+(meses[meses.length-1]||'')+'/2026'
+    : 'Matriz de Performance — '+_mtzMes+'/2026';
   var el = document.querySelector('.mtz-title');
   if (el) el.textContent = titulo;
-  _mtzBuildChart(_mtzReps);
-  document.getElementById('mtz-cards').innerHTML = _mtzBuildCards(_mtzReps);
+  var body = document.getElementById('mtz-body');
+  if (body) body.innerHTML = _mtzBodyHtml(_mtzReps);
+  _mtzMountCharts(_mtzReps);
 }
 
 function mtzUpdate() {
@@ -4490,11 +4627,10 @@ function mtzUpdate() {
   _mtzThrAt  = parseFloat(document.getElementById('mtz-thr-at').value);
   var meses  = CONFIG._meses || [_mtzMes];
   var dados  = DADOS_CACHE[_mtzMes] || {};
-  _mtzReps   = _mtzYtd
-    ? _mtzBuildRepsYtd(meses, _mtzLinha)
-    : _mtzBuildReps(_mtzMes, dados, _mtzLinha);
-  _mtzBuildChart(_mtzReps);
-  document.getElementById('mtz-cards').innerHTML = _mtzBuildCards(_mtzReps);
+  _mtzReps   = _mtzYtd ? _mtzBuildRepsYtd(meses,_mtzLinha) : _mtzBuildReps(_mtzMes,dados,_mtzLinha);
+  var body   = document.getElementById('mtz-body');
+  if (body) body.innerHTML = _mtzBodyHtml(_mtzReps);
+  _mtzMountCharts(_mtzReps);
 }
 
 // ═══════════════════════════════════════════════════════════════
