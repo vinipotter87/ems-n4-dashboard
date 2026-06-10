@@ -443,6 +443,39 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
 .cota-tab{padding:6px 18px;border-radius:8px;border:2px solid var(--border);background:#fff;font-size:11px;font-weight:700;cursor:pointer;color:var(--gray);font-family:inherit;transition:all .12s}
 .cota-tab.an{border-color:var(--nexus);color:var(--nexus);background:var(--nexus-l)}
 .cota-tab.av{border-color:var(--red);color:var(--red);background:var(--red-l)}
+/* ── Matriz de Performance ── */
+.cycle-btn.mtz-btn{border-color:#0369a1;color:#0369a1}
+.cycle-btn.mtz-btn.active{background:#0369a1;color:#fff}
+.mtz-wrap{padding:24px 28px;max-width:1280px;margin:0 auto}
+.mtz-header{display:flex;align-items:center;gap:14px;margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.mtz-title{font-size:17px;font-weight:800;color:var(--dark)}
+.mtz-sub{font-size:11px;color:var(--gray);margin-top:2px}
+.mtz-controls{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;padding:12px 14px;background:#fafafa;border-radius:9px;margin-bottom:18px;border:1px solid var(--border)}
+.mtz-scatter-wrap{background:#fff;border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:20px;box-shadow:0 1px 8px rgba(0,0,0,.05);height:400px;position:relative}
+.mtz-cards-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+@media(max-width:960px){.mtz-cards-grid{grid-template-columns:repeat(2,1fr)}}
+.mtz-quad-col{background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 1px 8px rgba(0,0,0,.05);display:flex;flex-direction:column}
+.mtz-q-star  .mtz-quad-hdr{background:#f0fdf4;border-bottom:2px solid #15803d}
+.mtz-q-efic  .mtz-quad-hdr{background:#eff6ff;border-bottom:2px solid #2563eb}
+.mtz-q-esfor .mtz-quad-hdr{background:#fffbeb;border-bottom:2px solid #d97706}
+.mtz-q-crit  .mtz-quad-hdr{background:#fef2f2;border-bottom:2px solid #b91c1c}
+.mtz-quad-hdr{display:flex;align-items:center;gap:10px;padding:12px 14px}
+.mtz-q-icon{font-size:19px;flex-shrink:0}
+.mtz-q-label{font-size:12px;font-weight:800;color:var(--dark)}
+.mtz-q-desc{font-size:9.5px;color:var(--gray);margin-top:1px}
+.mtz-q-count{margin-left:auto;font-size:22px;font-weight:800;color:var(--dark)}
+.mtz-q-empty{padding:16px;text-align:center;font-size:11px;color:var(--gray)}
+.mtz-rep-card{padding:9px 13px;border-bottom:1px solid #f5f5f5;transition:background .1s}
+.mtz-rep-card:last-child{border-bottom:none}
+.mtz-rep-card:hover{background:#fafafa}
+.mtz-rep-name{font-size:11px;font-weight:700;color:var(--dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mtz-rep-dist{font-size:9.5px;color:var(--gray);margin-bottom:6px;margin-top:1px}
+.mtz-rep-metrics{display:flex;gap:9px;flex-wrap:wrap}
+.mtz-metric{display:flex;flex-direction:column;min-width:36px}
+.mtz-mlbl{font-size:8.5px;color:#9ca3af;text-transform:uppercase;letter-spacing:.4px;font-weight:700}
+.mtz-mval{font-size:11.5px;font-weight:700;color:var(--dark)}
+.gap-tab.mtz-all-tab{border-color:#7c3aed;color:#7c3aed}
+.gap-tab.mtz-all-tab.active{border-color:#7c3aed;color:#fff;background:#7c3aed}
 /* ── Gap & Outliers ── */
 .cycle-btn.gap-btn{border-color:#7c3aed;color:#7c3aed}
 .cycle-btn.gap-btn.active{background:#7c3aed;color:#fff}
@@ -1106,7 +1139,8 @@ function renderCycleBar(meses, mesAtual) {
   var isVisitas  = VIEW_ATUAL === 'visitas';
   var isGloss    = VIEW_ATUAL === 'glossario';
   var isGap      = VIEW_ATUAL === 'gap';
-  var nenhuma    = isAnual || isCota || isVisitas || isGloss || isGap;
+  var isMatrix   = VIEW_ATUAL === 'matrix';
+  var nenhuma    = isAnual || isCota || isVisitas || isGloss || isGap || isMatrix;
   var btns = meses.map(function(m) {
     return '<button class="cycle-btn' + (m === mesAtual && !nenhuma ? ' active' : '') +
       '" onclick="trocarMes(\'' + m + '\')">' + m + '/2026</button>';
@@ -1116,6 +1150,7 @@ function renderCycleBar(meses, mesAtual) {
   btns += '<button class="cycle-btn cota-btn'    + (isCota    ? ' active' : '') + '" onclick="abrirEvolucaoCota()">📈 Cota</button>';
   btns += '<button class="cycle-btn visitas-btn' + (isVisitas ? ' active' : '') + '" onclick="abrirVisitasGD()">👁 Visitas GD</button>';
   btns += '<button class="cycle-btn gap-btn'     + (isGap     ? ' active' : '') + '" onclick="abrirGapAnalise()">🔍 Gap & Outliers</button>';
+  btns += '<button class="cycle-btn mtz-btn'     + (isMatrix  ? ' active' : '') + '" onclick="abrirMatrizPerformance()">🎯 Matriz</button>';
   btns += '<button class="cycle-btn gloss-btn'   + (isGloss   ? ' active' : '') + '" onclick="abrirGlossario()">📖 Glossário</button>';
   bar.innerHTML = btns;
 }
@@ -3856,8 +3891,9 @@ async function trocarMes(mes) {
   var wasVisitas = VIEW_ATUAL === 'visitas';
   var wasGloss   = VIEW_ATUAL === 'glossario';
   var wasGap     = VIEW_ATUAL === 'gap';
-  if (wasAnual || wasCota || wasVisitas || wasGloss || wasGap) VIEW_ATUAL = 'principal';
-  if (MES_ATUAL === mes && !wasAnual && !wasCota && !wasVisitas && !wasGloss && !wasGap) return;
+  var wasMatrix  = VIEW_ATUAL === 'matrix';
+  if (wasAnual || wasCota || wasVisitas || wasGloss || wasGap || wasMatrix) VIEW_ATUAL = 'principal';
+  if (MES_ATUAL === mes && !wasAnual && !wasCota && !wasVisitas && !wasGloss && !wasGap && !wasMatrix) return;
   MES_ATUAL = mes;
   DISTRITO_ATIVO = null;
 
@@ -3865,7 +3901,7 @@ async function trocarMes(mes) {
   document.querySelectorAll('.cycle-btn').forEach(function(btn){
     if (btn.classList.contains('anual-btn') || btn.classList.contains('cota-btn') ||
         btn.classList.contains('visitas-btn') || btn.classList.contains('gloss-btn') ||
-        btn.classList.contains('gap-btn')) {
+        btn.classList.contains('gap-btn') || btn.classList.contains('mtz-btn')) {
       btn.classList.remove('active');
     } else {
       btn.classList.toggle('active', btn.textContent.startsWith(mes));
@@ -3966,6 +4002,294 @@ async function init() {
   }
 
   mostrarLoading(false);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  MATRIZ DE PERFORMANCE
+// ═══════════════════════════════════════════════════════════════
+
+var _mtzMes    = null;
+var _mtzLinha  = null;   // null = ambas
+var _mtzThrMdv = 80;
+var _mtzThrAt  = 100;
+var _mtzReps   = [];
+var _mtzChart  = null;
+
+async function abrirMatrizPerformance() {
+  VIEW_ATUAL = 'matrix';
+  DISTRITO_ATIVO = null;
+  _mtzMes = MES_ATUAL || (CONFIG._meses || []).slice(-1)[0];
+  mostrarLoading(true);
+  try {
+    await carregarMes(_mtzMes);
+    renderCycleBar(CONFIG._meses || [], MES_ATUAL);
+    _mtzRenderPage();
+  } catch(e) { renderErro(e.message); }
+  mostrarLoading(false);
+}
+
+function _mtzRenderPage() {
+  var dados = DADOS_CACHE[_mtzMes] || {};
+  _mtzReps  = _mtzBuildReps(_mtzMes, dados, _mtzLinha);
+
+  var html =
+    '<div class="mtz-wrap">' +
+      '<div class="mtz-header">' +
+        '<span style="font-size:26px">🎯</span>' +
+        '<div><div class="mtz-title">Matriz de Performance — ' + _mtzMes + '/2026</div>' +
+        '<div class="mtz-sub">Classificação dos representantes por atividade (MDV) e resultado (Cota)</div></div>' +
+      '</div>' +
+      '<div class="mtz-controls">' +
+        '<div class="gap-ctrl-group"><label class="gap-ctrl-label">Linha</label>' +
+          '<div class="gap-tabs" style="margin:0">' +
+            '<button class="gap-tab gap-tab-nex' + (_mtzLinha==='NEXUS'?' active':'') + '" id="mtz-nex" onclick="mtzLinha(\'NEXUS\')">NEXUS</button>' +
+            '<button class="gap-tab gap-tab-vit' + (_mtzLinha==='VITAL'?' active':'') + '" id="mtz-vit" onclick="mtzLinha(\'VITAL\')">VITAL</button>' +
+            '<button class="gap-tab mtz-all-tab'  + (!_mtzLinha?' active':'') + '"  id="mtz-all" onclick="mtzLinha(null)">Ambas</button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="gap-ctrl-group"><label class="gap-ctrl-label">Corte MDV%</label>' +
+          '<select id="mtz-thr-mdv" class="gap-select" onchange="mtzUpdate()">' +
+            '<option value="80"'  + (_mtzThrMdv===80 ?' selected':'') + '>≥ 80%</option>' +
+            '<option value="90"'  + (_mtzThrMdv===90 ?' selected':'') + '>≥ 90%</option>' +
+            '<option value="100"' + (_mtzThrMdv===100?' selected':'') + '>≥ 100%</option>' +
+          '</select>' +
+        '</div>' +
+        '<div class="gap-ctrl-group"><label class="gap-ctrl-label">Corte Cota%</label>' +
+          '<select id="mtz-thr-at" class="gap-select" onchange="mtzUpdate()">' +
+            '<option value="80"'  + (_mtzThrAt===80 ?' selected':'') + '>≥ 80%</option>' +
+            '<option value="90"'  + (_mtzThrAt===90 ?' selected':'') + '>≥ 90%</option>' +
+            '<option value="100"' + (_mtzThrAt===100?' selected':'') + '>≥ 100%</option>' +
+          '</select>' +
+        '</div>' +
+      '</div>' +
+      '<div class="mtz-scatter-wrap"><canvas id="mtz-chart"></canvas></div>' +
+      '<div id="mtz-cards">' + _mtzBuildCards(_mtzReps) + '</div>' +
+    '</div>';
+
+  document.getElementById('main-content').innerHTML = html;
+  setTimeout(function(){ _mtzBuildChart(_mtzReps); }, 60);
+}
+
+// ── Helpers ──────────────────────────────────────────────────────
+
+function _mtzBuildReps(mes, dados, linha) {
+  var reps = (dados.reps || []).filter(function(r){
+    if (r.vago === 'True' || r.vago === true) return false;
+    if (linha && r.linha !== linha) return false;
+    var mdv = safeFloat(r.prod);
+    return mdv !== null;
+  });
+
+  // Cota ating% por rep: soma de prodRep
+  var repProd = (dados.prodRepNex||[]).concat(dados.prodRepVit||[]);
+  var atMap   = {};
+  repProd.forEach(function(p){
+    var sid = p.setor_id;
+    if (!atMap[sid]) atMap[sid] = {c:0, r:0};
+    atMap[sid].c += safeFloat(p.cota)      || 0;
+    atMap[sid].r += safeFloat(p.realizado) || 0;
+  });
+
+  // Mapa distrito → nome abreviado
+  var distMap = {};
+  (dados.distritos||[]).forEach(function(d){ distMap[d.distrito_id] = d.ab || d.nm; });
+
+  return reps.map(function(r){
+    var pr  = atMap[r.setor_id];
+    var at  = (pr && pr.c > 0) ? pr.r / pr.c * 100 : null;
+    return Object.assign({}, r, {
+      _mdv:  safeFloat(r.prod),
+      _at:   at,
+      _dist: distMap[r.distrito_id] || r.distrito_id || '—',
+    });
+  });
+}
+
+function _mtzQuad(r) {
+  var hi  = r._mdv >= _mtzThrMdv;
+  var ok  = r._at !== null && r._at >= _mtzThrAt;
+  if (hi  && ok)  return 0; // Estrela
+  if (!hi && ok)  return 1; // Eficiente
+  if (hi  && !ok) return 2; // Esforçado
+  return 3;                  // Crítico
+}
+
+var _MTZ_QUADS = [
+  {icon:'⭐', label:'ESTRELA',    cls:'mtz-q-star',  desc:'Alta atividade · Entrega cota',       bg:'rgba(21,128,61,.75)',  bd:'#15803d', fill:'rgba(21,128,61,.07)'},
+  {icon:'💡', label:'EFICIENTE',  cls:'mtz-q-efic',  desc:'Baixa atividade · Entrega cota',      bg:'rgba(37,99,235,.75)', bd:'#2563eb', fill:'rgba(37,99,235,.07)'},
+  {icon:'⚠',  label:'ESFORÇADO', cls:'mtz-q-esfor', desc:'Alta atividade · Não entrega cota',   bg:'rgba(217,119,6,.75)', bd:'#d97706', fill:'rgba(245,158,11,.07)'},
+  {icon:'🔴', label:'CRÍTICO',    cls:'mtz-q-crit',  desc:'Baixa atividade · Não entrega cota',  bg:'rgba(185,28,28,.75)', bd:'#b91c1c', fill:'rgba(185,28,28,.07)'},
+];
+
+// ── Scatter chart ─────────────────────────────────────────────
+
+function _mtzBuildChart(reps) {
+  var el = document.getElementById('mtz-chart'); if (!el) return;
+  if (_mtzChart) { _mtzChart.destroy(); _mtzChart = null; }
+
+  var buckets = [[], [], [], []];
+  reps.forEach(function(r){ buckets[_mtzQuad(r)].push(r); });
+
+  var datasets = _MTZ_QUADS.map(function(q, i){
+    return {
+      label:           q.icon + ' ' + q.label + ' (' + buckets[i].length + ')',
+      data:            buckets[i].map(function(r){ return {x: r._at !== null ? r._at : 0, y: r._mdv, rep: r}; }),
+      backgroundColor: q.bg,
+      borderColor:     q.bd,
+      borderWidth: 1.5,
+      pointRadius: 9,
+      pointHoverRadius: 12,
+    };
+  });
+
+  // Plugin: pinta quadrantes e desenha linhas de corte
+  var thrMdv = _mtzThrMdv, thrAt = _mtzThrAt;
+  var quadPlugin = {
+    id: 'mtzQuad',
+    beforeDraw: function(chart) {
+      var ctx = chart.ctx, xa = chart.scales.x, ya = chart.scales.y;
+      var xT = xa.getPixelForValue(thrAt),   yT = ya.getPixelForValue(thrMdv);
+      var L  = chart.chartArea.left,          R  = chart.chartArea.right;
+      var T  = chart.chartArea.top,           B  = chart.chartArea.bottom;
+      ctx.save();
+      // Quadrantes
+      ctx.fillStyle = _MTZ_QUADS[2].fill; ctx.fillRect(L,  T,  xT-L, yT-T); // Esforçado TL
+      ctx.fillStyle = _MTZ_QUADS[0].fill; ctx.fillRect(xT, T,  R-xT, yT-T); // Estrela TR
+      ctx.fillStyle = _MTZ_QUADS[3].fill; ctx.fillRect(L,  yT, xT-L, B-yT); // Crítico BL
+      ctx.fillStyle = _MTZ_QUADS[1].fill; ctx.fillRect(xT, yT, R-xT, B-yT); // Eficiente BR
+      // Linhas de corte
+      ctx.strokeStyle = 'rgba(100,100,100,.3)'; ctx.lineWidth = 1.5;
+      ctx.setLineDash([6,4]);
+      ctx.beginPath(); ctx.moveTo(xT, T); ctx.lineTo(xT, B); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(L, yT); ctx.lineTo(R, yT); ctx.stroke();
+      ctx.setLineDash([]);
+      // Labels dos quadrantes
+      ctx.font = '700 9.5px Inter,sans-serif'; ctx.fillStyle = 'rgba(80,80,80,.55)';
+      ctx.fillText('⭐ ESTRELA',    xT+7,  T+14);
+      ctx.fillText('⚠ ESFORÇADO',  L+7,   T+14);
+      ctx.fillText('💡 EFICIENTE',  xT+7,  B-7);
+      ctx.fillText('🔴 CRÍTICO',    L+7,   B-7);
+      ctx.restore();
+    }
+  };
+
+  _mtzChart = new Chart(el.getContext('2d'), {
+    type: 'scatter',
+    data: {datasets: datasets},
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: {display:true, position:'top', labels:{boxWidth:11, font:{size:11}, padding:12}},
+        tooltip: {
+          backgroundColor: 'rgba(17,24,39,.95)',
+          titleFont:{size:12,weight:'700'}, bodyFont:{size:11},
+          padding:12, cornerRadius:10,
+          callbacks: {
+            title: function(items){
+              var r = items[0] && items[0].raw && items[0].raw.rep;
+              return r ? (r.nome || r.setor_id) : '';
+            },
+            label: function(item){
+              var r = item.raw.rep; if (!r) return '';
+              return [
+                '  Distrito: ' + (r._dist||'—') + '  ·  ' + (r.linha||''),
+                '  MDV: '    + (r._mdv!==null ? r._mdv.toFixed(1)+'%' : '—'),
+                '  Q1: ' + _mtzPct(r.q1) + '   Q2: ' + _mtzPct(r.q2) + '   Q3: ' + _mtzPct(r.q3) + '   Q4: ' + _mtzPct(r.q4),
+                '  Cob. Painel: ' + _mtzPct(r.cob_painel),
+                '  Ating. Cota: ' + (r._at!==null ? r._at.toFixed(1)+'%' : '—'),
+              ];
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          title:{display:true, text:'Atingimento de Cota (%)', font:{size:11,weight:'600'}},
+          min:0, max:200,
+          grid:{color:'#f0f0f0'},
+          ticks:{callback:function(v){return v+'%';}, font:{size:10}}
+        },
+        y: {
+          title:{display:true, text:'MDV % (Atividade)', font:{size:11,weight:'600'}},
+          min:0, max:130,
+          grid:{color:'#f0f0f0'},
+          ticks:{callback:function(v){return v+'%';}, font:{size:10}}
+        }
+      }
+    },
+    plugins: [quadPlugin]
+  });
+}
+
+// ── Cards por quadrante ───────────────────────────────────────
+
+function _mtzBuildCards(reps) {
+  var buckets = [[], [], [], []];
+  reps.forEach(function(r){ buckets[_mtzQuad(r)].push(r); });
+
+  // Ordenação: Estrela/Eficiente → melhor cota primeiro; Esforçado/Crítico → pior cota primeiro
+  [0,1].forEach(function(i){ buckets[i].sort(function(a,b){ return (b._at||0)-(a._at||0); }); });
+  [2,3].forEach(function(i){ buckets[i].sort(function(a,b){ return (a._at||0)-(b._at||0); }); });
+
+  return '<div class="mtz-cards-grid">' +
+    _MTZ_QUADS.map(function(q, i){
+      var cards = buckets[i].map(function(r){
+        return '<div class="mtz-rep-card">' +
+          '<div class="mtz-rep-name">' + (r.nome || r.setor_id || '—') + '</div>' +
+          '<div class="mtz-rep-dist">' + (r._dist||'—') + ' · ' + (r.linha||'') + '</div>' +
+          '<div class="mtz-rep-metrics">' +
+            _mtzMetric('MDV',         r._mdv!==null ? r._mdv.toFixed(1)+'%' : '—', cotaPctClass(r._mdv)) +
+            _mtzMetric('Q1',          _mtzPct(r.q1)) +
+            _mtzMetric('Q2',          _mtzPct(r.q2)) +
+            _mtzMetric('Q3',          _mtzPct(r.q3)) +
+            _mtzMetric('Q4',          _mtzPct(r.q4)) +
+            _mtzMetric('Cota',        r._at!==null ? r._at.toFixed(1)+'%' : '—', cotaPctClass(r._at)) +
+          '</div>' +
+        '</div>';
+      }).join('');
+
+      return '<div class="mtz-quad-col ' + q.cls + '">' +
+        '<div class="mtz-quad-hdr">' +
+          '<span class="mtz-q-icon">' + q.icon + '</span>' +
+          '<div><div class="mtz-q-label">' + q.label + '</div>' +
+          '<div class="mtz-q-desc">' + q.desc + '</div></div>' +
+          '<div class="mtz-q-count">' + buckets[i].length + '</div>' +
+        '</div>' +
+        (cards || '<div class="mtz-q-empty">Nenhum rep neste quadrante</div>') +
+      '</div>';
+    }).join('') +
+  '</div>';
+}
+
+function _mtzMetric(lbl, val, cls) {
+  return '<div class="mtz-metric">' +
+    '<span class="mtz-mlbl">' + lbl + '</span>' +
+    '<span class="mtz-mval ' + (cls||'') + '">' + val + '</span>' +
+  '</div>';
+}
+
+function _mtzPct(v) {
+  var f = safeFloat(v);
+  return f !== null ? f.toFixed(1)+'%' : '—';
+}
+
+// ── Controles interativos ──────────────────────────────────────
+
+function mtzLinha(linha) {
+  _mtzLinha = linha;
+  document.getElementById('mtz-nex').className = 'gap-tab gap-tab-nex' + (linha==='NEXUS'?' active':'');
+  document.getElementById('mtz-vit').className = 'gap-tab gap-tab-vit' + (linha==='VITAL'?' active':'');
+  document.getElementById('mtz-all').className = 'gap-tab mtz-all-tab'  + (!linha?' active':'');
+  mtzUpdate();
+}
+
+function mtzUpdate() {
+  _mtzThrMdv = parseFloat(document.getElementById('mtz-thr-mdv').value);
+  _mtzThrAt  = parseFloat(document.getElementById('mtz-thr-at').value);
+  var dados  = DADOS_CACHE[_mtzMes] || {};
+  _mtzReps   = _mtzBuildReps(_mtzMes, dados, _mtzLinha);
+  _mtzBuildChart(_mtzReps);
+  document.getElementById('mtz-cards').innerHTML = _mtzBuildCards(_mtzReps);
 }
 
 // ═══════════════════════════════════════════════════════════════
