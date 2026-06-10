@@ -3850,7 +3850,7 @@ function buildChartProdutividade(distritos) {
 function renderMatrizPrincipal(dados, mes) {
   var meses = (CONFIG && CONFIG._meses) ? CONFIG._meses : [mes];
 
-  var tabs = meses.slice().reverse().map(function(m) {
+  var tabs = meses.slice().map(function(m) {
     return '<button class="mtz-p-tab' + (m === mes ? ' active' : '') + '" ' +
       'onclick="mtzPrincipalTab(\'' + m + '\')">' + m + '</button>';
   }).join('');
