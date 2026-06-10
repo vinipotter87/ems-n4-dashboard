@@ -462,6 +462,16 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
 .mtz-ytd-toggle{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden}
 .mtz-ytd-btn{padding:5px 13px;font-size:11px;font-weight:700;cursor:pointer;background:#fff;border:none;color:var(--gray);font-family:inherit;transition:all .12s}
 .mtz-ytd-btn.active{background:#0369a1;color:#fff}
+/* ── Matriz na view principal ── */
+.mtz-p-wrap{margin-bottom:24px}
+.mtz-p-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.mtz-p-tab{padding:5px 16px;border-radius:8px;border:1.5px solid var(--border);background:#fff;font-size:11px;font-weight:700;cursor:pointer;color:var(--gray);font-family:inherit;transition:all .12s}
+.mtz-p-tab.active{background:#0369a1;color:#fff;border-color:#0369a1}
+.mtz-p-tab:hover:not(.active){border-color:#0369a1;color:#0369a1}
+.mtz-p-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+@media(max-width:960px){.mtz-p-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:540px){.mtz-p-grid{grid-template-columns:1fr}}
+.mtz-p-loading{padding:32px;text-align:center;color:var(--gray);font-size:13px;background:#fff;border-radius:14px;border:1px solid var(--border)}
 .mtz-q-star  .mtz-quad-hdr{background:#f0fdf4;border-bottom:2px solid #15803d}
 .mtz-q-efic  .mtz-quad-hdr{background:#eff6ff;border-bottom:2px solid #2563eb}
 .mtz-q-esfor .mtz-quad-hdr{background:#fffbeb;border-bottom:2px solid #d97706}
@@ -3835,6 +3845,83 @@ function buildChartProdutividade(distritos) {
   });
 }
 
+// ── Matriz na View Principal ──────────────────────────────────────
+
+function renderMatrizPrincipal(dados, mes) {
+  var meses = (CONFIG && CONFIG._meses) ? CONFIG._meses : [mes];
+
+  var tabs = meses.slice().reverse().map(function(m) {
+    return '<button class="mtz-p-tab' + (m === mes ? ' active' : '') + '" ' +
+      'onclick="mtzPrincipalTab(\'' + m + '\')">' + m + '</button>';
+  }).join('');
+
+  var grid = _mtzPrincipalGrid(dados);
+
+  return '<div class="mtz-p-wrap">' +
+    '<div class="jornada-sec-hdr" style="margin-bottom:12px">' +
+      '<div class="sec-title" style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px">🎯 Matriz de Performance</div>' +
+    '</div>' +
+    '<div class="mtz-p-tabs">' + tabs + '</div>' +
+    '<div id="mtz-p-grid" class="mtz-p-grid">' + grid + '</div>' +
+  '</div>';
+}
+
+function _mtzPrincipalGrid(dados) {
+  var reps = _mtzBuildReps(null, dados, null);
+  if (!reps.length) {
+    return '<div class="mtz-p-loading" style="grid-column:1/-1">Sem dados para este mês.</div>';
+  }
+  var buckets = [[], [], [], []];
+  reps.forEach(function(r) { buckets[_mtzQuad(r)].push(r); });
+  [0,1].forEach(function(i){ buckets[i].sort(function(a,b){ return (b._at||0)-(a._at||0); }); });
+  [2,3].forEach(function(i){ buckets[i].sort(function(a,b){ return (a._at||0)-(b._at||0); }); });
+
+  return _MTZ_QUADS.map(function(q, i) {
+    var cards = buckets[i].map(function(r) {
+      return '<div class="mtz-rep-card">' +
+        '<div class="mtz-rep-name" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">' +
+          '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (r.nome || r.setor_id || '—') + '</span>' +
+          jornadaBadge(r.etapa || 'Start') +
+        '</div>' +
+        '<div class="mtz-rep-dist">' + (r._dist||'—') + ' · ' + (r.linha||'') + '</div>' +
+        '<div class="mtz-rep-metrics">' +
+          _mtzMetric('MDV',  r._mdv!==null ? r._mdv.toFixed(1)+'%' : '—', cotaPctClass(r._mdv)) +
+          _mtzMetric('Q1',   _mtzPct(r.q1)) +
+          _mtzMetric('Q2',   _mtzPct(r.q2)) +
+          _mtzMetric('Q3',   _mtzPct(r.q3)) +
+          _mtzMetric('Q4',   _mtzPct(r.q4)) +
+          _mtzMetric('Cota', r._at!==null ? r._at.toFixed(1)+'%' : '—', cotaPctClass(r._at)) +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    return '<div class="mtz-quad-col ' + q.cls + '">' +
+      '<div class="mtz-quad-hdr">' +
+        '<span class="mtz-q-icon">' + q.icon + '</span>' +
+        '<div><div class="mtz-q-label">' + q.label + '</div>' +
+        '<div class="mtz-q-desc">' + q.desc + '</div></div>' +
+        '<div class="mtz-q-count">' + buckets[i].length + '</div>' +
+      '</div>' +
+      '<div class="mtz-quad-body">' +
+        (cards || '<div class="mtz-q-empty">Nenhum rep neste quadrante</div>') +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+async function mtzPrincipalTab(mes) {
+  // Atualiza aba ativa
+  document.querySelectorAll('.mtz-p-tab').forEach(function(b) {
+    b.classList.toggle('active', b.textContent.trim() === mes);
+  });
+  var el = document.getElementById('mtz-p-grid');
+  if (!el) return;
+  // Mostra spinner enquanto carrega
+  el.innerHTML = '<div class="mtz-p-loading" style="grid-column:1/-1">⏳ Carregando ' + mes + '…</div>';
+  var dados = await carregarMes(mes).catch(function() { return {}; });
+  el.innerHTML = _mtzPrincipalGrid(dados);
+}
+
 // ── Controller ────────────────────────────────────────────────────
 
 function renderTudo(dados, mes) {
@@ -3858,6 +3945,9 @@ function renderTudo(dados, mes) {
 
   // 3. PEX
   html += renderPEX(dados.pex || [], distritos);
+
+  // 3.5 MATRIZ DE PERFORMANCE (inline, abaixo do PEX)
+  html += renderMatrizPrincipal(dados, mes);
 
   // 4. VISITAS GD do mês
   html += renderVisitasMes(dados, mes, distritos);
