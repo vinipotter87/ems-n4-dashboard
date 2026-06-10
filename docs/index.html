@@ -443,6 +443,36 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
 .cota-tab{padding:6px 18px;border-radius:8px;border:2px solid var(--border);background:#fff;font-size:11px;font-weight:700;cursor:pointer;color:var(--gray);font-family:inherit;transition:all .12s}
 .cota-tab.an{border-color:var(--nexus);color:var(--nexus);background:var(--nexus-l)}
 .cota-tab.av{border-color:var(--red);color:var(--red);background:var(--red-l)}
+/* ── Gap & Outliers ── */
+.cycle-btn.gap-btn{border-color:#7c3aed;color:#7c3aed}
+.cycle-btn.gap-btn.active{background:#7c3aed;color:#fff}
+.gap-wrap{padding:24px 28px;max-width:1200px;margin:0 auto}
+.gap-page-header{display:flex;align-items:center;gap:14px;margin-bottom:24px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+.gap-page-icon{font-size:26px}
+.gap-page-title{font-size:17px;font-weight:800;color:var(--dark)}
+.gap-page-sub{font-size:11px;color:var(--gray);margin-top:2px}
+.gap-section{background:#fff;border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin-bottom:20px;box-shadow:0 1px 8px rgba(0,0,0,.05)}
+.gap-sec-hdr{display:flex;align-items:center;gap:9px;margin-bottom:14px}
+.gap-sec-icon{font-size:15px}
+.gap-sec-title{font-size:13px;font-weight:800;color:var(--dark)}
+.gap-tabs{display:flex;gap:6px;margin-bottom:14px}
+.gap-tab{padding:5px 16px;border-radius:7px;border:2px solid var(--border);background:#fff;font-size:11px;font-weight:700;cursor:pointer;color:var(--gray);font-family:inherit;transition:all .12s}
+.gap-tab.gap-tab-nex.active{border-color:var(--nexus);color:var(--nexus);background:var(--nexus-l)}
+.gap-tab.gap-tab-vit.active{border-color:var(--red);color:var(--red);background:var(--red-l)}
+.gap-pos{color:#15803d;font-weight:700}
+.gap-neg{color:#b91c1c;font-weight:700}
+.gap-val{font-size:11px}
+.gap-outlier-controls{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;padding:12px 14px;background:#fafafa;border-radius:9px;margin-bottom:14px;border:1px solid var(--border)}
+.gap-ctrl-group{display:flex;flex-direction:column;gap:4px}
+.gap-ctrl-label{font-size:10px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.4px}
+.gap-select{padding:5px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;font-weight:600;font-family:inherit;color:var(--dark);background:#fff;cursor:pointer;min-width:140px}
+.gap-select:focus{outline:none;border-color:#7c3aed}
+.outlier-summary{display:flex;align-items:center;gap:10px;padding:10px 0 12px;font-size:12px;flex-wrap:wrap}
+.outlier-count-ativo{background:#fef2f2;color:#b91c1c;padding:4px 12px;border-radius:20px;font-weight:700;border:1px solid #fecaca}
+.outlier-count-ok{background:#f0fdf4;color:#15803d;padding:4px 12px;border-radius:20px;font-weight:700;border:1px solid #bbf7d0}
+.outlier-count-vago{background:#f3f4f6;color:#6b7280;padding:4px 12px;border-radius:20px;font-weight:600;border:1px solid #e5e7eb}
+.outlier-vago td{color:#9ca3af!important;font-style:italic}
+.outlier-empty{padding:18px;text-align:center;color:#15803d;font-size:13px;font-weight:600;background:#f0fdf4;border-radius:9px;border:1px solid #bbf7d0;margin-top:4px}
 
 /* Marcas chave — destaque nas tabelas de produto */
 .prod-chave td{background:#fffdf5}
@@ -1075,7 +1105,8 @@ function renderCycleBar(meses, mesAtual) {
   var isCota     = VIEW_ATUAL === 'cota';
   var isVisitas  = VIEW_ATUAL === 'visitas';
   var isGloss    = VIEW_ATUAL === 'glossario';
-  var nenhuma    = isAnual || isCota || isVisitas || isGloss;
+  var isGap      = VIEW_ATUAL === 'gap';
+  var nenhuma    = isAnual || isCota || isVisitas || isGloss || isGap;
   var btns = meses.map(function(m) {
     return '<button class="cycle-btn' + (m === mesAtual && !nenhuma ? ' active' : '') +
       '" onclick="trocarMes(\'' + m + '\')">' + m + '/2026</button>';
@@ -1084,6 +1115,7 @@ function renderCycleBar(meses, mesAtual) {
   btns += '<button class="cycle-btn anual-btn'   + (isAnual   ? ' active' : '') + '" onclick="abrirVisaoAnual()">📅 Visão Anual</button>';
   btns += '<button class="cycle-btn cota-btn'    + (isCota    ? ' active' : '') + '" onclick="abrirEvolucaoCota()">📈 Cota</button>';
   btns += '<button class="cycle-btn visitas-btn' + (isVisitas ? ' active' : '') + '" onclick="abrirVisitasGD()">👁 Visitas GD</button>';
+  btns += '<button class="cycle-btn gap-btn'     + (isGap     ? ' active' : '') + '" onclick="abrirGapAnalise()">🔍 Gap & Outliers</button>';
   btns += '<button class="cycle-btn gloss-btn'   + (isGloss   ? ' active' : '') + '" onclick="abrirGlossario()">📖 Glossário</button>';
   bar.innerHTML = btns;
 }
@@ -3823,15 +3855,17 @@ async function trocarMes(mes) {
   var wasCota    = VIEW_ATUAL === 'cota';
   var wasVisitas = VIEW_ATUAL === 'visitas';
   var wasGloss   = VIEW_ATUAL === 'glossario';
-  if (wasAnual || wasCota || wasVisitas || wasGloss) VIEW_ATUAL = 'principal';
-  if (MES_ATUAL === mes && !wasAnual && !wasCota && !wasVisitas && !wasGloss) return;
+  var wasGap     = VIEW_ATUAL === 'gap';
+  if (wasAnual || wasCota || wasVisitas || wasGloss || wasGap) VIEW_ATUAL = 'principal';
+  if (MES_ATUAL === mes && !wasAnual && !wasCota && !wasVisitas && !wasGloss && !wasGap) return;
   MES_ATUAL = mes;
   DISTRITO_ATIVO = null;
 
   document.getElementById('pill-mes').textContent = mes + '/2026';
   document.querySelectorAll('.cycle-btn').forEach(function(btn){
     if (btn.classList.contains('anual-btn') || btn.classList.contains('cota-btn') ||
-        btn.classList.contains('visitas-btn') || btn.classList.contains('gloss-btn')) {
+        btn.classList.contains('visitas-btn') || btn.classList.contains('gloss-btn') ||
+        btn.classList.contains('gap-btn')) {
       btn.classList.remove('active');
     } else {
       btn.classList.toggle('active', btn.textContent.startsWith(mes));
@@ -3932,6 +3966,311 @@ async function init() {
   }
 
   mostrarLoading(false);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  GAP & OUTLIERS
+// ═══════════════════════════════════════════════════════════════
+
+var _gapMeses     = [];
+var _gapDistritos = {};   // distrito_id → ab
+var _gapLinha     = 'NEXUS';
+var _outLinha     = 'NEXUS';
+var _outProd      = null;
+var _outMes       = null;
+var _outThr       = 200;  // padrão: todos
+
+async function abrirGapAnalise() {
+  VIEW_ATUAL = 'gap';
+  DISTRITO_ATIVO = null;
+  var meses = CONFIG._meses || [];
+  mostrarLoading(true);
+  try {
+    await Promise.all(meses.map(function(m){ return carregarMes(m); }));
+    var d0 = DADOS_CACHE[meses[meses.length - 1]] || {};
+    // Montar mapa distrito_id → ab
+    _gapDistritos = {};
+    (d0.distritos || []).forEach(function(d){ _gapDistritos[d.distrito_id] = d.ab || d.nm || d.distrito_id; });
+    renderCycleBar(meses, MES_ATUAL);
+    renderGapPage(meses);
+  } catch(e) { renderErro(e.message); }
+  mostrarLoading(false);
+}
+
+function renderGapPage(meses) {
+  _gapMeses = meses;
+  _outMes   = meses[meses.length - 1];
+  var prodOpts = _gapProdOpts('NEXUS', meses);
+  _outProd  = prodOpts.length ? prodOpts[0].norm : null;
+
+  document.getElementById('main-content').innerHTML =
+    '<div class="gap-wrap">' +
+      '<div class="gap-page-header">' +
+        '<span class="gap-page-icon">🔍</span>' +
+        '<div><div class="gap-page-title">Gap &amp; Outliers</div>' +
+        '<div class="gap-page-sub">Onde estamos perdendo — por produto e por rep</div></div>' +
+      '</div>' +
+      _renderGapMapSec(meses) +
+      _renderOutlierSec(meses, prodOpts) +
+    '</div>';
+}
+
+/* ── Seção 1: Mapa de Gap por Produto ── */
+function _renderGapMapSec(meses) {
+  return '<div class="gap-section">' +
+    '<div class="gap-sec-hdr"><span class="gap-sec-icon">📊</span>' +
+    '<span class="gap-sec-title">Mapa de Gap por Produto — mês a mês</span></div>' +
+    '<div class="gap-tabs">' +
+      '<button class="gap-tab gap-tab-nex active" id="gm-nex" onclick="gapMapSwitch(\'NEXUS\')">NEXUS</button>' +
+      '<button class="gap-tab gap-tab-vit"         id="gm-vit" onclick="gapMapSwitch(\'VITAL\')">VITAL</button>' +
+    '</div>' +
+    '<div id="gap-map-content">' + _buildGapTable(meses, 'NEXUS') + '</div>' +
+  '</div>';
+}
+
+function gapMapSwitch(linha) {
+  _gapLinha = linha;
+  document.getElementById('gm-nex').className = 'gap-tab gap-tab-nex' + (linha === 'NEXUS' ? ' active' : '');
+  document.getElementById('gm-vit').className = 'gap-tab gap-tab-vit' + (linha === 'VITAL' ? ' active' : '');
+  document.getElementById('gap-map-content').innerHTML = _buildGapTable(_gapMeses, linha);
+}
+
+function _buildGapTable(meses, linha) {
+  // Produtos: union de todos os meses
+  var prodSet = {};
+  meses.forEach(function(m){
+    var d = DADOS_CACHE[m]; if (!d) return;
+    var arr = linha === 'NEXUS' ? (d.prodNex||[]) : (d.prodVit||[]);
+    arr.forEach(function(r){ if (r.produto) prodSet[normProd(r.produto)] = r.produto; });
+  });
+
+  // Calcular gap YTD por produto para ordenar (pior primeiro)
+  var prods = Object.keys(prodSet);
+  prods.sort(function(a, b){
+    var ga = 0, gb = 0;
+    meses.forEach(function(m){
+      ga += getRealProd(m, a, linha) - getCotaProd(m, a, linha);
+      gb += getRealProd(m, b, linha) - getCotaProd(m, b, linha);
+    });
+    return ga - gb; // mais negativo primeiro
+  });
+
+  var html = '<div class="cota-table-wrap"><table class="cota-table">';
+  // Cabeçalho
+  html += '<thead><tr><th class="th-label" rowspan="2">Produto</th>';
+  meses.forEach(function(m){ html += '<th class="th-mes-hdr" colspan="2">' + m + '</th>'; });
+  html += '<th class="th-ytd-hdr" colspan="2">YTD</th></tr><tr>';
+  meses.forEach(function(){ html += '<th class="th-sub">Ating%</th><th class="th-sub">Gap R$</th>'; });
+  html += '<th class="th-sub-ytd">Ating%</th><th class="th-sub-ytd">Gap R$</th></tr></thead><tbody>';
+
+  // Linha de total
+  html += _gapTotalRow(meses, linha);
+
+  // Linhas por produto
+  prods.forEach(function(pn){
+    var pNome = prodSet[pn];
+    var isMC  = isMarcaChave(pn, linha);
+    var ytdC = 0, ytdR = 0;
+    html += '<tr class="row-prod' + (isMC ? ' row-prod-chave' : '') + '">';
+    html += '<td class="td-label">' + pNome + (isMC ? '<span class="mc-badge">★</span>' : '') + '</td>';
+    meses.forEach(function(m, i){
+      var c = getCotaProd(m, pn, linha), r = getRealProd(m, pn, linha);
+      var pct = c > 0 ? r/c*100 : null;
+      var gap = r - c; ytdC += c; ytdR += r;
+      var sep = i === 0 ? '' : 'td-mes-sep';
+      html += '<td class="' + sep + ' ' + cotaPctClass(pct) + '">' + (pct !== null ? pct.toFixed(1)+'%' : '—') + '</td>';
+      html += '<td class="gap-val ' + (c > 0 ? (gap>=0?'gap-pos':'gap-neg') : '') + '">' +
+        (c > 0 ? _fmtGap(gap) : '—') + '</td>';
+    });
+    var yp = ytdC > 0 ? ytdR/ytdC*100 : null;
+    var yg = ytdR - ytdC;
+    html += '<td class="td-ytd ' + cotaPctClass(yp) + '">' + (yp !== null ? yp.toFixed(1)+'%' : '—') + '</td>';
+    html += '<td class="td-ytd gap-val ' + (ytdC>0?(yg>=0?'gap-pos':'gap-neg'):'') + '">' + (ytdC>0?_fmtGap(yg):'—') + '</td>';
+    html += '</tr>';
+  });
+
+  html += '</tbody></table></div>';
+  return html;
+}
+
+function _gapTotalRow(meses, linha) {
+  var ytdC = 0, ytdR = 0;
+  var html = '<tr class="row-total"><td class="td-label">Total ' + linha + '</td>';
+  meses.forEach(function(m, i){
+    var c = getCotaReg(m, linha), r = getRealReg(m, linha);
+    var pct = c > 0 ? r/c*100 : null;
+    var gap = r - c; ytdC += c; ytdR += r;
+    var sep = i === 0 ? '' : 'td-mes-sep';
+    html += '<td class="' + sep + ' ' + cotaPctClass(pct) + '">' + (pct !== null ? pct.toFixed(1)+'%' : '—') + '</td>';
+    html += '<td class="gap-val ' + (gap>=0?'gap-pos':'gap-neg') + '">' + _fmtGap(gap) + '</td>';
+  });
+  var yp = ytdC > 0 ? ytdR/ytdC*100 : null;
+  var yg = ytdR - ytdC;
+  html += '<td class="td-ytd ' + cotaPctClass(yp) + '">' + (yp !== null ? yp.toFixed(1)+'%' : '—') + '</td>';
+  html += '<td class="td-ytd gap-val ' + (yg>=0?'gap-pos':'gap-neg') + '">' + _fmtGap(yg) + '</td>';
+  html += '</tr>';
+  return html;
+}
+
+function _fmtGap(v) {
+  var abs = Math.abs(v);
+  var s   = v >= 0 ? '+' : '-';
+  if (abs >= 1e6)  return s + 'R$ ' + (abs/1e6).toFixed(2)  + 'M';
+  if (abs >= 1e3)  return s + 'R$ ' + Math.round(abs/1e3).toLocaleString('pt-BR') + 'k';
+  return s + 'R$ ' + Math.round(abs).toLocaleString('pt-BR');
+}
+
+/* ── Seção 2: Rep Outliers por Produto ── */
+function _renderOutlierSec(meses, prodOpts) {
+  var mesOpts = meses.map(function(m){
+    return '<option value="' + m + '"' + (m === _outMes ? ' selected' : '') + '>' + m + '/2026</option>';
+  }).join('');
+  var prodOptsHtml = prodOpts.map(function(p, i){
+    return '<option value="' + p.norm + '"' + (i===0?' selected':'') + '>' + p.nome + '</option>';
+  }).join('');
+
+  return '<div class="gap-section">' +
+    '<div class="gap-sec-hdr"><span class="gap-sec-icon">⚠️</span>' +
+    '<span class="gap-sec-title">Rep Outliers por Produto</span></div>' +
+    '<div class="gap-outlier-controls">' +
+      '<div class="gap-ctrl-group"><label class="gap-ctrl-label">Linha</label>' +
+        '<div class="gap-tabs" style="margin:0">' +
+          '<button class="gap-tab gap-tab-nex active" id="out-nex" onclick="outSwitchLinha(\'NEXUS\')">NEXUS</button>' +
+          '<button class="gap-tab gap-tab-vit"         id="out-vit" onclick="outSwitchLinha(\'VITAL\')">VITAL</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="gap-ctrl-group"><label class="gap-ctrl-label">Mês</label>' +
+        '<select id="out-mes" class="gap-select" onchange="outUpdate()">' + mesOpts + '</select>' +
+      '</div>' +
+      '<div class="gap-ctrl-group"><label class="gap-ctrl-label">Produto</label>' +
+        '<select id="out-prod" class="gap-select" onchange="outUpdate()">' + prodOptsHtml + '</select>' +
+      '</div>' +
+      '<div class="gap-ctrl-group"><label class="gap-ctrl-label">Filtrar abaixo de</label>' +
+        '<select id="out-thr" class="gap-select" onchange="outUpdate()">' +
+          '<option value="200" selected>Todos os reps</option>' +
+          '<option value="100">Abaixo de 100%</option>' +
+          '<option value="90">Abaixo de 90%</option>' +
+          '<option value="80">Abaixo de 80%</option>' +
+          '<option value="60">Abaixo de 60%</option>' +
+        '</select>' +
+      '</div>' +
+    '</div>' +
+    '<div id="out-content">' + _buildOutlierTable('NEXUS', _outProd, _outMes, 200) + '</div>' +
+  '</div>';
+}
+
+function _gapProdOpts(linha, meses) {
+  var set = {};
+  meses.forEach(function(m){
+    var d = DADOS_CACHE[m]; if (!d) return;
+    var arr = linha === 'NEXUS' ? (d.prodNex||[]) : (d.prodVit||[]);
+    arr.forEach(function(r){ if (r.produto) set[normProd(r.produto)] = r.produto; });
+  });
+  // Ordenar por gap YTD (pior primeiro)
+  var list = Object.keys(set).map(function(k){
+    var gc = 0, gr = 0;
+    meses.forEach(function(m){ gc += getCotaProd(m,k,linha); gr += getRealProd(m,k,linha); });
+    return {norm: k, nome: set[k], gap: gr - gc};
+  });
+  list.sort(function(a,b){ return a.gap - b.gap; });
+  return list;
+}
+
+function outSwitchLinha(linha) {
+  _outLinha = linha;
+  document.getElementById('out-nex').className = 'gap-tab gap-tab-nex' + (linha==='NEXUS'?' active':'');
+  document.getElementById('out-vit').className = 'gap-tab gap-tab-vit' + (linha==='VITAL'?' active':'');
+  var opts = _gapProdOpts(linha, _gapMeses);
+  var sel  = document.getElementById('out-prod');
+  sel.innerHTML = opts.map(function(p){ return '<option value="'+p.norm+'">'+p.nome+'</option>'; }).join('');
+  _outProd = opts.length ? opts[0].norm : null;
+  outUpdate();
+}
+
+function outUpdate() {
+  _outMes  = document.getElementById('out-mes').value;
+  _outProd = document.getElementById('out-prod').value;
+  _outThr  = parseFloat(document.getElementById('out-thr').value);
+  document.getElementById('out-content').innerHTML = _buildOutlierTable(_outLinha, _outProd, _outMes, _outThr);
+}
+
+function _buildOutlierTable(linha, prodNorm, mes, thr) {
+  var d = DADOS_CACHE[mes];
+  if (!d) return '<p style="color:var(--gray);padding:12px 0">Dados não disponíveis para ' + mes + '.</p>';
+
+  var repArr = (linha === 'NEXUS' ? (d.prodRepNex||[]) : (d.prodRepVit||[]));
+
+  var rows = repArr
+    .filter(function(r){ return prodNorm && normProd(r.produto) === normProd(prodNorm); })
+    .map(function(r){
+      var c  = safeFloat(r.cota)      || 0;
+      var rl = safeFloat(r.realizado) || 0;
+      var at = c > 0 ? rl/c*100 : null;
+      var vago = r.vago === 'True' || r.vago === true ||
+                 (typeof r.nome === 'string' && r.nome.toUpperCase().includes('VAGO'));
+      return Object.assign({}, r, {_c:c, _r:rl, _at:at, _vago:vago});
+    })
+    .filter(function(r){ return r._at === null || r._at < thr; });
+
+  if (!rows.length) {
+    var thrLbl = thr >= 200 ? 'nenhum rep' : 'nenhum rep abaixo de ' + thr + '%';
+    return '<div class="outlier-empty">✅ ' + (thr >= 200 ? 'Sem dados para este produto em ' + mes : 'Nenhum rep abaixo de ' + thr + '% em ' + mes) + '</div>';
+  }
+
+  // Ordenar: não-vagos primeiro, depois por ating% asc
+  rows.sort(function(a,b){
+    if (a._vago !== b._vago) return a._vago ? 1 : -1;
+    if (a._at === null) return 1;
+    if (b._at === null) return -1;
+    return a._at - b._at;
+  });
+
+  var ativos = rows.filter(function(r){ return !r._vago; }).length;
+  var vagos  = rows.filter(function(r){ return r._vago; }).length;
+  var totalGap = rows.filter(function(r){ return !r._vago; })
+                     .reduce(function(s,r){ return s + (r._r - r._c); }, 0);
+
+  var summary = '<div class="outlier-summary">';
+  if (ativos > 0)
+    summary += '<span class="outlier-count-ativo">⚠ ' + ativos + ' rep' + (ativos!==1?'s':'') + ' abaixo do threshold</span>';
+  else
+    summary += '<span class="outlier-count-ok">✅ Todos os reps ativos acima do threshold</span>';
+  if (vagos > 0)
+    summary += '<span class="outlier-count-vago">⬜ ' + vagos + ' vaga' + (vagos!==1?'s':'') + '</span>';
+  if (ativos > 0)
+    summary += '<span style="font-size:11px;color:var(--gray)">Gap acumulado dos reps ativos: <strong style="color:#b91c1c">' + _fmtGap(totalGap) + '</strong></span>';
+  summary += '</div>';
+
+  var html = summary + '<div class="cota-table-wrap"><table class="cota-table">';
+  html += '<thead><tr>' +
+    '<th class="th-label">Rep</th>' +
+    '<th class="th-label">Distrito / GD</th>' +
+    '<th class="th-sub">Cota</th>' +
+    '<th class="th-sub">Realizado</th>' +
+    '<th class="th-sub">Ating%</th>' +
+    '<th class="th-sub">Gap R$</th>' +
+  '</tr></thead><tbody>';
+
+  rows.forEach(function(r){
+    var gap    = r._r - r._c;
+    var atStr  = r._at !== null ? r._at.toFixed(1)+'%' : '—';
+    var atCls  = r._vago ? '' : cotaPctClass(r._at);
+    var gapStr = r._c > 0 ? _fmtGap(gap) : '—';
+    var gapCls = r._c > 0 ? (gap >= 0 ? 'gap-pos' : 'gap-neg') : '';
+    var nome   = r._vago ? ('⬜ Vaga — ' + (r.setor_id||'')) : (r.nome || r.setor_id || '—');
+    var dist   = r.distrito_id ? (_gapDistritos[r.distrito_id] || r.distrito_id) : '—';
+    html += '<tr class="row-dist' + (r._vago ? ' outlier-vago' : '') + '">' +
+      '<td class="td-label">' + nome + '</td>' +
+      '<td class="td-label" style="font-size:11px;color:var(--gray)">' + dist + '</td>' +
+      '<td>' + fmtBRL(r._c) + '</td>' +
+      '<td>' + fmtBRL(r._r) + '</td>' +
+      '<td class="' + atCls + '">' + atStr + '</td>' +
+      '<td class="gap-val ' + gapCls + '">' + gapStr + '</td>' +
+    '</tr>';
+  });
+
+  html += '</tbody></table></div>';
+  return html;
 }
 
 // ═══════════════════════════════════════════════════════════════
