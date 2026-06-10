@@ -455,6 +455,13 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
 .mtz-cards-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
 @media(max-width:960px){.mtz-cards-grid{grid-template-columns:repeat(2,1fr)}}
 .mtz-quad-col{background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 1px 8px rgba(0,0,0,.05);display:flex;flex-direction:column}
+.mtz-quad-body{overflow-y:auto;flex:1;max-height:480px}
+.mtz-quad-body::-webkit-scrollbar{width:5px}
+.mtz-quad-body::-webkit-scrollbar-thumb{background:rgba(0,0,0,.15);border-radius:3px}
+.mtz-quad-body::-webkit-scrollbar-track{background:transparent}
+.mtz-ytd-toggle{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.mtz-ytd-btn{padding:5px 13px;font-size:11px;font-weight:700;cursor:pointer;background:#fff;border:none;color:var(--gray);font-family:inherit;transition:all .12s}
+.mtz-ytd-btn.active{background:#0369a1;color:#fff}
 .mtz-q-star  .mtz-quad-hdr{background:#f0fdf4;border-bottom:2px solid #15803d}
 .mtz-q-efic  .mtz-quad-hdr{background:#eff6ff;border-bottom:2px solid #2563eb}
 .mtz-q-esfor .mtz-quad-hdr{background:#fffbeb;border-bottom:2px solid #d97706}
@@ -4012,6 +4019,7 @@ var _mtzMes    = null;
 var _mtzLinha  = null;   // null = ambas
 var _mtzThrMdv = 80;
 var _mtzThrAt  = 100;
+var _mtzYtd    = false;  // false = mês atual, true = YTD acumulado
 var _mtzReps   = [];
 var _mtzChart  = null;
 
@@ -4021,7 +4029,11 @@ async function abrirMatrizPerformance() {
   _mtzMes = MES_ATUAL || (CONFIG._meses || []).slice(-1)[0];
   mostrarLoading(true);
   try {
-    await carregarMes(_mtzMes);
+    // Carrega todos os meses (necessário para YTD) + jornada
+    var meses = CONFIG._meses || [_mtzMes];
+    setLoadingTxt('Carregando Matriz…');
+    for (var _m of meses) { await carregarMes(_m).catch(function(){}); }
+    await carregarJornada();
     renderCycleBar(CONFIG._meses || [], MES_ATUAL);
     _mtzRenderPage();
   } catch(e) { renderErro(e.message); }
@@ -4029,17 +4041,33 @@ async function abrirMatrizPerformance() {
 }
 
 function _mtzRenderPage() {
+  var meses = CONFIG._meses || [_mtzMes];
   var dados = DADOS_CACHE[_mtzMes] || {};
-  _mtzReps  = _mtzBuildReps(_mtzMes, dados, _mtzLinha);
+  _mtzReps  = _mtzYtd
+    ? _mtzBuildRepsYtd(meses, _mtzLinha)
+    : _mtzBuildReps(_mtzMes, dados, _mtzLinha);
+
+  var titulo = _mtzYtd
+    ? 'Matriz de Performance — YTD ' + (meses[0]||'') + '→' + (meses[meses.length-1]||'') + '/2026'
+    : 'Matriz de Performance — ' + _mtzMes + '/2026';
+  var subtit = _mtzYtd
+    ? 'MDV ponderado por dias trabalhados · Cota = Σ real ÷ Σ cota do período'
+    : 'Classificação dos representantes por atividade (MDV) e resultado (Cota)';
 
   var html =
     '<div class="mtz-wrap">' +
       '<div class="mtz-header">' +
         '<span style="font-size:26px">🎯</span>' +
-        '<div><div class="mtz-title">Matriz de Performance — ' + _mtzMes + '/2026</div>' +
-        '<div class="mtz-sub">Classificação dos representantes por atividade (MDV) e resultado (Cota)</div></div>' +
+        '<div><div class="mtz-title">' + titulo + '</div>' +
+        '<div class="mtz-sub">' + subtit + '</div></div>' +
       '</div>' +
       '<div class="mtz-controls">' +
+        '<div class="gap-ctrl-group"><label class="gap-ctrl-label">Período</label>' +
+          '<div class="mtz-ytd-toggle">' +
+            '<button class="mtz-ytd-btn' + (!_mtzYtd?' active':'') + '" onclick="mtzToggleYtd(false)">Mês</button>' +
+            '<button class="mtz-ytd-btn' + ( _mtzYtd?' active':'') + '" onclick="mtzToggleYtd(true)">YTD</button>' +
+          '</div>' +
+        '</div>' +
         '<div class="gap-ctrl-group"><label class="gap-ctrl-label">Linha</label>' +
           '<div class="gap-tabs" style="margin:0">' +
             '<button class="gap-tab gap-tab-nex' + (_mtzLinha==='NEXUS'?' active':'') + '" id="mtz-nex" onclick="mtzLinha(\'NEXUS\')">NEXUS</button>' +
@@ -4101,6 +4129,63 @@ function _mtzBuildReps(mes, dados, linha) {
       _mdv:  safeFloat(r.prod),
       _at:   at,
       _dist: distMap[r.distrito_id] || r.distrito_id || '—',
+      etapa: getJornadaRep(r.setor_id, r.nome),
+    });
+  });
+}
+
+// ── YTD: agrega todos os meses ponderando dias trabalhados ────────
+
+function _mtzBuildRepsYtd(meses, linha) {
+  var agg = {}; // setor_id → {base, mdvW, diasW, cotaC, realC, distName}
+
+  meses.forEach(function(mes) {
+    var dados = DADOS_CACHE[mes] || {};
+    var reps  = (dados.reps || []).filter(function(r){
+      return r.vago !== 'True' && r.vago !== true && safeFloat(r.prod) !== null;
+    });
+    if (linha) reps = reps.filter(function(r){ return r.linha === linha; });
+
+    var repProd = (dados.prodRepNex||[]).concat(dados.prodRepVit||[]);
+    var atMap   = {};
+    repProd.forEach(function(p){
+      var sid = p.setor_id;
+      if (!atMap[sid]) atMap[sid] = {c:0, r:0};
+      atMap[sid].c += safeFloat(p.cota)      || 0;
+      atMap[sid].r += safeFloat(p.realizado) || 0;
+    });
+
+    var distMap = {};
+    (dados.distritos||[]).forEach(function(d){ distMap[d.distrito_id] = d.ab || d.nm; });
+
+    reps.forEach(function(r){
+      var mdv  = safeFloat(r.prod);
+      var dias = safeFloat(r.dias_trabalhados) || 1;
+      var pr   = atMap[r.setor_id] || {c:0, r:0};
+      var dn   = distMap[r.distrito_id] || r.distrito_id || '—';
+      if (!agg[r.setor_id]) {
+        agg[r.setor_id] = {base: r, mdvW:0, diasW:0, cotaC:0, realC:0, distName: dn};
+      }
+      var a = agg[r.setor_id];
+      a.base     = r;       // mantém dados do mês mais recente
+      a.mdvW    += mdv * dias;
+      a.diasW   += dias;
+      a.cotaC   += pr.c;
+      a.realC   += pr.r;
+      a.distName = dn;
+    });
+  });
+
+  return Object.keys(agg).map(function(sid){
+    var a   = agg[sid];
+    var r   = a.base;
+    var mdv = a.diasW > 0 ? a.mdvW / a.diasW : null;
+    var at  = a.cotaC > 0 ? a.realC / a.cotaC * 100 : null;
+    return Object.assign({}, r, {
+      _mdv:  mdv,
+      _at:   at,
+      _dist: a.distName,
+      etapa: getJornadaRep(r.setor_id, r.nome),
     });
   });
 }
@@ -4235,7 +4320,10 @@ function _mtzBuildCards(reps) {
     _MTZ_QUADS.map(function(q, i){
       var cards = buckets[i].map(function(r){
         return '<div class="mtz-rep-card">' +
-          '<div class="mtz-rep-name">' + (r.nome || r.setor_id || '—') + '</div>' +
+          '<div class="mtz-rep-name" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">' +
+            '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (r.nome || r.setor_id || '—') + '</span>' +
+            jornadaBadge(r.etapa || 'Start') +
+          '</div>' +
           '<div class="mtz-rep-dist">' + (r._dist||'—') + ' · ' + (r.linha||'') + '</div>' +
           '<div class="mtz-rep-metrics">' +
             _mtzMetric('MDV',         r._mdv!==null ? r._mdv.toFixed(1)+'%' : '—', cotaPctClass(r._mdv)) +
@@ -4255,7 +4343,9 @@ function _mtzBuildCards(reps) {
           '<div class="mtz-q-desc">' + q.desc + '</div></div>' +
           '<div class="mtz-q-count">' + buckets[i].length + '</div>' +
         '</div>' +
-        (cards || '<div class="mtz-q-empty">Nenhum rep neste quadrante</div>') +
+        '<div class="mtz-quad-body">' +
+          (cards || '<div class="mtz-q-empty">Nenhum rep neste quadrante</div>') +
+        '</div>' +
       '</div>';
     }).join('') +
   '</div>';
@@ -4283,11 +4373,36 @@ function mtzLinha(linha) {
   mtzUpdate();
 }
 
+function mtzToggleYtd(ytd) {
+  _mtzYtd = ytd;
+  // Atualiza botões do toggle
+  document.querySelectorAll('.mtz-ytd-btn').forEach(function(b, i){
+    b.className = 'mtz-ytd-btn' + ((ytd ? i===1 : i===0) ? ' active' : '');
+  });
+  // Re-calcula reps e re-renderiza scatter + cards
+  var meses = CONFIG._meses || [_mtzMes];
+  var dados = DADOS_CACHE[_mtzMes] || {};
+  _mtzReps  = _mtzYtd
+    ? _mtzBuildRepsYtd(meses, _mtzLinha)
+    : _mtzBuildReps(_mtzMes, dados, _mtzLinha);
+  // Atualiza título
+  var titulo = _mtzYtd
+    ? 'Matriz de Performance — YTD ' + (meses[0]||'') + '→' + (meses[meses.length-1]||'') + '/2026'
+    : 'Matriz de Performance — ' + _mtzMes + '/2026';
+  var el = document.querySelector('.mtz-title');
+  if (el) el.textContent = titulo;
+  _mtzBuildChart(_mtzReps);
+  document.getElementById('mtz-cards').innerHTML = _mtzBuildCards(_mtzReps);
+}
+
 function mtzUpdate() {
   _mtzThrMdv = parseFloat(document.getElementById('mtz-thr-mdv').value);
   _mtzThrAt  = parseFloat(document.getElementById('mtz-thr-at').value);
+  var meses  = CONFIG._meses || [_mtzMes];
   var dados  = DADOS_CACHE[_mtzMes] || {};
-  _mtzReps   = _mtzBuildReps(_mtzMes, dados, _mtzLinha);
+  _mtzReps   = _mtzYtd
+    ? _mtzBuildRepsYtd(meses, _mtzLinha)
+    : _mtzBuildReps(_mtzMes, dados, _mtzLinha);
   _mtzBuildChart(_mtzReps);
   document.getElementById('mtz-cards').innerHTML = _mtzBuildCards(_mtzReps);
 }
