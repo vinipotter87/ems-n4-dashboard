@@ -914,6 +914,12 @@ function getVisitasGDRow(mes, linha, distId) {
   return arr.find(function(r){ return String(r.distrito_id) === String(distId); }) || null;
 }
 
+function getCrmRow(mes, distId) {
+  var d = DADOS_CACHE[mes]; if (!d) return null;
+  var arr = d.crm || [];
+  return arr.find(function(r){ return String(r.distrito_id) === String(distId); }) || null;
+}
+
 function cobClass(pct) {
   var v = parseFloat(pct);
   if (isNaN(v)) return '';
@@ -1097,8 +1103,8 @@ function renderCrmChave(crm, mes) {
 
   function crmClass(pct) {
     if (pct === null) return 'crit';
-    if (pct >= 70) return 'ok';
-    if (pct >= 40) return 'warn';
+    if (pct >= 100) return 'ok';
+    if (pct >= 80)  return 'warn';
     return 'crit';
   }
   function fmtPct(v) {
@@ -1172,6 +1178,60 @@ function renderCrmChave(crm, mes) {
   return html;
 }
 
+function renderCrmAnual(meses, distritos) {
+  var nexDists = distritos.filter(function(d){ return d.linha === 'NEXUS'; });
+  var vitDists = distritos.filter(function(d){ return d.linha === 'VITAL'; });
+  var nMeses   = meses.length;
+  var totalCols = 1 + nMeses * 3; // GD + (Obj, Real, Cob%) × meses
+
+  function crmCls(pct) {
+    if (pct === null || isNaN(pct)) return '';
+    if (pct >= 100) return 'crm-pct ok';
+    if (pct >= 80)  return 'crm-pct warn';
+    return 'crm-pct crit';
+  }
+  function crmBarHtml(pct) {
+    var clsFill = (pct === null || isNaN(pct)) ? 'crit' : (pct >= 100 ? 'ok' : (pct >= 80 ? 'warn' : 'crit'));
+    var w = pct !== null && !isNaN(pct) ? Math.min(100, Math.max(0, pct)) : 0;
+    return '<span class="crm-bar-wrap"><span class="crm-bar-fill ' + clsFill + '" style="width:' + w + '%"></span></span>';
+  }
+  function fmtP(v) { return (v !== null && !isNaN(v)) ? v.toFixed(1) + '%' : '—'; }
+
+  function buildRow(dist, cls) {
+    var row = '<tr class="' + cls + '">';
+    row += '<td class="td-gd" style="white-space:nowrap">' + (dist.ab || dist.nm || dist.distrito_id) + '</td>';
+    meses.forEach(function(m, mi) {
+      var r    = getCrmRow(m, dist.distrito_id);
+      var obj  = r ? parseFloat(r.obj_interacoes)  : NaN;
+      var real = r ? parseFloat(r.real_interacoes) : NaN;
+      var cob  = r ? parseFloat(r.cob_interacoes)  : NaN;
+      if (isNaN(obj))  obj  = null;
+      if (isNaN(real)) real = null;
+      if (isNaN(cob))  cob  = null;
+      if (cob !== null && cob <= 1.5) cob = cob * 100;
+      var sepCls = mi === 0 ? ' td-sep' : '';
+      row += '<td class="' + sepCls + '" style="text-align:right">' + (obj  !== null ? Math.round(obj)  : '—') + '</td>';
+      row += '<td style="text-align:right">'                        + (real !== null ? Math.round(real) : '—') + '</td>';
+      row += '<td style="text-align:center"><span class="' + crmCls(cob) + '">' + fmtP(cob) + '</span> ' + crmBarHtml(cob) + '</td>';
+    });
+    row += '</tr>';
+    return row;
+  }
+
+  var html = '<div class="visitas-table-wrap"><table class="visitas-table"><thead>';
+  html += '<tr><th class="th-gd" rowspan="2">GD</th>';
+  meses.forEach(function(m) { html += '<th class="th-mes" colspan="3">' + m + '</th>'; });
+  html += '</tr><tr>';
+  meses.forEach(function() { html += '<th class="th-mes">Obj</th><th class="th-mes">Real</th><th class="th-mes">Cob%</th>'; });
+  html += '</tr></thead><tbody>';
+  html += '<tr class="row-sep"><td colspan="' + totalCols + '">🔵 NEXUS</td></tr>';
+  nexDists.forEach(function(d){ html += buildRow(d, 'row-nexus'); });
+  html += '<tr class="row-sep"><td colspan="' + totalCols + '">🔴 VITAL</td></tr>';
+  vitDists.forEach(function(d){ html += buildRow(d, 'row-vital'); });
+  html += '</tbody></table></div>';
+  return html;
+}
+
 function renderVisitasGD(meses, distritos) {
   VIEW_ATUAL = 'visitas';
   window._visitasMeses    = meses;
@@ -1231,10 +1291,21 @@ function renderVisitasGD(meses, distritos) {
   html += '<div style="height:260px"><canvas id="chart-visitas-cob"></canvas></div>';
   html += '</div>';
 
-  // Tabela completa
+  // Tabela completa de Visitas
   html += '<div class="visitas-chart-wrap">';
-  html += '<h3>📋 Detalhamento por GD e Mês</h3>';
+  html += '<h3>📋 Detalhamento por GD e Mês — Visitas</h3>';
   html += renderVisitasTable(meses, distritos);
+  html += '</div>';
+
+  // CRM CHAVE — visão anual
+  html += '<div class="visitas-chart-wrap">';
+  html += '<h3>🎯 CRM CHAVE — Interações por GD e Mês</h3>';
+  html += '<p style="font-size:11px;color:var(--gray);margin:0 0 12px">';
+  html += '<span style="display:inline-block;width:10px;height:10px;background:#22c55e;border-radius:2px;margin-right:4px"></span>≥100%&nbsp;&nbsp;';
+  html += '<span style="display:inline-block;width:10px;height:10px;background:#f59e0b;border-radius:2px;margin-right:4px"></span>80–99%&nbsp;&nbsp;';
+  html += '<span style="display:inline-block;width:10px;height:10px;background:#ef4444;border-radius:2px;margin-right:4px"></span>&lt;80%';
+  html += '</p>';
+  html += renderCrmAnual(meses, distritos);
   html += '</div>';
 
   html += '</div>';
