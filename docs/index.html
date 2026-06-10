@@ -500,6 +500,33 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
 .mtz-mval{font-size:11.5px;font-weight:700;color:var(--dark)}
 .gap-tab.mtz-all-tab{border-color:#7c3aed;color:#7c3aed}
 .gap-tab.mtz-all-tab.active{border-color:#7c3aed;color:#fff;background:#7c3aed}
+/* ── CRM CHAVE ── */
+.crm-wrap{margin-bottom:24px}
+.crm-section{background:#fff;border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin-bottom:14px;box-shadow:0 1px 8px rgba(0,0,0,.05)}
+.crm-linha-hdr{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.crm-linha-badge{font-size:10px;font-weight:800;padding:3px 10px;border-radius:6px;letter-spacing:.6px}
+.crm-linha-badge.nexus{background:#dbeafe;color:#1d4ed8}
+.crm-linha-badge.vital{background:#fce7f3;color:#9d174d}
+.crm-linha-title{font-size:12px;font-weight:700;color:var(--dark)}
+.crm-table{width:100%;border-collapse:collapse;font-size:11.5px}
+.crm-table th{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray);padding:5px 8px;border-bottom:2px solid var(--border);text-align:left;white-space:nowrap}
+.crm-table th.right,.crm-table td.right{text-align:right}
+.crm-table td{padding:8px 8px;border-bottom:1px solid #f5f5f5;vertical-align:middle}
+.crm-table tr:last-child td{border-bottom:none}
+.crm-table tr:hover td{background:#fafafa}
+.crm-gd-name{font-weight:700;color:var(--dark);font-size:11.5px}
+.crm-gd-ab{font-size:10px;color:var(--gray);margin-top:1px}
+.crm-num{font-weight:700;color:var(--dark)}
+.crm-pct{font-weight:800;font-size:12px}
+.crm-pct.ok{color:#15803d}
+.crm-pct.warn{color:#d97706}
+.crm-pct.crit{color:#b91c1c}
+.crm-bar-wrap{width:80px;height:7px;background:#e5e7eb;border-radius:4px;overflow:hidden;display:inline-block;vertical-align:middle}
+.crm-bar-fill{height:100%;border-radius:4px;transition:width .4s ease}
+.crm-bar-fill.ok{background:#22c55e}
+.crm-bar-fill.warn{background:#f59e0b}
+.crm-bar-fill.crit{background:#ef4444}
+.crm-empty{padding:24px;text-align:center;color:var(--gray);font-size:12px}
 /* ── Gap & Outliers ── */
 .cycle-btn.gap-btn{border-color:#7c3aed;color:#7c3aed}
 .cycle-btn.gap-btn.active{background:#7c3aed;color:#fff}
@@ -784,7 +811,7 @@ async function carregarMes(mes) {
   var [distritos, reps, prodNex, prodVit,
        prodDistNex, prodDistVit,
        prodRepNex,  prodRepVit, pex,
-       visitasNex,  visitasVit] = await Promise.all([
+       visitasNex,  visitasVit, crm] = await Promise.all([
     fetchAba('distritos_' + mes).catch(function() { return []; }),
     fetchAba('reps_' + mes).catch(function() { return []; }),
     fetchAba('produtos_NEXUS_' + mes).catch(function() { return []; }),
@@ -795,12 +822,13 @@ async function carregarMes(mes) {
     fetchAba('produtos_rep_VITAL_' + mes).catch(function() { return []; }),
     fetchAba('pex_' + mes).catch(function() { return []; }),
     fetchAba('visitas_NEXUS_' + mes).catch(function() { return []; }),
-    fetchAba('visitas_VITAL_' + mes).catch(function() { return []; })
+    fetchAba('visitas_VITAL_' + mes).catch(function() { return []; }),
+    fetchAba('crm_' + mes).catch(function() { return []; })
   ]);
 
   DADOS_CACHE[mes] = { distritos, reps, prodNex, prodVit,
                        prodDistNex, prodDistVit, prodRepNex, prodRepVit, pex,
-                       visitasNex, visitasVit };
+                       visitasNex, visitasVit, crm };
   return DADOS_CACHE[mes];
 }
 
@@ -1060,6 +1088,87 @@ function renderVisitasMes(dados, mes, distritos) {
   html += '<tr class="row-sep"><td colspan="5">🔴 VITAL</td></tr>';
   html += buildRows(vitDists, 'VITAL', visitasVit);
   html += '</tbody></table></div></div></div>';
+  return html;
+}
+
+// ── CRM CHAVE ─────────────────────────────────────────────────────
+function renderCrmChave(crm, mes) {
+  if (!crm || !crm.length) return '';
+
+  function crmClass(pct) {
+    if (pct === null) return 'crit';
+    if (pct >= 70) return 'ok';
+    if (pct >= 40) return 'warn';
+    return 'crit';
+  }
+  function fmtPct(v) {
+    if (v === null || isNaN(v)) return '—';
+    return v.toFixed(1) + '%';
+  }
+  function barHtml(pct) {
+    var cls = crmClass(pct);
+    var w   = pct !== null ? Math.min(100, Math.max(0, pct)) : 0;
+    return '<span class="crm-bar-wrap"><span class="crm-bar-fill ' + cls + '" style="width:' + w + '%"></span></span>';
+  }
+
+  function buildSection(rows, linhaNome) {
+    var linhaCls = linhaNome.toLowerCase();
+    var html = '<div class="crm-section">';
+    html += '<div class="crm-linha-hdr">';
+    html += '<span class="crm-linha-badge ' + linhaCls + '">' + linhaNome + '</span>';
+    html += '<span class="crm-linha-title">Interações CRM CHAVE</span>';
+    html += '</div>';
+    if (!rows.length) {
+      html += '<div class="crm-empty">Sem dados para ' + linhaNome + ' em ' + mes + '</div>';
+    } else {
+      html += '<table class="crm-table"><thead><tr>';
+      html += '<th>GD</th>';
+      html += '<th class="right">Obj</th>';
+      html += '<th class="right">Real</th>';
+      html += '<th class="right">Cob.%</th>';
+      html += '<th>Progresso</th>';
+      html += '<th class="right">Painel</th>';
+      html += '<th class="right">Cob.Painel</th>';
+      html += '</tr></thead><tbody>';
+      rows.forEach(function(r) {
+        var obj  = parseFloat(r.obj_interacoes);  if (isNaN(obj))  obj  = null;
+        var real = parseFloat(r.real_interacoes); if (isNaN(real)) real = null;
+        var cob  = parseFloat(r.cob_interacoes);  if (isNaN(cob))  cob  = null;
+        // Convert fraction to % if needed
+        if (cob !== null && cob <= 1.5) cob = cob * 100;
+        var painel    = r.painel    !== undefined && r.painel    !== '' ? r.painel    : '—';
+        var cobPainel = parseFloat(r.cob_painel);
+        if (isNaN(cobPainel)) cobPainel = null;
+        if (cobPainel !== null && cobPainel <= 1.5) cobPainel = cobPainel * 100;
+        var cc = crmClass(cob);
+        var cp = crmClass(cobPainel);
+        html += '<tr>';
+        html += '<td><div class="crm-gd-name">' + (r.nm || r.ab || r.distrito_id) + '</div>';
+        if (r.ab && r.nm && r.nm !== r.ab) html += '<div class="crm-gd-ab">' + r.ab + '</div>';
+        html += '</td>';
+        html += '<td class="right crm-num">' + (obj  !== null ? Math.round(obj)  : '—') + '</td>';
+        html += '<td class="right crm-num">' + (real !== null ? Math.round(real) : '—') + '</td>';
+        html += '<td class="right"><span class="crm-pct ' + cc + '">' + fmtPct(cob) + '</span></td>';
+        html += '<td>' + barHtml(cob) + '</td>';
+        html += '<td class="right crm-num">' + painel + '</td>';
+        html += '<td class="right"><span class="crm-pct ' + cp + '">' + fmtPct(cobPainel) + '</span></td>';
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  var nexRows = crm.filter(function(r){ return (r.linha || '').toUpperCase() === 'NEXUS'; });
+  var vitRows = crm.filter(function(r){ return (r.linha || '').toUpperCase() === 'VITAL'; });
+
+  var html = '<div class="crm-wrap">';
+  html += '<div class="sec-hdr"><div class="sec-title">PANORAMA — CRM CHAVE</div><div class="sec-line"></div>';
+  html += '<span style="font-size:11px;color:var(--gray)">' + mes + '/2026</span></div>';
+  html += buildSection(nexRows, 'NEXUS');
+  html += buildSection(vitRows, 'VITAL');
+  html += '</div>';
   return html;
 }
 
@@ -3958,6 +4067,9 @@ function renderTudo(dados, mes) {
 
   // 4. VISITAS GD do mês
   html += renderVisitasMes(dados, mes, distritos);
+
+  // 4.5 CRM CHAVE
+  html += renderCrmChave(dados.crm || [], mes);
 
   // 5. ANÁLISE & ALERTAS (preview — abre página dedicada)
   html += renderBotaoAnalise(dados, mes);
