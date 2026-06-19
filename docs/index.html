@@ -2677,6 +2677,10 @@ function sumField(arr, field) {
 }
 
 // Cota/Realizado regional por linha ('NEXUS','VITAL',null=total)
+function isMesParcial(mes) {
+  return CONFIG && CONFIG.mes_parcial && mes === CONFIG.mes_parcial;
+}
+
 function getCotaReg(mes, linha) {
   var d = DADOS_CACHE[mes]; if (!d) return 0;
   if (linha === 'NEXUS') return sumField(d.prodNex || [], 'cota');
@@ -2684,6 +2688,7 @@ function getCotaReg(mes, linha) {
   return sumField((d.prodNex||[]).concat(d.prodVit||[]), 'cota');
 }
 function getRealReg(mes, linha) {
+  if (isMesParcial(mes)) return null;
   var d = DADOS_CACHE[mes]; if (!d) return 0;
   if (linha === 'NEXUS') return sumField(d.prodNex || [], 'realizado');
   if (linha === 'VITAL') return sumField(d.prodVit || [], 'realizado');
@@ -2698,6 +2703,7 @@ function getCotaDist(mes, distId, linhaD) {
   return sumField(arr, 'cota');
 }
 function getRealDist(mes, distId, linhaD) {
+  if (isMesParcial(mes)) return null;
   var d = DADOS_CACHE[mes]; if (!d) return 0;
   var arr = (linhaD === 'NEXUS' ? (d.prodDistNex||[]) : (d.prodDistVit||[]))
     .filter(function(r){ return r.distrito_id === distId; });
@@ -2714,6 +2720,7 @@ function getCotaProd(mes, produto, linha) {
   return 0;
 }
 function getRealProd(mes, produto, linha) {
+  if (isMesParcial(mes)) return null;
   var d = DADOS_CACHE[mes]; if (!d) return 0;
   var arr = linha === 'NEXUS' ? (d.prodNex||[]) : (d.prodVit||[]);
   for (var i = 0; i < arr.length; i++) {
@@ -2722,9 +2729,12 @@ function getRealProd(mes, produto, linha) {
   return 0;
 }
 
-// YTD: soma de todos os meses disponíveis
+// YTD: soma de todos os meses — meses parciais excluídos do realizado (null)
 function calcYTD(meses, getFn) {
-  return meses.reduce(function(s, m) { return s + (getFn(m) || 0); }, 0);
+  return meses.reduce(function(s, m) {
+    var v = getFn(m);
+    return s + (v !== null ? (v || 0) : 0);
+  }, 0);
 }
 
 // ── Chart: barras cota vs realizado ──────────────────────────────
@@ -2934,7 +2944,8 @@ function renderCotaTableRegional(meses) {
   html += '<thead><tr>';
   html += '<th class="th-label" rowspan="2">Linha</th>';
   meses.forEach(function(m) {
-    html += '<th class="th-mes-hdr" colspan="3">' + m + '</th>';
+    var lbl = m + (isMesParcial(m) ? ' <span style="font-size:8px;font-weight:700;background:#fef3c7;color:#92400e;padding:1px 5px;border-radius:4px;vertical-align:middle">PARCIAL</span>' : '');
+    html += '<th class="th-mes-hdr" colspan="3">' + lbl + '</th>';
   });
   html += '<th class="th-ytd-hdr" colspan="3">YTD</th>';
   html += '</tr><tr>';
@@ -2951,12 +2962,12 @@ function renderCotaTableRegional(meses) {
     html += '<td class="td-label">' + lin.label + '</td>';
     meses.forEach(function(m, idx) {
       var c = getCotaReg(m, getLinha);
-      var r = getRealReg(m, getLinha);
-      var pct = c > 0 ? r / c * 100 : null;
-      ytdC += c; ytdR += r;
+      var r = getRealReg(m, getLinha); // null se parcial
+      var pct = (c > 0 && r !== null) ? r / c * 100 : null;
+      ytdC += c; if (r !== null) ytdR += r;
       var sep = idx === 0 ? '' : 'td-mes-sep';
       html += '<td class="' + sep + '">' + fmtBRL(c) + '</td>';
-      html += '<td>' + fmtBRL(r) + '</td>';
+      html += '<td>' + (r !== null ? fmtBRL(r) : '—') + '</td>';
       html += '<td class="' + cotaPctClass(pct) + '">' + (pct !== null ? pct.toFixed(1) + '%' : '—') + '</td>';
     });
     var ytdPct = ytdC > 0 ? ytdR / ytdC * 100 : null;
@@ -2976,7 +2987,10 @@ function renderCotaTableDist(meses, distritos) {
   var html = '<div class="cota-table-wrap"><table class="cota-table">';
   html += '<thead><tr>';
   html += '<th class="th-label" rowspan="2">Distrito</th>';
-  meses.forEach(function(m) { html += '<th class="th-mes-hdr" colspan="3">' + m + '</th>'; });
+  meses.forEach(function(m) {
+    var lbl = m + (isMesParcial(m) ? ' <span style="font-size:8px;font-weight:700;background:#fef3c7;color:#92400e;padding:1px 5px;border-radius:4px;vertical-align:middle">PARCIAL</span>' : '');
+    html += '<th class="th-mes-hdr" colspan="3">' + lbl + '</th>';
+  });
   html += '<th class="th-ytd-hdr" colspan="3">YTD</th>';
   html += '</tr><tr>';
   meses.forEach(function() { html += '<th class="th-sub">Cota</th><th class="th-sub">Realizado</th><th class="th-sub">%</th>'; });
@@ -2992,12 +3006,12 @@ function renderCotaTableDist(meses, distritos) {
       (d.ab || d.nome || d.distrito_id) + '</span></td>';
     meses.forEach(function(m, idx) {
       var c = getCotaDist(m, d.distrito_id, linhaD);
-      var r = getRealDist(m, d.distrito_id, linhaD);
-      var pct = c > 0 ? r / c * 100 : null;
-      ytdC += c; ytdR += r;
+      var r = getRealDist(m, d.distrito_id, linhaD); // null se parcial
+      var pct = (c > 0 && r !== null) ? r / c * 100 : null;
+      ytdC += c; if (r !== null) ytdR += r;
       var sep = idx === 0 ? '' : 'td-mes-sep';
       row += '<td class="' + sep + '">' + fmtBRL(c) + '</td>';
-      row += '<td>' + fmtBRL(r) + '</td>';
+      row += '<td>' + (r !== null ? fmtBRL(r) : '—') + '</td>';
       row += '<td class="' + cotaPctClass(pct) + '">' + (pct !== null ? pct.toFixed(1) + '%' : '—') + '</td>';
     });
     var ytdPct = ytdC > 0 ? ytdR / ytdC * 100 : null;
@@ -3034,7 +3048,10 @@ function renderCotaTableProduto(meses, linha) {
   var html = '<div class="cota-table-wrap"><table class="cota-table">';
   html += '<thead><tr>';
   html += '<th class="th-label" rowspan="2">Produto</th>';
-  meses.forEach(function(m) { html += '<th class="th-mes-hdr" colspan="3">' + m + '</th>'; });
+  meses.forEach(function(m) {
+    var lbl = m + (isMesParcial(m) ? ' <span style="font-size:8px;font-weight:700;background:#fef3c7;color:#92400e;padding:1px 5px;border-radius:4px;vertical-align:middle">PARCIAL</span>' : '');
+    html += '<th class="th-mes-hdr" colspan="3">' + lbl + '</th>';
+  });
   html += '<th class="th-ytd-hdr" colspan="3">YTD</th>';
   html += '</tr><tr>';
   meses.forEach(function() { html += '<th class="th-sub">Cota</th><th class="th-sub">Realizado</th><th class="th-sub">%</th>'; });
@@ -3048,12 +3065,12 @@ function renderCotaTableProduto(meses, linha) {
     html += '<td class="td-label">' + pNome + (isMC ? '<span class="mc-badge">★ CHAVE</span>' : '') + '</td>';
     meses.forEach(function(m, idx) {
       var c = getCotaProd(m, pNorm, linha);
-      var r = getRealProd(m, pNorm, linha);
-      var pct = c > 0 ? r / c * 100 : null;
-      ytdC += c; ytdR += r;
+      var r = getRealProd(m, pNorm, linha); // null se parcial
+      var pct = (c > 0 && r !== null) ? r / c * 100 : null;
+      ytdC += c; if (r !== null) ytdR += r;
       var sep = idx === 0 ? '' : 'td-mes-sep';
       html += '<td class="' + sep + '">' + fmtBRL(c) + '</td>';
-      html += '<td>' + fmtBRL(r) + '</td>';
+      html += '<td>' + (r !== null ? fmtBRL(r) : '—') + '</td>';
       html += '<td class="' + cotaPctClass(pct) + '">' + (pct !== null ? pct.toFixed(1) + '%' : '—') + '</td>';
     });
     var ytdPct = ytdC > 0 ? ytdR / ytdC * 100 : null;
@@ -3072,6 +3089,10 @@ function renderCotaYTDCard(titulo, cor, meses, getLinha) {
   var r = calcYTD(meses, function(m){ return getRealReg(m, getLinha); });
   var pct = c > 0 ? r / c * 100 : null;
   var pctCls = pct !== null ? (pct >= 100 ? 'ok' : pct >= 80 ? 'warn' : 'crit') : '';
+  var temParcial = meses.some(function(m){ return isMesParcial(m); });
+  var notaParcial = temParcial
+    ? '<div style="font-size:9px;color:#92400e;background:#fef3c7;border-radius:4px;padding:2px 7px;margin-top:6px;text-align:center">Realizado exclui mês parcial (' + CONFIG.mes_parcial + ')</div>'
+    : '';
   return '<div class="cota-ytd-card" style="border-top:4px solid ' + cor + '">' +
     '<div class="cota-ytd-label">' + titulo + '</div>' +
     '<div class="cota-ytd-row2">' +
@@ -3080,6 +3101,7 @@ function renderCotaYTDCard(titulo, cor, meses, getLinha) {
       '<span class="cota-ytd-cota">' + fmtBRL(c) + '</span>' +
     '</div>' +
     '<span class="cota-ytd-pct ' + pctCls + '">' + (pct !== null ? pct.toFixed(1) + '%' : '—') + '</span>' +
+    notaParcial +
   '</div>';
 }
 
