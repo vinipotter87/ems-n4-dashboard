@@ -1556,19 +1556,21 @@ function abrirDiagCard(idx) {
   fecharDiagCard(true);
   DIAG_ATIVO = idx;
 
-  var nc = parseInt(d.n_criticos)        || 0;
-  var nd = parseInt(d.n_desenvolvimento) || 0;
-  var ne = parseInt(d.n_execucao)        || 0;
-  var nv = parseInt(d.n_vagos)           || 0;
+  var nc    = parseInt(d.n_criticos)        || 0;
+  var nocorr = parseInt(d.n_criticos_ocorr) || 0;
+  var nd    = parseInt(d.n_desenvolvimento) || 0;
+  var ne    = parseInt(d.n_execucao)        || 0;
+  var nv    = parseInt(d.n_vagos)           || 0;
   var total = nc + nd + ne + nv;
   var isNexus = (d.linha||'').toUpperCase() === 'NEXUS';
   var cor1 = isNexus ? 'var(--nexus)' : 'var(--red)';
 
-  function metricBig(val, cor, lbl, desc) {
+  function metricBig(val, cor, lbl, desc, nota) {
     return '<div style="background:var(--bg);border-radius:12px;padding:18px 10px;text-align:center">' +
       '<div style="font-size:40px;font-weight:900;color:' + cor + ';line-height:1">' + val + '</div>' +
       '<div style="font-size:10px;font-weight:700;color:' + cor + ';margin-top:5px;letter-spacing:.05em">' + lbl + '</div>' +
       '<div style="font-size:10px;color:var(--gray);margin-top:4px;line-height:1.3">' + desc + '</div>' +
+      (nota ? '<div style="font-size:9px;color:var(--gray);margin-top:3px;opacity:.8">' + nota + '</div>' : '') +
     '</div>';
   }
 
@@ -1596,7 +1598,7 @@ function abrirDiagCard(idx) {
       var jCor      = JORNADA_COR[r.jornada]   || 'var(--gray)';
       var gap       = parseFloat(r.gap_financeiro);
       var gapStr    = isNaN(gap) || gap === 0 ? '—' : 'R$ ' + gap.toLocaleString('pt-BR', {maximumFractionDigits:0});
-      var gapCls    = (!isNaN(gap) && gap > 0) ? 'vermelho' : '';
+      var gapColor  = (!isNaN(gap) && gap > 0) ? '#e53e3e' : 'var(--gray)';
 
       tabelaHtml += '<tr>' +
         '<td><span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:' + tipoCor + '">' + tipoLabel + '</span></td>' +
@@ -1604,7 +1606,7 @@ function abrirDiagCard(idx) {
         '<td style="font-weight:600;font-size:12px">' + (r.nome_rep || '—') + '</td>' +
         '<td>' + (r.jornada ? '<span style="font-size:10px;font-weight:700;color:' + jCor + ';background:' + jCor + '18;border-radius:4px;padding:2px 6px">' + r.jornada + '</span>' : '<span style="color:var(--gray);font-size:10px">—</span>') + '</td>' +
         '<td style="font-size:11px">' + (r.produto || '—') + '</td>' +
-        '<td class="r ' + gapCls + '" style="font-weight:700">' + gapStr + '</td>' +
+        '<td style="text-align:right;font-weight:700;color:' + gapColor + '">' + gapStr + '</td>' +
       '</tr>';
     });
     tabelaHtml += '</tbody></table></div>';
@@ -1618,7 +1620,7 @@ function abrirDiagCard(idx) {
       '<button class="dd-close" onclick="fecharDiagCard()">✕</button>' +
     '</div>' +
     '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:4px">' +
-      metricBig(nc, '#e53e3e', 'CRÍTICOS',       'Visitação ok,<br>sem conversão') +
+      metricBig(nc, '#e53e3e', 'CRÍTICOS',       'Visitação ok,<br>sem conversão', nocorr > nc ? nocorr + ' ocorrências' : '') +
       metricBig(nd, '#d69e2e', 'DESENVOLVIMENTO', 'Rep Start em<br>médico c/ potencial') +
       metricBig(ne, '#3182ce', 'GAP EXECUÇÃO',   'Visitação abaixo<br>de 85%') +
       metricBig(nv, '#718096', 'VAGOS',          'Setor sem<br>rep alocado') +
