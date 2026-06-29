@@ -1548,13 +1548,36 @@ var JORNADA_COR = {
   'Start':       '#b7791f'
 };
 
-function abrirDiagCard(idx) {
+function calcStreakCritico(setor_codigo, gd_codigo) {
+  var mesesConfig = CONFIG._meses || [];
+  var idxAtual = MES_ORDER.indexOf(MES_ATUAL);
+  var streak = 0;
+  for (var i = idxAtual; i >= 0; i--) {
+    var m = MES_ORDER[i];
+    if (mesesConfig.indexOf(m) === -1) continue;
+    var cache = DADOS_CACHE[m];
+    if (!cache || !cache.diagDetalhe) break;
+    var row = cache.diagDetalhe.find(function(r) {
+      return String(r.setor_codigo) === String(setor_codigo) && String(r.gd_codigo) === String(gd_codigo);
+    });
+    if (row && row.tipo === 'ANOMALIA_CRITICA') { streak++; } else { break; }
+  }
+  return streak;
+}
+
+async function abrirDiagCard(idx) {
   var d = DIAG_DATA[idx];
   if (!d) return;
 
   if (DIAG_ATIVO === idx) { fecharDiagCard(); return; }
   fecharDiagCard(true);
   DIAG_ATIVO = idx;
+
+  // Pré-carregar todos os meses para cálculo de reincidência
+  var todosMeses = CONFIG._meses || [];
+  await Promise.all(todosMeses.map(function(m) {
+    return (DADOS_CACHE[m] && DADOS_CACHE[m].diagDetalhe) ? Promise.resolve() : carregarMes(m).catch(function(){});
+  }));
 
   var nc    = parseInt(d.n_criticos)        || 0;
   var nocorr = parseInt(d.n_criticos_ocorr) || 0;
@@ -1600,8 +1623,13 @@ function abrirDiagCard(idx) {
       var gapStr    = isNaN(gap) || gap === 0 ? '—' : 'R$ ' + gap.toLocaleString('pt-BR', {maximumFractionDigits:0});
       var gapColor  = (!isNaN(gap) && gap > 0) ? '#e53e3e' : 'var(--gray)';
 
+      var streak = (r.tipo === 'ANOMALIA_CRITICA') ? calcStreakCritico(r.setor_codigo, r.gd_codigo) : 0;
+      var streakBadge = streak >= 2
+        ? '<span style="font-size:9px;font-weight:800;padding:1px 6px;border-radius:3px;background:#fff0f0;color:#e53e3e;border:1px solid #fcc;margin-left:6px">' + streak + 'M</span>'
+        : '';
+
       tabelaHtml += '<tr>' +
-        '<td><span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:' + tipoCor + '">' + tipoLabel + '</span></td>' +
+        '<td><span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:' + tipoCor + '">' + tipoLabel + streakBadge + '</span></td>' +
         '<td style="font-size:11px;color:var(--gray)">' + (r.setor_codigo || '—') + '</td>' +
         '<td style="font-weight:600;font-size:12px">' + (r.nome_rep || '—') + '</td>' +
         '<td>' + (r.jornada ? '<span style="font-size:10px;font-weight:700;color:' + jCor + ';background:' + jCor + '18;border-radius:4px;padding:2px 6px">' + r.jornada + '</span>' : '<span style="color:var(--gray);font-size:10px">—</span>') + '</td>' +
