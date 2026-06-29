@@ -1582,7 +1582,7 @@ function abrirDiagCard(idx) {
     tabelaHtml = '<div class="dd-section-lbl" style="margin-top:20px">Detalhamento por Setor</div>' +
       '<div style="overflow-x:auto"><table class="dd-rep-table"><thead><tr>' +
         '<th>Diagnóstico</th><th>Setor</th><th>Representante</th>' +
-        '<th>Jornada</th><th>Produto</th><th class="r">Ating.%</th>' +
+        '<th>Jornada</th><th>Produto ★</th><th class="r">Gap R$</th>' +
       '</tr></thead><tbody>';
 
     var ORDEM = ['ANOMALIA_CRITICA','GAP_EXECUCAO','GAP_COBERTURA','DESENVOLVIMENTO','RUIDO_ESPERADO'];
@@ -1594,9 +1594,9 @@ function abrirDiagCard(idx) {
       var tipoCor   = DIAG_TIPO_COR[r.tipo]   || '#718096';
       var tipoLabel = DIAG_TIPO_LABEL[r.tipo]  || r.tipo;
       var jCor      = JORNADA_COR[r.jornada]   || 'var(--gray)';
-      var cob       = parseFloat(r.cob_pct);
-      var cobStr    = isNaN(cob) ? '—' : cob.toFixed(1) + '%';
-      var cobCls    = (!isNaN(cob) && cob >= 100) ? 'verde' : ((!isNaN(cob) && cob >= 70) ? 'amarelo' : 'vermelho');
+      var gap       = parseFloat(r.gap_financeiro);
+      var gapStr    = isNaN(gap) || gap === 0 ? '—' : 'R$ ' + gap.toLocaleString('pt-BR', {maximumFractionDigits:0});
+      var gapCls    = (!isNaN(gap) && gap > 0) ? 'vermelho' : '';
 
       tabelaHtml += '<tr>' +
         '<td><span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:' + tipoCor + '">' + tipoLabel + '</span></td>' +
@@ -1604,7 +1604,7 @@ function abrirDiagCard(idx) {
         '<td style="font-weight:600;font-size:12px">' + (r.nome_rep || '—') + '</td>' +
         '<td>' + (r.jornada ? '<span style="font-size:10px;font-weight:700;color:' + jCor + ';background:' + jCor + '18;border-radius:4px;padding:2px 6px">' + r.jornada + '</span>' : '<span style="color:var(--gray);font-size:10px">—</span>') + '</td>' +
         '<td style="font-size:11px">' + (r.produto || '—') + '</td>' +
-        '<td class="r ' + cobCls + '" style="font-weight:700">' + cobStr + '</td>' +
+        '<td class="r ' + gapCls + '" style="font-weight:700">' + gapStr + '</td>' +
       '</tr>';
     });
     tabelaHtml += '</tbody></table></div>';
