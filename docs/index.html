@@ -834,7 +834,7 @@ async function carregarMes(mes) {
        prodDistNex, prodDistVit,
        prodRepNex,  prodRepVit, pex,
        visitasNex,  visitasVit, crm,
-       diagnostico] = await Promise.all([
+       diagnostico, diagDetalhe] = await Promise.all([
     fetchAba('distritos_' + mes).catch(function() { return []; }),
     fetchAba('reps_' + mes).catch(function() { return []; }),
     fetchAba('produtos_NEXUS_' + mes).catch(function() { return []; }),
@@ -847,12 +847,13 @@ async function carregarMes(mes) {
     fetchAba('visitas_NEXUS_' + mes).catch(function() { return []; }),
     fetchAba('visitas_VITAL_' + mes).catch(function() { return []; }),
     fetchAba('crm_' + mes).catch(function() { return []; }),
-    fetchAba('diagnostico_' + mes).catch(function() { return []; })
+    fetchAba('diagnostico_' + mes).catch(function() { return []; }),
+    fetchAba('diagnostico_detalhe_' + mes).catch(function() { return []; })
   ]);
 
   DADOS_CACHE[mes] = { distritos, reps, prodNex, prodVit,
                        prodDistNex, prodDistVit, prodRepNex, prodRepVit, pex,
-                       visitasNex, visitasVit, crm, diagnostico };
+                       visitasNex, visitasVit, crm, diagnostico, diagDetalhe };
   return DADOS_CACHE[mes];
 }
 
@@ -1527,6 +1528,26 @@ function reRenderDiagCards() {
   if (gv) gv.innerHTML = vital.map(diagCard).join('');
 }
 
+var DIAG_TIPO_COR = {
+  'ANOMALIA_CRITICA': '#e53e3e',
+  'GAP_EXECUCAO':     '#3182ce',
+  'GAP_COBERTURA':    '#2d3748',
+  'DESENVOLVIMENTO':  '#d69e2e',
+  'RUIDO_ESPERADO':   '#a0aec0'
+};
+var DIAG_TIPO_LABEL = {
+  'ANOMALIA_CRITICA': '🔴 Crítico',
+  'GAP_EXECUCAO':     '🔵 Gap Exec.',
+  'GAP_COBERTURA':    '⚫ Vago',
+  'DESENVOLVIMENTO':  '🟡 Desenv.',
+  'RUIDO_ESPERADO':   '⚪ Ruído'
+};
+var JORNADA_COR = {
+  'Destaque':    '#276749',
+  'Performance': '#2b6cb0',
+  'Start':       '#b7791f'
+};
+
 function abrirDiagCard(idx) {
   var d = DIAG_DATA[idx];
   if (!d) return;
@@ -1551,36 +1572,58 @@ function abrirDiagCard(idx) {
     '</div>';
   }
 
-  var prioHtml = '';
-  if (d.prioridade_1_produto) {
-    var pCor  = nc > 0 ? '#e53e3e' : (ne > 0 ? '#3182ce' : '#d69e2e');
-    var pTipo = nc > 0 ? '🔴 ANOMALIA CRÍTICA' : (ne > 0 ? '🔵 GAP DE EXECUÇÃO' : '🟡 DESENVOLVIMENTO');
-    prioHtml =
-      '<div style="margin-top:20px">' +
-        '<div style="font-size:10px;font-weight:800;color:var(--gray);letter-spacing:.06em;margin-bottom:8px">PRIORIDADE #1</div>' +
-        '<div style="background:var(--bg);border-left:4px solid ' + pCor + ';border-radius:8px;padding:14px 16px">' +
-          '<div style="font-size:10px;color:' + pCor + ';font-weight:800;margin-bottom:6px">' + pTipo + '</div>' +
-          '<div style="font-size:15px;font-weight:800;color:var(--dark)">' + (d.prioridade_1_produto || '') + '</div>' +
-          '<div style="font-size:12px;color:var(--gray);margin-top:3px">Rep: ' + (d.prioridade_1_rep || '—') + '</div>' +
-          (d.prioridade_1_mensagem ? '<div style="font-size:11px;color:var(--dark);margin-top:10px;line-height:1.6;background:#fff;border-radius:6px;padding:8px 12px">' + d.prioridade_1_mensagem + '</div>' : '') +
-        '</div>' +
-      '</div>';
+  // Tabela de setores do detalhe
+  var dadosGlobais = window._D;
+  var detalhe = dadosGlobais ? (dadosGlobais.diagDetalhe || []) : [];
+  var setoresGD = detalhe.filter(function(r){ return r.gd_codigo === d.gd_codigo; });
+
+  var tabelaHtml = '';
+  if (setoresGD.length) {
+    tabelaHtml = '<div class="dd-section-lbl" style="margin-top:20px">Detalhamento por Setor</div>' +
+      '<div style="overflow-x:auto"><table class="dd-rep-table"><thead><tr>' +
+        '<th>Diagnóstico</th><th>Setor</th><th>Representante</th>' +
+        '<th>Jornada</th><th>Produto</th><th class="r">Ating.%</th>' +
+      '</tr></thead><tbody>';
+
+    var ORDEM = ['ANOMALIA_CRITICA','GAP_EXECUCAO','GAP_COBERTURA','DESENVOLVIMENTO','RUIDO_ESPERADO'];
+    setoresGD.sort(function(a,b){
+      return ORDEM.indexOf(a.tipo) - ORDEM.indexOf(b.tipo);
+    });
+
+    setoresGD.forEach(function(r) {
+      var tipoCor   = DIAG_TIPO_COR[r.tipo]   || '#718096';
+      var tipoLabel = DIAG_TIPO_LABEL[r.tipo]  || r.tipo;
+      var jCor      = JORNADA_COR[r.jornada]   || 'var(--gray)';
+      var cob       = parseFloat(r.cob_pct);
+      var cobStr    = isNaN(cob) ? '—' : cob.toFixed(1) + '%';
+      var cobCls    = (!isNaN(cob) && cob >= 100) ? 'verde' : ((!isNaN(cob) && cob >= 70) ? 'amarelo' : 'vermelho');
+
+      tabelaHtml += '<tr>' +
+        '<td><span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:' + tipoCor + '">' + tipoLabel + '</span></td>' +
+        '<td style="font-size:11px;color:var(--gray)">' + (r.setor_codigo || '—') + '</td>' +
+        '<td style="font-weight:600;font-size:12px">' + (r.nome_rep || '—') + '</td>' +
+        '<td>' + (r.jornada ? '<span style="font-size:10px;font-weight:700;color:' + jCor + ';background:' + jCor + '18;border-radius:4px;padding:2px 6px">' + r.jornada + '</span>' : '<span style="color:var(--gray);font-size:10px">—</span>') + '</td>' +
+        '<td style="font-size:11px">' + (r.produto || '—') + '</td>' +
+        '<td class="r ' + cobCls + '" style="font-weight:700">' + cobStr + '</td>' +
+      '</tr>';
+    });
+    tabelaHtml += '</tbody></table></div>';
   }
 
   var html =
     '<div class="dd-hdr">' +
       '<span class="dd-linha-tag" style="background:' + (isNexus ? 'var(--nexus-l)' : 'var(--red-l)') + ';color:' + cor1 + '">' + (d.linha||'') + '</span>' +
       '<span class="dd-title">' + (d.gd_nome || d.gd_codigo) + '</span>' +
-      '<span class="dd-cod">' + (d.gd_codigo || '') + ' · ' + total + ' ocorrências</span>' +
+      '<span class="dd-cod">' + (d.gd_codigo || '') + ' · ' + total + ' setores</span>' +
       '<button class="dd-close" onclick="fecharDiagCard()">✕</button>' +
     '</div>' +
     '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:4px">' +
-      metricBig(nc, '#e53e3e', 'CRÍTICOS',      'Visitação ok,<br>sem conversão') +
-      metricBig(nd, '#d69e2e', 'DESENVOLVIMENTO','Rep Start em<br>médico c/ potencial') +
-      metricBig(ne, '#3182ce', 'GAP EXECUÇÃO',  'Visitação abaixo<br>de 85%') +
-      metricBig(nv, '#718096', 'VAGOS',         'Setor sem<br>rep alocado') +
+      metricBig(nc, '#e53e3e', 'CRÍTICOS',       'Visitação ok,<br>sem conversão') +
+      metricBig(nd, '#d69e2e', 'DESENVOLVIMENTO', 'Rep Start em<br>médico c/ potencial') +
+      metricBig(ne, '#3182ce', 'GAP EXECUÇÃO',   'Visitação abaixo<br>de 85%') +
+      metricBig(nv, '#718096', 'VAGOS',          'Setor sem<br>rep alocado') +
     '</div>' +
-    prioHtml;
+    tabelaHtml;
 
   var panelId = isNexus ? 'diag-detalhe-nexus' : 'diag-detalhe-vital';
   var panel = document.getElementById(panelId);
