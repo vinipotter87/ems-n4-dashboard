@@ -1573,10 +1573,16 @@ async function abrirDiagCard(idx) {
   fecharDiagCard(true);
   DIAG_ATIVO = idx;
 
-  // Pré-carregar todos os meses para cálculo de reincidência
+  // Pré-carregar diagDetalhe dos meses que ainda não estão em cache
+  // Usa fetchAba diretamente para não sobrescrever window._D (que pertence ao mês atual)
   var todosMeses = CONFIG._meses || [];
-  await Promise.all(todosMeses.map(function(m) {
-    return (DADOS_CACHE[m] && DADOS_CACHE[m].diagDetalhe) ? Promise.resolve() : carregarMes(m).catch(function(){});
+  await Promise.all(todosMeses.map(async function(m) {
+    if (DADOS_CACHE[m] && DADOS_CACHE[m].diagDetalhe) return;
+    try {
+      var dd = await fetchAba('diagnostico_detalhe_' + m);
+      if (!DADOS_CACHE[m]) DADOS_CACHE[m] = {};
+      DADOS_CACHE[m].diagDetalhe = dd;
+    } catch(e) {}
   }));
 
   var nc    = parseInt(d.n_criticos)        || 0;
