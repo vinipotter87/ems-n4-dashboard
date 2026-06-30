@@ -409,6 +409,27 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
 .cycle-btn.gloss-btn{border-color:#64748b;color:#64748b}
 .cycle-btn.gloss-btn.active{background:#f1f5f9;border-color:#64748b;color:#334155}
 .gloss-wrap{padding:28px;max-width:900px;margin:0 auto}
+/* ── Evolução Diagnóstico ── */
+.cycle-btn.diagevol-btn{border-color:#d97706;color:#d97706}
+.cycle-btn.diagevol-btn.active{background:#fffbeb;border-color:#d97706;color:#b45309}
+.diagevol-wrap{padding:24px 28px;max-width:1280px;margin:0 auto}
+.diagevol-hdr{display:flex;align-items:center;gap:14px;margin-bottom:24px;padding:16px 22px;background:#fff;border-radius:12px;box-shadow:0 1px 8px rgba(0,0,0,.07)}
+.diagevol-hdr-icon{font-size:28px}
+.diagevol-hdr-title{font-size:18px;font-weight:800;color:var(--dark)}
+.diagevol-hdr-sub{font-size:12px;color:var(--gray);margin-top:2px}
+.diagevol-section{background:#fff;border-radius:12px;padding:20px 24px;box-shadow:0 1px 8px rgba(0,0,0,.06);margin-bottom:20px}
+.diagevol-sec-title{font-size:13px;font-weight:700;color:var(--dark);margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.diagevol-charts-row{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px}
+.diagevol-chart-card{background:#fff;border-radius:12px;padding:20px;box-shadow:0 1px 8px rgba(0,0,0,.06)}
+.diagevol-chart-hdr{font-size:12px;font-weight:700;color:var(--dark);margin-bottom:14px}
+.diagevol-canvas-wrap{height:260px;position:relative}
+.diagevol-table{width:100%;border-collapse:collapse;font-size:12px}
+.diagevol-table th{background:var(--light);padding:8px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)}
+.diagevol-table td{padding:9px 12px;border-bottom:1px solid #f5f5f5;vertical-align:middle}
+.diagevol-table tr:last-child td{border-bottom:none}
+.diagevol-table tr:hover td{background:#fafafa}
+.streak-pill{display:inline-block;font-size:10px;font-weight:800;padding:2px 7px;border-radius:4px;background:#fff0f0;color:#e53e3e;border:1px solid #fcc}
+.ytd-bar{height:10px;border-radius:4px;background:#e53e3e;min-width:4px;display:inline-block;vertical-align:middle}
 .gloss-wrap h1{font-size:20px;font-weight:700;color:var(--text);margin:0 0 6px}
 .gloss-wrap .gloss-sub{font-size:13px;color:var(--gray);margin-bottom:28px}
 .gloss-search{width:100%;padding:9px 14px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--text);outline:none;margin-bottom:28px;box-sizing:border-box}
@@ -1369,7 +1390,8 @@ function renderCycleBar(meses, mesAtual) {
   var isGloss    = VIEW_ATUAL === 'glossario';
   var isGap      = VIEW_ATUAL === 'gap';
   var isMatrix   = VIEW_ATUAL === 'matrix';
-  var nenhuma    = isAnual || isCota || isVisitas || isGloss || isGap || isMatrix;
+  var isDiagEvol = VIEW_ATUAL === 'diag-evol';
+  var nenhuma    = isAnual || isCota || isVisitas || isGloss || isGap || isMatrix || isDiagEvol;
   var btns = meses.map(function(m) {
     return '<button class="cycle-btn' + (m === mesAtual && !nenhuma ? ' active' : '') +
       '" onclick="trocarMes(\'' + m + '\')">' + m + '/2026</button>';
@@ -1380,7 +1402,8 @@ function renderCycleBar(meses, mesAtual) {
   btns += '<button class="cycle-btn visitas-btn' + (isVisitas ? ' active' : '') + '" onclick="abrirVisitasGD()">👁 Visitas GD</button>';
   btns += '<button class="cycle-btn gap-btn'     + (isGap     ? ' active' : '') + '" onclick="abrirGapAnalise()">🔍 Gap & Outliers</button>';
   btns += '<button class="cycle-btn mtz-btn'     + (isMatrix  ? ' active' : '') + '" onclick="abrirMatrizPerformance()">🎯 Matriz</button>';
-  btns += '<button class="cycle-btn gloss-btn'   + (isGloss   ? ' active' : '') + '" onclick="abrirGlossario()">📖 Glossário</button>';
+  btns += '<button class="cycle-btn gloss-btn'    + (isGloss    ? ' active' : '') + '" onclick="abrirGlossario()">📖 Glossário</button>';
+  btns += '<button class="cycle-btn diagevol-btn' + (isDiagEvol ? ' active' : '') + '" onclick="abrirEvolucaoDiag()">📊 Diag. Evolução</button>';
   bar.innerHTML = btns;
 }
 
@@ -1653,12 +1676,17 @@ async function abrirDiagCard(idx) {
       '<span class="dd-cod">' + (d.gd_codigo || '') + ' · ' + total + ' setores</span>' +
       '<button class="dd-close" onclick="fecharDiagCard()">✕</button>' +
     '</div>' +
-    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:4px">' +
-      metricBig(nc, '#e53e3e', 'CRÍTICOS',       'Visitação ok,<br>sem conversão', nocorr > nc ? nocorr + ' ocorrências' : '') +
-      metricBig(nd, '#d69e2e', 'DESENVOLVIMENTO', 'Rep Start em<br>médico c/ potencial') +
-      metricBig(ne, '#3182ce', 'GAP EXECUÇÃO',   'Visitação abaixo<br>de 85%') +
-      metricBig(nv, '#718096', 'VAGOS',          'Setor sem<br>rep alocado') +
-    '</div>' +
+    (function(){
+      var gapTotal = setoresGD.reduce(function(s,r){ return s + (parseFloat(r.gap_financeiro)||0); }, 0);
+      var gapStr = gapTotal > 0 ? 'R$ ' + gapTotal.toLocaleString('pt-BR',{maximumFractionDigits:0}) : '—';
+      return '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:4px">' +
+        metricBig(nc, '#e53e3e', 'CRÍTICOS',       'Visitação ok,<br>sem conversão', nocorr > nc ? nocorr + ' ocorrências' : '') +
+        metricBig(nd, '#d69e2e', 'DESENVOLVIMENTO', 'Rep Start em<br>médico c/ potencial') +
+        metricBig(ne, '#3182ce', 'GAP EXECUÇÃO',   'Visitação abaixo<br>de 85%') +
+        metricBig(nv, '#718096', 'VAGOS',          'Setor sem<br>rep alocado') +
+        metricBig(gapStr, '#e53e3e', 'GAP R$',     'Marcas chave<br>no mês') +
+      '</div>';
+    })() +
     tabelaHtml;
 
   var panelId = isNexus ? 'diag-detalhe-nexus' : 'diag-detalhe-vital';
@@ -5416,6 +5444,182 @@ function _buildOutlierTable(linha, prodNorm, mes, thr) {
 // ═══════════════════════════════════════════════════════════════
 //  GLOSSÁRIO
 // ═══════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════
+// EVOLUÇÃO DIAGNÓSTICO — tendência, GAP YTD, setores crônicos
+// ═══════════════════════════════════════════════════════════════
+
+var _diagEvolCharts = {};
+
+async function abrirEvolucaoDiag() {
+  VIEW_ATUAL = 'diag-evol';
+  DISTRITO_ATIVO = null;
+  mostrarLoading(true);
+  try {
+    var meses = CONFIG._meses || [];
+    // Carregar apenas diagnostico + diagDetalhe de cada mês sem sobrescrever window._D
+    await Promise.all(meses.map(async function(m) {
+      if (DADOS_CACHE[m] && DADOS_CACHE[m].diagnostico && DADOS_CACHE[m].diagDetalhe) return;
+      if (!DADOS_CACHE[m]) DADOS_CACHE[m] = {};
+      var [diag, det] = await Promise.all([
+        fetchAba('diagnostico_' + m).catch(function(){ return []; }),
+        fetchAba('diagnostico_detalhe_' + m).catch(function(){ return []; })
+      ]);
+      DADOS_CACHE[m].diagnostico  = DADOS_CACHE[m].diagnostico  || diag;
+      DADOS_CACHE[m].diagDetalhe  = DADOS_CACHE[m].diagDetalhe  || det;
+    }));
+    renderCycleBar(meses, null);
+    renderEvolucaoDiag(meses);
+  } catch(e) { renderErro(e.message); }
+  mostrarLoading(false);
+}
+
+function renderEvolucaoDiag(meses) {
+  Object.values(_diagEvolCharts).forEach(function(c){ try{ c.destroy(); }catch(e){} });
+  _diagEvolCharts = {};
+
+  var mesesDisp = meses.filter(function(m){ return DADOS_CACHE[m] && DADOS_CACHE[m].diagnostico; });
+
+  // ── Coletar dados por GD ──────────────────────────────────────
+  var gdMap = {}; // {gd_codigo: {nome, linha, criticos:{MES:n}, gap:{MES:v}}}
+
+  mesesDisp.forEach(function(m) {
+    (DADOS_CACHE[m].diagnostico || []).forEach(function(r) {
+      if (!r.gd_codigo) return;
+      if (!gdMap[r.gd_codigo]) {
+        gdMap[r.gd_codigo] = { nome: r.gd_nome || r.gd_codigo, linha: (r.linha||'').toUpperCase(), criticos: {}, gap: {} };
+      }
+      gdMap[r.gd_codigo].criticos[m] = parseInt(r.n_criticos) || 0;
+    });
+    (DADOS_CACHE[m].diagDetalhe || []).forEach(function(r) {
+      if (!r.gd_codigo || !gdMap[r.gd_codigo]) return;
+      gdMap[r.gd_codigo].gap[m] = (gdMap[r.gd_codigo].gap[m] || 0) + (parseFloat(r.gap_financeiro) || 0);
+    });
+  });
+
+  var gds = Object.values(gdMap);
+  var nexus = gds.filter(function(g){ return g.linha === 'NEXUS'; });
+  var vital = gds.filter(function(g){ return g.linha === 'VITAL'; });
+
+  // ── GAP YTD por GD ───────────────────────────────────────────
+  function ytdTotal(gd) { return mesesDisp.reduce(function(s,m){ return s + (gd.gap[m]||0); }, 0); }
+  var maxYtd = Math.max.apply(null, gds.map(ytdTotal).concat([1]));
+
+  function ytdRows(lista) {
+    return lista.slice().sort(function(a,b){ return ytdTotal(b)-ytdTotal(a); }).map(function(g) {
+      var total = ytdTotal(g);
+      var pct = Math.round(total / maxYtd * 100);
+      var nome = g.nome.split(' ').slice(0,2).join(' ');
+      return '<tr>' +
+        '<td style="font-weight:600">' + nome + '</td>' +
+        '<td>' + mesesDisp.map(function(m){
+          var v = g.gap[m]||0;
+          return '<span style="font-size:10px;color:'+(v>0?'#e53e3e':'var(--gray)')+'">R$'+Math.round(v/1000)+'k</span>';
+        }).join('<span style="color:var(--border);margin:0 3px">·</span>') + '</td>' +
+        '<td style="text-align:right;font-weight:700;color:#e53e3e">R$ ' + Math.round(total/1000) + 'k</td>' +
+        '<td style="width:120px"><div style="background:#f5f5f5;border-radius:4px;height:8px"><div style="width:'+pct+'%;height:8px;border-radius:4px;background:#e53e3e"></div></div></td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  // ── Ranking setores crônicos ─────────────────────────────────
+  var setorMap = {}; // {key: {setor_codigo, gd_nome, linha, mesesCriticos, gapMax, nomeRep}}
+  mesesDisp.forEach(function(m) {
+    (DADOS_CACHE[m].diagDetalhe || []).forEach(function(r) {
+      var key = r.gd_codigo + '_' + r.setor_codigo;
+      if (!setorMap[key]) setorMap[key] = { setor: r.setor_codigo, gd: r.gd_nome||r.gd_codigo, linha: (r.linha||'').toUpperCase(), rep: r.nome_rep||'', meses: 0, gapMax: 0, produto: r.produto||'' };
+      if (r.tipo === 'ANOMALIA_CRITICA') setorMap[key].meses++;
+      var g = parseFloat(r.gap_financeiro)||0;
+      if (g > setorMap[key].gapMax) { setorMap[key].gapMax = g; setorMap[key].produto = r.produto||''; }
+    });
+  });
+
+  var ranking = Object.values(setorMap).filter(function(s){ return s.meses >= 2; })
+    .sort(function(a,b){ return b.meses - a.meses || b.gapMax - a.gapMax; }).slice(0, 20);
+
+  var rankRows = ranking.map(function(s, i) {
+    var cor = s.meses >= 5 ? '#e53e3e' : s.meses >= 3 ? '#d97706' : '#718096';
+    var nomeCurto = s.rep.split(' ').slice(0,3).join(' ');
+    return '<tr>' +
+      '<td style="font-weight:700;color:var(--gray);font-size:11px">' + (i+1) + '</td>' +
+      '<td style="font-size:11px;color:var(--gray)">' + s.setor + '</td>' +
+      '<td style="font-weight:600">' + nomeCurto + '</td>' +
+      '<td><span style="font-size:9px;padding:2px 5px;border-radius:3px;background:' + (s.linha==='NEXUS'?'var(--nexus-l)':'var(--red-l)') + ';color:' + (s.linha==='NEXUS'?'var(--nexus)':'var(--red)') + ';font-weight:700">' + s.linha + '</span></td>' +
+      '<td>' + (s.produto ? '<span style="font-size:11px">' + s.produto + '</span>' : '<span style="color:var(--gray)">—</span>') + '</td>' +
+      '<td><span class="streak-pill">' + s.meses + 'M</span></td>' +
+      '<td style="text-align:right;font-weight:700;color:#e53e3e">' + (s.gapMax > 0 ? 'R$ ' + s.gapMax.toLocaleString('pt-BR',{maximumFractionDigits:0}) : '—') + '</td>' +
+    '</tr>';
+  }).join('');
+
+  // ── Render HTML ──────────────────────────────────────────────
+  document.getElementById('main-content').innerHTML =
+    '<div class="diagevol-wrap">' +
+      '<div class="diagevol-hdr">' +
+        '<div class="diagevol-hdr-icon">📊</div>' +
+        '<div><div class="diagevol-hdr-title">Evolução Diagnóstico</div>' +
+        '<div class="diagevol-hdr-sub">Tendência de críticos · GAP YTD · Setores crônicos · ' + mesesDisp.join(' → ') + '</div></div>' +
+      '</div>' +
+
+      // Gráficos de tendência
+      '<div class="diagevol-charts-row">' +
+        '<div class="diagevol-chart-card"><div class="diagevol-chart-hdr">📉 Tendência de Críticos — NEXUS</div><div class="diagevol-canvas-wrap"><canvas id="chart-trend-nexus"></canvas></div></div>' +
+        '<div class="diagevol-chart-card"><div class="diagevol-chart-hdr">📉 Tendência de Críticos — VITAL</div><div class="diagevol-canvas-wrap"><canvas id="chart-trend-vital"></canvas></div></div>' +
+      '</div>' +
+
+      // GAP YTD
+      '<div class="diagevol-section">' +
+        '<div class="diagevol-sec-title">💰 GAP Financeiro YTD — Marcas Chave (acumulado ' + mesesDisp.join('→') + ')</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">' +
+          '<div><div style="font-size:10px;font-weight:700;color:var(--nexus);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">NEXUS</div>' +
+          '<table class="diagevol-table"><thead><tr><th>GD</th><th>Por mês</th><th style="text-align:right">YTD</th><th>Barra</th></tr></thead><tbody>' + ytdRows(nexus) + '</tbody></table></div>' +
+          '<div><div style="font-size:10px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">VITAL</div>' +
+          '<table class="diagevol-table"><thead><tr><th>GD</th><th>Por mês</th><th style="text-align:right">YTD</th><th>Barra</th></tr></thead><tbody>' + ytdRows(vital) + '</tbody></table></div>' +
+        '</div>' +
+      '</div>' +
+
+      // Ranking crônicos
+      '<div class="diagevol-section">' +
+        '<div class="diagevol-sec-title">🔁 Setores Crônicos — 2+ meses críticos consecutivos</div>' +
+        (ranking.length ? '<table class="diagevol-table"><thead><tr><th>#</th><th>Setor</th><th>Representante</th><th>Linha</th><th>Produto ★</th><th>Streak</th><th style="text-align:right">Gap R$ (pico)</th></tr></thead><tbody>' + rankRows + '</tbody></table>' : '<p style="color:var(--gray);font-size:13px">Nenhum setor com 2+ meses críticos no período.</p>') +
+      '</div>' +
+    '</div>';
+
+  // ── Gráficos Chart.js ────────────────────────────────────────
+  var NEX_PALETTE = ['#1e3a8a','#2563eb','#38bdf8','#06b6d4'];
+  var VIT_PALETTE = ['#7f1d1d','#b91c1c','#f43f5e','#fb7185'];
+
+  function buildTrendChart(canvasId, lista, palette) {
+    var el = document.getElementById(canvasId);
+    if (!el) return;
+    var datasets = lista.map(function(g, i) {
+      return {
+        label: g.nome.split(' ').slice(0,2).join(' '),
+        data: mesesDisp.map(function(m){ return g.criticos[m] !== undefined ? g.criticos[m] : null; }),
+        borderColor: palette[i % palette.length],
+        backgroundColor: palette[i % palette.length] + '22',
+        tension: 0.3, fill: false, pointRadius: 5, pointHoverRadius: 7,
+        spanGaps: true,
+      };
+    });
+    _diagEvolCharts[canvasId] = new Chart(el.getContext('2d'), {
+      type: 'line',
+      data: { labels: mesesDisp, datasets: datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } },
+        scales: {
+          y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } }, title: { display: true, text: 'Setores Críticos', font: { size: 10 } } },
+          x: { ticks: { font: { size: 11 } } }
+        }
+      }
+    });
+  }
+
+  setTimeout(function() {
+    buildTrendChart('chart-trend-nexus', nexus, NEX_PALETTE);
+    buildTrendChart('chart-trend-vital', vital, VIT_PALETTE);
+  }, 50);
+}
 
 function abrirGlossario() {
   VIEW_ATUAL = 'glossario';
