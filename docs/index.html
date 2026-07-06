@@ -818,8 +818,19 @@ function sheetsUrl(aba) {
     '/values/' + encodeURIComponent(aba) + '?key=' + CONFIG.api_key;
 }
 
-async function fetchAba(aba) {
+async function fetchAba(aba, tentativa) {
+  tentativa = tentativa || 0;
   var res = await fetch(sheetsUrl(aba), { cache: 'no-store' });
+  // A tela carrega várias abas de vários meses em paralelo (Promise.all) e
+  // isso estoura a cota de curto prazo da API do Sheets (429) com frequência.
+  // Sem retry, o mês inteiro fica em branco silenciosamente — os dados
+  // continuam corretos no Sheets, só a busca falhou. Retry com backoff +
+  // jitter para não fazer todas as abas baterem de novo no mesmo instante.
+  if (res.status === 429 && tentativa < 6) {
+    var espera = 500 * Math.pow(1.8, tentativa) + Math.random() * 400;
+    await new Promise(function(r) { setTimeout(r, espera); });
+    return fetchAba(aba, tentativa + 1);
+  }
   if (!res.ok) throw new Error('Erro ao buscar aba: ' + aba + ' (' + res.status + ')');
   var json = await res.json();
   var rows = json.values || [];
@@ -851,25 +862,32 @@ async function carregarMes(mes) {
 
   setLoadingTxt('Carregando ' + mes + '/2026…');
 
+  function fetchAbaOuVazio(aba) {
+    return fetchAba(aba).catch(function(e) {
+      console.warn('Aba indisponível (ficará em branco):', aba, '—', e.message);
+      return [];
+    });
+  }
+
   var [distritos, reps, prodNex, prodVit,
        prodDistNex, prodDistVit,
        prodRepNex,  prodRepVit, pex,
        visitasNex,  visitasVit, crm,
        diagnostico, diagDetalhe] = await Promise.all([
-    fetchAba('distritos_' + mes).catch(function() { return []; }),
-    fetchAba('reps_' + mes).catch(function() { return []; }),
-    fetchAba('produtos_NEXUS_' + mes).catch(function() { return []; }),
-    fetchAba('produtos_VITAL_' + mes).catch(function() { return []; }),
-    fetchAba('produtos_dist_NEXUS_' + mes).catch(function() { return []; }),
-    fetchAba('produtos_dist_VITAL_' + mes).catch(function() { return []; }),
-    fetchAba('produtos_rep_NEXUS_' + mes).catch(function() { return []; }),
-    fetchAba('produtos_rep_VITAL_' + mes).catch(function() { return []; }),
-    fetchAba('pex_' + mes).catch(function() { return []; }),
-    fetchAba('visitas_NEXUS_' + mes).catch(function() { return []; }),
-    fetchAba('visitas_VITAL_' + mes).catch(function() { return []; }),
-    fetchAba('crm_' + mes).catch(function() { return []; }),
-    fetchAba('diagnostico_' + mes).catch(function() { return []; }),
-    fetchAba('diagnostico_detalhe_' + mes).catch(function() { return []; })
+    fetchAbaOuVazio('distritos_' + mes),
+    fetchAbaOuVazio('reps_' + mes),
+    fetchAbaOuVazio('produtos_NEXUS_' + mes),
+    fetchAbaOuVazio('produtos_VITAL_' + mes),
+    fetchAbaOuVazio('produtos_dist_NEXUS_' + mes),
+    fetchAbaOuVazio('produtos_dist_VITAL_' + mes),
+    fetchAbaOuVazio('produtos_rep_NEXUS_' + mes),
+    fetchAbaOuVazio('produtos_rep_VITAL_' + mes),
+    fetchAbaOuVazio('pex_' + mes),
+    fetchAbaOuVazio('visitas_NEXUS_' + mes),
+    fetchAbaOuVazio('visitas_VITAL_' + mes),
+    fetchAbaOuVazio('crm_' + mes),
+    fetchAbaOuVazio('diagnostico_' + mes),
+    fetchAbaOuVazio('diagnostico_detalhe_' + mes)
   ]);
 
   DADOS_CACHE[mes] = { distritos, reps, prodNex, prodVit,
@@ -1367,7 +1385,7 @@ async function abrirVisitasGD() {
   mostrarLoading(true);
   try {
     var meses = (CONFIG && CONFIG._meses && CONFIG._meses.length) ? CONFIG._meses : [MES_ATUAL];
-    var proms = meses.map(function(m){ return carregarMes(m).catch(function(){}); });
+    var proms = meses.map(function(m){ return carregarMes(m).catch(function(e){ console.warn('Falha ao carregar', m, e.message); }); });
     await Promise.all(proms);
 
     var mesSel = MES_ATUAL || meses[meses.length - 1];
@@ -2912,7 +2930,7 @@ async function abrirVisaoAnual() {
   try {
     // Carrega todos os meses disponíveis em paralelo
     setLoadingTxt('Carregando visão anual…');
-    var promises = meses.map(function(m){ return carregarMes(m).catch(function(){}); });
+    var promises = meses.map(function(m){ return carregarMes(m).catch(function(e){ console.warn('Falha ao carregar', m, e.message); }); });
     await Promise.all(promises);
 
     // Usa o mês mais recente como pivot para estrutura de distritos
@@ -2939,7 +2957,7 @@ async function irParaMes(mes) {
   try {
     var mesAnt = getMesAnterior(mes);
     var promises = [carregarMes(mes)];
-    if (mesAnt) promises.push(carregarMes(mesAnt).catch(function(){}));
+    if (mesAnt) promises.push(carregarMes(mesAnt).catch(function(e){ console.warn('Falha ao carregar mês anterior', mesAnt, e.message); }));
     var resultados = await Promise.all(promises);
     renderTudo(resultados[0], mes);
   } catch(e) {
@@ -3816,7 +3834,7 @@ async function abrirEvolucaoCota() {
   mostrarLoading(true);
   try {
     setLoadingTxt('Carregando evolução de cota…');
-    var promises = meses.map(function(m){ return carregarMes(m).catch(function(){}); });
+    var promises = meses.map(function(m){ return carregarMes(m).catch(function(e){ console.warn('Falha ao carregar', m, e.message); }); });
     await Promise.all(promises);
     var mesPivot = meses[meses.length - 1];
     var dadosPivot = DADOS_CACHE[mesPivot];
@@ -4519,7 +4537,7 @@ async function trocarMes(mes) {
   try {
     var mesAnt = getMesAnterior(mes);
     var promises = [carregarMes(mes)];
-    if (mesAnt) promises.push(carregarMes(mesAnt).catch(function(){}));
+    if (mesAnt) promises.push(carregarMes(mesAnt).catch(function(e){ console.warn('Falha ao carregar mês anterior', mesAnt, e.message); }));
     var resultados = await Promise.all(promises);
     if (VIEW_ATUAL === 'analise') {
       renderViewAnalise(resultados[0], mes);
@@ -4604,7 +4622,7 @@ async function init() {
     setLoadingTxt('Carregando dados do time…');
     var mesAntInicial = getMesAnterior(mesInicial);
     var initPromises = [carregarJornada(), carregarMes(mesInicial)];
-    if (mesAntInicial) initPromises.push(carregarMes(mesAntInicial).catch(function(){}));
+    if (mesAntInicial) initPromises.push(carregarMes(mesAntInicial).catch(function(e){ console.warn('Falha ao carregar mês anterior', mesAntInicial, e.message); }));
     await Promise.all(initPromises);
 
     renderTudo(DADOS_CACHE[mesInicial], mesInicial);
@@ -4639,7 +4657,7 @@ async function abrirMatrizPerformance() {
     // Carrega todos os meses (necessário para YTD) + jornada
     var meses = CONFIG._meses || [_mtzMes];
     setLoadingTxt('Carregando Matriz…');
-    for (var _m of meses) { await carregarMes(_m).catch(function(){}); }
+    for (var _m of meses) { await carregarMes(_m).catch(function(e){ console.warn('Falha ao carregar', _m, e.message); }); }
     await carregarJornada();
     renderCycleBar(CONFIG._meses || [], MES_ATUAL);
     _mtzRenderPage();
