@@ -819,7 +819,7 @@ function sheetsUrl(aba) {
 }
 
 async function fetchAba(aba) {
-  var res = await fetch(sheetsUrl(aba));
+  var res = await fetch(sheetsUrl(aba), { cache: 'no-store' });
   if (!res.ok) throw new Error('Erro ao buscar aba: ' + aba + ' (' + res.status + ')');
   var json = await res.json();
   var rows = json.values || [];
@@ -4557,7 +4557,7 @@ async function init() {
   try {
     // Carregar config local (credenciais)
     setLoadingTxt('Carregando configuração…');
-    var res = await fetch('config.json');
+    var res = await fetch('config.json?t=' + Date.now(), { cache: 'no-store' });
     if (!res.ok) throw new Error('config.json não encontrado. Execute python scripts/setup.py primeiro.');
     CONFIG = await res.json();
 
@@ -4571,13 +4571,18 @@ async function init() {
     try {
       var cfgRows = await fetchAba('config');
       var mesesStr = '';
+      var ultimaStr = '';
       cfgRows.forEach(function(r) {
         if (r.chave === 'meses_disponiveis') mesesStr = r.valor || '';
+        if (r.chave === 'ultima_atualizacao') ultimaStr = r.valor || '';
       });
       if (mesesStr) {
         var mesesSheets = mesesStr.split(',').map(function(m){ return m.trim(); }).filter(Boolean);
         if (mesesSheets.length) meses = mesesSheets; // usa o Sheets (mais atualizado)
       }
+      // ingest.py grava ultima_atualizacao no Sheets a cada rodada — sempre mais
+      // atual que o config.json estatico, que so e editado manualmente.
+      if (ultimaStr) CONFIG.ultima_atualizacao = ultimaStr;
     } catch(e) {
       console.warn('Não foi possível ler meses do Sheets — usando config.json');
     }
