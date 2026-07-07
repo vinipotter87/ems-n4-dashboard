@@ -405,8 +405,6 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
 .tend-item-titulo{font-weight:700;color:var(--dark)}
 .tend-item-meta{color:var(--gray);font-size:10.5px;margin-top:2px}
 .tend-empty{padding:24px;text-align:center;color:var(--gray);font-size:12px}
-.tend-dossie-link{display:inline-block;margin-top:12px;font-size:11.5px;font-weight:700;color:#0d9488;text-decoration:none}
-.tend-dossie-link:hover{text-decoration:underline}
 
 /* Marcas chave — destaque nas tabelas de produto */
 .prod-chave td{background:#fffdf5}
@@ -2992,9 +2990,6 @@ function tendCard(row) {
     '<div class="tend-score">Qualidade dos combinados (mês mais recente): <b>' + score + ' / 5</b></div>' +
     '<div class="tend-subsec">🔁 Recorrências não resolvidas</div>' + recHtml +
     '<div class="tend-subsec">⚠️ Riscos de KPI</div>' + riscoHtml +
-    (row.dossie_url
-      ? '<a class="tend-dossie-link" href="' + row.dossie_url + '" target="_blank" rel="noopener">📇 Ver dossiê executivo completo →</a>'
-      : '') +
   '</div>';
 }
 
