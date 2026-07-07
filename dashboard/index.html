@@ -118,9 +118,9 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
 .jrep2{display:flex;align-items:center;padding:8px 14px;border-bottom:1px solid #f5f5f5;gap:10px;transition:background .1s}
 .jrep2:hover{background:#fafafa}
 .jrep2:last-child{border-bottom:none}
-.jrep2-nome{flex:1;font-size:12px;font-weight:600;color:var(--dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.jrep2-gd{font-size:10px;color:var(--gray);white-space:nowrap;margin-right:4px}
-.jrep2-prod{font-size:12px;font-weight:800;min-width:48px;text-align:right}
+.jrep2-nome{flex:1;font-size:12px;font-weight:400;color:var(--dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.jrep2-gd{font-size:10px;color:#bbb;white-space:nowrap;margin-right:4px}
+.jrep2-prod{font-size:13px;font-weight:800;min-width:52px;text-align:right}
 /* PEX — 5 colunas de medalhas */
 .pex-wrap{margin-bottom:24px}
 .pex-panorama{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
@@ -363,10 +363,50 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
 .cota-pct-ok{color:#15803d;font-weight:700}
 .cota-pct-warn{color:#854d0e;font-weight:700}
 .cota-pct-crit{color:#b91c1c;font-weight:700}
+/* Heatmap regional */
+.cota-heatmap{width:100%;border-collapse:collapse;font-size:12px}
+.cota-heatmap th{padding:8px 14px;text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--gray);background:var(--light);border-bottom:2px solid var(--border)}
+.cota-heatmap th.th-row-label{text-align:left;min-width:120px}
+.cota-heatmap td{padding:10px 14px;text-align:center;font-size:13px;font-weight:800;border-bottom:1px solid #f0f0f0;transition:filter .1s}
+.cota-heatmap td.td-row-label{text-align:left;font-size:12px;font-weight:600;color:var(--dark);background:#fff}
+.cota-heatmap tr:hover td{filter:brightness(.96)}
+.hm-ok{background:#dcfce7;color:#15803d}
+.hm-warn{background:#fef3c7;color:#92400e}
+.hm-crit{background:#fee2e2;color:#b91c1c}
+.hm-na{background:var(--light);color:#bbb}
+.cota-heatmap td.td-ytd{font-size:14px;border-left:2px solid var(--border)}
 .cota-tabs{display:flex;gap:6px;margin-bottom:16px}
 .cota-tab{padding:6px 18px;border-radius:8px;border:2px solid var(--border);background:#fff;font-size:11px;font-weight:700;cursor:pointer;color:var(--gray);font-family:inherit;transition:all .12s}
 .cota-tab.an{border-color:var(--nexus);color:var(--nexus);background:var(--nexus-l)}
 .cota-tab.av{border-color:var(--red);color:var(--red);background:var(--red-l)}
+
+.cycle-btn.tend-btn{border-color:#0d9488;color:#0d9488}
+.cycle-btn.tend-btn.active{background:#f0fdfa;border-color:#0d9488;color:#0d9488}
+.tend-linha-hdr{font-size:13px;font-weight:800;display:flex;align-items:center;gap:10px;margin:28px 0 14px;padding-bottom:8px;border-bottom:2px solid var(--border)}
+.tend-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:16px}
+.tend-card{background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.08);padding:18px 20px;border-top:3px solid var(--border)}
+.tend-card.melhorando{border-top-color:var(--green)}
+.tend-card.piorando{border-top-color:var(--red)}
+.tend-card.estavel{border-top-color:var(--gray)}
+.tend-card-hdr{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+.tend-card-nome{font-size:14px;font-weight:800;color:var(--dark)}
+.tend-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:800;padding:3px 10px;border-radius:12px;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
+.tend-badge.melhorando{background:var(--green-l);color:var(--green)}
+.tend-badge.piorando{background:var(--red-l);color:var(--red)}
+.tend-badge.estavel{background:var(--light);color:var(--gray)}
+.tend-resumo{font-size:12.5px;color:var(--gray);line-height:1.5;margin-bottom:12px}
+.tend-score{font-size:11px;color:var(--gray);margin-bottom:12px}
+.tend-score b{color:var(--dark);font-size:13px}
+.tend-subsec{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--gray);margin:12px 0 6px}
+.tend-item{border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:11.5px}
+.tend-item.alto{border-left:3px solid var(--red);background:var(--red-l)}
+.tend-item.medio{border-left:3px solid var(--orange);background:var(--orange-l)}
+.tend-item.melhora{border-left:3px solid var(--green);background:var(--green-l)}
+.tend-item-titulo{font-weight:700;color:var(--dark)}
+.tend-item-meta{color:var(--gray);font-size:10.5px;margin-top:2px}
+.tend-empty{padding:24px;text-align:center;color:var(--gray);font-size:12px}
+.tend-dossie-link{display:inline-block;margin-top:12px;font-size:11.5px;font-weight:700;color:#0d9488;text-decoration:none}
+.tend-dossie-link:hover{text-decoration:underline}
 
 /* Marcas chave — destaque nas tabelas de produto */
 .prod-chave td{background:#fffdf5}
@@ -694,7 +734,7 @@ function renderKPIs(dados) {
     kpiCard('g', 'OK',            ok,          'distritos ≥ 100% MDV') +
     kpiCard('o', 'ATENÇÃO',       warn,        'distritos 80–99% MDV') +
     kpiCard('r', 'CRÍTICO',       crit,        'distritos < 80% MDV') +
-    kpiCard(semMDVCls, 'REPS SEM MDV 12', repsSemMDV, 'abaixo do obj. — prod < 100%') +
+    kpiCard(semMDVCls, 'REPS SEM MDV 12', repsSemMDV, repsSemMDV + ' de ' + ativos.length + ' reps (' + (ativos.length ? Math.round(repsSemMDV/ativos.length*100) : 0) + '%) abaixo do obj.') +
   '</div>';
 
   return row1 + row2;
@@ -711,8 +751,9 @@ function renderCycleBar(meses, mesAtual) {
   var bar = document.getElementById('cycle-bar');
   var isAnual = VIEW_ATUAL === 'anual';
   var isCota  = VIEW_ATUAL === 'cota';
+  var isTend  = VIEW_ATUAL === 'tendencias';
   var btns = meses.map(function(m) {
-    return '<button class="cycle-btn' + (m === mesAtual && !isAnual && !isCota ? ' active' : '') +
+    return '<button class="cycle-btn' + (m === mesAtual && !isAnual && !isCota && !isTend ? ' active' : '') +
       '" onclick="trocarMes(\'' + m + '\')">' + m + '/2026</button>';
   }).join('');
   btns += '<span style="display:inline-block;width:1px;height:22px;background:var(--border);margin:0 6px;align-self:center"></span>';
@@ -720,6 +761,8 @@ function renderCycleBar(meses, mesAtual) {
     '" onclick="abrirVisaoAnual()">📅 Visão Anual</button>';
   btns += '<button class="cycle-btn cota-btn' + (isCota ? ' active' : '') +
     '" onclick="abrirEvolucaoCota()">📈 Cota</button>';
+  btns += '<button class="cycle-btn tend-btn' + (isTend ? ' active' : '') +
+    '" onclick="abrirTendencias()">🧭 Tendências</button>';
   bar.innerHTML = btns;
 }
 
@@ -818,9 +861,14 @@ function renderJornada(reps, distritos) {
 
   var colunasHtml = JORNADA_ORDER.map(buildColuna).join('');
 
+  var nDestaque = repsJ.filter(function(r){ return r.etapa === 'Destaque'; }).length;
+  var tituloJornada = nDestaque > 0
+    ? nDestaque + ' de ' + totalReps + ' reps em nível Destaque'
+    : 'Panorama — Jornada de Evolução';
+
   return '<div class="jornada-wrap">' +
     '<div class="jornada-sec-hdr">' +
-      '<div class="sec-title" style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px">Panorama — Jornada de Evolução</div>' +
+      '<div class="sec-title" style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px">' + tituloJornada + '</div>' +
       '<div class="sec-line" style="flex:1;height:1px;background:var(--border)"></div>' +
       '<span style="font-size:10px;color:var(--gray)">% = Ating. Produtividade MDV</span>' +
       '<span style="font-size:11px;color:var(--gray);font-weight:600;margin-left:12px">' + totalReps + ' reps ativos</span>' +
@@ -855,8 +903,8 @@ function renderPEX(pex, distritos) {
         '<div class="sec-line" style="flex:1;height:1px;background:var(--border)"></div>' +
       '</div>' +
       '<div style="background:#fff;border-radius:12px;padding:28px;text-align:center;color:var(--gray);font-size:13px;box-shadow:0 1px 8px rgba(0,0,0,.06)">' +
-        '📊 Dados de PEX ainda não disponíveis para este mês.<br>' +
-        '<span style="font-size:11px;margin-top:6px;display:inline-block">Execute: <code>python scripts/ingest.py --pex --mes ' + (MES_ATUAL||'MES') + '</code></span>' +
+        '📊 Dados de PEX de ' + (MES_ATUAL||'') + '/2026 ainda não processados.<br>' +
+        '<span style="font-size:11px;margin-top:6px;display:inline-block;color:#aaa">Disponível em breve.</span>' +
       '</div>' +
     '</div>';
   }
@@ -2030,7 +2078,7 @@ function fmtBRL(v) {
 
 function cotaPctClass(v) {
   if (v === null || isNaN(v)) return '';
-  return v >= 100 ? 'cota-pct-ok' : v >= 80 ? 'cota-pct-warn' : 'cota-pct-crit';
+  return v >= 100 ? 'cota-pct-ok' : v >= 95 ? 'cota-pct-warn' : 'cota-pct-crit';
 }
 
 function sumField(arr, field) {
@@ -2173,7 +2221,7 @@ function buildCotaAtingChart(canvasId, meses, fn) {
       responsive: true, maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
       plugins: {
-        legend: { display: true, position: 'top', labels: { boxWidth: 14, font: { size: 11 }, padding: 16 } },
+        legend: { display: false },
         tooltip: {
           backgroundColor: 'rgba(17,24,39,.93)',
           titleFont: { size: 12, weight: '700' }, bodyFont: { size: 11 },
@@ -2201,7 +2249,26 @@ function buildCotaAtingChart(canvasId, meses, fn) {
           }
         }
       },
-      spanGaps: true
+      spanGaps: true,
+      animation: { onComplete: function() {
+        var chart = this;
+        var ctx2 = chart.ctx;
+        ctx2.save();
+        ctx2.font = 'bold 11px Segoe UI, Arial, sans-serif';
+        ctx2.textAlign = 'left';
+        ctx2.textBaseline = 'middle';
+        chart.data.datasets.forEach(function(ds, di) {
+          var lastIdx = -1;
+          for (var i = ds.data.length - 1; i >= 0; i--) { if (ds.data[i] !== null) { lastIdx = i; break; } }
+          if (lastIdx < 0) return;
+          var meta = chart.getDatasetMeta(di);
+          var pt = meta.data[lastIdx];
+          if (!pt) return;
+          ctx2.fillStyle = ds.borderColor || '#333';
+          ctx2.fillText(ds.label, pt.x + 8, pt.y);
+        });
+        ctx2.restore();
+      }}
     }
   });
 }
@@ -2287,46 +2354,36 @@ function cotaSwitchBarLinha(linhaKey, btn, meses) {
 }
 
 // ── Tabela Regional ───────────────────────────────────────────────
+function hmClass(pct) {
+  if (pct === null) return 'hm-na';
+  return pct >= 100 ? 'hm-ok' : pct >= 95 ? 'hm-warn' : 'hm-crit';
+}
+
 function renderCotaTableRegional(meses) {
   var linhas = [
-    { key: 'TOTAL', label: 'Total Regional',   cls: 'row-total' },
-    { key: 'NEXUS', label: '↳ NEXUS',          cls: 'row-nexus' },
-    { key: 'VITAL', label: '↳ VITAL',          cls: 'row-vital' }
+    { key: 'TOTAL', label: 'Total Regional' },
+    { key: 'NEXUS', label: '↳ NEXUS' },
+    { key: 'VITAL', label: '↳ VITAL' }
   ];
-  var html = '<div class="cota-table-wrap"><table class="cota-table">';
-  // Header
-  html += '<thead><tr>';
-  html += '<th class="th-label" rowspan="2">Linha</th>';
-  meses.forEach(function(m) {
-    html += '<th class="th-mes-hdr" colspan="3">' + m + '</th>';
-  });
-  html += '<th class="th-ytd-hdr" colspan="3">YTD</th>';
-  html += '</tr><tr>';
-  meses.forEach(function() {
-    html += '<th class="th-sub">Cota</th><th class="th-sub">Realizado</th><th class="th-sub">%</th>';
-  });
-  html += '<th class="th-sub-ytd">Cota</th><th class="th-sub-ytd">Realizado</th><th class="th-sub-ytd">%</th>';
-  html += '</tr></thead><tbody>';
-  // Rows
+  var html = '<div style="overflow-x:auto"><table class="cota-heatmap">';
+  html += '<thead><tr><th class="th-row-label">Linha</th>';
+  meses.forEach(function(m) { html += '<th>' + m + '</th>'; });
+  html += '<th style="border-left:2px solid var(--border)">YTD</th></tr></thead><tbody>';
   linhas.forEach(function(lin) {
     var getLinha = lin.key === 'TOTAL' ? null : lin.key;
     var ytdC = 0, ytdR = 0;
-    html += '<tr class="' + lin.cls + '">';
-    html += '<td class="td-label">' + lin.label + '</td>';
-    meses.forEach(function(m, idx) {
+    html += '<tr><td class="td-row-label">' + lin.label + '</td>';
+    meses.forEach(function(m) {
       var c = getCotaReg(m, getLinha);
       var r = getRealReg(m, getLinha);
       var pct = c > 0 ? r / c * 100 : null;
       ytdC += c; ytdR += r;
-      var sep = idx === 0 ? '' : 'td-mes-sep';
-      html += '<td class="' + sep + '">' + fmtBRL(c) + '</td>';
-      html += '<td>' + fmtBRL(r) + '</td>';
-      html += '<td class="' + cotaPctClass(pct) + '">' + (pct !== null ? pct.toFixed(1) + '%' : '—') + '</td>';
+      var tip = pct !== null ? 'Cota: ' + fmtBRL(c) + ' | Real: ' + fmtBRL(r) : '';
+      html += '<td class="' + hmClass(pct) + '" title="' + tip + '">' + (pct !== null ? pct.toFixed(1) + '%' : '—') + '</td>';
     });
     var ytdPct = ytdC > 0 ? ytdR / ytdC * 100 : null;
-    html += '<td class="td-ytd">' + fmtBRL(ytdC) + '</td>';
-    html += '<td class="td-ytd">' + fmtBRL(ytdR) + '</td>';
-    html += '<td class="td-ytd-pct ' + cotaPctClass(ytdPct) + '">' + (ytdPct !== null ? ytdPct.toFixed(1) + '%' : '—') + '</td>';
+    var ytdTip = 'Cota YTD: ' + fmtBRL(ytdC) + ' | Real YTD: ' + fmtBRL(ytdR);
+    html += '<td class="td-ytd ' + hmClass(ytdPct) + '" title="' + ytdTip + '">' + (ytdPct !== null ? ytdPct.toFixed(1) + '%' : '—') + '</td>';
     html += '</tr>';
   });
   html += '</tbody></table></div>';
@@ -2435,7 +2492,7 @@ function renderCotaYTDCard(titulo, cor, meses, getLinha) {
   var c = calcYTD(meses, function(m){ return getCotaReg(m, getLinha); });
   var r = calcYTD(meses, function(m){ return getRealReg(m, getLinha); });
   var pct = c > 0 ? r / c * 100 : null;
-  var pctCls = pct !== null ? (pct >= 100 ? 'ok' : pct >= 80 ? 'warn' : 'crit') : '';
+  var pctCls = pct !== null ? (pct >= 100 ? 'ok' : pct >= 95 ? 'warn' : 'crit') : '';
   return '<div class="cota-ytd-card" style="border-top:4px solid ' + cor + '">' +
     '<div class="cota-ytd-label">' + titulo + '</div>' +
     '<div class="cota-ytd-row2">' +
@@ -2867,6 +2924,142 @@ async function abrirEvolucaoCota() {
     var dadosPivot = DADOS_CACHE[mesPivot];
     if (!dadosPivot) throw new Error('Sem dados para montar a evolução de cota.');
     renderEvolucaoCota(meses, dadosPivot.distritos || []);
+  } catch(e) {
+    renderErro(e.message);
+  }
+  mostrarLoading(false);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── Radar de Tendências N4 ─────────────────────────────────────────
+
+function tendSafeJSON(v, fallback) {
+  if (!v) return fallback;
+  try { var p = JSON.parse(v); return p === null || p === undefined ? fallback : p; }
+  catch(e) { return fallback; }
+}
+
+function tendNormTrend(t) {
+  t = (t || '').toString().toLowerCase();
+  if (t.indexOf('melhor') === 0 || t.indexOf('melhor') > -1) return 'melhorando';
+  if (t.indexOf('pior') > -1) return 'piorando';
+  return 'estavel';
+}
+
+function tendSeveridadeClass(sev) {
+  sev = (sev || '').toString().toLowerCase();
+  if (sev.indexOf('alto') > -1 || sev.indexOf('crit') > -1) return 'alto';
+  if (sev.indexOf('melhor') > -1) return 'melhora';
+  return 'medio';
+}
+
+function tendCard(row) {
+  var trend   = tendNormTrend(row.tendencia_qualidade);
+  var trendLbl = trend === 'melhorando' ? '📈 Melhorando' : trend === 'piorando' ? '📉 Piorando' : '➖ Estável';
+  var score   = row.score_qualidade_atual !== '' && row.score_qualidade_atual !== undefined && !isNaN(parseFloat(row.score_qualidade_atual))
+                ? parseFloat(row.score_qualidade_atual).toFixed(1) : '—';
+  var recorrencias = tendSafeJSON(row.recorrencias_json, []);
+  var riscos        = tendSafeJSON(row.risco_kpi_json, []);
+
+  var recHtml = recorrencias.length
+    ? recorrencias.map(function(r){
+        return '<div class="tend-item medio">' +
+          '<div class="tend-item-titulo">🔁 ' + (r.tema || 'Tema não identificado') + '</div>' +
+          '<div class="tend-item-meta">' + (r.meses || []).join(' → ') +
+            (r.causa_provavel ? ' · ' + r.causa_provavel : '') + '</div>' +
+        '</div>';
+      }).join('')
+    : '<div class="tend-item-meta" style="padding:4px 2px">Nenhuma recorrência não resolvida identificada no período.</div>';
+
+  var riscoHtml = riscos.length
+    ? riscos.map(function(r){
+        var cls = tendSeveridadeClass(r.severidade);
+        var icone = cls === 'alto' ? '🔴' : cls === 'melhora' ? '🟢' : '🟡';
+        return '<div class="tend-item ' + cls + '">' +
+          '<div class="tend-item-titulo">' + icone + ' ' + (r.kpi || '') + '</div>' +
+          '<div class="tend-item-meta">' + (r.meses || []).join(' → ') +
+            (r.detalhe ? ' · ' + r.detalhe : '') + '</div>' +
+        '</div>';
+      }).join('')
+    : '<div class="tend-item-meta" style="padding:4px 2px">Nenhum risco de KPI recorrente identificado.</div>';
+
+  return '<div class="tend-card ' + trend + '">' +
+    '<div class="tend-card-hdr">' +
+      '<div class="tend-card-nome">' + (row.nm || '') + '</div>' +
+      '<span class="tend-badge ' + trend + '">' + trendLbl + '</span>' +
+    '</div>' +
+    '<div class="tend-resumo">' + (row.resumo || 'Sem resumo disponível.') + '</div>' +
+    '<div class="tend-score">Qualidade dos combinados (mês mais recente): <b>' + score + ' / 5</b></div>' +
+    '<div class="tend-subsec">🔁 Recorrências não resolvidas</div>' + recHtml +
+    '<div class="tend-subsec">⚠️ Riscos de KPI</div>' + riscoHtml +
+    (row.dossie_url
+      ? '<a class="tend-dossie-link" href="' + row.dossie_url + '" target="_blank" rel="noopener">📇 Ver dossiê executivo completo →</a>'
+      : '') +
+  '</div>';
+}
+
+function renderTendencias(registros, ciclo) {
+  var pageHdr =
+    '<div class="cota-page-hdr">' +
+    '<button class="cota-back-btn" onclick="irParaMes(MES_ATUAL)">← Voltar ao Dashboard</button>' +
+    '<div>' +
+      '<div style="font-size:16px;font-weight:800">🧭 Radar de Tendências N4</div>' +
+      '<div style="font-size:11px;color:var(--gray);margin-top:2px">Regional SPI OESTE · Cardiometabólico · Histórico de atas/briefings até ' + ciclo + '/2026</div>' +
+    '</div>' +
+    '</div>';
+
+  if (!registros.length) {
+    document.getElementById('main-content').innerHTML = pageHdr +
+      '<div class="tend-empty">Nenhum dado de tendências encontrado ainda.<br>' +
+      'Rode o fluxo dos agentes 09→12 (coletor-atas-notion → motor-tendencias → gerador-dossies → publicar_tendencias.py) para gerar a aba <code>tendencias_' + ciclo + '</code>.</div>';
+    return;
+  }
+
+  var nexus = registros.filter(function(r){ return r.linha === 'NEXUS'; });
+  var vital = registros.filter(function(r){ return r.linha === 'VITAL'; });
+
+  var html = pageHdr;
+  if (nexus.length) {
+    html += '<div class="tend-linha-hdr">🔵 NEXUS</div><div class="tend-grid">' +
+      nexus.map(tendCard).join('') + '</div>';
+  }
+  if (vital.length) {
+    html += '<div class="tend-linha-hdr">🔴 VITAL</div><div class="tend-grid">' +
+      vital.map(tendCard).join('') + '</div>';
+  }
+
+  document.getElementById('main-content').innerHTML = html;
+}
+
+async function abrirTendencias() {
+  VIEW_ATUAL = 'tendencias';
+  DISTRITO_ATIVO = null;
+  var meses = CONFIG._meses || [];
+  renderCycleBar(meses, null);
+  mostrarLoading(true);
+  try {
+    setLoadingTxt('Carregando radar de tendências…');
+    // A aba tendencias_{ciclo} pode existir para um ciclo mais recente do que os
+    // já "fechados" em CONFIG._meses (ex.: briefing pré-N4 do mês em andamento,
+    // antes dos dados de Produtos/Produtividade daquele mês subirem). Como o
+    // radar de tendências nunca fica mais de 1 mês à frente do último ciclo
+    // fechado, tenta só esse +1 além dos meses já disponíveis — evita disparar
+    // 12 requests seguidos na Sheets API (risco de 429).
+    var TODOS_MESES = ["JAN","FEV","MAR","ABR","MAI","JUN","JUL","AGO","SET","OUT","NOV","DEZ"];
+    var candidatos = meses.slice().reverse();
+    var idxUltimo = TODOS_MESES.indexOf(meses[meses.length - 1]);
+    if (idxUltimo > -1 && idxUltimo + 1 < TODOS_MESES.length) {
+      candidatos.unshift(TODOS_MESES[idxUltimo + 1]);
+    }
+    var registros = [];
+    var cicloEncontrado = meses[meses.length - 1] || MES_ATUAL || '';
+    for (var i = 0; i < candidatos.length; i++) {
+      try {
+        var rows = await fetchAba('tendencias_' + candidatos[i]);
+        if (rows.length) { registros = rows; cicloEncontrado = candidatos[i]; break; }
+      } catch(e) { /* aba ainda não existe para esse ciclo — tenta o anterior */ }
+    }
+    renderTendencias(registros, cicloEncontrado);
   } catch(e) {
     renderErro(e.message);
   }
@@ -3385,15 +3578,16 @@ function renderTudo(dados, mes) {
 async function trocarMes(mes) {
   var wasAnual = VIEW_ATUAL === 'anual';
   var wasCota  = VIEW_ATUAL === 'cota';
-  if (wasAnual || wasCota) VIEW_ATUAL = 'principal';
-  if (MES_ATUAL === mes && !wasAnual && !wasCota) return;
+  var wasTend  = VIEW_ATUAL === 'tendencias';
+  if (wasAnual || wasCota || wasTend) VIEW_ATUAL = 'principal';
+  if (MES_ATUAL === mes && !wasAnual && !wasCota && !wasTend) return;
   MES_ATUAL = mes;
   DISTRITO_ATIVO = null;
 
   document.getElementById('pill-mes').textContent = mes + '/2026';
-  // Atualiza botões: mês ativo, anual inativo
+  // Atualiza botões: mês ativo, anual/cota/tendências inativos
   document.querySelectorAll('.cycle-btn').forEach(function(btn){
-    if (btn.classList.contains('anual-btn') || btn.classList.contains('cota-btn')) {
+    if (btn.classList.contains('anual-btn') || btn.classList.contains('cota-btn') || btn.classList.contains('tend-btn')) {
       btn.classList.remove('active');
     } else {
       btn.classList.toggle('active', btn.textContent.startsWith(mes));

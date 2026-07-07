@@ -464,6 +464,34 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
 .cota-tab{padding:6px 18px;border-radius:8px;border:2px solid var(--border);background:#fff;font-size:11px;font-weight:700;cursor:pointer;color:var(--gray);font-family:inherit;transition:all .12s}
 .cota-tab.an{border-color:var(--nexus);color:var(--nexus);background:var(--nexus-l)}
 .cota-tab.av{border-color:var(--red);color:var(--red);background:var(--red-l)}
+
+.cycle-btn.tend-btn{border-color:#0d9488;color:#0d9488}
+.cycle-btn.tend-btn.active{background:#f0fdfa;border-color:#0d9488;color:#0d9488}
+.tend-linha-hdr{font-size:13px;font-weight:800;display:flex;align-items:center;gap:10px;margin:28px 0 14px;padding-bottom:8px;border-bottom:2px solid var(--border)}
+.tend-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:16px}
+.tend-card{background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.08);padding:18px 20px;border-top:3px solid var(--border)}
+.tend-card.melhorando{border-top-color:var(--green)}
+.tend-card.piorando{border-top-color:var(--red)}
+.tend-card.estavel{border-top-color:var(--gray)}
+.tend-card-hdr{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+.tend-card-nome{font-size:14px;font-weight:800;color:var(--dark)}
+.tend-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:800;padding:3px 10px;border-radius:12px;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
+.tend-badge.melhorando{background:var(--green-l);color:var(--green)}
+.tend-badge.piorando{background:var(--red-l);color:var(--red)}
+.tend-badge.estavel{background:var(--light);color:var(--gray)}
+.tend-resumo{font-size:12.5px;color:var(--gray);line-height:1.5;margin-bottom:12px}
+.tend-score{font-size:11px;color:var(--gray);margin-bottom:12px}
+.tend-score b{color:var(--dark);font-size:13px}
+.tend-subsec{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--gray);margin:12px 0 6px}
+.tend-item{border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:11.5px}
+.tend-item.alto{border-left:3px solid var(--red);background:var(--red-l)}
+.tend-item.medio{border-left:3px solid var(--orange);background:var(--orange-l)}
+.tend-item.melhora{border-left:3px solid var(--green);background:var(--green-l)}
+.tend-item-titulo{font-weight:700;color:var(--dark)}
+.tend-item-meta{color:var(--gray);font-size:10.5px;margin-top:2px}
+.tend-empty{padding:24px;text-align:center;color:var(--gray);font-size:12px}
+.tend-dossie-link{display:inline-block;margin-top:12px;font-size:11.5px;font-weight:700;color:#0d9488;text-decoration:none}
+.tend-dossie-link:hover{text-decoration:underline}
 /* ── Matriz de Performance ── */
 .cycle-btn.mtz-btn{border-color:#0369a1;color:#0369a1}
 .cycle-btn.mtz-btn.active{background:#0369a1;color:#fff}
@@ -1409,7 +1437,8 @@ function renderCycleBar(meses, mesAtual) {
   var isGap      = VIEW_ATUAL === 'gap';
   var isMatrix   = VIEW_ATUAL === 'matrix';
   var isDiagEvol = VIEW_ATUAL === 'diag-evol';
-  var nenhuma    = isAnual || isCota || isVisitas || isGloss || isGap || isMatrix || isDiagEvol;
+  var isTend     = VIEW_ATUAL === 'tendencias';
+  var nenhuma    = isAnual || isCota || isVisitas || isGloss || isGap || isMatrix || isDiagEvol || isTend;
   var btns = meses.map(function(m) {
     return '<button class="cycle-btn' + (m === mesAtual && !nenhuma ? ' active' : '') +
       '" onclick="trocarMes(\'' + m + '\')">' + m + '/2026</button>';
@@ -1422,6 +1451,7 @@ function renderCycleBar(meses, mesAtual) {
   btns += '<button class="cycle-btn mtz-btn'     + (isMatrix  ? ' active' : '') + '" onclick="abrirMatrizPerformance()">🎯 Matriz</button>';
   btns += '<button class="cycle-btn gloss-btn'    + (isGloss    ? ' active' : '') + '" onclick="abrirGlossario()">📖 Glossário</button>';
   btns += '<button class="cycle-btn diagevol-btn' + (isDiagEvol ? ' active' : '') + '" onclick="abrirEvolucaoDiag()">📊 Diag. Evolução</button>';
+  btns += '<button class="cycle-btn tend-btn'      + (isTend     ? ' active' : '') + '" onclick="abrirTendencias()">🧭 Tendências</button>';
   bar.innerHTML = btns;
 }
 
@@ -3847,6 +3877,142 @@ async function abrirEvolucaoCota() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+// ── Radar de Tendências N4 ─────────────────────────────────────────
+
+function tendSafeJSON(v, fallback) {
+  if (!v) return fallback;
+  try { var p = JSON.parse(v); return p === null || p === undefined ? fallback : p; }
+  catch(e) { return fallback; }
+}
+
+function tendNormTrend(t) {
+  t = (t || '').toString().toLowerCase();
+  if (t.indexOf('melhor') === 0 || t.indexOf('melhor') > -1) return 'melhorando';
+  if (t.indexOf('pior') > -1) return 'piorando';
+  return 'estavel';
+}
+
+function tendSeveridadeClass(sev) {
+  sev = (sev || '').toString().toLowerCase();
+  if (sev.indexOf('alto') > -1 || sev.indexOf('crit') > -1) return 'alto';
+  if (sev.indexOf('melhor') > -1) return 'melhora';
+  return 'medio';
+}
+
+function tendCard(row) {
+  var trend   = tendNormTrend(row.tendencia_qualidade);
+  var trendLbl = trend === 'melhorando' ? '📈 Melhorando' : trend === 'piorando' ? '📉 Piorando' : '➖ Estável';
+  var score   = row.score_qualidade_atual !== '' && row.score_qualidade_atual !== undefined && !isNaN(parseFloat(row.score_qualidade_atual))
+                ? parseFloat(row.score_qualidade_atual).toFixed(1) : '—';
+  var recorrencias = tendSafeJSON(row.recorrencias_json, []);
+  var riscos        = tendSafeJSON(row.risco_kpi_json, []);
+
+  var recHtml = recorrencias.length
+    ? recorrencias.map(function(r){
+        return '<div class="tend-item medio">' +
+          '<div class="tend-item-titulo">🔁 ' + (r.tema || 'Tema não identificado') + '</div>' +
+          '<div class="tend-item-meta">' + (r.meses || []).join(' → ') +
+            (r.causa_provavel ? ' · ' + r.causa_provavel : '') + '</div>' +
+        '</div>';
+      }).join('')
+    : '<div class="tend-item-meta" style="padding:4px 2px">Nenhuma recorrência não resolvida identificada no período.</div>';
+
+  var riscoHtml = riscos.length
+    ? riscos.map(function(r){
+        var cls = tendSeveridadeClass(r.severidade);
+        var icone = cls === 'alto' ? '🔴' : cls === 'melhora' ? '🟢' : '🟡';
+        return '<div class="tend-item ' + cls + '">' +
+          '<div class="tend-item-titulo">' + icone + ' ' + (r.kpi || '') + '</div>' +
+          '<div class="tend-item-meta">' + (r.meses || []).join(' → ') +
+            (r.detalhe ? ' · ' + r.detalhe : '') + '</div>' +
+        '</div>';
+      }).join('')
+    : '<div class="tend-item-meta" style="padding:4px 2px">Nenhum risco de KPI recorrente identificado.</div>';
+
+  return '<div class="tend-card ' + trend + '">' +
+    '<div class="tend-card-hdr">' +
+      '<div class="tend-card-nome">' + (row.nm || '') + '</div>' +
+      '<span class="tend-badge ' + trend + '">' + trendLbl + '</span>' +
+    '</div>' +
+    '<div class="tend-resumo">' + (row.resumo || 'Sem resumo disponível.') + '</div>' +
+    '<div class="tend-score">Qualidade dos combinados (mês mais recente): <b>' + score + ' / 5</b></div>' +
+    '<div class="tend-subsec">🔁 Recorrências não resolvidas</div>' + recHtml +
+    '<div class="tend-subsec">⚠️ Riscos de KPI</div>' + riscoHtml +
+    (row.dossie_url
+      ? '<a class="tend-dossie-link" href="' + row.dossie_url + '" target="_blank" rel="noopener">📇 Ver dossiê executivo completo →</a>'
+      : '') +
+  '</div>';
+}
+
+function renderTendencias(registros, ciclo) {
+  var pageHdr =
+    '<div class="cota-page-hdr">' +
+    '<button class="cota-back-btn" onclick="irParaMes(MES_ATUAL)">← Voltar ao Dashboard</button>' +
+    '<div>' +
+      '<div style="font-size:16px;font-weight:800">🧭 Radar de Tendências N4</div>' +
+      '<div style="font-size:11px;color:var(--gray);margin-top:2px">Regional SPI OESTE · Cardiometabólico · Histórico de atas/briefings até ' + ciclo + '/2026</div>' +
+    '</div>' +
+    '</div>';
+
+  if (!registros.length) {
+    document.getElementById('main-content').innerHTML = pageHdr +
+      '<div class="tend-empty">Nenhum dado de tendências encontrado ainda.<br>' +
+      'Rode o fluxo dos agentes 09→12 (coletor-atas-notion → motor-tendencias → gerador-dossies → publicar_tendencias.py) para gerar a aba <code>tendencias_' + ciclo + '</code>.</div>';
+    return;
+  }
+
+  var nexus = registros.filter(function(r){ return r.linha === 'NEXUS'; });
+  var vital = registros.filter(function(r){ return r.linha === 'VITAL'; });
+
+  var html = pageHdr;
+  if (nexus.length) {
+    html += '<div class="tend-linha-hdr">🔵 NEXUS</div><div class="tend-grid">' +
+      nexus.map(tendCard).join('') + '</div>';
+  }
+  if (vital.length) {
+    html += '<div class="tend-linha-hdr">🔴 VITAL</div><div class="tend-grid">' +
+      vital.map(tendCard).join('') + '</div>';
+  }
+
+  document.getElementById('main-content').innerHTML = html;
+}
+
+async function abrirTendencias() {
+  VIEW_ATUAL = 'tendencias';
+  DISTRITO_ATIVO = null;
+  var meses = CONFIG._meses || [];
+  renderCycleBar(meses, null);
+  mostrarLoading(true);
+  try {
+    setLoadingTxt('Carregando radar de tendências…');
+    // A aba tendencias_{ciclo} pode existir para um ciclo mais recente do que os
+    // já "fechados" em CONFIG._meses (ex.: briefing pré-N4 do mês em andamento,
+    // antes dos dados de Produtos/Produtividade daquele mês subirem). Como o
+    // radar de tendências nunca fica mais de 1 mês à frente do último ciclo
+    // fechado, tenta só esse +1 além dos meses já disponíveis — evita disparar
+    // muitos requests seguidos na Sheets API (risco de 429).
+    var TODOS_MESES = ["JAN","FEV","MAR","ABR","MAI","JUN","JUL","AGO","SET","OUT","NOV","DEZ"];
+    var candidatos = meses.slice().reverse();
+    var idxUltimo = TODOS_MESES.indexOf(meses[meses.length - 1]);
+    if (idxUltimo > -1 && idxUltimo + 1 < TODOS_MESES.length) {
+      candidatos.unshift(TODOS_MESES[idxUltimo + 1]);
+    }
+    var registros = [];
+    var cicloEncontrado = meses[meses.length - 1] || MES_ATUAL || '';
+    for (var i = 0; i < candidatos.length; i++) {
+      try {
+        var rows = await fetchAba('tendencias_' + candidatos[i]);
+        if (rows.length) { registros = rows; cicloEncontrado = candidatos[i]; break; }
+      } catch(e) { /* aba ainda não existe para esse ciclo — tenta o anterior */ }
+    }
+    renderTendencias(registros, cicloEncontrado);
+  } catch(e) {
+    renderErro(e.message);
+  }
+  mostrarLoading(false);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
 // ── Renderização: Distrito cards ──────────────────────────────────
 
 function renderDistritoCard(d, reps) {
@@ -4517,8 +4683,9 @@ async function trocarMes(mes) {
   var wasGloss   = VIEW_ATUAL === 'glossario';
   var wasGap     = VIEW_ATUAL === 'gap';
   var wasMatrix  = VIEW_ATUAL === 'matrix';
-  if (wasAnual || wasCota || wasVisitas || wasGloss || wasGap || wasMatrix) VIEW_ATUAL = 'principal';
-  if (MES_ATUAL === mes && !wasAnual && !wasCota && !wasVisitas && !wasGloss && !wasGap && !wasMatrix) return;
+  var wasTend    = VIEW_ATUAL === 'tendencias';
+  if (wasAnual || wasCota || wasVisitas || wasGloss || wasGap || wasMatrix || wasTend) VIEW_ATUAL = 'principal';
+  if (MES_ATUAL === mes && !wasAnual && !wasCota && !wasVisitas && !wasGloss && !wasGap && !wasMatrix && !wasTend) return;
   MES_ATUAL = mes;
   DISTRITO_ATIVO = null;
 
@@ -4526,7 +4693,8 @@ async function trocarMes(mes) {
   document.querySelectorAll('.cycle-btn').forEach(function(btn){
     if (btn.classList.contains('anual-btn') || btn.classList.contains('cota-btn') ||
         btn.classList.contains('visitas-btn') || btn.classList.contains('gloss-btn') ||
-        btn.classList.contains('gap-btn') || btn.classList.contains('mtz-btn')) {
+        btn.classList.contains('gap-btn') || btn.classList.contains('mtz-btn') ||
+        btn.classList.contains('tend-btn')) {
       btn.classList.remove('active');
     } else {
       btn.classList.toggle('active', btn.textContent.startsWith(mes));
