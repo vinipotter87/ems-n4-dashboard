@@ -4640,9 +4640,11 @@ async function init() {
 
 var _mtzMes      = null;
 var _mtzLinha    = null;   // null = ambas
+var _mtzDistrito = null;   // null = todos os distritos
 var _mtzThrMdv   = 80;
 var _mtzThrAt    = 100;
 var _mtzYtd      = false;  // false = mês atual, true = YTD acumulado
+var _mtzBaseReps = [];     // reps filtrados por período+linha, antes do filtro de distrito
 var _mtzView     = 'quadrantes'; // 'quadrantes' | 'correlacao'
 var _mtzReps     = [];
 var _mtzChart    = null;
@@ -4668,9 +4670,10 @@ async function abrirMatrizPerformance() {
 function _mtzRenderPage() {
   var meses = CONFIG._meses || [_mtzMes];
   var dados = DADOS_CACHE[_mtzMes] || {};
-  _mtzReps  = _mtzYtd
+  _mtzBaseReps = _mtzYtd
     ? _mtzBuildRepsYtd(meses, _mtzLinha)
     : _mtzBuildReps(_mtzMes, dados, _mtzLinha);
+  _mtzReps  = _mtzFilterDistrito(_mtzBaseReps);
 
   var titulo = _mtzYtd
     ? 'Matriz de Performance — YTD ' + (meses[0]||'') + '→' + (meses[meses.length-1]||'') + '/2026'
@@ -4699,6 +4702,14 @@ function _mtzRenderPage() {
             '<button class="gap-tab gap-tab-vit' + (_mtzLinha==='VITAL'?' active':'') + '" id="mtz-vit" onclick="mtzLinha(\'VITAL\')">VITAL</button>' +
             '<button class="gap-tab mtz-all-tab'  + (!_mtzLinha?' active':'') + '"  id="mtz-all" onclick="mtzLinha(null)">Ambas</button>' +
           '</div>' +
+        '</div>' +
+        '<div class="gap-ctrl-group"><label class="gap-ctrl-label">Distrito</label>' +
+          '<select id="mtz-distrito" class="gap-select" onchange="mtzDistrito(this.value)">' +
+            '<option value="">Todos</option>' +
+            _mtzDistOptions(_mtzBaseReps).map(function(o){
+              return '<option value="' + o.id + '"' + (_mtzDistrito===o.id?' selected':'') + '>' + o.label + '</option>';
+            }).join('') +
+          '</select>' +
         '</div>' +
         '<div class="gap-ctrl-group"><label class="gap-ctrl-label">Corte MDV%</label>' +
           '<select id="mtz-thr-mdv" class="gap-select" onchange="mtzUpdate()">' +
@@ -4743,6 +4754,21 @@ function _mtzMountCharts(reps) {
 }
 
 // ── Helpers ──────────────────────────────────────────────────────
+
+function _mtzDistOptions(reps) {
+  var seen = {}, list = [];
+  (reps || []).forEach(function(r){
+    var id = r.distrito_id;
+    if (id && !seen[id]) { seen[id] = true; list.push({id: id, label: r._dist || id}); }
+  });
+  list.sort(function(a,b){ return (a.label||'').localeCompare(b.label||''); });
+  return list;
+}
+
+function _mtzFilterDistrito(reps) {
+  if (!_mtzDistrito) return reps;
+  return (reps || []).filter(function(r){ return r.distrito_id === _mtzDistrito; });
+}
 
 function _mtzBuildReps(mes, dados, linha) {
   var reps = (dados.reps || []).filter(function(r){
@@ -5125,24 +5151,44 @@ function mtzTabView(v) {
 
 // ── Controles interativos ─────────────────────────────────────────
 
+function _mtzRefreshDistritoSelect() {
+  var selEl = document.getElementById('mtz-distrito');
+  if (!selEl) return;
+  selEl.innerHTML = '<option value="">Todos</option>' +
+    _mtzDistOptions(_mtzBaseReps).map(function(o){
+      return '<option value="' + o.id + '"' + (_mtzDistrito===o.id?' selected':'') + '>' + o.label + '</option>';
+    }).join('');
+}
+
 function mtzLinha(linha) {
-  _mtzLinha = linha;
+  _mtzLinha    = linha;
+  _mtzDistrito = null; // conjunto de distritos muda entre NEXUS/VITAL/Ambas
   document.getElementById('mtz-nex').className = 'gap-tab gap-tab-nex' + (linha==='NEXUS'?' active':'');
   document.getElementById('mtz-vit').className = 'gap-tab gap-tab-vit' + (linha==='VITAL'?' active':'');
   document.getElementById('mtz-all').className = 'gap-tab mtz-all-tab'  + (!linha?' active':'');
   mtzUpdate();
 }
 
+function mtzDistrito(distritoId) {
+  _mtzDistrito = distritoId || null;
+  _mtzReps = _mtzFilterDistrito(_mtzBaseReps);
+  var body = document.getElementById('mtz-body');
+  if (body) body.innerHTML = _mtzBodyHtml(_mtzReps);
+  _mtzMountCharts(_mtzReps);
+}
+
 function mtzToggleYtd(ytd) {
   _mtzYtd = ytd;
   var meses = CONFIG._meses || [_mtzMes];
   var dados = DADOS_CACHE[_mtzMes] || {};
-  _mtzReps  = _mtzYtd ? _mtzBuildRepsYtd(meses,_mtzLinha) : _mtzBuildReps(_mtzMes,dados,_mtzLinha);
+  _mtzBaseReps = _mtzYtd ? _mtzBuildRepsYtd(meses,_mtzLinha) : _mtzBuildReps(_mtzMes,dados,_mtzLinha);
+  _mtzReps     = _mtzFilterDistrito(_mtzBaseReps);
   var titulo = _mtzYtd
     ? 'Matriz de Performance — YTD '+(meses[0]||'')+'→'+(meses[meses.length-1]||'')+'/2026'
     : 'Matriz de Performance — '+_mtzMes+'/2026';
   var el = document.querySelector('.mtz-title');
   if (el) el.textContent = titulo;
+  _mtzRefreshDistritoSelect();
   var body = document.getElementById('mtz-body');
   if (body) body.innerHTML = _mtzBodyHtml(_mtzReps);
   _mtzMountCharts(_mtzReps);
@@ -5153,7 +5199,9 @@ function mtzUpdate() {
   _mtzThrAt  = parseFloat(document.getElementById('mtz-thr-at').value);
   var meses  = CONFIG._meses || [_mtzMes];
   var dados  = DADOS_CACHE[_mtzMes] || {};
-  _mtzReps   = _mtzYtd ? _mtzBuildRepsYtd(meses,_mtzLinha) : _mtzBuildReps(_mtzMes,dados,_mtzLinha);
+  _mtzBaseReps = _mtzYtd ? _mtzBuildRepsYtd(meses,_mtzLinha) : _mtzBuildReps(_mtzMes,dados,_mtzLinha);
+  _mtzReps     = _mtzFilterDistrito(_mtzBaseReps);
+  _mtzRefreshDistritoSelect();
   var body   = document.getElementById('mtz-body');
   if (body) body.innerHTML = _mtzBodyHtml(_mtzReps);
   _mtzMountCharts(_mtzReps);
