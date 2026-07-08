@@ -59,8 +59,10 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
 .dcard-linha{font-size:9px;font-weight:700;letter-spacing:1.5px;opacity:.7;margin-bottom:3px}
 .dcard-nome{font-size:13px;font-weight:700;line-height:1.3}
 .dcard-cod{font-size:10px;opacity:.55;margin-top:3px}
-.prod-badge{position:absolute;right:14px;top:50%;transform:translateY(-50%);width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.4);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
-.pb-n{font-size:12px;font-weight:800;color:#fff;line-height:1}.pb-l{font-size:8px;color:rgba(255,255,255,.7);margin-top:1px}
+.prod-badges{position:absolute;right:12px;top:50%;transform:translateY(-50%);display:flex;gap:6px}
+.prod-badge{width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.4);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.prod-badge.pb-alt{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.3)}
+.pb-n{font-size:11px;font-weight:800;color:#fff;line-height:1}.pb-l{font-size:7px;color:rgba(255,255,255,.7);margin-top:1px}
 .dcard-body{padding:12px 16px}
 .diag{font-size:10px;padding:5px 8px;border-radius:5px;border-left:3px solid;margin-bottom:8px}
 .diag.crit{background:var(--red-l);color:var(--red);border-color:var(--red)}
@@ -3849,10 +3851,12 @@ async function abrirEvolucaoCota() {
 
 // ── Renderização: Distrito cards ──────────────────────────────────
 
-function renderDistritoCard(d, reps) {
+function renderDistritoCard(d, reps, prodDist) {
   var cls     = d.linha === 'NEXUS' ? 'nc' : 'vc';
   var _dprod  = safeFloat(d.prod);
   var prodPct = _dprod !== null ? (_dprod * 100).toFixed(1) : '—';
+  var _dating = mediaAtProdDist(prodDist || [], d.distrito_id);
+  var atProdPct = _dating !== null ? _dating.toFixed(1) : '—';
   var ativo   = DISTRITO_ATIVO === d.distrito_id ? ' ativo' : '';
 
   // Mini-jornada da equipe do distrito
@@ -3879,7 +3883,10 @@ function renderDistritoCard(d, reps) {
       '<div class="dcard-linha">' + d.linha + '</div>' +
       '<div class="dcard-nome">' + (d.ab || d.nm || d.distrito_id) + '</div>' +
       '<div class="dcard-cod">' + d.distrito_id + '</div>' +
-      '<div class="prod-badge"><div class="pb-n">' + prodPct + '%</div><div class="pb-l">PROD MDV</div></div>' +
+      '<div class="prod-badges">' +
+        '<div class="prod-badge"><div class="pb-n">' + prodPct + '%</div><div class="pb-l">PROD MDV</div></div>' +
+        '<div class="prod-badge pb-alt"><div class="pb-n">' + atProdPct + '%</div><div class="pb-l">PRODUTOS</div></div>' +
+      '</div>' +
     '</div>' +
     '<div class="dcard-body">' +
       '<div class="diag ' + dgClass(d.diagnostico) + '">' + dgIcon(d.diagnostico) + ' ' +
@@ -4019,10 +4026,11 @@ function fecharDistrito(silencioso) {
 function reRenderGrids(distritos, reps) {
   var nexus = distritos.filter(function(d){ return d.linha === 'NEXUS'; });
   var vital = distritos.filter(function(d){ return d.linha === 'VITAL'; });
+  var prodDist = window._D ? (window._D.prodDistNex||[]).concat(window._D.prodDistVit||[]) : [];
   var gn = document.getElementById('grid-nexus');
   var gv = document.getElementById('grid-vital');
-  if (gn) gn.innerHTML = nexus.map(function(d){ return renderDistritoCard(d, reps); }).join('');
-  if (gv) gv.innerHTML = vital.map(function(d){ return renderDistritoCard(d, reps); }).join('');
+  if (gn) gn.innerHTML = nexus.map(function(d){ return renderDistritoCard(d, reps, prodDist); }).join('');
+  if (gv) gv.innerHTML = vital.map(function(d){ return renderDistritoCard(d, reps, prodDist); }).join('');
 }
 
 // ── Renderização: Produto Atingimento ────────────────────────────
@@ -4453,6 +4461,7 @@ function renderTudo(dados, mes) {
   var reps       = dados.reps       || [];
   var nexus      = distritos.filter(function(d){ return d.linha === 'NEXUS'; });
   var vital      = distritos.filter(function(d){ return d.linha === 'VITAL'; });
+  var prodDistAll = (dados.prodDistNex||[]).concat(dados.prodDistVit||[]);
 
   // Salva dados globalmente para uso nos painéis interativos
   window._D = dados;
@@ -4485,12 +4494,12 @@ function renderTudo(dados, mes) {
 
   // 6. NEXUS – cards + painel de detalhe
   html += '<div class="sec-hdr"><div class="sec-title">NEXUS</div><div class="sec-line"></div><span class="badge n">4 distritos</span></div>';
-  html += '<div class="dgrid" id="grid-nexus">' + nexus.map(function(d){ return renderDistritoCard(d, reps); }).join('') + '</div>';
+  html += '<div class="dgrid" id="grid-nexus">' + nexus.map(function(d){ return renderDistritoCard(d, reps, prodDistAll); }).join('') + '</div>';
   html += '<div class="distrito-detalhe" id="detalhe-nexus"></div>';
 
   // 5. VITAL – cards + painel de detalhe
   html += '<div class="sec-hdr"><div class="sec-title">VITAL</div><div class="sec-line"></div><span class="badge v">4 distritos</span></div>';
-  html += '<div class="dgrid" id="grid-vital">' + vital.map(function(d){ return renderDistritoCard(d, reps); }).join('') + '</div>';
+  html += '<div class="dgrid" id="grid-vital">' + vital.map(function(d){ return renderDistritoCard(d, reps, prodDistAll); }).join('') + '</div>';
   html += '<div class="distrito-detalhe" id="detalhe-vital"></div>';
 
   // 6. PRODUTO ATINGIMENTO
