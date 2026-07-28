@@ -1499,34 +1499,32 @@ function aplicarFiltroDistrito(distritoId) {
     var dSel = (dados.distritos || []).find(function(d){ return d.distrito_id === DISTRITO_FILTRO; });
     if (dSel) PROD_LINHA = dSel.linha; // trava a aba de linha do card de Produto na linha do distrito
     if (PROD_NIVEL === 'distrito') PROD_NIVEL = 'regional'; // "Por Distrito" some com o filtro ligado
-
-    // Ao filtrar um distrito, vai direto para Análise & Alertas já aberta com os dados dele
-    VIEW_ATUAL = 'analise';
-    renderViewAnalise(dados, MES_ATUAL);
-  } else {
-    VIEW_ATUAL = 'principal';
-    renderTudo(dados, MES_ATUAL); // aqui dentro PROD_DIST_SEL é resetado para null
   }
+
+  // Sempre fica na página principal — com filtro ligado, a Análise & Alertas
+  // aparece embutida ali mesmo (ver renderTudo), sem navegar pra outra página.
+  VIEW_ATUAL = 'principal';
+  renderTudo(dados, MES_ATUAL); // aqui dentro PROD_DIST_SEL é resetado para null
 
   // Com filtro ativo só existe 1 distrito — seleciona direto, sem exigir clique no pill
   PROD_DIST_SEL = DISTRITO_FILTRO || null;
-  if (VIEW_ATUAL === 'principal') atualizarProdContent();
+  atualizarProdContent();
   abrirDetalheDoFiltroAtivo();
   atualizarVisibilidadeFiltroDistrito();
 }
 
-// Quando há um distrito filtrado e estamos na página principal, abre
-// automaticamente o painel de detalhe (Equipe & Jornada + Atingimento por
-// Produto por Representante), já que com o filtro só existe 1 card na tela.
+// Quando há um distrito filtrado, abre automaticamente o painel de detalhe
+// (Equipe & Jornada + Atingimento por Produto por Representante), já que
+// com o filtro só existe 1 card na tela.
 function abrirDetalheDoFiltroAtivo() {
-  if (!DISTRITO_FILTRO || VIEW_ATUAL !== 'principal') return;
+  if (!DISTRITO_FILTRO) return;
   DISTRITO_ATIVO = null; // garante que abrirDistrito abra em vez de fazer toggle-fechar
   abrirDistrito(DISTRITO_FILTRO);
 }
 
 function atualizarVisibilidadeFiltroDistrito() {
   var bar = document.getElementById('distrito-filtro-bar');
-  if (bar) bar.style.display = (VIEW_ATUAL === 'principal' || VIEW_ATUAL === 'analise') ? 'flex' : 'none';
+  if (bar) bar.style.display = (VIEW_ATUAL === 'principal') ? 'flex' : 'none';
 }
 
 // ── Renderização: Mês ─────────────────────────────────────────────
@@ -4673,8 +4671,9 @@ function renderTudo(dados, mes) {
   // 4.5 CRM CHAVE
   html += renderCrmChave(dados.crm || [], mes);
 
-  // 5. ANÁLISE & ALERTAS (preview — abre página dedicada)
-  html += renderBotaoAnalise(dados, mes);
+  // 5. ANÁLISE & ALERTAS — com distrito filtrado, mostra o conteúdo completo
+  // aqui mesmo na página; sem filtro, fica o preview que abre a página dedicada.
+  html += DISTRITO_FILTRO ? renderAnalise(dados, mes) : renderBotaoAnalise(dados, mes);
 
   // 6. NEXUS – cards + painel de detalhe
   html += '<div class="sec-hdr"><div class="sec-title">NEXUS</div><div class="sec-line"></div><span class="badge n">' + nexus.length + ' distrito' + (nexus.length !== 1 ? 's' : '') + '</span></div>';
