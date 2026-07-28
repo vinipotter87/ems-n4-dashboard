@@ -25,6 +25,11 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
 .cycle-btn{padding:6px 18px;border-radius:8px;border:2px solid var(--border);background:#fff;font-size:12px;font-weight:700;cursor:pointer;color:var(--gray);font-family:inherit;transition:all .15s}
 .cycle-btn.active{border-color:var(--red);color:var(--red);background:var(--red-l)}
 .cycle-btn:hover:not(.active){border-color:#ccc;color:var(--dark)}
+.distrito-filtro-bar{background:#FAFAFB;border-bottom:1px solid var(--border);padding:8px 28px;align-items:center;gap:10px;flex-wrap:wrap}
+.distrito-filtro-bar .df-label{font-size:12px;font-weight:700;color:var(--dark)}
+.distrito-filtro-bar select{padding:6px 14px;border-radius:8px;border:2px solid var(--border);background:#fff;font-size:12px;font-weight:700;color:var(--dark);font-family:inherit;cursor:pointer;min-width:220px}
+.distrito-filtro-bar select:hover{border-color:#ccc}
+.distrito-filtro-bar select:focus{outline:none;border-color:var(--red)}
 .main{padding:22px 28px;max-width:1440px;margin:0 auto}
 
 /* Loading */
@@ -635,6 +640,13 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
   <!-- Botões de mês injetados dinamicamente -->
 </div>
 
+<div class="distrito-filtro-bar" id="distrito-filtro-bar" style="display:none">
+  <span class="df-label">🎯 Filtrar por distrito</span>
+  <select id="distrito-filtro-select" onchange="aplicarFiltroDistrito(this.value)">
+    <option value="">Todos os distritos</option>
+  </select>
+</div>
+
 <div class="main" id="main-content">
   <!-- Conteúdo injetado dinamicamente -->
 </div>
@@ -653,6 +665,7 @@ var MES_ATUAL = null;
 var CHART_PROD = null;
 var ANUAL_CHARTS = {};
 var DISTRITO_ATIVO = null;
+var DISTRITO_FILTRO = null;
 var PROD_LINHA = 'NEXUS';
 var PROD_NIVEL = 'regional';
 var PROD_DIST_SEL = null;
@@ -940,13 +953,19 @@ function renderKPIs(dados) {
 
   function fmt(v) { return v !== null ? v.toFixed(1) + '%' : '—'; }
 
+  var nDistTotal = distritos.length;
+  var nDistNex   = distritos.filter(function(d){ return d.linha === 'NEXUS'; }).length;
+  var nDistVit   = distritos.filter(function(d){ return d.linha === 'VITAL'; }).length;
+  function distLbl(n) { return n + ' distrito' + (n !== 1 ? 's' : ''); }
+  var prodLbl = DISTRITO_FILTRO ? 'Média produtos do distrito' : 'Média produtos linha';
+
   // Linha 1: produtividade MDV + produto
   var row1 = '<div class="kpi-row" style="grid-template-columns:repeat(5,1fr);margin-bottom:10px">' +
-    kpiCard('r', 'ATING. PROD. REGIONAL', fmt(prodRegM), 'MDV · 8 distritos') +
-    kpiCard('n', 'ATING. PROD. NEXUS',    fmt(prodNexM), 'MDV · 4 distritos') +
-    kpiCard('r', 'ATING. PROD. VITAL',    fmt(prodVitM), 'MDV · 4 distritos') +
-    kpiCard('n', 'ATING. PRODUTO NEXUS',  fmt(atProdNex), 'Média produtos linha') +
-    kpiCard('r', 'ATING. PRODUTO VITAL',  fmt(atProdVit), 'Média produtos linha') +
+    kpiCard('r', 'ATING. PROD. REGIONAL', fmt(prodRegM), 'MDV · ' + distLbl(nDistTotal)) +
+    kpiCard('n', 'ATING. PROD. NEXUS',    fmt(prodNexM), 'MDV · ' + distLbl(nDistNex)) +
+    kpiCard('r', 'ATING. PROD. VITAL',    fmt(prodVitM), 'MDV · ' + distLbl(nDistVit)) +
+    kpiCard('n', 'ATING. PRODUTO NEXUS',  fmt(atProdNex), prodLbl) +
+    kpiCard('r', 'ATING. PRODUTO VITAL',  fmt(atProdVit), prodLbl) +
   '</div>';
 
   // Linha 2: status + alerta MDV
@@ -1400,6 +1419,74 @@ async function abrirVisitasGD() {
   finally    { mostrarLoading(false); }
 }
 
+// ── Filtro por distrito (topo da página) ───────────────────────────
+
+// Recorta um objeto `dados` (do carregarMes) para conter só as linhas do
+// distrito selecionado. Usado pela página principal para que todos os
+// blocos (KPIs, Jornada, Diagnóstico, PEX, Matriz, Visitas GD, CRM Chave,
+// cards e Produto/Atingimento) passem a refletir só aquele distrito.
+function filtrarDadosPorDistrito(dados, distritoId) {
+  var distritoSel = (dados.distritos || []).find(function(d){ return d.distrito_id === distritoId; });
+  if (!distritoSel) return dados;
+  var linhaSel = distritoSel.linha;
+  var gdCodigo = distritoId.slice(0, -1); // diagnostico_/diagnostico_detalhe_ usam gd_codigo (distrito_id sem o último dígito)
+
+  function porDist(arr) { return (arr || []).filter(function(r){ return r.distrito_id === distritoId; }); }
+  function porGd(arr)   { return (arr || []).filter(function(r){ return r.gd_codigo === gdCodigo; }); }
+
+  return Object.assign({}, dados, {
+    distritos:   porDist(dados.distritos),
+    reps:        porDist(dados.reps),
+    // prodNex/prodVit são regionais (sem distrito_id) — na visão filtrada,
+    // usamos o recorte por distrito no lugar do agregado da linha inteira.
+    prodNex:     linhaSel === 'NEXUS' ? porDist(dados.prodDistNex) : [],
+    prodVit:     linhaSel === 'VITAL' ? porDist(dados.prodDistVit) : [],
+    prodDistNex: porDist(dados.prodDistNex),
+    prodDistVit: porDist(dados.prodDistVit),
+    prodRepNex:  porDist(dados.prodRepNex),
+    prodRepVit:  porDist(dados.prodRepVit),
+    pex:         porDist(dados.pex),
+    visitasNex:  porDist(dados.visitasNex),
+    visitasVit:  porDist(dados.visitasVit),
+    crm:         porDist(dados.crm),
+    diagnostico: porGd(dados.diagnostico),
+    diagDetalhe: porGd(dados.diagDetalhe)
+  });
+}
+
+// Popula o <select> do topo com os 8 distritos (sempre a lista completa,
+// não a filtrada) e mantém a seleção atual.
+function renderDistritoFiltroBar(distritos) {
+  var sel = document.getElementById('distrito-filtro-select');
+  if (!sel) return;
+
+  var nexus = (distritos || []).filter(function(d){ return d.linha === 'NEXUS'; });
+  var vital = (distritos || []).filter(function(d){ return d.linha === 'VITAL'; });
+
+  function opts(list) {
+    return list.map(function(d) {
+      return '<option value="' + d.distrito_id + '">' + (d.ab || d.nm || d.distrito_id) + '</option>';
+    }).join('');
+  }
+
+  sel.innerHTML = '<option value="">Todos os distritos</option>' +
+    (nexus.length ? '<optgroup label="NEXUS">' + opts(nexus) + '</optgroup>' : '') +
+    (vital.length ? '<optgroup label="VITAL">' + opts(vital) + '</optgroup>' : '');
+
+  sel.value = DISTRITO_FILTRO || '';
+}
+
+function aplicarFiltroDistrito(distritoId) {
+  DISTRITO_FILTRO = distritoId || null;
+  var dados = DADOS_CACHE[MES_ATUAL];
+  if (dados) renderTudo(dados, MES_ATUAL);
+}
+
+function atualizarVisibilidadeFiltroDistrito() {
+  var bar = document.getElementById('distrito-filtro-bar');
+  if (bar) bar.style.display = (VIEW_ATUAL === 'principal') ? 'flex' : 'none';
+}
+
 // ── Renderização: Mês ─────────────────────────────────────────────
 
 function renderCycleBar(meses, mesAtual) {
@@ -1425,6 +1512,7 @@ function renderCycleBar(meses, mesAtual) {
   btns += '<button class="cycle-btn gloss-btn'    + (isGloss    ? ' active' : '') + '" onclick="abrirGlossario()">📖 Glossário</button>';
   btns += '<button class="cycle-btn diagevol-btn' + (isDiagEvol ? ' active' : '') + '" onclick="abrirEvolucaoDiag()">📊 Diag. Evolução</button>';
   bar.innerHTML = btns;
+  atualizarVisibilidadeFiltroDistrito();
 }
 
 // ── Renderização: Jornada da Evolução ─────────────────────────────
@@ -1776,13 +1864,13 @@ function renderDiagnostico(diagnostico) {
     '</div>';
 
   var nexusHtml = nexus.length
-    ? '<div style="margin-bottom:6px;display:flex;align-items:center;gap:8px"><span style="font-size:12px;font-weight:800;color:var(--dark)">NEXUS</span><span class="badge n">4 distritos</span></div>' +
+    ? '<div style="margin-bottom:6px;display:flex;align-items:center;gap:8px"><span style="font-size:12px;font-weight:800;color:var(--dark)">NEXUS</span><span class="badge n">' + nexus.length + ' distrito' + (nexus.length !== 1 ? 's' : '') + '</span></div>' +
       '<div class="diag-grid" id="diag-grid-nexus">' + nexus.map(diagCard).join('') + '</div>' +
       '<div class="distrito-detalhe diag-detalhe" id="diag-detalhe-nexus"></div>'
     : '';
 
   var vitalHtml = vital.length
-    ? '<div style="margin-bottom:6px;display:flex;align-items:center;gap:8px"><span style="font-size:12px;font-weight:800;color:var(--dark)">VITAL</span><span class="badge v">4 distritos</span></div>' +
+    ? '<div style="margin-bottom:6px;display:flex;align-items:center;gap:8px"><span style="font-size:12px;font-weight:800;color:var(--dark)">VITAL</span><span class="badge v">' + vital.length + ' distrito' + (vital.length !== 1 ? 's' : '') + '</span></div>' +
       '<div class="diag-grid" id="diag-grid-vital">' + vital.map(diagCard).join('') + '</div>' +
       '<div class="distrito-detalhe diag-detalhe" id="diag-detalhe-vital"></div>'
     : '';
@@ -4449,12 +4537,16 @@ async function mtzPrincipalTab(mes) {
   // Mostra spinner enquanto carrega
   el.innerHTML = '<div class="mtz-p-loading" style="grid-column:1/-1">⏳ Carregando ' + mes + '…</div>';
   var dados = await carregarMes(mes).catch(function() { return {}; });
+  if (DISTRITO_FILTRO) dados = filtrarDadosPorDistrito(dados, DISTRITO_FILTRO);
   el.innerHTML = _mtzPrincipalGrid(dados);
 }
 
 // ── Controller ────────────────────────────────────────────────────
 
 function renderTudo(dados, mes) {
+  renderDistritoFiltroBar(dados.distritos || []); // sempre com a lista completa, não a filtrada
+  if (DISTRITO_FILTRO) dados = filtrarDadosPorDistrito(dados, DISTRITO_FILTRO);
+
   PROD_DIST_SEL = null; // reset seleção de distrito no produto
 
   var distritos  = dados.distritos  || [];
@@ -4493,12 +4585,12 @@ function renderTudo(dados, mes) {
   html += renderBotaoAnalise(dados, mes);
 
   // 6. NEXUS – cards + painel de detalhe
-  html += '<div class="sec-hdr"><div class="sec-title">NEXUS</div><div class="sec-line"></div><span class="badge n">4 distritos</span></div>';
+  html += '<div class="sec-hdr"><div class="sec-title">NEXUS</div><div class="sec-line"></div><span class="badge n">' + nexus.length + ' distrito' + (nexus.length !== 1 ? 's' : '') + '</span></div>';
   html += '<div class="dgrid" id="grid-nexus">' + nexus.map(function(d){ return renderDistritoCard(d, reps, prodDistAll); }).join('') + '</div>';
   html += '<div class="distrito-detalhe" id="detalhe-nexus"></div>';
 
   // 5. VITAL – cards + painel de detalhe
-  html += '<div class="sec-hdr"><div class="sec-title">VITAL</div><div class="sec-line"></div><span class="badge v">4 distritos</span></div>';
+  html += '<div class="sec-hdr"><div class="sec-title">VITAL</div><div class="sec-line"></div><span class="badge v">' + vital.length + ' distrito' + (vital.length !== 1 ? 's' : '') + '</span></div>';
   html += '<div class="dgrid" id="grid-vital">' + vital.map(function(d){ return renderDistritoCard(d, reps, prodDistAll); }).join('') + '</div>';
   html += '<div class="distrito-detalhe" id="detalhe-vital"></div>';
 
@@ -4541,6 +4633,7 @@ async function trocarMes(mes) {
       btn.classList.toggle('active', btn.textContent.startsWith(mes));
     }
   });
+  atualizarVisibilidadeFiltroDistrito();
 
   mostrarLoading(true);
   try {
