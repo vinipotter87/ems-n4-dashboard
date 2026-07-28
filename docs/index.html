@@ -4079,10 +4079,10 @@ function abrirDistrito(distritoId) {
       '<td style="color:var(--gray);font-size:11px">' + (r.setor_id || '—') + '</td>' +
       '<td>' + jornadaBadge(etapa) + '</td>' +
       '<td style="' + prodColor(prodPct) + ';font-weight:700">' + (prodPct !== null ? prodPct.toFixed(1) + '%' : '—') + '</td>' +
-      '<td>' + pct(r.q1) + '</td>' +
-      '<td>' + pct(r.q2) + '</td>' +
-      '<td>' + pct(r.q3) + '</td>' +
-      '<td>' + pct(r.q4) + '</td>' +
+      '<td class="' + atClass(safeFloat(r.q1)) + '">' + pct(r.q1) + '</td>' +
+      '<td class="' + atClass(safeFloat(r.q2)) + '">' + pct(r.q2) + '</td>' +
+      '<td class="' + atClass(safeFloat(r.q3)) + '">' + pct(r.q3) + '</td>' +
+      '<td class="' + atClass(safeFloat(r.q4)) + '">' + pct(r.q4) + '</td>' +
       '<td>' + pct(r.cob_painel) + '</td>' +
     '</tr>';
   });
