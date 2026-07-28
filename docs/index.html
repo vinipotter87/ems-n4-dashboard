@@ -612,6 +612,10 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
 .prod-chave td:first-child{border-left:3px solid #f59e0b!important}
 .prod-table .prod-chave:hover td{background:#fff9e0}
 .mc-badge{display:inline-block;background:#fef3c7;color:#92400e;font-size:9px;font-weight:800;padding:1px 6px;border-radius:4px;margin-left:6px;vertical-align:middle;letter-spacing:.3px;white-space:nowrap}
+
+/* Rodapé de total nas tabelas de produto */
+.prod-total-row td{background:var(--light);font-weight:800;border-top:2px solid var(--border)}
+.prod-total-row .prod-nome{text-transform:uppercase;font-size:11px;letter-spacing:.4px;color:var(--dark)}
 </style>
 </head>
 <body>
@@ -1479,7 +1483,15 @@ function renderDistritoFiltroBar(distritos) {
 function aplicarFiltroDistrito(distritoId) {
   DISTRITO_FILTRO = distritoId || null;
   var dados = DADOS_CACHE[MES_ATUAL];
-  if (dados) renderTudo(dados, MES_ATUAL);
+  if (DISTRITO_FILTRO && dados) {
+    var dSel = (dados.distritos || []).find(function(d){ return d.distrito_id === DISTRITO_FILTRO; });
+    if (dSel) PROD_LINHA = dSel.linha; // trava a aba de linha do card de Produto na linha do distrito
+    if (PROD_NIVEL === 'distrito') PROD_NIVEL = 'regional'; // "Por Distrito" some com o filtro ligado
+  }
+  if (dados) renderTudo(dados, MES_ATUAL); // aqui dentro PROD_DIST_SEL é resetado para null
+  // Com filtro ativo só existe 1 distrito — seleciona direto, sem exigir clique no pill
+  PROD_DIST_SEL = DISTRITO_FILTRO || null;
+  if (dados) atualizarProdContent();
   abrirDetalheDoFiltroAtivo();
 }
 
@@ -4137,15 +4149,28 @@ function renderProdutoAtingimento(dados) {
   var html = '<div class="prod-ating-card" id="prod-ating">';
   html += '<div class="card-title"><div class="cc-bar"></div>Atingimento por Produto</div>';
 
-  // Linha tabs (Nexus | Vital)
-  html += '<div class="prod-tabs-row">' +
-    '<button class="ptab linha-nexus' + (PROD_LINHA === 'NEXUS' ? ' active' : '') + '" onclick="switchProdLinha(\'NEXUS\')">NEXUS</button>' +
-    '<button class="ptab' + (PROD_LINHA === 'VITAL' ? ' active' : '') + '" onclick="switchProdLinha(\'VITAL\')">VITAL</button>' +
-    '<div class="ptab-sep"></div>' +
-    '<button class="ptab' + (PROD_NIVEL === 'regional' ? ' active' : '') + '" onclick="switchProdNivel(\'regional\')">Regional</button>' +
-    '<button class="ptab' + (PROD_NIVEL === 'distrito' ? ' active' : '') + '" onclick="switchProdNivel(\'distrito\')">Por Distrito</button>' +
-    '<button class="ptab' + (PROD_NIVEL === 'rep' ? ' active' : '') + '" onclick="switchProdNivel(\'rep\')">Por Representante</button>' +
-  '</div>';
+  var filtrado = !!DISTRITO_FILTRO;
+
+  // Linha tabs (Nexus | Vital) — com filtro de distrito ativo, só a linha
+  // do distrito selecionado faz sentido, então mostra um badge fixo.
+  html += '<div class="prod-tabs-row">';
+  if (filtrado) {
+    var linhaCls = PROD_LINHA === 'NEXUS' ? 'n' : 'v';
+    html += '<span class="badge ' + linhaCls + '" style="margin-right:6px">' + PROD_LINHA + '</span>';
+  } else {
+    html +=
+      '<button class="ptab linha-nexus' + (PROD_LINHA === 'NEXUS' ? ' active' : '') + '" onclick="switchProdLinha(\'NEXUS\')">NEXUS</button>' +
+      '<button class="ptab' + (PROD_LINHA === 'VITAL' ? ' active' : '') + '" onclick="switchProdLinha(\'VITAL\')">VITAL</button>';
+  }
+  html += '<div class="ptab-sep"></div>';
+  html += '<button class="ptab' + (PROD_NIVEL === 'regional' ? ' active' : '') + '" onclick="switchProdNivel(\'regional\')">' +
+    (filtrado ? 'Consolidado do Distrito' : 'Regional') + '</button>';
+  // "Por Distrito" fica redundante com o filtro ligado (só há 1 distrito na tela)
+  if (!filtrado) {
+    html += '<button class="ptab' + (PROD_NIVEL === 'distrito' ? ' active' : '') + '" onclick="switchProdNivel(\'distrito\')">Por Distrito</button>';
+  }
+  html += '<button class="ptab' + (PROD_NIVEL === 'rep' ? ' active' : '') + '" onclick="switchProdNivel(\'rep\')">Por Representante</button>';
+  html += '</div>';
 
   html += '<div id="prod-content"></div>';
   html += '</div>';
@@ -4167,7 +4192,8 @@ function switchProdLinha(linha) {
 
 function switchProdNivel(nivel) {
   PROD_NIVEL = nivel;
-  PROD_DIST_SEL = null;
+  // Com filtro de distrito ativo só existe 1 opção — seleciona direto, sem exigir clique no pill
+  PROD_DIST_SEL = DISTRITO_FILTRO || null;
   // Re-renderiza a seção inteira para atualizar estados dos botões
   var card = document.getElementById('prod-ating');
   if (card && window._D) {
@@ -4277,7 +4303,29 @@ function renderProdTableSimples(dados, linha) {
     if (temCob)   html += '<td class="r">' + pct(r.cobertura)   + '</td>';
     html += '</tr>';
   });
-  html += '</tbody></table></div>';
+  html += '</tbody>' + renderProdTotalFooter(sorted, temAting, temCresc, temCob) + '</table></div>';
+  return html;
+}
+
+// Rodapé com a soma de Cota/Realizado e o Ating.% ponderado (soma Realizado / soma Cota)
+function renderProdTotalFooter(rows, temAting, temCresc, temCob) {
+  var totalCota = 0, totalReal = 0;
+  rows.forEach(function(r) {
+    var c  = parseFloat(r.cota);
+    var re = parseFloat(r.realizado);
+    if (!isNaN(c))  totalCota += c;
+    if (!isNaN(re)) totalReal += re;
+  });
+  var totalAt = totalCota > 0 ? (totalReal / totalCota * 100) : null;
+
+  var html = '<tfoot><tr class="prod-total-row">' +
+    '<td class="prod-nome">Total</td>' +
+    '<td class="r">' + numBR(totalCota) + '</td>' +
+    '<td class="r">' + numBR(totalReal) + '</td>';
+  if (temAting) html += '<td class="r ' + atClass(totalAt) + '">' + (totalAt !== null ? totalAt.toFixed(1) + '%' : '—') + '</td>';
+  if (temCresc) html += '<td class="r">—</td>';
+  if (temCob)   html += '<td class="r">—</td>';
+  html += '</tr></tfoot>';
   return html;
 }
 
@@ -4332,7 +4380,20 @@ function renderProdTablePorRep(dados, linha) {
     html += '</tr>';
   });
 
-  html += '</tbody></table></div>';
+  // Rodapé: Ating.% ponderado (soma Realizado / soma Cota) de todos os produtos, por rep
+  html += '</tbody><tfoot><tr class="prod-total-row"><td class="prod-nome">Total</td>';
+  repsIds.forEach(function(rid) {
+    var totalCota = 0, totalReal = 0;
+    dados.forEach(function(p) {
+      if (p.setor_id !== rid) return;
+      var c = parseFloat(p.cota), re = parseFloat(p.realizado);
+      if (!isNaN(c))  totalCota += c;
+      if (!isNaN(re)) totalReal += re;
+    });
+    var totalAt = totalCota > 0 ? (totalReal / totalCota * 100) : null;
+    html += '<td class="r ' + atClass(totalAt) + '">' + (totalAt !== null ? totalAt.toFixed(1) + '%' : '—') + '</td>';
+  });
+  html += '</tr></tfoot></table></div>';
   return html;
 }
 
