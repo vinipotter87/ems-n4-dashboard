@@ -787,16 +787,26 @@ function alternarView(view) {
     renderViewAnalise(dados, MES_ATUAL);
   } else {
     renderTudo(dados, MES_ATUAL);
+    abrirDetalheDoFiltroAtivo();
   }
+  atualizarVisibilidadeFiltroDistrito();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function renderViewAnalise(dados, mes) {
+  if (DISTRITO_FILTRO) dados = filtrarDadosPorDistrito(dados, DISTRITO_FILTRO);
+  var distritoNome = null;
+  if (DISTRITO_FILTRO) {
+    var dSel = (dados.distritos || []).find(function(d){ return d.distrito_id === DISTRITO_FILTRO; });
+    distritoNome = dSel ? (dSel.ab || dSel.nm || DISTRITO_FILTRO) : DISTRITO_FILTRO;
+  }
   var html = '<div class="analise-page-hdr">' +
     '<button class="analise-back-btn" onclick="alternarView(\'principal\')">← Voltar ao Dashboard</button>' +
     '<div>' +
       '<div style="font-size:16px;font-weight:800">Análise &amp; Alertas</div>' +
-      '<div style="font-size:11px;color:var(--gray);margin-top:2px">' + mes + '/2026 · Regional SPI OESTE · Cardiometabólico</div>' +
+      '<div style="font-size:11px;color:var(--gray);margin-top:2px">' + mes + '/2026 · ' +
+        (distritoNome ? ('Distrito ' + distritoNome) : 'Regional SPI OESTE · Cardiometabólico') +
+      '</div>' +
     '</div>' +
   '</div>';
   html += renderAnalise(dados, mes);
@@ -1483,30 +1493,40 @@ function renderDistritoFiltroBar(distritos) {
 function aplicarFiltroDistrito(distritoId) {
   DISTRITO_FILTRO = distritoId || null;
   var dados = DADOS_CACHE[MES_ATUAL];
-  if (DISTRITO_FILTRO && dados) {
+  if (!dados) return;
+
+  if (DISTRITO_FILTRO) {
     var dSel = (dados.distritos || []).find(function(d){ return d.distrito_id === DISTRITO_FILTRO; });
     if (dSel) PROD_LINHA = dSel.linha; // trava a aba de linha do card de Produto na linha do distrito
     if (PROD_NIVEL === 'distrito') PROD_NIVEL = 'regional'; // "Por Distrito" some com o filtro ligado
+
+    // Ao filtrar um distrito, vai direto para Análise & Alertas já aberta com os dados dele
+    VIEW_ATUAL = 'analise';
+    renderViewAnalise(dados, MES_ATUAL);
+  } else {
+    VIEW_ATUAL = 'principal';
+    renderTudo(dados, MES_ATUAL); // aqui dentro PROD_DIST_SEL é resetado para null
   }
-  if (dados) renderTudo(dados, MES_ATUAL); // aqui dentro PROD_DIST_SEL é resetado para null
+
   // Com filtro ativo só existe 1 distrito — seleciona direto, sem exigir clique no pill
   PROD_DIST_SEL = DISTRITO_FILTRO || null;
-  if (dados) atualizarProdContent();
+  if (VIEW_ATUAL === 'principal') atualizarProdContent();
   abrirDetalheDoFiltroAtivo();
+  atualizarVisibilidadeFiltroDistrito();
 }
 
-// Quando há um distrito filtrado, abre automaticamente o painel de detalhe
-// (Equipe & Jornada + Atingimento por Produto por Representante), já que
-// com o filtro só existe 1 card na tela.
+// Quando há um distrito filtrado e estamos na página principal, abre
+// automaticamente o painel de detalhe (Equipe & Jornada + Atingimento por
+// Produto por Representante), já que com o filtro só existe 1 card na tela.
 function abrirDetalheDoFiltroAtivo() {
-  if (!DISTRITO_FILTRO) return;
+  if (!DISTRITO_FILTRO || VIEW_ATUAL !== 'principal') return;
   DISTRITO_ATIVO = null; // garante que abrirDistrito abra em vez de fazer toggle-fechar
   abrirDistrito(DISTRITO_FILTRO);
 }
 
 function atualizarVisibilidadeFiltroDistrito() {
   var bar = document.getElementById('distrito-filtro-bar');
-  if (bar) bar.style.display = (VIEW_ATUAL === 'principal') ? 'flex' : 'none';
+  if (bar) bar.style.display = (VIEW_ATUAL === 'principal' || VIEW_ATUAL === 'analise') ? 'flex' : 'none';
 }
 
 // ── Renderização: Mês ─────────────────────────────────────────────
@@ -2100,6 +2120,7 @@ function buildEvoGrid(dists, getAt, getAn) {
 function renderAnalise(dados, mes) {
   var mesAnt    = getMesAnterior(mes);
   var dadosAnt  = mesAnt && DADOS_CACHE[mesAnt] ? DADOS_CACHE[mesAnt] : null;
+  if (DISTRITO_FILTRO && dadosAnt) dadosAnt = filtrarDadosPorDistrito(dadosAnt, DISTRITO_FILTRO);
   var distritos = dados.distritos || [];
   var reps      = dados.reps      || [];
   var ativos    = reps.filter(function(r){
@@ -2153,7 +2174,7 @@ function renderEvolucao(dados, dadosAnt, mes, mesAnt, distritos) {
 
   html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">' +
     '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--gray)">📊 Produtividade (MDV)</span>' +
-    '<span class="evo-regional-delta" style="' + mdvB.cls + ';background:' + mdvB.bg + '">' + mdvB.icon + mdvB.str + ' &nbsp;Regional MDV</span>' +
+    '<span class="evo-regional-delta" style="' + mdvB.cls + ';background:' + mdvB.bg + '">' + mdvB.icon + mdvB.str + ' &nbsp;' + (DISTRITO_FILTRO ? 'Distrito' : 'Regional') + ' MDV</span>' +
   '</div>';
   html += buildEvoGrid(dists,
     function(d){ var v = safeFloat(d.prod); return v !== null ? v*100 : null; },
@@ -2181,7 +2202,7 @@ function renderEvolucao(dados, dadosAnt, mes, mesAnt, distritos) {
     html += '<div style="border-top:1px solid var(--border);margin:14px 0 10px"></div>';
     html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">' +
       '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--gray)">📋 Bimestres (Q1 · Q2 · Q3 · Q4)</span>' +
-      '<span class="evo-regional-delta" style="' + qRegB.cls + ';background:' + qRegB.bg + '">' + qRegB.icon + qRegB.str + ' &nbsp;Média Qs Regional</span>' +
+      '<span class="evo-regional-delta" style="' + qRegB.cls + ';background:' + qRegB.bg + '">' + qRegB.icon + qRegB.str + ' &nbsp;Média Qs ' + (DISTRITO_FILTRO ? 'Distrito' : 'Regional') + '</span>' +
     '</div>';
     html += buildEvoGridQ(dists, repsAtu, repsAntQ);
   }
@@ -2191,7 +2212,7 @@ function renderEvolucao(dados, dadosAnt, mes, mesAnt, distritos) {
     html += '<div style="border-top:1px solid var(--border);margin:14px 0 10px"></div>';
     html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">' +
       '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--gray)">📦 Atingimento de Produto</span>' +
-      '<span class="evo-regional-delta" style="' + atProdB.cls + ';background:' + atProdB.bg + '">' + atProdB.icon + atProdB.str + ' &nbsp;Regional Produto</span>' +
+      '<span class="evo-regional-delta" style="' + atProdB.cls + ';background:' + atProdB.bg + '">' + atProdB.icon + atProdB.str + ' &nbsp;' + (DISTRITO_FILTRO ? 'Distrito' : 'Regional') + ' Produto</span>' +
     '</div>';
     html += buildEvoGrid(dists,
       function(d){ return mediaAtProdDist(allProdAtu, d.distrito_id); },
@@ -2213,7 +2234,7 @@ function renderAlertas(dados, dadosAnt, ativos, mes, mesAnt, distritos) {
 
   var html = '<div class="alertas-card">';
   html += '<div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px">' +
-    '<div class="card-title" style="margin-bottom:0"><div class="cc-bar"></div>Alertas da Regional</div>' +
+    '<div class="card-title" style="margin-bottom:0"><div class="cc-bar"></div>Alertas ' + (DISTRITO_FILTRO ? 'do Distrito' : 'da Regional') + '</div>' +
     '<span style="font-size:10px;color:var(--gray)">MDV = Produtividade &nbsp;|&nbsp; Produto = Atingimento médio dos produtos</span>' +
   '</div>';
 
