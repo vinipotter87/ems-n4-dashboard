@@ -1,0 +1,17 @@
+{
+  "spreadsheet_id": "1jFaqBQo4v_BecdH_sL9lGbsIIBsMG-Qi7AzQgnlf6rA",
+  "api_key": "AIzaSyBvsOZpNSzqUt_qvkail_cEvVilAw03LKI",
+  "meses_disponiveis": [
+    "JAN",
+    "FEV",
+    "MAR",
+    "ABR",
+    "MAI",
+    "JUN"
+  ],
+  "mes_padrao": "JUN",
+  "ultima_atualizacao": "2026-07-29T00:00:00.000000",
+  "versao": "4.1",
+  "regional": "LESTE",
+  "divisao": "Cardiometabolico"
+}
