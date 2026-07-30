@@ -695,15 +695,47 @@ var JORNADA_CFG = {
 // Ordem dos meses para navegação e comparação
 var MES_ORDER = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
 
-// Marcas chave — produtos prioritários por linha
-var MARCAS_CHAVE_NEXUS = ['BRAMICAR','BRAMICAR HCT','OLIRE','LYBERDIA'];
-var MARCAS_CHAVE_VITAL = ['BRASART HCT','BRASART BCC','LINADIB','LINADIB DUO','BUPIUM XL'];
+// Marcas chave — produtos prioritários por linha, com vigência por mês.
+// Cada entrada "desde" vale a partir daquele mês até a próxima entrada da lista.
+// Meses sem entrada explícita herdam a última vigente (ex: AGO em diante repete JUL).
+var MARCAS_CHAVE_HISTORICO_NEXUS = [
+  { desde: 'JAN', marcas: ['BRAMICAR','BRAMICAR HCT','OLIRE','LYBERDIA'] },
+  { desde: 'JUL', marcas: ['CONCARDIO','LYBERDIA','OZIVY'] }
+];
+var MARCAS_CHAVE_HISTORICO_VITAL = [
+  { desde: 'JAN', marcas: ['BRASART HCT','BRASART BCC','LINADIB','LINADIB DUO','BUPIUM XL'] },
+  { desde: 'JUL', marcas: ['OZIVY','LINADIB','LINADIB DUO','BUPIUM XL'] }
+];
+// Notas informativas por mês, exibidas na seção de Atingimento por Produto
+// (não alteram nenhum número — apenas um aviso visível ao usuário)
+var NOTAS_PRODUTOS_POR_MES = {
+  'JUL': 'Apuração parcial — ciclo comercial de 28 dias (não é o mês calendário completo).'
+};
 function normProd(n) { return (n || '').toUpperCase().trim().replace(/\s+/g, ' '); }
-function isMarcaChave(nome, linha) {
+function marcasChaveDoMes(linha, mes) {
+  var hist = linha === 'VITAL' ? MARCAS_CHAVE_HISTORICO_VITAL : MARCAS_CHAVE_HISTORICO_NEXUS;
+  var idxMes = MES_ORDER.indexOf((mes || '').toUpperCase());
+  var atual = hist[0].marcas;
+  for (var i = 0; i < hist.length; i++) {
+    var idxDesde = MES_ORDER.indexOf(hist[i].desde);
+    if (idxMes < 0 || idxDesde <= idxMes) atual = hist[i].marcas;
+    else break;
+  }
+  return atual;
+}
+// Todas as marcas que já foram chave em algum momento (para montar linhas de gráfico multi-mês)
+function marcasChaveUniao(linha) {
+  var hist = linha === 'VITAL' ? MARCAS_CHAVE_HISTORICO_VITAL : MARCAS_CHAVE_HISTORICO_NEXUS;
+  var vistas = {}, out = [];
+  hist.forEach(function(h) { h.marcas.forEach(function(m) { if (!vistas[m]) { vistas[m] = true; out.push(m); } }); });
+  return out;
+}
+function isMarcaChave(nome, linha, mes) {
   var n = normProd(nome);
-  if (linha === 'NEXUS') return MARCAS_CHAVE_NEXUS.indexOf(n) >= 0;
-  if (linha === 'VITAL') return MARCAS_CHAVE_VITAL.indexOf(n) >= 0;
-  return MARCAS_CHAVE_NEXUS.indexOf(n) >= 0 || MARCAS_CHAVE_VITAL.indexOf(n) >= 0;
+  mes = mes || MES_ATUAL;
+  if (linha === 'NEXUS') return marcasChaveDoMes('NEXUS', mes).indexOf(n) >= 0;
+  if (linha === 'VITAL') return marcasChaveDoMes('VITAL', mes).indexOf(n) >= 0;
+  return marcasChaveDoMes('NEXUS', mes).indexOf(n) >= 0 || marcasChaveDoMes('VITAL', mes).indexOf(n) >= 0;
 }
 
 function getMesAnterior(mes) {
@@ -2772,17 +2804,23 @@ var MARCA_NEXUS_COLORS = {
   'BRAMICAR':     '#1e3a8a',
   'BRAMICAR HCT': '#6366f1',
   'OLIRE':        '#0891b2',
-  'LYBERDIA':     '#0f766e'
+  'LYBERDIA':     '#0f766e',
+  'CONCARDIO':    '#7c2d12',
+  'OZIVY':        '#a21caf'
 };
 var MARCA_VITAL_COLORS = {
   'BRASART HCT':  '#7f1d1d',
   'BRASART BCC':  '#ea580c',
   'LINADIB':      '#b45309',
   'LINADIB DUO':  '#d97706',
-  'BUPIUM XL':    '#9d174d'
+  'BUPIUM XL':    '#9d174d',
+  'OZIVY':        '#a21caf'
 };
 
+// Retorna null quando a marca não está lá o mês pedido — não "olha pra trás"
+// nem "carrega pra frente" fora da janela em que a marca foi chave.
 function getCellMarcaRegional(mes, marca, linha) {
+  if (!isMarcaChave(marca, linha, mes)) return null;
   var d = DADOS_CACHE[mes]; if (!d) return null;
   var arr = linha === 'NEXUS' ? (d.prodNex || []) : (d.prodVit || []);
   var row = null;
@@ -2798,7 +2836,7 @@ function getCellMarcaRegional(mes, marca, linha) {
 
 function buildMarcaChaveDatasets(meses) {
   var datasets = [];
-  MARCAS_CHAVE_NEXUS.forEach(function(marca) {
+  marcasChaveUniao('NEXUS').forEach(function(marca) {
     datasets.push({
       label: marca + ' (N)',
       data: meses.map(function(m){ return getCellMarcaRegional(m, marca, 'NEXUS'); }),
@@ -2808,7 +2846,7 @@ function buildMarcaChaveDatasets(meses) {
       tension: .35, fill: false, _group: 'nexus', _marca: marca
     });
   });
-  MARCAS_CHAVE_VITAL.forEach(function(marca) {
+  marcasChaveUniao('VITAL').forEach(function(marca) {
     datasets.push({
       label: marca + ' (V)',
       data: meses.map(function(m){ return getCellMarcaRegional(m, marca, 'VITAL'); }),
@@ -2846,14 +2884,14 @@ function buildMarcaFilterBar(chartId) {
   html += '</div>';
   html += '<div class="anual-filter-dists">';
   html += '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)">Marcas:</span>';
-  MARCAS_CHAVE_NEXUS.forEach(function(marca) {
+  marcasChaveUniao('NEXUS').forEach(function(marca) {
     var c = MARCA_NEXUS_COLORS[marca] || '#1e3a8a';
     html += '<button class="adtbtn active" data-marca="' + marca + '" style="--dt-color:' + c + '"' +
       ' onclick="anualToggleMarca(\'' + chartId + '\',\'' + marca + '\',this)">' +
       '<span class="adt-dot" style="background:' + c + '"></span>' + marca + '</button>';
   });
   html += '<span class="anual-filter-sep"></span>';
-  MARCAS_CHAVE_VITAL.forEach(function(marca) {
+  marcasChaveUniao('VITAL').forEach(function(marca) {
     var c = MARCA_VITAL_COLORS[marca] || '#7f1d1d';
     html += '<button class="adtbtn active" data-marca="' + marca + '" style="--dt-color:' + c + '"' +
       ' onclick="anualToggleMarca(\'' + chartId + '\',\'' + marca + '\',this)">' +
@@ -2866,6 +2904,7 @@ function buildMarcaFilterBar(chartId) {
 // ── Marcas Chave por Distrito ─────────────────────────────────────
 
 function getCellMarcaDist(mes, marca, linha, distId) {
+  if (!isMarcaChave(marca, linha, mes)) return null;
   var d = DADOS_CACHE[mes]; if (!d) return null;
   var arr = linha === 'NEXUS' ? (d.prodDistNex || []) : (d.prodDistVit || []);
   for (var i = 0; i < arr.length; i++) {
@@ -2956,15 +2995,16 @@ function buildMarcaDistFilterBar() {
   // Linha 1: seletor de marca
   html += '<div class="anual-filter-groups">';
   html += '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)">Marca:</span>';
-  MARCAS_CHAVE_NEXUS.forEach(function(marca) {
+  var uniaoNexus = marcasChaveUniao('NEXUS');
+  uniaoNexus.forEach(function(marca) {
     var c = MARCA_NEXUS_COLORS[marca] || '#1e3a8a';
-    var isFirst = marca === MARCAS_CHAVE_NEXUS[0];
+    var isFirst = marca === uniaoNexus[0];
     html += '<button class="adtbtn mcd-brand-btn' + (isFirst ? ' active' : '') + '" data-marca="' + marca + '"' +
       ' style="--dt-color:' + c + ';font-size:10px" onclick="switchMarcaDist(\'' + marca + '\',\'NEXUS\')">' +
       '<span class="adt-dot" style="background:' + c + '"></span>' + marca + '</button>';
   });
   html += '<span class="anual-filter-sep"></span>';
-  MARCAS_CHAVE_VITAL.forEach(function(marca) {
+  marcasChaveUniao('VITAL').forEach(function(marca) {
     var c = MARCA_VITAL_COLORS[marca] || '#7f1d1d';
     html += '<button class="adtbtn mcd-brand-btn" data-marca="' + marca + '"' +
       ' style="--dt-color:' + c + ';font-size:10px" onclick="switchMarcaDist(\'' + marca + '\',\'VITAL\')">' +
@@ -2983,7 +3023,7 @@ function renderVisaoAnual(meses, distritos) {
   // Salva contexto para uso nos callbacks dos botões (switchMarcaDist etc.)
   ANUAL_MESES     = meses;
   ANUAL_DISTRITOS = distritos;
-  MARCA_DIST_SEL  = MARCAS_CHAVE_NEXUS[0]; // reset para primeira marca
+  MARCA_DIST_SEL  = marcasChaveUniao('NEXUS')[0]; // reset para primeira marca
 
   var html = '<div class="anual-page-hdr">' +
     '<button class="anual-back-btn" onclick="irParaMes(MES_ATUAL)">← Voltar ao Dashboard</button>' +
@@ -4176,6 +4216,13 @@ function reRenderGrids(distritos, reps) {
 function renderProdutoAtingimento(dados) {
   var html = '<div class="prod-ating-card" id="prod-ating">';
   html += '<div class="card-title"><div class="cc-bar"></div>Atingimento por Produto</div>';
+
+  var notaMes = NOTAS_PRODUTOS_POR_MES[MES_ATUAL];
+  if (notaMes) {
+    html += '<div style="background:#fef3c7;color:#92400e;font-size:11.5px;font-weight:600;' +
+      'padding:8px 12px;border-radius:8px;margin-bottom:10px;display:flex;align-items:center;gap:6px">' +
+      '<span>⚠️</span><span>' + notaMes + '</span></div>';
+  }
 
   var filtrado = !!DISTRITO_FILTRO;
 
