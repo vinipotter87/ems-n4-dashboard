@@ -81,11 +81,50 @@ def encontrar_arquivo(folder_id: str, mes: str, prefixos: list[str]) -> dict | N
     return None
 
 
+def encontrar_produto_leste(folder_id: str, mes: str, linha: str) -> dict | None:
+    """
+    Localiza o arquivo de Produto LESTE (NEXUS ou VITAL) do mês na pasta.
+    Preferência: arquivo com "leste" explícito no nome (formato usado até JUN).
+    Fallback: arquivo combinado OESTE+LESTE sem "leste" no nome (ex: a partir de
+    JUL alguns meses vêm com as duas regionais no mesmo arquivo) — o filtro por
+    prefixo de setor em processar_produto já separa LESTE corretamente.
+    """
+    arquivos = listar_arquivos(folder_id)
+    mes_up   = mes.upper()
+    extenso_map = {
+        "JAN": ["jan","janeiro"], "FEV": ["fev","fevereiro"],
+        "MAR": ["mar","marco","março"], "ABR": ["abr","abril"],
+        "MAI": ["mai","maio"],  "JUN": ["jun","junho"],
+        "JUL": ["jul","julho"], "AGO": ["ago","agosto"],
+        "SET": ["set","setembro"], "OUT": ["out","outubro"],
+        "NOV": ["nov","novembro"], "DEZ": ["dez","dezembro"],
+    }
+    termos_mes = [mes_up.lower()] + extenso_map.get(mes_up, [])
+    for a in arquivos:
+        nome = a["name"].lower()
+        if "leste" in nome and linha.lower() in nome and any(t in nome for t in termos_mes):
+            return a
+    for a in arquivos:
+        nome = a["name"].lower()
+        if "leste" not in nome and "spi" not in nome and linha.lower() in nome and any(t in nome for t in termos_mes):
+            return a
+    return None
+
+
 def encontrar_qualquer_xlsx(folder_id: str) -> dict | None:
     """Retorna o primeiro xlsx/xls/xlsm na pasta (para jornada)."""
     arquivos = listar_arquivos(folder_id)
     for a in arquivos:
         if a["name"].lower().endswith((".xlsx", ".xls", ".xlsm")):
+            return a
+    return None
+
+
+def encontrar_jornada_leste(folder_id: str) -> dict | None:
+    """Localiza o arquivo de Jornada da Evolução da LESTE na pasta (pode conter outros arquivos regionais)."""
+    arquivos = listar_arquivos(folder_id)
+    for a in arquivos:
+        if "leste" in a["name"].lower():
             return a
     return None
 
@@ -147,6 +186,10 @@ def is_spi(setor_id: str) -> bool:
     return setor_id.startswith("11030") or setor_id.startswith("11630")
 
 
+def is_leste(setor_id: str) -> bool:
+    return setor_id.startswith("1105") or setor_id.startswith("1165")
+
+
 def get_distrito_id(setor_id: str) -> str:
     return setor_id[:6] + "000"
 
@@ -155,6 +198,14 @@ def get_linha(setor_id: str) -> str:
     if setor_id.startswith("11030"):
         return "NEXUS"
     if setor_id.startswith("11630"):
+        return "VITAL"
+    return "DESCONHECIDO"
+
+
+def get_linha_leste(setor_id: str) -> str:
+    if setor_id.startswith("1105"):
+        return "NEXUS"
+    if setor_id.startswith("1165"):
         return "VITAL"
     return "DESCONHECIDO"
 
@@ -180,11 +231,12 @@ def abreviar_nome(nome: str) -> str:
     return partes[0] + " " + partes[-1]
 
 
-def atualizar_gds_mapping(novos_gds: dict[str, str]):
+def atualizar_gds_mapping(novos_gds: dict[str, str], distritos_key: str = "distritos"):
     """
     Atualiza os nomes de GD no mapping.json quando o arquivo mensal traz
     um nome diferente do registrado.
     novos_gds = {distrito_id: nome_completo_do_gd}
+    distritos_key: "distritos" (SPI OESTE) ou "distritos_leste" (LESTE)
     """
     path = ROOT / "config/mapping.json"
     with open(path, encoding="utf-8") as f:
@@ -192,13 +244,13 @@ def atualizar_gds_mapping(novos_gds: dict[str, str]):
 
     atualizado = False
     for did, novo_nm in novos_gds.items():
-        meta = mapping["distritos"].get(did, {})
+        meta = mapping[distritos_key].get(did, {})
         antigo_nm = meta.get("nm", "")
         if novo_nm and novo_nm != antigo_nm:
             print(f"  📝 GD atualizado [{did}]: '{antigo_nm}' → '{novo_nm}'")
-            mapping["distritos"].setdefault(did, {})
-            mapping["distritos"][did]["nm"] = novo_nm
-            mapping["distritos"][did]["ab"] = abreviar_nome(novo_nm)
+            mapping[distritos_key].setdefault(did, {})
+            mapping[distritos_key][did]["nm"] = novo_nm
+            mapping[distritos_key][did]["ab"] = abreviar_nome(novo_nm)
             atualizado = True
 
     if atualizado:
@@ -209,9 +261,11 @@ def atualizar_gds_mapping(novos_gds: dict[str, str]):
 
 # ── Processamento Produtividade ────────────────────────────────────────────────
 
-def processar_produtividade(xlsx_bytes: bytes, mes: str) -> tuple[list, list]:
+def processar_produtividade(xlsx_bytes: bytes, mes: str, regional: str = "SPI") -> tuple[list, list]:
     """
     Retorna (linhas_distritos, linhas_reps).
+
+    regional: "SPI" (SPI OESTE, prefixos 11030/11630) ou "LESTE" (prefixos 1105/1165).
 
     Princípio de estabilidade de identificadores:
       - setor_id   (8 dígitos) → NUNCA muda → chave primária do rep
@@ -221,6 +275,11 @@ def processar_produtividade(xlsx_bytes: bytes, mes: str) -> tuple[list, list]:
                           fallback: mapping.json (atualizado automaticamente quando há mudança)
     """
     import pandas as pd
+
+    if regional == "LESTE":
+        filtro_fn, linha_fn, distritos_key = is_leste, get_linha_leste, "distritos_leste"
+    else:
+        filtro_fn, linha_fn, distritos_key = is_spi, get_linha, "distritos"
 
     df = pd.read_excel(io.BytesIO(xlsx_bytes))
     col_setor = df.columns[0]
@@ -235,7 +294,7 @@ def processar_produtividade(xlsx_bytes: bytes, mes: str) -> tuple[list, list]:
     for _, row in df.iterrows():
         setor_raw = str(row.get(col_setor, ""))
         parsed    = parse_setor(setor_raw)
-        if not parsed or not is_spi(parsed["setor_id"]):
+        if not parsed or not filtro_fn(parsed["setor_id"]):
             continue
 
         did = get_distrito_id(parsed["setor_id"])
@@ -256,7 +315,7 @@ def processar_produtividade(xlsx_bytes: bytes, mes: str) -> tuple[list, list]:
             "nome":            parsed["nome"],   # nome do rep: sempre do arquivo do mês
             "vago":            parsed["vago"],
             "distrito_id":     did,
-            "linha":           get_linha(parsed["setor_id"]),
+            "linha":           linha_fn(parsed["setor_id"]),
             "prod":            prod_pct,
             "q1":              parse_pct(row.get("Q1")),
             "q2":              parse_pct(row.get("Q2")),
@@ -272,7 +331,7 @@ def processar_produtividade(xlsx_bytes: bytes, mes: str) -> tuple[list, list]:
 
     # Se o arquivo trouxe novos nomes de GD, atualiza mapping.json automaticamente
     if gd_nomes_mes:
-        atualizar_gds_mapping(gd_nomes_mes)
+        atualizar_gds_mapping(gd_nomes_mes, distritos_key)
         # Recarrega para usar os nomes recém-gravados
         with open(ROOT / "config/mapping.json") as f:
             mapping = json.load(f)
@@ -285,7 +344,7 @@ def processar_produtividade(xlsx_bytes: bytes, mes: str) -> tuple[list, list]:
         did = rep["distrito_id"]
         if did not in distritos_agg:
             # Prioridade: arquivo do mês → mapping.json
-            meta = mapping["distritos"].get(did, {})
+            meta = mapping[distritos_key].get(did, {})
             nm   = gd_nomes_mes.get(did) or meta.get("nm", "")
             ab   = abreviar_nome(nm) if gd_nomes_mes.get(did) else meta.get("ab", nm)
             distritos_agg[did] = {
@@ -311,13 +370,13 @@ def processar_produtividade(xlsx_bytes: bytes, mes: str) -> tuple[list, list]:
             "prod": prod_media, "reps_ativos": d["reps_ativos"], "diagnostico": dg,
         })
 
-    print(f"  ✓ Produtividade: {len(reps)} reps SPI, {len(distritos)} distritos")
+    print(f"  ✓ Produtividade {regional}: {len(reps)} reps, {len(distritos)} distritos")
     return distritos, reps
 
 
 # ── Processamento Produto ──────────────────────────────────────────────────────
 
-def processar_produto(xlsx_bytes: bytes, mes: str, linha: str) -> tuple[list, list, list]:
+def processar_produto(xlsx_bytes: bytes, mes: str, linha: str, regional: str = "SPI") -> tuple[list, list, list]:
     """
     Processa arquivo de produto.
     Tenta detectar se há quebra por rep/setor.
@@ -326,6 +385,11 @@ def processar_produto(xlsx_bytes: bytes, mes: str, linha: str) -> tuple[list, li
         (registros_regional, registros_distrito, registros_rep)
     """
     import pandas as pd
+
+    if regional == "LESTE":
+        filtro_fn, ugn_esperada = is_leste, "LESTE"
+    else:
+        filtro_fn, ugn_esperada = is_spi, "SPI"
 
     df = pd.read_excel(io.BytesIO(xlsx_bytes))
     col_produto = df.columns[0]
@@ -345,8 +409,8 @@ def processar_produto(xlsx_bytes: bytes, mes: str, linha: str) -> tuple[list, li
         if not produto or produto.upper().startswith("TOTAL") or produto.upper().startswith("FILTRO"):
             continue
 
-        ugn = str(row.get(col_ugn, "SPI")).strip() if col_ugn else "SPI"
-        if col_ugn and ugn.upper() != "SPI":
+        ugn = str(row.get(col_ugn, ugn_esperada)).strip() if col_ugn else ugn_esperada
+        if col_ugn and ugn.upper() != ugn_esperada:
             continue
 
         cota       = parse_float(row.get("Cota"))
@@ -362,7 +426,7 @@ def processar_produto(xlsx_bytes: bytes, mes: str, linha: str) -> tuple[list, li
         if col_setor_rep:
             setor_raw = str(row.get(col_setor_rep, ""))
             parsed    = parse_setor(setor_raw)
-            if parsed and is_spi(parsed["setor_id"]) and not parsed["vago"]:
+            if parsed and filtro_fn(parsed["setor_id"]) and not parsed["vago"]:
                 registros_rep.append({
                     "mes":          mes,
                     "linha":        linha,
@@ -388,6 +452,15 @@ def processar_produto(xlsx_bytes: bytes, mes: str, linha: str) -> tuple[list, li
                 "crescimento": crescimento,
                 "cobertura":   cobertura,
             })
+
+    # Remove produtos sem cota atribuída no mês (sem meta oficial — não deve
+    # entrar no scorecard nem distorcer a média de atingimento por produto).
+    produtos_com_cota = {r["produto"] for r in registros_rep if r["cota"] is not None}
+    produtos_sem_cota = {r["produto"] for r in registros_rep} - produtos_com_cota
+    if produtos_sem_cota:
+        print(f"  ℹ  Produto(s) sem cota no mês — removido(s): {', '.join(sorted(produtos_sem_cota))}")
+        registros_rep      = [r for r in registros_rep      if r["produto"] not in produtos_sem_cota]
+        registros_regional = [r for r in registros_regional if r["produto"] not in produtos_sem_cota]
 
     # Se tem dados por rep → agrega para regional e distrito
     if registros_rep:
@@ -482,33 +555,73 @@ def encontrar_visitas(folder_id: str, mes: str, linha: str) -> dict | None:
     return None
 
 
-def processar_visitas(xlsx_bytes: bytes, mes: str, linha: str) -> list:
+def encontrar_visitas_leste(folder_id: str, mes: str) -> dict | None:
+    """Localiza o arquivo combinado (NEXUS+VITAL) de Visitas GD da LESTE para o mês."""
+    arquivos = listar_arquivos(folder_id)
+    mes_up   = mes.upper()
+    extenso_map = {
+        "JAN": ["jan","janeiro"], "FEV": ["fev","fevereiro"],
+        "MAR": ["mar","marco","março"], "ABR": ["abr","abril"],
+        "MAI": ["mai","maio"],  "JUN": ["jun","junho"],
+        "JUL": ["jul","julho"], "AGO": ["ago","agosto"],
+        "SET": ["set","setembro"], "OUT": ["out","outubro"],
+        "NOV": ["nov","novembro"], "DEZ": ["dez","dezembro"],
+    }
+    termos_mes = [mes_up.lower()] + extenso_map.get(mes_up, [])
+    for a in arquivos:
+        nome = a["name"].lower()
+        if "leste" in nome and any(t in nome for t in termos_mes):
+            return a
+    return None
+
+
+def processar_visitas(xlsx_bytes: bytes, mes: str, linha: str, regional: str = "SPI") -> list:
     """
     Processa arquivo de Visitas GD.
-    Filtra apenas GDs da SPI (11030* = NEXUS, 11630* = VITAL).
+    Filtra apenas GDs da regional informada (SPI: 11030*/11630* · LESTE: 1105*/1165*).
 
     Colunas esperadas:
-      Distrital           → 'setor_id - nome'
+      Distrital           → 'setor_id - nome'  (setor_id termina em 00 → é o próprio GD)
       Real. Contatos      → contatos realizados
       Obj. Acomp. GDD     → objetivo de acompanhamentos
       Real. Acomp. GDD    → acompanhamentos realizados
       Cob. Acomp. GDD     → % cobertura (0-1 ou 0-100)
       Qtde. dias Acomp. GDD → dias de acompanhamento
+
+    A coluna Distrital é a fonte mais confiável do nome do GD (o próprio GD é a
+    linha), então este arquivo também sincroniza mapping.json automaticamente.
     """
     import pandas as pd
 
-    df = pd.read_excel(io.BytesIO(xlsx_bytes))
+    if regional == "LESTE":
+        filtro_fn, linha_fn, distritos_key = is_leste, get_linha_leste, "distritos_leste"
+    else:
+        filtro_fn, linha_fn, distritos_key = is_spi, get_linha, "distritos"
+
+    df   = pd.read_excel(io.BytesIO(xlsx_bytes))
+    col0 = df.columns[0]
+
+    # Pré-varredura: sincroniza nomes de GD no mapping.json antes de montar os registros
+    gd_nomes_mes: dict[str, str] = {}
+    for _, row in df.iterrows():
+        parsed = parse_setor(str(row.get(col0, "")).strip())
+        if parsed and filtro_fn(parsed["setor_id"]):
+            did = get_distrito_id(parsed["setor_id"])
+            gd_nomes_mes[did] = "Vago" if parsed["vago"] else parsed["nome"]
+
+    if gd_nomes_mes:
+        atualizar_gds_mapping(gd_nomes_mes, distritos_key)
 
     with open(ROOT / "config/mapping.json") as f:
         mapping = json.load(f)
 
     registros = []
     for _, row in df.iterrows():
-        distrital_raw = str(row.get(df.columns[0], "")).strip()
+        distrital_raw = str(row.get(col0, "")).strip()
         parsed = parse_setor(distrital_raw)
-        if not parsed or not is_spi(parsed["setor_id"]):
+        if not parsed or not filtro_fn(parsed["setor_id"]):
             continue
-        if get_linha(parsed["setor_id"]) != linha:
+        if linha_fn(parsed["setor_id"]) != linha:
             continue
 
         obj      = parse_float(row.get("Obj. Acomp. GDD"))
@@ -524,13 +637,13 @@ def processar_visitas(xlsx_bytes: bytes, mes: str, linha: str) -> list:
         contatos = parse_float(row.get("Real. Contatos"))
 
         distrito_id = get_distrito_id(parsed["setor_id"])
-        meta        = mapping["distritos"].get(distrito_id, {})
+        meta        = mapping[distritos_key].get(distrito_id, {})
 
         registros.append({
             "mes":        mes,
             "linha":      linha,
             "setor_id":   parsed["setor_id"],
-            "nome":       parsed["nome"],
+            "nome":       "Vago" if parsed["vago"] else parsed["nome"],
             "distrito_id": distrito_id,
             "ab":         meta.get("ab", ""),
             "contatos":   contatos,
@@ -540,7 +653,7 @@ def processar_visitas(xlsx_bytes: bytes, mes: str, linha: str) -> list:
             "dias":       dias,
         })
 
-    print(f"  ✓ Visitas {linha} {mes}: {len(registros)} GDs SPI")
+    print(f"  ✓ Visitas {linha} {mes} [{regional}]: {len(registros)} GDs")
     return registros
 
 
@@ -583,22 +696,46 @@ def encontrar_pex(folder_id: str, mes: str) -> dict | None:
     termos = meses_map.get(mes.upper(), [mes.lower()])
     for a in arquivos:
         nome = a["name"].lower()
-        if "pex" in nome and any(t in nome for t in termos):
+        if "pex" in nome and "leste" not in nome and any(t in nome for t in termos):
             return a
-    # Fallback: qualquer xlsx na pasta
+    # Fallback: qualquer xlsx na pasta (exclui arquivos LESTE)
     for a in arquivos:
-        if a["name"].lower().endswith((".xlsx", ".xls", ".xlsm")):
+        if a["name"].lower().endswith((".xlsx", ".xls", ".xlsm")) and "leste" not in a["name"].lower():
             return a
     return None
 
 
-def processar_pex(xlsx_bytes: bytes, mes: str) -> list:
+def encontrar_pex_leste(folder_id: str, mes: str) -> dict | None:
+    """Encontra o arquivo PEX LESTE do mês na pasta (ex: 'PEX ABRIL LESTE')."""
+    arquivos = listar_arquivos(folder_id)
+    meses_map = {
+        "JAN": ["jan","janeiro"], "FEV": ["fev","fevereiro"],
+        "MAR": ["mar","marco","março"], "ABR": ["abr","abril"],
+        "MAI": ["mai","maio"], "JUN": ["jun","junho"],
+        "JUL": ["jul","julho"], "AGO": ["ago","agosto"],
+        "SET": ["set","setembro"], "OUT": ["out","outubro"],
+        "NOV": ["nov","novembro"], "DEZ": ["dez","dezembro"],
+    }
+    termos = meses_map.get(mes.upper(), [mes.lower()])
+    for a in arquivos:
+        nome = a["name"].lower()
+        if "pex" in nome and "leste" in nome and any(t in nome for t in termos):
+            return a
+    return None
+
+
+def processar_pex(xlsx_bytes: bytes, mes: str, regional: str = "SPI") -> list:
     """
     Lê o arquivo PEX mensal.
     Colunas: SETOR, NOME, FRENTE, MEDAL (URL ícone), PT. (score 0-100), PTS. MAX.
-    Filtra apenas SPI (11030* / 11630*) e deriva medalha pelo score.
+    Filtra pela regional informada e deriva medalha pelo score.
     """
     import pandas as pd
+
+    if regional == "LESTE":
+        filtro_fn, linha_fn, distritos_key = is_leste, get_linha_leste, "distritos_leste"
+    else:
+        filtro_fn, linha_fn, distritos_key = is_spi, get_linha, "distritos"
 
     df = pd.read_excel(io.BytesIO(xlsx_bytes))
     print(f"  → Colunas PEX: {list(df.columns)}")
@@ -609,13 +746,13 @@ def processar_pex(xlsx_bytes: bytes, mes: str) -> list:
     # Detectar colunas flexivelmente
     col_setor  = detect_col(df.columns, ["setor"])       or df.columns[0]
     col_nome   = detect_col(df.columns, ["nome"])        or df.columns[1]
-    col_pts    = detect_col(df.columns, ["pt.", "pts", "pontos", "score"])
+    col_pts    = detect_col(df.columns, ["pontuacao pex", "pt.", "pontos", "score", "pts"])
     col_medal  = detect_col(df.columns, ["medal"])
 
     registros = []
     for _, row in df.iterrows():
         setor_id = str(row.get(col_setor, "")).strip()
-        if not setor_id.isdigit() or not is_spi(setor_id):
+        if not setor_id.isdigit() or not filtro_fn(setor_id):
             continue
 
         nome   = str(row.get(col_nome, "")).strip()
@@ -628,8 +765,8 @@ def processar_pex(xlsx_bytes: bytes, mes: str) -> list:
         medalha  = get_medalha_url(url_val) or get_medalha_pts(pts)
 
         distrito_id = get_distrito_id(setor_id)
-        linha       = get_linha(setor_id)
-        meta        = mapping["distritos"].get(distrito_id, {})
+        linha       = linha_fn(setor_id)
+        meta        = mapping[distritos_key].get(distrito_id, {})
 
         registros.append({
             "mes":        mes,
@@ -644,20 +781,28 @@ def processar_pex(xlsx_bytes: bytes, mes: str) -> list:
 
     # Ordenar por pontuação decrescente
     registros.sort(key=lambda r: r["pts"], reverse=True)
-    print(f"  ✓ PEX {mes}: {len(registros)} representantes SPI classificados")
+    print(f"  ✓ PEX {mes} [{regional}]: {len(registros)} representantes classificados")
     return registros
 
 
 # ── Processamento Jornada da Evolução ─────────────────────────────────────────
 
-def processar_jornada(xlsx_bytes: bytes) -> list:
+def processar_jornada(xlsx_bytes: bytes, regional: str = "SPI") -> list:
     """
     Lê o arquivo de Jornada da Evolução.
     Estrutura esperada: colunas separadas 'Setor' (código), 'Colaborador' (nome) e 'Posição atual'.
     Também suporta formato legado 'XXXXXXXX - Nome' em coluna única.
     Níveis válidos: Start, Performance, Destaque.
+
+    O arquivo pode trazer representantes de outras regionais (export nacional) —
+    filtra_fn restringe apenas aos setores da regional pedida.
     """
     import pandas as pd
+
+    if regional == "LESTE":
+        filtro_fn, linha_fn = is_leste, get_linha_leste
+    else:
+        filtro_fn, linha_fn = is_spi, get_linha
 
     df = pd.read_excel(io.BytesIO(xlsx_bytes))
     print(f"  → Colunas encontradas: {list(df.columns)}")
@@ -684,16 +829,17 @@ def processar_jornada(xlsx_bytes: bytes) -> list:
         if col_setor and col_nome:
             setor_id = str(row.get(col_setor, "")).strip()
             nome     = str(row.get(col_nome,  "")).strip()
-            if setor_id and setor_id.isdigit() and is_spi(setor_id):
+            if setor_id and setor_id.isdigit() and filtro_fn(setor_id):
                 registros.append({
                     "setor_id":      setor_id,
                     "nome":          nome,
                     "distrito_id":   get_distrito_id(setor_id),
-                    "linha":         get_linha(setor_id),
+                    "linha":         linha_fn(setor_id),
                     "classificacao": classif,
                 })
-            elif nome and nome.lower() not in ("nan", "none"):
-                # SPI não identificado mas tem nome — guarda sem setor
+            elif regional == "SPI" and nome and nome.lower() not in ("nan", "none"):
+                # SPI não identificado mas tem nome — guarda sem setor (comportamento legado;
+                # não se aplica à LESTE pois o arquivo é compartilhado entre regionais)
                 registros.append({
                     "setor_id":      setor_id if setor_id.isdigit() else "",
                     "nome":          nome,
@@ -705,16 +851,16 @@ def processar_jornada(xlsx_bytes: bytes) -> list:
             # Caso 2: formato legado 'XXXXXXXX - Nome'
             setor_raw = str(row.get(col_setor or df.columns[0], "")).strip()
             parsed = parse_setor(setor_raw)
-            if parsed and is_spi(parsed["setor_id"]):
+            if parsed and filtro_fn(parsed["setor_id"]):
                 registros.append({
                     "setor_id":      parsed["setor_id"],
                     "nome":          parsed["nome"],
                     "distrito_id":   get_distrito_id(parsed["setor_id"]),
-                    "linha":         get_linha(parsed["setor_id"]),
+                    "linha":         linha_fn(parsed["setor_id"]),
                     "classificacao": classif,
                 })
 
-    print(f"  ✓ Jornada: {len(registros)} representantes classificados")
+    print(f"  ✓ Jornada {regional}: {len(registros)} representantes classificados")
     return registros
 
 
@@ -742,14 +888,14 @@ def escrever_aba(gc, sh, nome_aba: str, dados: list[dict], force: bool):
     print(f"  ✓ Aba '{nome_aba}': {len(dados)} registros escritos")
 
 
-def atualizar_config_aba(gc, sh, mes: str):
+def atualizar_config_aba(gc, sh, mes: str, aba: str = "config", regional_label: str = "SPI OESTE"):
     import gspread
     from datetime import datetime
 
     try:
-        ws = sh.worksheet("config")
+        ws = sh.worksheet(aba)
     except gspread.WorksheetNotFound:
-        ws = sh.add_worksheet(title="config", rows=20, cols=5)
+        ws = sh.add_worksheet(title=aba, rows=20, cols=5)
 
     dados = ws.get_all_records()
     meses_str = next((r["valor"] for r in dados if r["chave"] == "meses_disponiveis"), "")
@@ -767,10 +913,10 @@ def atualizar_config_aba(gc, sh, mes: str):
         ["mes_padrao", mes],
         ["ultima_atualizacao", datetime.utcnow().isoformat()],
         ["versao", "5.0"],
-        ["regional", "SPI OESTE"],
+        ["regional", regional_label],
         ["divisao", "Cardiometabolico"]
     ])
-    print(f"  ✓ Config atualizada: meses disponíveis = {meses}")
+    print(f"  ✓ Config '{aba}' atualizada: meses disponíveis = {meses}")
 
 
 # ── Conectar ao Sheets ─────────────────────────────────────────────────────────
@@ -791,7 +937,7 @@ def conectar_sheets():
 
 # ── Main ───────────────────────────────────────────────────────────────────────
 
-def criar_stubs_sem_produtividade(mes: str, rep_nex: list, rep_vit: list) -> tuple[list, list]:
+def criar_stubs_sem_produtividade(mes: str, rep_nex: list, rep_vit: list, regional: str = "SPI") -> tuple[list, list]:
     """
     Quando não há arquivo de Produtividade, cria stubs de distritos e reps
     a partir dos dados de produto por rep.
@@ -803,14 +949,24 @@ def criar_stubs_sem_produtividade(mes: str, rep_nex: list, rep_vit: list) -> tup
                        Se o GD mudou, atualize manualmente em config/mapping.json
                        e rode: python scripts/ingest.py --mes <MES> --produto-only --force
       - métricas MDV, Q1-Q4, cobertura → None (sem arquivo de Produtividade)
+
+    A classificação da Jornada da Evolução (Destaque/Performance/Start) NÃO é
+    tocada aqui — o front-end busca em jornada_LESTE/jornada por nome/setor_id
+    e já cai em "Start" automaticamente pra quem não estiver lá (ex: contratação
+    recente ainda não reportada no arquivo de jornada).
     """
+    distritos_key = "distritos_leste" if regional == "LESTE" else "distritos"
     with open(ROOT / "config/mapping.json") as f:
         mapping = json.load(f)
 
-    # Extrai reps únicos: chave = setor_id (estável), nome = do arquivo do mês
+    # Extrai reps únicos: chave = setor_id (estável), nome = do arquivo do mês.
+    # Setor terminado em "00" é o próprio GD (pool pessoal dele no arquivo de
+    # produto) — não é um rep da equipe, então fica de fora daqui.
     reps_map: dict = {}
     for r in rep_nex + rep_vit:
         sid = r["setor_id"]
+        if sid and sid.endswith("00"):
+            continue
         if sid and sid not in reps_map:
             reps_map[sid] = {
                 "mes":              mes,
@@ -836,7 +992,7 @@ def criar_stubs_sem_produtividade(mes: str, rep_nex: list, rep_vit: list) -> tup
     for rep in reps:
         did = rep["distrito_id"]
         if did not in distritos_map:
-            meta = mapping["distritos"].get(did, {})
+            meta = mapping[distritos_key].get(did, {})
             distritos_map[did] = {
                 "mes": mes, "distrito_id": did, "linha": rep["linha"],
                 "ab": meta.get("ab", ""), "nm": meta.get("nm", ""),
@@ -861,6 +1017,8 @@ def main():
     parser.add_argument("--visitas",      action="store_true",   help="Ingerir Visitas GD")
     parser.add_argument("--produto-only", action="store_true",   dest="produto_only",
                         help="Ingere apenas produto (sem Produtividade). Cria stubs de distritos/reps com nomes do mês.")
+    parser.add_argument("--regional",     choices=["SPI", "LESTE"], default="SPI",
+                        help="Regional a ingerir com --mes (default: SPI OESTE). LESTE ingere só Produtividade → abas *_LESTE_{mes}.")
     args = parser.parse_args()
 
     if not args.mes and not args.jornada and not args.pex and not args.visitas:
@@ -888,7 +1046,17 @@ def main():
             else:
                 print(f"  ✓ Subpasta encontrada: {jornada_folder}")
 
-        if jornada_folder:
+        if jornada_folder and args.regional == "LESTE":
+            arq_jornada = encontrar_jornada_leste(jornada_folder)
+            if not arq_jornada:
+                print("❌ Nenhum arquivo de Jornada LESTE encontrado na pasta.")
+            else:
+                print(f"📥 Baixando jornada LESTE: {arq_jornada['name']}...")
+                xlsx_jornada = baixar_xlsx(arq_jornada["id"])
+                jornada_data = processar_jornada(xlsx_jornada, regional="LESTE")
+                escrever_aba(gc, sh, "jornada_LESTE", jornada_data, force=True)  # sempre sobrescreve
+                print("✅ Jornada LESTE atualizada.\n")
+        elif jornada_folder:
             arq_jornada = encontrar_qualquer_xlsx(jornada_folder)
             if not arq_jornada:
                 print("❌ Nenhum arquivo xlsx encontrado na pasta de jornada.")
@@ -902,7 +1070,58 @@ def main():
     # ════════════════════════════════════════════════════════
     #  DADOS MENSAIS
     # ════════════════════════════════════════════════════════
-    if args.mes:
+    if args.mes and args.regional == "LESTE":
+        mes = args.mes.upper()
+        print(f"\n══ INGESTÃO LESTE {mes}/2026 ══\n")
+
+        folder_produto = os.getenv("DRIVE_PRODUTO") or os.getenv("DRIVE_DADOS_FOLDER")
+
+        rep_nex, rep_vit = [], []
+        for linha_produto in ["NEXUS", "VITAL"]:
+            print(f"\n📥 Baixando Produto {linha_produto} LESTE...")
+            arq_p = encontrar_produto_leste(folder_produto, mes, linha_produto)
+            if arq_p:
+                print(f"  → {arq_p['name']}")
+                xlsx_p = baixar_xlsx(arq_p["id"])
+                reg_p, dist_p, rep_p = processar_produto(xlsx_p, mes, linha_produto, regional="LESTE")
+                escrever_aba(gc, sh, f"produtos_{linha_produto}_LESTE_{mes}",      reg_p,  args.force)
+                escrever_aba(gc, sh, f"produtos_dist_{linha_produto}_LESTE_{mes}", dist_p, args.force)
+                escrever_aba(gc, sh, f"produtos_rep_{linha_produto}_LESTE_{mes}",  rep_p,  args.force)
+                if linha_produto == "NEXUS": rep_nex = rep_p
+                else: rep_vit = rep_p
+            else:
+                print(f"  ⚠  Produto {linha_produto} LESTE {mes} não encontrado — ignorando")
+
+        print(f"\n📥 Procurando Produtividade LESTE...")
+        folder_prod = os.getenv("DRIVE_PRODUTIVIDADE") or os.getenv("DRIVE_DADOS_FOLDER")
+        arquivos = listar_arquivos(folder_prod)
+        arq_prod = next(
+            (a for a in arquivos
+             if mes in a["name"].upper()
+             and "PRODUTIVIDADE" in a["name"].upper()
+             and "LESTE" in a["name"].upper()),
+            None
+        )
+        if not arq_prod:
+            print(f"⚠  Arquivo Produtividade LESTE {mes} não encontrado — gerando stubs a partir do Produto")
+            print(f"   Identificador estável: setor_id / distrito_id")
+            print(f"   Jornada da Evolução: mantida (lookup por nome/setor_id em jornada_LESTE,")
+            print(f"   quem não estiver lá cai em 'Start' — ex: contratação recente)")
+            distritos, reps = criar_stubs_sem_produtividade(mes, rep_nex, rep_vit, regional="LESTE")
+        else:
+            print(f"  → {arq_prod['name']}")
+            xlsx_prod = baixar_xlsx(arq_prod["id"])
+            distritos, reps = processar_produtividade(xlsx_prod, mes, regional="LESTE")
+
+        escrever_aba(gc, sh, f"distritos_LESTE_{mes}", distritos, args.force)
+        escrever_aba(gc, sh, f"reps_LESTE_{mes}",      reps,      args.force)
+
+        print("\n📋 Atualizando config_LESTE...")
+        atualizar_config_aba(gc, sh, mes, aba="config_LESTE", regional_label="LESTE")
+
+        print(f"\n✅ Ingestão LESTE {mes} concluída.\n")
+
+    elif args.mes:
         mes = args.mes.upper()
         modo = "PRODUTO-ONLY" if args.produto_only else "COMPLETO"
         print(f"\n══ INGESTÃO {mes}/2026 [{modo}] ══\n")
@@ -979,24 +1198,35 @@ def main():
         if not args.mes:
             parser.error("--pex requer --mes (ex: --pex --mes FEV)")
         mes = args.mes.upper()
-        print(f"\n══ PEX {mes}/2026 ══\n")
 
         pex_folder = os.getenv("DRIVE_PEX")
         if not pex_folder:
             print("❌ DRIVE_PEX não configurado no .env")
             sys.exit(1)
 
-        arq_pex = encontrar_pex(pex_folder, mes)
-        if not arq_pex:
-            print(f"❌ Arquivo PEX {mes} não encontrado na pasta DRIVE_PEX.")
-            print(f"   Adicione o arquivo 'PEX {mes}.xlsx' na pasta e tente novamente.")
-            sys.exit(1)
-
-        print(f"📥 Baixando PEX: {arq_pex['name']}...")
-        xlsx_pex  = baixar_xlsx(arq_pex["id"])
-        pex_data  = processar_pex(xlsx_pex, mes)
-        escrever_aba(gc, sh, f"pex_{mes}", pex_data, force=True)  # sempre sobrescreve
-        print(f"✅ PEX {mes} atualizado.\n")
+        if args.regional == "LESTE":
+            print(f"\n══ PEX LESTE {mes}/2026 ══\n")
+            arq_pex = encontrar_pex_leste(pex_folder, mes)
+            if not arq_pex:
+                print(f"❌ Arquivo PEX LESTE {mes} não encontrado na pasta DRIVE_PEX.")
+                sys.exit(1)
+            print(f"📥 Baixando PEX LESTE: {arq_pex['name']}...")
+            xlsx_pex = baixar_xlsx(arq_pex["id"])
+            pex_data = processar_pex(xlsx_pex, mes, regional="LESTE")
+            escrever_aba(gc, sh, f"pex_LESTE_{mes}", pex_data, force=True)  # sempre sobrescreve
+            print(f"✅ PEX LESTE {mes} atualizado.\n")
+        else:
+            print(f"\n══ PEX {mes}/2026 ══\n")
+            arq_pex = encontrar_pex(pex_folder, mes)
+            if not arq_pex:
+                print(f"❌ Arquivo PEX {mes} não encontrado na pasta DRIVE_PEX.")
+                print(f"   Adicione o arquivo 'PEX {mes}.xlsx' na pasta e tente novamente.")
+                sys.exit(1)
+            print(f"📥 Baixando PEX: {arq_pex['name']}...")
+            xlsx_pex  = baixar_xlsx(arq_pex["id"])
+            pex_data  = processar_pex(xlsx_pex, mes)
+            escrever_aba(gc, sh, f"pex_{mes}", pex_data, force=True)  # sempre sobrescreve
+            print(f"✅ PEX {mes} atualizado.\n")
 
     # ════════════════════════════════════════════════════════
     #  VISITAS GD
@@ -1005,26 +1235,40 @@ def main():
         if not args.mes:
             parser.error("--visitas requer --mes (ex: --visitas --mes MAR)")
         mes = args.mes.upper()
-        print(f"\n══ VISITAS GD {mes}/2026 ══\n")
 
         visitas_folder = os.getenv("DRIVE_VISITAS_GD")
         if not visitas_folder:
             print("❌ DRIVE_VISITAS_GD não configurado no .env")
             sys.exit(1)
 
-        for linha in ["NEXUS", "VITAL"]:
-            print(f"📥 Baixando Visitas {linha} {mes}...")
-            arq = encontrar_visitas(visitas_folder, mes, linha)
+        if args.regional == "LESTE":
+            print(f"\n══ VISITAS GD LESTE {mes}/2026 ══\n")
+            print(f"📥 Baixando Visitas LESTE {mes}...")
+            arq = encontrar_visitas_leste(visitas_folder, mes)
             if not arq:
-                print(f"  ⚠  Arquivo Visitas {linha} {mes} não encontrado — ignorando")
-                continue
-            print(f"  → {arq['name']}")
-            xlsx_bytes = baixar_xlsx(arq["id"])
-            dados = processar_visitas(xlsx_bytes, mes, linha)
-            if dados:
-                escrever_aba(gc, sh, f"visitas_{linha}_{mes}", dados, args.force)
-
-        print(f"\n✅ Visitas GD {mes} concluído.\n")
+                print(f"  ⚠  Arquivo Visitas LESTE {mes} não encontrado — ignorando")
+            else:
+                print(f"  → {arq['name']}")
+                xlsx_bytes = baixar_xlsx(arq["id"])
+                for linha in ["NEXUS", "VITAL"]:
+                    dados = processar_visitas(xlsx_bytes, mes, linha, regional="LESTE")
+                    if dados:
+                        escrever_aba(gc, sh, f"visitas_{linha}_LESTE_{mes}", dados, args.force)
+            print(f"\n✅ Visitas GD LESTE {mes} concluído.\n")
+        else:
+            print(f"\n══ VISITAS GD {mes}/2026 ══\n")
+            for linha in ["NEXUS", "VITAL"]:
+                print(f"📥 Baixando Visitas {linha} {mes}...")
+                arq = encontrar_visitas(visitas_folder, mes, linha)
+                if not arq:
+                    print(f"  ⚠  Arquivo Visitas {linha} {mes} não encontrado — ignorando")
+                    continue
+                print(f"  → {arq['name']}")
+                xlsx_bytes = baixar_xlsx(arq["id"])
+                dados = processar_visitas(xlsx_bytes, mes, linha)
+                if dados:
+                    escrever_aba(gc, sh, f"visitas_{linha}_{mes}", dados, args.force)
+            print(f"\n✅ Visitas GD {mes} concluído.\n")
 
 
 if __name__ == "__main__":

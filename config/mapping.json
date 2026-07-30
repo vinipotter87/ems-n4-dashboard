@@ -3,25 +3,286 @@
   "divisao": "Cardiometabolico",
   "drive_dados_folder": "1a_yM6ro5-ziGrqcS02sRk1_u7aInBIk-",
   "distritos": {
-    "110301000": { "linha": "NEXUS", "ab": "Joao Rafael",       "nm": "Joao Rafael de Franca Nunes Leardini" },
-    "110302000": { "linha": "NEXUS", "ab": "Murillo Cesar",     "nm": "Murillo Cesar Barbosa dos Santos" },
-    "110303000": { "linha": "NEXUS", "ab": "Geovana Buttignon", "nm": "Geovana Buttignon" },
-    "110304000": { "linha": "NEXUS", "ab": "Vanessa Araujo",    "nm": "Vanessa Araujo Ferreira Lima" },
-    "116301000": { "linha": "VITAL", "ab": "Fabiano Machado",   "nm": "Fabiano Atanazio Machado" },
-    "116302000": { "linha": "VITAL", "ab": "Daniel Costa",      "nm": "Daniel Antonio Costa" },
-    "116303000": { "linha": "VITAL", "ab": "Matheus Allonso",   "nm": "Matheus Landulpho Allonso" },
-    "116304000": { "linha": "VITAL", "ab": "Michael Mota",      "nm": "Michael Aparecido da Silva Mota" }
+    "110301000": {
+      "linha": "NEXUS",
+      "ab": "Joao Rafael",
+      "nm": "Joao Rafael de Franca Nunes Leardini"
+    },
+    "110302000": {
+      "linha": "NEXUS",
+      "ab": "Murillo Cesar",
+      "nm": "Murillo Cesar Barbosa dos Santos"
+    },
+    "110303000": {
+      "linha": "NEXUS",
+      "ab": "Geovana Buttignon",
+      "nm": "Geovana Buttignon"
+    },
+    "110304000": {
+      "linha": "NEXUS",
+      "ab": "Vanessa Araujo",
+      "nm": "Vanessa Araujo Ferreira Lima"
+    },
+    "116301000": {
+      "linha": "VITAL",
+      "ab": "Fabiano Machado",
+      "nm": "Fabiano Atanazio Machado"
+    },
+    "116302000": {
+      "linha": "VITAL",
+      "ab": "Daniel Costa",
+      "nm": "Daniel Antonio Costa"
+    },
+    "116303000": {
+      "linha": "VITAL",
+      "ab": "Matheus Allonso",
+      "nm": "Matheus Landulpho Allonso"
+    },
+    "116304000": {
+      "linha": "VITAL",
+      "ab": "Michael Mota",
+      "nm": "Michael Aparecido da Silva Mota"
+    }
   },
   "prefixos_spi": {
     "NEXUS": "11030",
     "VITAL": "11630"
   },
-  "produtos_nexus": ["LYBERDIA", "DEPOSTERON", "BRAMICAR", "BRAMICAR HCT", "LEFOR", "AGLITIL", "OLIRE", "LIRUX"],
-  "produtos_vital": ["BRASART", "BRASART BCC", "BRASART HCT", "BUPIUM XL", "CONCARDIO", "ESCILEX", "IMENSE", "LINADIB", "LINADIB DUO", "LIRUX", "OLIRE", "PATZ SL"],
-  "meses_ordem": ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"],
+  "regional_leste": "LESTE",
+  "prefixos_leste": {
+    "NEXUS": "1105",
+    "VITAL": "1165"
+  },
+  "distritos_leste": {
+    "110501000": {
+      "linha": "NEXUS",
+      "ab": "Vago",
+      "nm": "Vago"
+    },
+    "110502000": {
+      "linha": "NEXUS",
+      "ab": "Carla Ziviani",
+      "nm": "Carla Patricia de Melo Ziviani"
+    },
+    "116501000": {
+      "linha": "VITAL",
+      "ab": "Julio Oliveira",
+      "nm": "Julio Cesar dos Santos Oliveira"
+    },
+    "116502000": {
+      "linha": "VITAL",
+      "ab": "Rafael Almeida",
+      "nm": "Rafael Oliveira Almeida"
+    }
+  },
+  "_distritos_leste_nota": "Nomes de GD sao placeholder ate a 1a Produtividade LESTE ser importada — ingest.py atualiza automaticamente a partir da coluna Gerente, igual ja faz para SPI.",
+  "setores_leste": {
+    "NEXUS": [
+      {
+        "setor": "11050101",
+        "distrito": "110501000",
+        "nome": "ES_SERRA_VITORIA_CARIACICA"
+      },
+      {
+        "setor": "11050102",
+        "distrito": "110501000",
+        "nome": "ES_COLATINA_LINHARES_ARACRUZ"
+      },
+      {
+        "setor": "11050103",
+        "distrito": "110501000",
+        "nome": "ES_VILAVELHA_CACHOEIRO"
+      },
+      {
+        "setor": "11050104",
+        "distrito": "110501000",
+        "nome": "MG_GVALADARES_TEOFILOOTONI"
+      },
+      {
+        "setor": "11050105",
+        "distrito": "110501000",
+        "nome": "MG_IPATINGA_JMONLEVADE_ITABIRA"
+      },
+      {
+        "setor": "11050106",
+        "distrito": "110501000",
+        "nome": "MG_JUIZDEFORA_BARBACENA_SJDELREI"
+      },
+      {
+        "setor": "11050107",
+        "distrito": "110501000",
+        "nome": "MG_JUIZ DE FORA_MURIAE_UBA"
+      },
+      {
+        "setor": "11050201",
+        "distrito": "110502000",
+        "nome": "MG_BH_STAEFCIMA_CENTRO_LAFAIETE"
+      },
+      {
+        "setor": "11050202",
+        "distrito": "110502000",
+        "nome": "MG_BH_SAVASSI_NOVALIMA"
+      },
+      {
+        "setor": "11050203",
+        "distrito": "110502000",
+        "nome": "MG_BH_FUNCIONARIOS_PONTENOVA"
+      },
+      {
+        "setor": "11050204",
+        "distrito": "110502000",
+        "nome": "MG_MONTESCLAROS"
+      },
+      {
+        "setor": "11050205",
+        "distrito": "110502000",
+        "nome": "MG_BARREIRO_BETIM_CONTAGEM"
+      },
+      {
+        "setor": "11050206",
+        "distrito": "110502000",
+        "nome": "MG_BH_BARROPRETO_BURITIS"
+      },
+      {
+        "setor": "11050207",
+        "distrito": "110502000",
+        "nome": "MG_BH_STAEFBAIXA_CNOVA_METROPOLITANA_CENTROOESTE"
+      },
+      {
+        "setor": "11050208",
+        "distrito": "110502000",
+        "nome": "MG_BH_VNOVA_7LAGOAS"
+      },
+      {
+        "setor": "11050209",
+        "distrito": "110502000",
+        "nome": "MG_DIVINOPOLIS"
+      }
+    ],
+    "VITAL": [
+      {
+        "setor": "11650101",
+        "distrito": "116501000",
+        "nome": "ES_SERRA_VITORIA_CARIACICA"
+      },
+      {
+        "setor": "11650102",
+        "distrito": "116501000",
+        "nome": "ES_COLATINA_LINHARES_ARACRUZ"
+      },
+      {
+        "setor": "11650103",
+        "distrito": "116501000",
+        "nome": "ES_VILAVELHA_CACHOEIRO"
+      },
+      {
+        "setor": "11650104",
+        "distrito": "116501000",
+        "nome": "MG_GVALADARES_TEOFILOOTONI"
+      },
+      {
+        "setor": "11650105",
+        "distrito": "116501000",
+        "nome": "MG_IPATINGA_JMONLEVADE_ITABIRA"
+      },
+      {
+        "setor": "11650106",
+        "distrito": "116501000",
+        "nome": "MG_JUIZDEFORA_BARBACENA_SJDELREI"
+      },
+      {
+        "setor": "11650107",
+        "distrito": "116501000",
+        "nome": "MG_JUIZ DE FORA_MURIAE_UBA"
+      },
+      {
+        "setor": "11650201",
+        "distrito": "116502000",
+        "nome": "MG_BH_STAEFCIMA_CENTRO_LAFAIETE"
+      },
+      {
+        "setor": "11650202",
+        "distrito": "116502000",
+        "nome": "MG_BH_SAVASSI_NOVALIMA"
+      },
+      {
+        "setor": "11650203",
+        "distrito": "116502000",
+        "nome": "MG_BH_FUNCIONARIOS_PONTENOVA"
+      },
+      {
+        "setor": "11650204",
+        "distrito": "116502000",
+        "nome": "MG_MONTESCLAROS"
+      },
+      {
+        "setor": "11650205",
+        "distrito": "116502000",
+        "nome": "MG_BARREIRO_BETIM_CONTAGEM"
+      },
+      {
+        "setor": "11650206",
+        "distrito": "116502000",
+        "nome": "MG_BH_BARROPRETO_BURITIS"
+      },
+      {
+        "setor": "11650207",
+        "distrito": "116502000",
+        "nome": "MG_BH_STAEFBAIXA_CNOVA_METROPOLITANA_CENTROOESTE"
+      },
+      {
+        "setor": "11650208",
+        "distrito": "116502000",
+        "nome": "MG_BH_VNOVA_7LAGOAS"
+      },
+      {
+        "setor": "11650209",
+        "distrito": "116502000",
+        "nome": "MG_DIVINOPOLIS"
+      }
+    ]
+  },
+  "produtos_nexus": [
+    "LYBERDIA",
+    "DEPOSTERON",
+    "BRAMICAR",
+    "BRAMICAR HCT",
+    "LEFOR",
+    "AGLITIL",
+    "OLIRE",
+    "LIRUX"
+  ],
+  "produtos_vital": [
+    "BRASART",
+    "BRASART BCC",
+    "BRASART HCT",
+    "BUPIUM XL",
+    "CONCARDIO",
+    "ESCILEX",
+    "IMENSE",
+    "LINADIB",
+    "LINADIB DUO",
+    "LIRUX",
+    "OLIRE",
+    "PATZ SL"
+  ],
+  "meses_ordem": [
+    "JAN",
+    "FEV",
+    "MAR",
+    "ABR",
+    "MAI",
+    "JUN",
+    "JUL",
+    "AGO",
+    "SET",
+    "OUT",
+    "NOV",
+    "DEZ"
+  ],
   "diagnostico_thresholds": {
-    "ok":   1.00,
-    "warn": 0.80,
-    "crit": 0.00
+    "ok": 1.0,
+    "warn": 0.8,
+    "crit": 0.0
   }
 }
