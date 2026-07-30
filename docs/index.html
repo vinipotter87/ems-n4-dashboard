@@ -3174,18 +3174,37 @@ function isMesParcial(mes) {
   return CONFIG && CONFIG.mes_parcial && mes === CONFIG.mes_parcial;
 }
 
+// Alguns produtos (ex: Ozivy) vêm com o MESMO valor reportado nos arquivos de
+// NEXUS e de VITAL (confirmado célula a célula com o GD) — não são duas vendas
+// distintas, é o mesmo dado duplicado na origem. Somar prodNex + prodVit direto
+// conta esses produtos em dobro no "Total Regional". Esta função soma cada
+// produto uma única vez: usa o valor de NEXUS quando o produto existe lá,
+// senão usa o de VITAL.
+function sumFieldRegionalDedup(prodNex, prodVit, field) {
+  var porProduto = {};
+  (prodNex || []).forEach(function(r) {
+    var p = normProd(r.produto);
+    if (p) porProduto[p] = r;
+  });
+  (prodVit || []).forEach(function(r) {
+    var p = normProd(r.produto);
+    if (p && !(p in porProduto)) porProduto[p] = r;
+  });
+  return sumField(Object.values(porProduto), field);
+}
+
 function getCotaReg(mes, linha) {
   var d = DADOS_CACHE[mes]; if (!d) return 0;
   if (linha === 'NEXUS') return sumField(d.prodNex || [], 'cota');
   if (linha === 'VITAL') return sumField(d.prodVit || [], 'cota');
-  return sumField((d.prodNex||[]).concat(d.prodVit||[]), 'cota');
+  return sumFieldRegionalDedup(d.prodNex, d.prodVit, 'cota');
 }
 function getRealReg(mes, linha) {
   if (isMesParcial(mes)) return null;
   var d = DADOS_CACHE[mes]; if (!d) return 0;
   if (linha === 'NEXUS') return sumField(d.prodNex || [], 'realizado');
   if (linha === 'VITAL') return sumField(d.prodVit || [], 'realizado');
-  return sumField((d.prodNex||[]).concat(d.prodVit||[]), 'realizado');
+  return sumFieldRegionalDedup(d.prodNex, d.prodVit, 'realizado');
 }
 
 // Cota/Realizado por distrito
