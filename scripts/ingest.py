@@ -73,9 +73,12 @@ def baixar_xlsx(file_id: str) -> bytes:
 
 
 def encontrar_arquivo(folder_id: str, mes: str, prefixos: list[str]) -> dict | None:
+    """Usado exclusivamente pelo fluxo SPI OESTE — nunca deve pegar um arquivo com "leste" no nome."""
     arquivos = listar_arquivos(folder_id)
     for a in arquivos:
         nome = a["name"].upper()
+        if "LESTE" in nome:
+            continue
         if mes.upper() in nome and any(p.upper() in nome for p in prefixos):
             return a
     return None
@@ -426,7 +429,10 @@ def processar_produto(xlsx_bytes: bytes, mes: str, linha: str, regional: str = "
         if col_setor_rep:
             setor_raw = str(row.get(col_setor_rep, ""))
             parsed    = parse_setor(setor_raw)
-            if parsed and filtro_fn(parsed["setor_id"]) and not parsed["vago"]:
+            # Setor terminado em "00" é o SUBTOTAL do GD (soma dos reps do distrito),
+            # não uma venda adicional — confirmado: GD_row == sum(reps do distrito).
+            # Incluir essa linha junto com os reps individuais contaria tudo em dobro.
+            if parsed and filtro_fn(parsed["setor_id"]) and not parsed["vago"] and not parsed["setor_id"].endswith("00"):
                 registros_rep.append({
                     "mes":          mes,
                     "linha":        linha,
