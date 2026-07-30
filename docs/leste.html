@@ -3267,8 +3267,12 @@ function buildCotaBarChart(canvasId, meses, cotaArr, realArr) {
               return '  ' + ctx.dataset.label + ':  ' + fmtBRL(v);
             },
             afterBody: function(items) {
-              var c = items[0] ? items[0].parsed.y : 0;
-              var r = items[1] ? items[1].parsed.y : 0;
+              // Busca por label, não por índice: o "order" dos datasets reordena
+              // os items do tooltip, então items[0]/items[1] não é confiável.
+              var itemCota = items.find(function(it){ return it.dataset.label === 'Cota'; });
+              var itemReal = items.find(function(it){ return it.dataset.label === 'Realizado'; });
+              var c = itemCota ? itemCota.parsed.y : 0;
+              var r = itemReal ? itemReal.parsed.y : 0;
               if (!c || !r) return [];
               return ['  Atingimento:  ' + (r / c * 100).toFixed(1) + '%'];
             }
