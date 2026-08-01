@@ -763,7 +763,7 @@ def processar_visitas_por_rep(xlsx_bytes: bytes, mes: str, linha: str, regional:
             meta = mapping[distritos_key].get(did, {})
             agg[did] = {
                 "distrito_id": did, "nm": meta.get("nm", ""), "ab": meta.get("ab", ""),
-                "contatos": 0.0, "obj": 0.0, "real": 0.0, "dias": 0.0, "tem_real": False,
+                "contatos": 0.0, "obj": None, "real": 0.0, "dias": 0.0, "tem_real": False,
             }
 
         contatos = parse_float(row.get("Real. Contatos"))
@@ -771,7 +771,11 @@ def processar_visitas_por_rep(xlsx_bytes: bytes, mes: str, linha: str, regional:
         real     = parse_float(row.get("Real. Acomp. GDD"))
         dias     = parse_float(row.get("Qtde. dias Acomp. GDD"))
         if contatos is not None: agg[did]["contatos"] += contatos
-        if obj is not None:      agg[did]["obj"]      += obj
+        # "Obj. Acomp. GDD" é o objetivo do DISTRITO inteiro, repetido igual em
+        # cada linha de rep (confirmado: mesmo valor nas 8 linhas de um distrito)
+        # — não é por representante, então não soma, só usa uma vez.
+        if obj is not None and agg[did]["obj"] is None:
+            agg[did]["obj"] = obj
         if real is not None:
             agg[did]["real"] += real
             agg[did]["tem_real"] = True
@@ -779,7 +783,7 @@ def processar_visitas_por_rep(xlsx_bytes: bytes, mes: str, linha: str, regional:
 
     registros = []
     for did, d in agg.items():
-        obj  = d["obj"] or None
+        obj  = d["obj"]
         real = d["real"] if d["tem_real"] else None
         cob_pct = round(real / obj * 100, 1) if (real is not None and obj and obj > 0) else None
         registros.append({
