@@ -84,6 +84,35 @@ def encontrar_arquivo(folder_id: str, mes: str, prefixos: list[str]) -> dict | N
     return None
 
 
+def encontrar_produtividade_leste(folder_id: str, mes: str) -> dict | None:
+    """
+    Localiza o arquivo de Produtividade LESTE do mês.
+    Preferência: arquivo com "leste" explícito no nome (formato usado até JUN).
+    Fallback: arquivo combinado OESTE+LESTE sem "leste" no nome (a partir de JUL) —
+    o filtro por prefixo de setor em processar_produtividade separa LESTE corretamente.
+    """
+    arquivos = listar_arquivos(folder_id)
+    mes_up   = mes.upper()
+    extenso_map = {
+        "JAN": ["jan","janeiro"], "FEV": ["fev","fevereiro"],
+        "MAR": ["mar","marco","março"], "ABR": ["abr","abril"],
+        "MAI": ["mai","maio"],  "JUN": ["jun","junho"],
+        "JUL": ["jul","julho"], "AGO": ["ago","agosto"],
+        "SET": ["set","setembro"], "OUT": ["out","outubro"],
+        "NOV": ["nov","novembro"], "DEZ": ["dez","dezembro"],
+    }
+    termos_mes = [mes_up.lower()] + extenso_map.get(mes_up, [])
+    for a in arquivos:
+        nome = a["name"].lower()
+        if "leste" in nome and "produtividade" in nome and any(t in nome for t in termos_mes):
+            return a
+    for a in arquivos:
+        nome = a["name"].lower()
+        if "leste" not in nome and "produtividade" in nome and any(t in nome for t in termos_mes):
+            return a
+    return None
+
+
 def encontrar_produto_leste(folder_id: str, mes: str, linha: str) -> dict | None:
     """
     Localiza o arquivo de Produto LESTE (NEXUS ou VITAL) do mês na pasta.
@@ -663,6 +692,114 @@ def processar_visitas(xlsx_bytes: bytes, mes: str, linha: str, regional: str = "
     return registros
 
 
+def eh_visitas_formato_distrital(xlsx_bytes: bytes) -> bool:
+    """
+    True se a primeira coluna do arquivo é 'Distrital' (formato antigo: 1 linha
+    por GD). Qualquer outra coisa (ex: 'Setor') é o formato novo, por representante.
+    Decide pela ESTRUTURA real do arquivo, não pelo nome — nome de arquivo sozinho
+    não é confiável pra distinguir os dois formatos (já causou um bug real).
+    """
+    import pandas as pd
+    df = pd.read_excel(io.BytesIO(xlsx_bytes), nrows=0)
+    return str(df.columns[0]).strip().lower() == "distrital"
+
+
+def encontrar_visitas_combinado(folder_id: str, mes: str) -> dict | None:
+    """
+    Localiza o arquivo de Visitas no formato novo (a partir de jul/2026): 1 linha
+    por representante (coluna 'Setor', não mais 'Distrital'), combinado OESTE+LESTE,
+    sem separação por linha no nome do arquivo (ex: 'VISITAS ACOMPANHADAS JULHO.xlsx').
+    """
+    arquivos = listar_arquivos(folder_id)
+    mes_up   = mes.upper()
+    extenso_map = {
+        "JAN": ["jan","janeiro"], "FEV": ["fev","fevereiro"],
+        "MAR": ["mar","marco","março"], "ABR": ["abr","abril"],
+        "MAI": ["mai","maio"],  "JUN": ["jun","junho"],
+        "JUL": ["jul","julho"], "AGO": ["ago","agosto"],
+        "SET": ["set","setembro"], "OUT": ["out","outubro"],
+        "NOV": ["nov","novembro"], "DEZ": ["dez","dezembro"],
+    }
+    termos_mes = [mes_up.lower()] + extenso_map.get(mes_up, [])
+    for a in arquivos:
+        nome = a["name"].lower()
+        if "visita" in nome and any(t in nome for t in termos_mes):
+            return a
+    return None
+
+
+def processar_visitas_por_rep(xlsx_bytes: bytes, mes: str, linha: str, regional: str = "SPI") -> list:
+    """
+    Formato novo de Visitas GD (a partir de jul/2026): 1 linha por representante
+    (Obj./Real. Acomp. GDD individuais), não mais 1 linha por GD ('Distrital').
+
+    Agrega somando os reps de cada distrito, pra manter o mesmo contrato de saída
+    de sempre (visitas_{linha}_{mes}: 1 registro por GD/distrito) — decisão
+    confirmada com o usuário: soma dos reps do distrito = Obj./Real. do GD.
+    """
+    import pandas as pd
+
+    if regional == "LESTE":
+        filtro_fn, linha_fn, distritos_key = is_leste, get_linha_leste, "distritos_leste"
+    else:
+        filtro_fn, linha_fn, distritos_key = is_spi, get_linha, "distritos"
+
+    df   = pd.read_excel(io.BytesIO(xlsx_bytes))
+    col0 = df.columns[0]
+
+    with open(ROOT / "config/mapping.json") as f:
+        mapping = json.load(f)
+
+    agg: dict = {}
+    for _, row in df.iterrows():
+        parsed = parse_setor(str(row.get(col0, "")).strip())
+        if not parsed or parsed["vago"] or not filtro_fn(parsed["setor_id"]):
+            continue
+        if linha_fn(parsed["setor_id"]) != linha:
+            continue
+
+        did = get_distrito_id(parsed["setor_id"])
+        if did not in agg:
+            meta = mapping[distritos_key].get(did, {})
+            agg[did] = {
+                "distrito_id": did, "nm": meta.get("nm", ""), "ab": meta.get("ab", ""),
+                "contatos": 0.0, "obj": 0.0, "real": 0.0, "dias": 0.0, "tem_real": False,
+            }
+
+        contatos = parse_float(row.get("Real. Contatos"))
+        obj      = parse_float(row.get("Obj. Acomp. GDD"))
+        real     = parse_float(row.get("Real. Acomp. GDD"))
+        dias     = parse_float(row.get("Qtde. dias Acomp. GDD"))
+        if contatos is not None: agg[did]["contatos"] += contatos
+        if obj is not None:      agg[did]["obj"]      += obj
+        if real is not None:
+            agg[did]["real"] += real
+            agg[did]["tem_real"] = True
+        if dias is not None:     agg[did]["dias"] += dias
+
+    registros = []
+    for did, d in agg.items():
+        obj  = d["obj"] or None
+        real = d["real"] if d["tem_real"] else None
+        cob_pct = round(real / obj * 100, 1) if (real is not None and obj and obj > 0) else None
+        registros.append({
+            "mes":        mes,
+            "linha":      linha,
+            "setor_id":   did,
+            "nome":       d["nm"],
+            "distrito_id": did,
+            "ab":         d["ab"],
+            "contatos":   d["contatos"] or None,
+            "obj":        obj,
+            "real":       real,
+            "cob_pct":    cob_pct,
+            "dias":       round(d["dias"], 1) if d["dias"] else None,
+        })
+
+    print(f"  ✓ Visitas (por rep, agregado por distrito) {linha} {mes} [{regional}]: {len(registros)} distritos")
+    return registros
+
+
 # ── Processamento PEX ────────────────────────────────────────────────────────
 
 # Mapeamento dos ícones do Flaticon → nome da medalha
@@ -1100,14 +1237,7 @@ def main():
 
         print(f"\n📥 Procurando Produtividade LESTE...")
         folder_prod = os.getenv("DRIVE_PRODUTIVIDADE") or os.getenv("DRIVE_DADOS_FOLDER")
-        arquivos = listar_arquivos(folder_prod)
-        arq_prod = next(
-            (a for a in arquivos
-             if mes in a["name"].upper()
-             and "PRODUTIVIDADE" in a["name"].upper()
-             and "LESTE" in a["name"].upper()),
-            None
-        )
+        arq_prod = encontrar_produtividade_leste(folder_prod, mes)
         if not arq_prod:
             print(f"⚠  Arquivo Produtividade LESTE {mes} não encontrado — gerando stubs a partir do Produto")
             print(f"   Identificador estável: setor_id / distrito_id")
@@ -1249,31 +1379,64 @@ def main():
 
         if args.regional == "LESTE":
             print(f"\n══ VISITAS GD LESTE {mes}/2026 ══\n")
-            print(f"📥 Baixando Visitas LESTE {mes}...")
+            processado = False
             arq = encontrar_visitas_leste(visitas_folder, mes)
-            if not arq:
-                print(f"  ⚠  Arquivo Visitas LESTE {mes} não encontrado — ignorando")
-            else:
-                print(f"  → {arq['name']}")
+            if arq:
                 xlsx_bytes = baixar_xlsx(arq["id"])
-                for linha in ["NEXUS", "VITAL"]:
-                    dados = processar_visitas(xlsx_bytes, mes, linha, regional="LESTE")
-                    if dados:
-                        escrever_aba(gc, sh, f"visitas_{linha}_LESTE_{mes}", dados, args.force)
+                if eh_visitas_formato_distrital(xlsx_bytes):
+                    print(f"📥 Visitas LESTE {mes} (formato Distrital) → {arq['name']}")
+                    for linha in ["NEXUS", "VITAL"]:
+                        dados = processar_visitas(xlsx_bytes, mes, linha, regional="LESTE")
+                        if dados:
+                            escrever_aba(gc, sh, f"visitas_{linha}_LESTE_{mes}", dados, args.force)
+                    processado = True
+                # se não for Distrital, ignora este achado — cai pro formato novo abaixo
+            if not processado:
+                arq = encontrar_visitas_combinado(visitas_folder, mes)
+                if arq:
+                    xlsx_bytes = baixar_xlsx(arq["id"])
+                    if eh_visitas_formato_distrital(xlsx_bytes):
+                        print(f"⚠  Arquivo '{arq['name']}' é formato Distrital mas não achado como tal — verifique o nome do arquivo.")
+                    else:
+                        print(f"📥 Visitas {mes} (formato novo, por representante) → {arq['name']}")
+                        for linha in ["NEXUS", "VITAL"]:
+                            dados = processar_visitas_por_rep(xlsx_bytes, mes, linha, regional="LESTE")
+                            if dados:
+                                escrever_aba(gc, sh, f"visitas_{linha}_LESTE_{mes}", dados, args.force)
+                        processado = True
+            if not processado:
+                print(f"  ⚠  Nenhum arquivo de Visitas LESTE {mes} encontrado — ignorando")
             print(f"\n✅ Visitas GD LESTE {mes} concluído.\n")
         else:
             print(f"\n══ VISITAS GD {mes}/2026 ══\n")
+            processado = False
             for linha in ["NEXUS", "VITAL"]:
-                print(f"📥 Baixando Visitas {linha} {mes}...")
                 arq = encontrar_visitas(visitas_folder, mes, linha)
                 if not arq:
-                    print(f"  ⚠  Arquivo Visitas {linha} {mes} não encontrado — ignorando")
                     continue
-                print(f"  → {arq['name']}")
                 xlsx_bytes = baixar_xlsx(arq["id"])
+                if not eh_visitas_formato_distrital(xlsx_bytes):
+                    continue  # provavelmente é o arquivo novo combinado — tratado abaixo
+                print(f"📥 Visitas {linha} {mes} (formato Distrital) → {arq['name']}")
                 dados = processar_visitas(xlsx_bytes, mes, linha)
                 if dados:
                     escrever_aba(gc, sh, f"visitas_{linha}_{mes}", dados, args.force)
+                    processado = True
+            if not processado:
+                arq = encontrar_visitas_combinado(visitas_folder, mes)
+                if arq:
+                    xlsx_bytes = baixar_xlsx(arq["id"])
+                    if eh_visitas_formato_distrital(xlsx_bytes):
+                        print(f"⚠  Arquivo '{arq['name']}' é formato Distrital mas não achado como tal — verifique o nome do arquivo.")
+                    else:
+                        print(f"📥 Visitas {mes} (formato novo, por representante) → {arq['name']}")
+                        for linha in ["NEXUS", "VITAL"]:
+                            dados = processar_visitas_por_rep(xlsx_bytes, mes, linha)
+                            if dados:
+                                escrever_aba(gc, sh, f"visitas_{linha}_{mes}", dados, args.force)
+                        processado = True
+            if not processado:
+                print(f"  ⚠  Nenhum arquivo de Visitas {mes} encontrado — ignorando")
             print(f"\n✅ Visitas GD {mes} concluído.\n")
 
 
