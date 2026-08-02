@@ -932,6 +932,59 @@ def processar_pex(xlsx_bytes: bytes, mes: str, regional: str = "SPI") -> list:
     return registros
 
 
+def processar_pex_simulado(xlsx_bytes: bytes, mes: str, regional: str = "SPI") -> list:
+    """
+    Lê um relatório de PEX SIMULADO (formato diferente do PEX oficial mensal:
+    várias abas, com os dados por rep na aba 'Detalhe_Reps'). Colunas usadas:
+    Setor, Nome, Pontuacao_Total, Medalha — as demais (sub-scores, GD, etc.)
+    são ignoradas, só o resultado final importa para o painel PEX.
+    """
+    import pandas as pd
+
+    if regional == "LESTE":
+        filtro_fn, linha_fn, distritos_key = is_leste, get_linha_leste, "distritos_leste"
+    else:
+        filtro_fn, linha_fn, distritos_key = is_spi, get_linha, "distritos"
+
+    df = pd.read_excel(io.BytesIO(xlsx_bytes), sheet_name="Detalhe_Reps")
+
+    with open(ROOT / "config/mapping.json") as f:
+        mapping = json.load(f)
+
+    registros = []
+    for _, row in df.iterrows():
+        setor_id = str(row.get("Setor", "")).strip()
+        if not setor_id.isdigit() or not filtro_fn(setor_id):
+            continue
+
+        nome = str(row.get("Nome", "")).strip()
+        pts  = parse_float(row.get("Pontuacao_Total"))
+        if pts is None:
+            continue
+
+        medalha_raw = str(row.get("Medalha", "")).strip().upper()
+        medalha = medalha_raw if medalha_raw in ("OURO", "PRATA", "BRONZE", "ATENÇÃO", "CRÍTICO") else get_medalha_pts(pts)
+
+        distrito_id = get_distrito_id(setor_id)
+        linha       = linha_fn(setor_id)
+        meta        = mapping[distritos_key].get(distrito_id, {})
+
+        registros.append({
+            "mes":        mes,
+            "setor_id":   setor_id,
+            "nome":       nome,
+            "distrito_id": distrito_id,
+            "linha":      linha,
+            "ab":         meta.get("ab", ""),
+            "pts":        round(pts, 1),
+            "medalha":    medalha,
+        })
+
+    registros.sort(key=lambda r: r["pts"], reverse=True)
+    print(f"  ✓ PEX SIMULADO {mes} [{regional}]: {len(registros)} representantes classificados")
+    return registros
+
+
 # ── Processamento Jornada da Evolução ─────────────────────────────────────────
 
 def processar_jornada(xlsx_bytes: bytes, regional: str = "SPI") -> list:
