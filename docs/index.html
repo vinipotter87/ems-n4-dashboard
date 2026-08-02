@@ -4873,17 +4873,20 @@ async function init() {
       var cfgRows = await fetchAba('config');
       var mesesStr = '';
       var ultimaStr = '';
+      var mesPadraoStr = '';
       cfgRows.forEach(function(r) {
         if (r.chave === 'meses_disponiveis') mesesStr = r.valor || '';
         if (r.chave === 'ultima_atualizacao') ultimaStr = r.valor || '';
+        if (r.chave === 'mes_padrao') mesPadraoStr = r.valor || '';
       });
       if (mesesStr) {
         var mesesSheets = mesesStr.split(',').map(function(m){ return m.trim(); }).filter(Boolean);
         if (mesesSheets.length) meses = mesesSheets; // usa o Sheets (mais atualizado)
       }
-      // ingest.py grava ultima_atualizacao no Sheets a cada rodada — sempre mais
-      // atual que o config.json estatico, que so e editado manualmente.
+      // ingest.py grava mes_padrao/ultima_atualizacao no Sheets a cada rodada —
+      // sempre mais atual que o config.json estatico, que so e editado manualmente.
       if (ultimaStr) CONFIG.ultima_atualizacao = ultimaStr;
+      if (mesPadraoStr) CONFIG.mes_padrao = mesPadraoStr;
     } catch(e) {
       console.warn('Não foi possível ler meses do Sheets — usando config.json');
     }

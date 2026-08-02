@@ -7,10 +7,11 @@
     "MAR",
     "ABR",
     "MAI",
-    "JUN"
+    "JUN",
+    "JUL"
   ],
-  "mes_padrao": "JUN",
-  "ultima_atualizacao": "2026-07-06T00:00:00.000000",
+  "mes_padrao": "JUL",
+  "ultima_atualizacao": "2026-08-01T00:00:00.000000",
   "versao": "4.1",
   "regional": "SPI OESTE",
   "divisao": "Cardiometabolico"
