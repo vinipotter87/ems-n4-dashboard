@@ -424,9 +424,58 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
 /* ── Evolução Diagnóstico ── */
 .cycle-btn.diagevol-btn{border-color:#d97706;color:#d97706}
 .cycle-btn.diagevol-btn.active{background:#fffbeb;border-color:#d97706;color:#b45309}
-/* ── CRM Chave — Prescrição (atalho externo) ── */
+/* ── CRM Chave — Prescrição ── */
 .cycle-btn.crm-btn{border-color:#0d9488;color:#0d9488}
-.cycle-btn.crm-btn:hover{background:#f0fdfa}
+.cycle-btn.crm-btn:hover:not(.active){background:#f0fdfa}
+.cycle-btn.crm-btn.active{background:#0d9488;border-color:#0d9488;color:#fff}
+.crmp-wrap{padding:24px 28px;max-width:1440px;margin:0 auto}
+.crmp-page-hdr{display:flex;align-items:center;gap:14px;margin-bottom:22px;padding:16px 22px;background:#fff;border-radius:12px;box-shadow:0 1px 8px rgba(0,0,0,.07)}
+.crmp-back-btn{display:flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;border:2px solid var(--border);background:#fff;font-size:12px;font-weight:700;cursor:pointer;color:var(--gray);font-family:inherit;transition:all .15s;white-space:nowrap}
+.crmp-back-btn:hover{border-color:#0d9488;color:#0d9488;background:#f0fdfa}
+.crmp-mes-bar{display:flex;gap:6px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
+.crmp-mes-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray);margin-right:4px}
+.crmp-mes-btn{padding:5px 14px;border-radius:16px;border:1.5px solid var(--border);background:#fff;font-size:12px;font-weight:700;color:var(--gray);cursor:pointer;font-family:inherit}
+.crmp-mes-btn.active{background:#0d9488;border-color:#0d9488;color:#fff}
+.crmp-filtro-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px;background:#fff;padding:12px 18px;border-radius:12px;box-shadow:0 1px 8px rgba(0,0,0,.06)}
+.crmp-filtro-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)}
+.crmp-select{padding:5px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;font-weight:600;font-family:inherit;color:var(--dark);background:#fff;cursor:pointer}
+.crmp-clear-btn{font-size:11px;font-weight:700;color:var(--gray);background:none;border:none;cursor:pointer;text-decoration:underline;font-family:inherit}
+.crmp-linha-hdr{font-size:13px;font-weight:800;display:flex;align-items:center;gap:10px;margin:26px 0 12px;padding-bottom:8px;border-bottom:2px solid var(--border)}
+.crmp-linha-hdr:first-child{margin-top:0}
+.crmp-card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+.crmp-mc-card{background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.08);padding:16px 18px;border-top:3px solid var(--border)}
+.crmp-mc-card.nexus{border-top-color:var(--nexus)}
+.crmp-mc-card.vital{border-top-color:var(--red)}
+.crmp-mc-nome{font-size:13px;font-weight:800;color:var(--dark);margin-bottom:10px}
+.crmp-mc-row{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:var(--gray);margin-bottom:4px}
+.crmp-mc-row b{font-size:15px;color:var(--dark);font-weight:800}
+.crmp-mc-trend{font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:10px}
+.crmp-mc-trend.up{background:var(--green-l);color:var(--green)}
+.crmp-mc-trend.down{background:var(--red-l);color:var(--red)}
+.crmp-mc-trend.flat,.crmp-mc-trend.na{background:var(--light);color:var(--gray)}
+.crmp-mc-foot{font-size:10.5px;color:var(--gray);margin-top:10px;padding-top:8px;border-top:1px solid var(--border)}
+.crmp-tbl-wrap{background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.08);overflow:hidden;margin-top:8px}
+.crmp-tbl-hdr-bar{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.crmp-tbl-hdr-bar h2{font-size:13px;font-weight:800}
+.crmp-tbl-search{padding:5px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;font-family:inherit;min-width:200px}
+.crmp-tbl-count{margin-left:auto;font-size:11px;color:var(--gray);font-weight:600}
+table.crmp-tbl{width:100%;border-collapse:collapse;font-size:11.5px}
+table.crmp-tbl thead th{background:var(--dark);color:#fff;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;padding:8px 8px;text-align:center;white-space:nowrap;position:sticky;top:0}
+table.crmp-tbl thead th.txt-left{text-align:left}
+table.crmp-tbl tbody td{padding:6px 8px;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap}
+table.crmp-tbl tbody td.txt-left{text-align:left;font-weight:600}
+table.crmp-tbl tbody tr:nth-child(even){background:var(--light)}
+table.crmp-tbl tbody tr:hover{background:#EEF6F5}
+.crmp-na-cell{color:#B0B4BC;font-style:italic;background:#FAFAFA!important}
+.crmp-zero-cell{color:var(--gray)}
+.crmp-linha-badge{font-size:9px;font-weight:800;padding:2px 8px;border-radius:10px;text-transform:uppercase}
+.crmp-linha-badge.nexus{background:var(--nexus-l);color:var(--nexus)}
+.crmp-linha-badge.vital{background:var(--red-l);color:var(--red)}
+.crmp-share-hi{color:var(--green);font-weight:800}
+.crmp-share-lo{color:var(--red-d);font-weight:700}
+.crmp-notes{background:#fff;border-radius:12px;padding:16px 20px;margin-top:16px;box-shadow:0 1px 8px rgba(0,0,0,.06)}
+.crmp-notes h3{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--gray);margin-bottom:8px}
+.crmp-notes li{font-size:11.5px;color:var(--gray);line-height:1.6;margin-left:16px;margin-bottom:4px}
 .diagevol-wrap{padding:24px 28px;max-width:1280px;margin:0 auto}
 .diagevol-hdr{display:flex;align-items:center;gap:14px;margin-bottom:24px;padding:16px 22px;background:#fff;border-radius:12px;box-shadow:0 1px 8px rgba(0,0,0,.07)}
 .diagevol-hdr-icon{font-size:28px}
@@ -1584,7 +1633,8 @@ function renderCycleBar(meses, mesAtual) {
   var isGap      = VIEW_ATUAL === 'gap';
   var isMatrix   = VIEW_ATUAL === 'matrix';
   var isDiagEvol = VIEW_ATUAL === 'diag-evol';
-  var nenhuma    = isAnual || isCota || isVisitas || isGloss || isGap || isMatrix || isDiagEvol;
+  var isCrm      = VIEW_ATUAL === 'crm';
+  var nenhuma    = isAnual || isCota || isVisitas || isGloss || isGap || isMatrix || isDiagEvol || isCrm;
   var btns = meses.map(function(m) {
     return '<button class="cycle-btn' + (m === mesAtual && !nenhuma ? ' active' : '') +
       '" onclick="trocarMes(\'' + m + '\')">' + m + '/2026</button>';
@@ -1597,7 +1647,7 @@ function renderCycleBar(meses, mesAtual) {
   btns += '<button class="cycle-btn mtz-btn'     + (isMatrix  ? ' active' : '') + '" onclick="abrirMatrizPerformance()">🎯 Matriz</button>';
   btns += '<button class="cycle-btn gloss-btn'    + (isGloss    ? ' active' : '') + '" onclick="abrirGlossario()">📖 Glossário</button>';
   btns += '<button class="cycle-btn diagevol-btn' + (isDiagEvol ? ' active' : '') + '" onclick="abrirEvolucaoDiag()">📊 Diag. Evolução</button>';
-  btns += '<button class="cycle-btn crm-btn" onclick="window.location.href=\'crm-chave.html\'">💊 CRM Chave</button>';
+  btns += '<button class="cycle-btn crm-btn' + (isCrm ? ' active' : '') + '" onclick="abrirCrmChave()">💊 CRM Chave</button>';
   bar.innerHTML = btns;
   atualizarVisibilidadeFiltroDistrito();
 }
@@ -4801,8 +4851,9 @@ async function trocarMes(mes) {
   var wasGloss   = VIEW_ATUAL === 'glossario';
   var wasGap     = VIEW_ATUAL === 'gap';
   var wasMatrix  = VIEW_ATUAL === 'matrix';
-  if (wasAnual || wasCota || wasVisitas || wasGloss || wasGap || wasMatrix) VIEW_ATUAL = 'principal';
-  if (MES_ATUAL === mes && !wasAnual && !wasCota && !wasVisitas && !wasGloss && !wasGap && !wasMatrix) return;
+  var wasCrm     = VIEW_ATUAL === 'crm';
+  if (wasAnual || wasCota || wasVisitas || wasGloss || wasGap || wasMatrix || wasCrm) VIEW_ATUAL = 'principal';
+  if (MES_ATUAL === mes && !wasAnual && !wasCota && !wasVisitas && !wasGloss && !wasGap && !wasMatrix && !wasCrm) return;
   MES_ATUAL = mes;
   DISTRITO_ATIVO = null;
 
@@ -4810,7 +4861,8 @@ async function trocarMes(mes) {
   document.querySelectorAll('.cycle-btn').forEach(function(btn){
     if (btn.classList.contains('anual-btn') || btn.classList.contains('cota-btn') ||
         btn.classList.contains('visitas-btn') || btn.classList.contains('gloss-btn') ||
-        btn.classList.contains('gap-btn') || btn.classList.contains('mtz-btn')) {
+        btn.classList.contains('gap-btn') || btn.classList.contains('mtz-btn') ||
+        btn.classList.contains('crm-btn')) {
       btn.classList.remove('active');
     } else {
       btn.classList.toggle('active', btn.textContent.startsWith(mes));
@@ -6180,6 +6232,273 @@ function renderGlossario() {
       sec.style.display = (q && !vis) ? 'none' : '';
     });
   });
+}
+
+// ══════════════════════════════════════════════════════════════════
+// CRM Chave — Prescrição
+// ══════════════════════════════════════════════════════════════════
+
+var CRM_TAB = 'crm_chave_prescricao';
+var CRM_NEXUS_MARCAS = ['CONCARDIO','LYBERDIA','OZIVY'];
+var CRM_VITAL_MARCAS = ['BUPIUM XL','LINADIB','LINADIB DUO','OZIVY'];
+var CRM_STATE = { registros: [], mesAtual: null, mesesDisp: [], filtroLinha: '', filtroGd: '', filtroBusca: '' };
+
+function crmFmtRx(v) {
+  var n = safeFloat(v);
+  return n === null ? '—' : n.toLocaleString('pt-BR');
+}
+function crmFmtShare(v) {
+  var n = safeFloat(v);
+  if (n === null) return '—';
+  return (n * 100).toLocaleString('pt-BR', {minimumFractionDigits:1, maximumFractionDigits:1}) + '%';
+}
+function crmShareClass(v) {
+  var n = safeFloat(v);
+  if (n === null) return '';
+  if (n >= 0.25) return 'crmp-share-hi';
+  if (n < 0.10) return 'crmp-share-lo';
+  return '';
+}
+
+function crmAgregarCards(registrosMes) {
+  var out = [];
+  [['NEXUS', CRM_NEXUS_MARCAS], ['VITAL', CRM_VITAL_MARCAS]].forEach(function(par) {
+    var linha = par[0], marcas = par[1];
+    marcas.forEach(function(marca) {
+      var regs = registrosMes.filter(function(r) { return r.linha === linha && r.marca === marca; });
+      var aplicaveis = regs.length;
+      var comShare = regs.filter(function(r) { return safeFloat(r.market_share) !== null; });
+      var somaRx = regs.reduce(function(a, r) { return a + (safeFloat(r.rx_mercado) || 0); }, 0);
+      var mediaShare = comShare.length
+        ? comShare.reduce(function(a, r) { return a + safeFloat(r.market_share); }, 0) / comShare.length
+        : null;
+      out.push({ linha: linha, marca: marca, aplicaveis: aplicaveis, comPrescricao: comShare.length, somaRx: somaRx, mediaShare: mediaShare });
+    });
+  });
+  return out;
+}
+
+function crmCardHtml(c, cardAnterior) {
+  var linhaCls = c.linha === 'NEXUS' ? 'nexus' : 'vital';
+  var penet = c.aplicaveis ? (c.comPrescricao / c.aplicaveis * 100) : 0;
+  var trendHtml = '<span class="crmp-mc-trend na">1º ciclo</span>';
+  if (cardAnterior && cardAnterior.mediaShare !== null && c.mediaShare !== null) {
+    var delta = c.mediaShare - cardAnterior.mediaShare;
+    var pp = (delta * 100).toFixed(1);
+    if (Math.abs(delta) < 0.001) trendHtml = '<span class="crmp-mc-trend flat">➖ estável</span>';
+    else if (delta > 0) trendHtml = '<span class="crmp-mc-trend up">▲ +' + pp + 'pp</span>';
+    else trendHtml = '<span class="crmp-mc-trend down">▼ ' + pp + 'pp</span>';
+  }
+  return '<div class="crmp-mc-card ' + linhaCls + '">' +
+    '<div class="crmp-mc-nome">' + c.marca + '</div>' +
+    '<div class="crmp-mc-row"><span>Market Share médio</span>' + trendHtml + '</div>' +
+    '<div class="crmp-mc-row"><b>' + crmFmtShare(c.mediaShare) + '</b></div>' +
+    '<div class="crmp-mc-row"><span>Rx Mercado (soma)</span><b>' + crmFmtRx(c.somaRx) + '</b></div>' +
+    '<div class="crmp-mc-row"><span>Médicos com prescrição</span><b>' + c.comPrescricao + ' / ' + c.aplicaveis + '</b></div>' +
+    '<div class="crmp-mc-foot">Penetração: ' + penet.toFixed(0) + '% dos médicos CRM Chave da marca têm prescrição mensurável no ciclo</div>' +
+  '</div>';
+}
+
+function crmMedicosPorLinhaGd(registrosMes) {
+  var porMedico = {};
+  registrosMes.forEach(function(r) {
+    if (!porMedico[r.crm]) porMedico[r.crm] = { linha: r.linha, gd: r.gd, nome: r.nome, crm: r.crm, marcas: {} };
+    porMedico[r.crm].marcas[r.marca] = r;
+  });
+  return Object.values(porMedico);
+}
+
+function crmListarGds(registrosMes, filtroLinha) {
+  var medicos = crmMedicosPorLinhaGd(registrosMes).filter(function(m) { return !filtroLinha || m.linha === filtroLinha; });
+  var set = {};
+  medicos.forEach(function(m) { if (m.gd) set[m.gd] = true; });
+  return Object.keys(set).sort();
+}
+
+function crmFiltrarPorLinhaGd(regs, filtroLinha, filtroGd) {
+  return regs.filter(function(r) {
+    if (filtroLinha && r.linha !== filtroLinha) return false;
+    if (filtroGd && r.gd !== filtroGd) return false;
+    return true;
+  });
+}
+
+function crmBuildTabelaHtml(registrosMes, filtroBusca) {
+  var medicos = crmMedicosPorLinhaGd(registrosMes).filter(function(m) {
+    if (filtroBusca) {
+      var q = filtroBusca.toLowerCase();
+      if (m.nome.toLowerCase().indexOf(q) === -1 && m.crm.toLowerCase().indexOf(q) === -1 && (m.gd||'').toLowerCase().indexOf(q) === -1) return false;
+    }
+    return true;
+  }).sort(function(a,b){ return (a.linha+a.gd+a.nome).localeCompare(b.linha+b.gd+b.nome); });
+
+  var todasMarcas = CRM_NEXUS_MARCAS.concat(CRM_VITAL_MARCAS.filter(function(m){ return CRM_NEXUS_MARCAS.indexOf(m) === -1; }));
+
+  var thead = '<tr><th class="txt-left">Linha</th><th class="txt-left">GD</th><th class="txt-left">Médico</th><th>CRM</th>';
+  todasMarcas.forEach(function(m) { thead += '<th colspan="2">' + m + '</th>'; });
+  thead += '</tr><tr><th></th><th></th><th></th><th></th>';
+  todasMarcas.forEach(function() { thead += '<th>Rx Mercado</th><th>Market Share</th>'; });
+  thead += '</tr>';
+
+  var linhaMarcas = { NEXUS: CRM_NEXUS_MARCAS, VITAL: CRM_VITAL_MARCAS };
+
+  var rows = medicos.map(function(m) {
+    var tr = '<tr><td><span class="crmp-linha-badge ' + (m.linha==='NEXUS'?'nexus':'vital') + '">' + m.linha + '</span></td>' +
+      '<td class="txt-left">' + (m.gd||'') + '</td><td class="txt-left">' + m.nome + '</td><td>' + m.crm + '</td>';
+    todasMarcas.forEach(function(marca) {
+      var aplicavel = linhaMarcas[m.linha].indexOf(marca) >= 0;
+      if (!aplicavel) {
+        tr += '<td class="crmp-na-cell">N/A</td><td class="crmp-na-cell">N/A</td>';
+      } else {
+        var r = m.marcas[marca];
+        var rx = r ? safeFloat(r.rx_mercado) : null;
+        var share = r ? r.market_share : null;
+        var rxCls = (rx === 0 || rx === null) ? 'crmp-zero-cell' : '';
+        tr += '<td class="' + rxCls + '">' + crmFmtRx(rx) + '</td>' +
+              '<td class="' + crmShareClass(share) + '">' + crmFmtShare(share) + '</td>';
+      }
+    });
+    tr += '</tr>';
+    return tr;
+  }).join('');
+
+  return { thead: thead, rows: rows, total: medicos.length };
+}
+
+function crmRenderPagina() {
+  var regMes = CRM_STATE.registros.filter(function(r) { return r.mes === CRM_STATE.mesAtual; });
+  var idxAtual = CRM_STATE.mesesDisp.indexOf(CRM_STATE.mesAtual);
+  var mesAnterior = idxAtual > 0 ? CRM_STATE.mesesDisp[idxAtual - 1] : null;
+  var regAnterior = mesAnterior ? CRM_STATE.registros.filter(function(r) { return r.mes === mesAnterior; }) : [];
+
+  var regMesF = crmFiltrarPorLinhaGd(regMes, CRM_STATE.filtroLinha, CRM_STATE.filtroGd);
+  var regAnteriorF = crmFiltrarPorLinhaGd(regAnterior, CRM_STATE.filtroLinha, CRM_STATE.filtroGd);
+
+  var cardsAtual = crmAgregarCards(regMesF);
+  var cardsAnterior = mesAnterior ? crmAgregarCards(regAnteriorF) : [];
+
+  var nMedicos = {}; regMesF.forEach(function(r){ nMedicos[r.crm]=1; });
+  var nMedicosCount = Object.keys(nMedicos).length;
+
+  var pageHdr =
+    '<div class="crmp-page-hdr">' +
+    '<button class="crmp-back-btn" onclick="irParaMes(MES_ATUAL)">← Voltar ao Dashboard</button>' +
+    '<div>' +
+      '<div style="font-size:16px;font-weight:800">💊 CRM Chave — Prescrição por Marca</div>' +
+      '<div style="font-size:11px;color:var(--gray);margin-top:2px">Regional SPI OESTE · Cardiometabólico · Rx Mercado &amp; Market Share dos médicos CRM Chave · ' + CRM_STATE.mesAtual + '/2026 · ' + nMedicosCount + ' médicos' + (CRM_STATE.filtroLinha || CRM_STATE.filtroGd ? ' (filtrado)' : '') + '</div>' +
+    '</div>' +
+    '</div>';
+
+  var mesBarHtml = '';
+  if (CRM_STATE.mesesDisp.length > 1) {
+    mesBarHtml = '<div class="crmp-mes-bar"><span class="crmp-mes-label">Ciclo:</span>' +
+      CRM_STATE.mesesDisp.map(function(m) {
+        return '<button class="crmp-mes-btn' + (m === CRM_STATE.mesAtual ? ' active' : '') + '" onclick="crmTrocarCiclo(\'' + m + '\')">' + m + '</button>';
+      }).join('') + '</div>';
+  }
+
+  var gdsDisponiveis = crmListarGds(regMes, CRM_STATE.filtroLinha);
+  if (CRM_STATE.filtroGd && gdsDisponiveis.indexOf(CRM_STATE.filtroGd) === -1) CRM_STATE.filtroGd = '';
+
+  var filtroBarHtml = '<div class="crmp-filtro-bar">' +
+    '<span class="crmp-filtro-label">Filtrar:</span>' +
+    '<select class="crmp-select" id="crm-filtro-linha">' +
+      '<option value=""' + (!CRM_STATE.filtroLinha ? ' selected' : '') + '>Todas as linhas</option>' +
+      '<option value="NEXUS"' + (CRM_STATE.filtroLinha==='NEXUS' ? ' selected' : '') + '>Nexus</option>' +
+      '<option value="VITAL"' + (CRM_STATE.filtroLinha==='VITAL' ? ' selected' : '') + '>Vital</option>' +
+    '</select>' +
+    '<select class="crmp-select" id="crm-filtro-gd">' +
+      '<option value="">Todos os GDs</option>' +
+      gdsDisponiveis.map(function(gd) { return '<option value="' + gd + '"' + (CRM_STATE.filtroGd===gd ? ' selected' : '') + '>' + gd + '</option>'; }).join('') +
+    '</select>' +
+    '<button class="crmp-clear-btn" id="crm-filtro-clear">Limpar filtro</button>' +
+  '</div>';
+
+  var temNexus = regMesF.some(function(r){ return r.linha === 'NEXUS'; });
+  var temVital = regMesF.some(function(r){ return r.linha === 'VITAL'; });
+
+  var cardsHtml = '';
+  if (temNexus) {
+    cardsHtml += '<div class="crmp-linha-hdr">🔵 NEXUS</div><div class="crmp-card-grid">' +
+      cardsAtual.filter(function(c){return c.linha==='NEXUS';}).map(function(c) {
+        var ant = cardsAnterior.filter(function(a){ return a.linha===c.linha && a.marca===c.marca; })[0];
+        return crmCardHtml(c, ant);
+      }).join('') + '</div>';
+  }
+  if (temVital) {
+    cardsHtml += '<div class="crmp-linha-hdr">🔴 VITAL</div><div class="crmp-card-grid">' +
+      cardsAtual.filter(function(c){return c.linha==='VITAL';}).map(function(c) {
+        var ant = cardsAnterior.filter(function(a){ return a.linha===c.linha && a.marca===c.marca; })[0];
+        return crmCardHtml(c, ant);
+      }).join('') + '</div>';
+  }
+  if (!temNexus && !temVital) {
+    cardsHtml += '<div style="padding:24px;text-align:center;color:var(--gray);font-size:12px;background:#fff;border-radius:12px">Nenhum médico para esse filtro.</div>';
+  }
+
+  var tbl = crmBuildTabelaHtml(regMesF, CRM_STATE.filtroBusca);
+  var tblHtml = '<div class="crmp-tbl-wrap">' +
+    '<div class="crmp-tbl-hdr-bar">' +
+      '<h2>📋 Detalhe por médico</h2>' +
+      '<input class="crmp-tbl-search" id="crm-busca-input" placeholder="Buscar médico, CRM ou GD…">' +
+      '<span class="crmp-tbl-count">' + tbl.total + ' médicos</span>' +
+    '</div>' +
+    '<div style="overflow-x:auto"><table class="crmp-tbl"><thead>' + tbl.thead + '</thead><tbody>' + tbl.rows + '</tbody></table></div>' +
+  '</div>';
+
+  var notesHtml = '<div class="crmp-notes"><h3>Notas metodológicas</h3><ul>' +
+    '<li>Fonte: Power BI Raio X, página "Prescrição | Análise de Performance". Mês de referência dos dados: ' + CRM_STATE.mesAtual + '/2026 (mês fechado no Power BI no momento da extração).</li>' +
+    '<li>Colunas de marca populadas por linha: todo médico Nexus recebe CONCARDIO, LYBERDIA e OZIVY; todo médico Vital recebe BUPIUM XL, LINADIB, LINADIB DUO e OZIVY — não pelas marcas individuais do cadastro original de CRM Chave.</li>' +
+    '<li>"N/A" (cinza) = marca não é chave para a linha do médico. Rx Mercado = 0/— = marca aplicável, mas o médico não aparece na base de prescrição desse mercado no período (sem volume mensurável).</li>' +
+    '<li>LINADIB (sem DUO): a consulta nacional do Power BI excede o tempo limite (recursos excedidos, 90s) de forma consistente. Extração feita com filtro UGN = SPI — não afeta a cobertura dos 92 médicos (todos da SPI OESTE), mas esse dado específico não é estritamente comparável em metodologia às demais marcas (nacionais, sem filtro de UGN).</li>' +
+    '<li>LINADIB e LINADIB DUO têm volume de Rx Mercado muito baixo por médico (1 a 2 prescrições no período em vários casos) — os Market Share de 100% que aparecem nesses casos refletem essa base pequena (o médico só teve 1 prescrição no mercado, e foi nossa), não necessariamente domínio real de mercado. Tratar como sinal fraco até acumular mais ciclos.</li>' +
+  '</ul></div>';
+
+  document.getElementById('main-content').innerHTML =
+    '<div class="crmp-wrap">' + pageHdr + mesBarHtml + filtroBarHtml + cardsHtml + tblHtml + notesHtml + '</div>';
+
+  document.getElementById('crm-filtro-linha').onchange = function() { CRM_STATE.filtroLinha = this.value; CRM_STATE.filtroGd = ''; crmRenderPagina(); };
+  document.getElementById('crm-filtro-gd').onchange = function() { CRM_STATE.filtroGd = this.value; crmRenderPagina(); };
+  document.getElementById('crm-filtro-clear').onclick = function() { CRM_STATE.filtroLinha = ''; CRM_STATE.filtroGd = ''; CRM_STATE.filtroBusca = ''; crmRenderPagina(); };
+  document.getElementById('crm-busca-input').value = CRM_STATE.filtroBusca;
+  document.getElementById('crm-busca-input').oninput = function() { CRM_STATE.filtroBusca = this.value; crmRenderPagina(); };
+}
+
+function crmTrocarCiclo(mes) {
+  CRM_STATE.mesAtual = mes;
+  crmRenderPagina();
+}
+
+async function abrirCrmChave() {
+  VIEW_ATUAL = 'crm';
+  DISTRITO_ATIVO = null;
+  var meses = CONFIG._meses || [];
+  renderCycleBar(meses, null);
+  mostrarLoading(true);
+  try {
+    setLoadingTxt('Carregando CRM Chave…');
+    var registros = CRM_STATE.registros.length ? CRM_STATE.registros : await fetchAba(CRM_TAB);
+    if (!registros.length) {
+      document.getElementById('main-content').innerHTML =
+        '<div class="crmp-wrap"><div class="error-card"><div class="error-icon">🗓️</div>' +
+        '<div class="error-title">Ainda não há dados publicados</div>' +
+        '<div class="error-sub">A aba <code>' + CRM_TAB + '</code> ainda não existe ou está vazia no Sheets. Rode a ingestão mensal de CRM Chave (<code>python scripts/ingest.py --crm-chave --mes MES</code>) para publicar o primeiro ciclo.</div></div></div>';
+    } else {
+      CRM_STATE.registros = registros;
+      var mesesSet = {};
+      registros.forEach(function(r) { mesesSet[r.mes] = true; });
+      var todosMeses = ["JAN","FEV","MAR","ABR","MAI","JUN","JUL","AGO","SET","OUT","NOV","DEZ"];
+      CRM_STATE.mesesDisp = Object.keys(mesesSet).sort(function(a,b){ return todosMeses.indexOf(a) - todosMeses.indexOf(b); });
+      if (!CRM_STATE.mesAtual || CRM_STATE.mesesDisp.indexOf(CRM_STATE.mesAtual) === -1) {
+        CRM_STATE.mesAtual = CRM_STATE.mesesDisp[CRM_STATE.mesesDisp.length - 1];
+      }
+      crmRenderPagina();
+    }
+  } catch(e) {
+    renderErro(e.message);
+  }
+  mostrarLoading(false);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 init();
