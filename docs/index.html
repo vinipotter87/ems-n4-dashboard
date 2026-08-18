@@ -1597,7 +1597,7 @@ function renderCycleBar(meses, mesAtual) {
   btns += '<button class="cycle-btn mtz-btn'     + (isMatrix  ? ' active' : '') + '" onclick="abrirMatrizPerformance()">🎯 Matriz</button>';
   btns += '<button class="cycle-btn gloss-btn'    + (isGloss    ? ' active' : '') + '" onclick="abrirGlossario()">📖 Glossário</button>';
   btns += '<button class="cycle-btn diagevol-btn' + (isDiagEvol ? ' active' : '') + '" onclick="abrirEvolucaoDiag()">📊 Diag. Evolução</button>';
-  btns += '<button class="cycle-btn crm-btn" onclick="window.open(\'crm-chave.html\',\'_blank\')">💊 CRM Chave</button>';
+  btns += '<button class="cycle-btn crm-btn" onclick="window.location.href=\'crm-chave.html\'">💊 CRM Chave</button>';
   bar.innerHTML = btns;
   atualizarVisibilidadeFiltroDistrito();
 }
