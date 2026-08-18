@@ -424,6 +424,9 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
 /* ── Evolução Diagnóstico ── */
 .cycle-btn.diagevol-btn{border-color:#d97706;color:#d97706}
 .cycle-btn.diagevol-btn.active{background:#fffbeb;border-color:#d97706;color:#b45309}
+/* ── CRM Chave — Prescrição (atalho externo) ── */
+.cycle-btn.crm-btn{border-color:#0d9488;color:#0d9488}
+.cycle-btn.crm-btn:hover{background:#f0fdfa}
 .diagevol-wrap{padding:24px 28px;max-width:1280px;margin:0 auto}
 .diagevol-hdr{display:flex;align-items:center;gap:14px;margin-bottom:24px;padding:16px 22px;background:#fff;border-radius:12px;box-shadow:0 1px 8px rgba(0,0,0,.07)}
 .diagevol-hdr-icon{font-size:28px}
@@ -1594,6 +1597,7 @@ function renderCycleBar(meses, mesAtual) {
   btns += '<button class="cycle-btn mtz-btn'     + (isMatrix  ? ' active' : '') + '" onclick="abrirMatrizPerformance()">🎯 Matriz</button>';
   btns += '<button class="cycle-btn gloss-btn'    + (isGloss    ? ' active' : '') + '" onclick="abrirGlossario()">📖 Glossário</button>';
   btns += '<button class="cycle-btn diagevol-btn' + (isDiagEvol ? ' active' : '') + '" onclick="abrirEvolucaoDiag()">📊 Diag. Evolução</button>';
+  btns += '<button class="cycle-btn crm-btn" onclick="window.open(\'crm-chave.html\',\'_blank\')">💊 CRM Chave</button>';
   bar.innerHTML = btns;
   atualizarVisibilidadeFiltroDistrito();
 }
