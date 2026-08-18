@@ -6,6 +6,7 @@ Uso:
     python scripts/ingest.py --mes ABR --force       (sobrescreve abas existentes)
     python scripts/ingest.py --jornada               (atualiza a jornada da evolução)
     python scripts/ingest.py --mes ABR --jornada     (faz tudo junto)
+    python scripts/ingest.py --crm-chave --mes JUL   (publica Rx Mercado/Market Share do CRM Chave)
 """
 
 import os, sys, json, argparse, io
@@ -1088,6 +1089,131 @@ def escrever_aba(gc, sh, nome_aba: str, dados: list[dict], force: bool):
     print(f"  ✓ Aba '{nome_aba}': {len(dados)} registros escritos")
 
 
+def anexar_aba_por_mes(gc, sh, nome_aba: str, dados: list[dict], mes: str, force: bool = True):
+    """
+    Escreve dados de um mês numa aba de série histórica (long format), preservando
+    os dados dos outros meses já gravados — diferente de escrever_aba, que sobrescreve
+    a aba inteira. Usado por abas tipo crm_chave_prescricao, que acumulam ciclo a ciclo
+    em vez de ter uma aba nova por mês.
+
+    Reexecutar para o mesmo --mes é idempotente: as linhas antigas desse mês são
+    substituídas pelas novas, sem duplicar.
+    """
+    import gspread
+
+    if not dados:
+        print(f"  ⚠  Sem dados para '{nome_aba}' ({mes})")
+        return
+
+    headers = list(dados[0].keys())
+
+    try:
+        ws = sh.worksheet(nome_aba)
+        existentes = ws.get_all_records()
+    except gspread.WorksheetNotFound:
+        ws = sh.add_worksheet(title=nome_aba, rows=2000, cols=max(20, len(headers) + 2))
+        existentes = []
+
+    # Mantém registros de outros meses, descarta os do mês atual (idempotência)
+    mantidos = [r for r in existentes if str(r.get("mes", "")).upper() != mes.upper()]
+
+    linhas = [headers] + [[str(row.get(h, "")) for h in headers] for row in mantidos] + \
+             [[str(row.get(h, "")) for h in headers] for row in dados]
+    ws.clear()
+    ws.update(linhas)
+    print(f"  ✓ Aba '{nome_aba}': {len(dados)} registros de {mes} gravados "
+          f"({len(mantidos)} de outros meses preservados, total {len(mantidos) + len(dados)})")
+
+
+def processar_crm_chave_prescricao(mes: str, regional: str = "SPI") -> list:
+    """
+    Junta os exports por marca do Power BI Raio X (Prescrição | Análise de Performance)
+    com o cadastro de médicos CRM Chave (config/crm_chave_medicos.json), produzindo
+    Rx Mercado e Market Share EMS por marca-chave, para cada médico CRM Chave.
+
+    Espera os exports em inputs_powerbi/crm_chave_rx/{MARCA}_{MES}.xlsx — um arquivo por
+    marca, exportado da tabela "Médico | Nome - CRM - Espec." do Raio X, sem filtro de
+    UGN (nacional), EXCETO LINADIB (sem DUO), que tende a estourar o tempo limite de
+    consulta do Power BI (recursos excedidos, 90s) — nesse caso, aplicar filtro
+    GDU > UGN = SPI antes de exportar (não afeta a cobertura dos médicos CRM Chave,
+    todos da SPI OESTE, mas deixa esse dado específico não estritamente comparável
+    em metodologia às demais marcas).
+
+    Colunas de marca por linha (fixo — não são as marcas individuais do cadastro
+    original de CRM Chave):
+      NEXUS: CONCARDIO, LYBERDIA, OZIVY
+      VITAL: BUPIUM XL, LINADIB, LINADIB DUO, OZIVY
+    """
+    import re
+
+    import openpyxl
+
+    registro_path = ROOT / "config" / "crm_chave_medicos.json"
+    if not registro_path.exists():
+        print(f"❌ {registro_path} não encontrado — rode a extração do CRM Chave (Stage 1) antes.")
+        return []
+    with open(registro_path, encoding="utf-8") as f:
+        medicos = json.load(f)
+
+    NEXUS_MARCAS = ["CONCARDIO", "LYBERDIA", "OZIVY"]
+    VITAL_MARCAS = ["BUPIUM XL", "LINADIB", "LINADIB DUO", "OZIVY"]
+    MARCA_SLUG = {
+        "CONCARDIO": "CONCARDIO", "LYBERDIA": "LYBERDIA", "OZIVY": "OZIVY",
+        "BUPIUM XL": "BUPIUM_XL", "LINADIB": "LINADIB", "LINADIB DUO": "LINADIB_DUO",
+    }
+    marcas_todas = NEXUS_MARCAS + [m for m in VITAL_MARCAS if m not in NEXUS_MARCAS]
+
+    crm_re = re.compile(r"^(.*?) - ([A-Z]{2}\d+) - (.*)$")
+    pasta_rx = ROOT / "inputs_powerbi" / "crm_chave_rx"
+
+    lookups: dict[str, dict[str, tuple]] = {}
+    for marca in marcas_todas:
+        caminho = pasta_rx / f"{MARCA_SLUG[marca]}_{mes.upper()}.xlsx"
+        if not caminho.exists():
+            print(f"  ⚠  {caminho.name} não encontrado — {marca} ficará sem dado neste ciclo (não é zero, é 'não extraído')")
+            lookups[marca] = None
+            continue
+        wb = openpyxl.load_workbook(caminho, data_only=True)
+        ws = wb.active
+        lookup = {}
+        for row in ws.iter_rows(min_row=2, values_only=True):
+            nome_crm_esp = row[0]
+            if not nome_crm_esp:
+                continue
+            m = crm_re.match(str(nome_crm_esp).strip())
+            if not m:
+                continue
+            lookup[m.group(2)] = (row[3], row[4])  # (rx_mercado, market_share)
+        lookups[marca] = lookup
+        print(f"  → {marca}: {len(lookup)} médicos na base nacional/regional do Power BI")
+
+    def marcas_da_linha(linha):
+        return NEXUS_MARCAS if linha == "NEXUS" else VITAL_MARCAS
+
+    registros = []
+    for d in medicos:
+        for marca in marcas_da_linha(d["linha"]):
+            lookup = lookups.get(marca)
+            if lookup is None:
+                rx, share = None, None
+            else:
+                entry = lookup.get(d["crm"])
+                rx, share = entry if entry else (0, None)
+            registros.append({
+                "mes":          mes.upper(),
+                "linha":        d["linha"],
+                "gd":           d["gd"],
+                "nome":         d["nome"],
+                "crm":          d["crm"],
+                "marca":        marca,
+                "rx_mercado":   rx if rx is not None else "",
+                "market_share": share if share is not None else "",
+            })
+
+    print(f"  ✓ CRM Chave — Prescrição {mes}: {len(registros)} registros ({len(medicos)} médicos)")
+    return registros
+
+
 def atualizar_config_aba(gc, sh, mes: str, aba: str = "config", regional_label: str = "SPI OESTE"):
     import gspread
     from datetime import datetime
@@ -1215,14 +1341,15 @@ def main():
     parser.add_argument("--jornada",      action="store_true",   help="Atualizar Jornada da Evolução")
     parser.add_argument("--pex",          action="store_true",   help="Ingerir PEX mensal")
     parser.add_argument("--visitas",      action="store_true",   help="Ingerir Visitas GD")
+    parser.add_argument("--crm-chave",    action="store_true",   dest="crm_chave", help="Ingerir CRM Chave — Prescricao por Marca (Rx Mercado/Market Share)")
     parser.add_argument("--produto-only", action="store_true",   dest="produto_only",
                         help="Ingere apenas produto (sem Produtividade). Cria stubs de distritos/reps com nomes do mês.")
     parser.add_argument("--regional",     choices=["SPI", "LESTE"], default="SPI",
                         help="Regional a ingerir com --mes (default: SPI OESTE). LESTE ingere só Produtividade → abas *_LESTE_{mes}.")
     args = parser.parse_args()
 
-    if not args.mes and not args.jornada and not args.pex and not args.visitas:
-        parser.error("Informe --mes, --jornada, --pex ou combinações.")
+    if not args.mes and not args.jornada and not args.pex and not args.visitas and not args.crm_chave:
+        parser.error("Informe --mes, --jornada, --pex, --visitas, --crm-chave ou combinações.")
 
     gc, sh = conectar_sheets()
 
@@ -1495,6 +1622,21 @@ def main():
             if not processado:
                 print(f"  ⚠  Nenhum arquivo de Visitas {mes} encontrado — ignorando")
             print(f"\n✅ Visitas GD {mes} concluído.\n")
+
+    # ════════════════════════════════════════════════════════
+    #  CRM CHAVE — PRESCRIÇÃO POR MARCA
+    # ════════════════════════════════════════════════════════
+    if args.crm_chave:
+        if not args.mes:
+            parser.error("--crm-chave requer --mes (ex: --crm-chave --mes JUL)")
+        mes = args.mes.upper()
+        print(f"\n══ CRM CHAVE — PRESCRIÇÃO {mes}/2026 ══\n")
+        crm_data = processar_crm_chave_prescricao(mes)
+        if crm_data:
+            anexar_aba_por_mes(gc, sh, "crm_chave_prescricao", crm_data, mes)
+            print(f"✅ CRM Chave {mes} publicado na aba 'crm_chave_prescricao'.\n")
+        else:
+            print(f"❌ Nenhum dado gerado para CRM Chave {mes} — verifique config/crm_chave_medicos.json e inputs_powerbi/crm_chave_rx/.\n")
 
 
 if __name__ == "__main__":

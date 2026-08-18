@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>EMS | CRM Chave — Prescrição</title>
+<style>
+:root{--red:#C8102E;--red-d:#8B0B1F;--red-l:#fce8ec;--orange:#E87722;--orange-l:#FFF3E0;
+--nexus:#1A3A6B;--nexus-l:#EEF2FA;--green:#15693A;--green-l:#E8F5EE;--yellow:#9C6D00;--yellow-l:#FFF7E0;
+--dark:#111827;--gray:#6B7280;--light:#F3F4F6;--border:#E5E7EB;--white:#FFFFFF}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark);min-height:100vh}
+.hdr{background:linear-gradient(135deg,#0f766e,#0d9488 55%,#14b8a6);position:sticky;top:0;z-index:200;box-shadow:0 2px 16px rgba(0,0,0,.25)}
+.hdr-inner{display:flex;align-items:center;padding:12px 28px;gap:16px;flex-wrap:wrap}
+.logo{background:#fff;padding:4px 10px;border-radius:6px;font-size:20px;font-weight:900;color:#0d9488;letter-spacing:-1px}
+.hdr-sep{width:1px;height:36px;background:rgba(255,255,255,.2)}
+.hdr-text h1{color:#fff;font-size:15px;font-weight:700}
+.hdr-text p{color:rgba(255,255,255,.65);font-size:11px;margin-top:2px}
+.hdr-pills{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap;align-items:center}
+.hpill{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600}
+.hpill.hi{background:#fff;color:#0d9488}
+.mes-bar{display:flex;gap:6px;padding:10px 28px;background:#fff;border-bottom:1px solid var(--border);flex-wrap:wrap;align-items:center}
+.mes-bar-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray);margin-right:6px}
+.filtro-bar{display:flex;gap:10px;padding:12px 28px;background:#fff;border-bottom:1px solid var(--border);flex-wrap:wrap;align-items:center}
+.filtro-bar-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)}
+.filtro-bar .tbl-select{min-width:160px}
+.filtro-clear{font-size:11px;font-weight:700;color:var(--gray);background:none;border:none;cursor:pointer;text-decoration:underline}
+.mes-btn{padding:5px 14px;border-radius:16px;border:1.5px solid var(--border);background:#fff;font-size:12px;font-weight:700;color:var(--gray);cursor:pointer}
+.mes-btn.active{background:#0d9488;border-color:#0d9488;color:#fff}
+.main{padding:22px 28px;max-width:1440px;margin:0 auto}
+
+.loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,.92);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+.loading-spinner{width:48px;height:48px;border:4px solid #ccfbf1;border-top:4px solid #0d9488;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-txt{font-size:14px;font-weight:600;color:var(--gray)}
+
+.error-card{background:#fff;border-radius:12px;padding:28px;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,.08)}
+.error-icon{font-size:32px;margin-bottom:10px}
+.error-title{font-size:15px;font-weight:800;margin-bottom:6px}
+.error-sub{font-size:13px;color:var(--gray)}
+
+.linha-hdr{font-size:13px;font-weight:800;display:flex;align-items:center;gap:10px;margin:26px 0 12px;padding-bottom:8px;border-bottom:2px solid var(--border)}
+.linha-hdr:first-child{margin-top:0}
+.card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+.mc-card{background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.08);padding:16px 18px;border-top:3px solid var(--border)}
+.mc-card.nexus{border-top-color:var(--nexus)}
+.mc-card.vital{border-top-color:var(--red)}
+.mc-card-nome{font-size:13px;font-weight:800;color:var(--dark);margin-bottom:10px}
+.mc-stat-row{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:var(--gray);margin-bottom:4px}
+.mc-stat-row b{font-size:15px;color:var(--dark);font-weight:800}
+.mc-trend{font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:10px}
+.mc-trend.up{background:var(--green-l);color:var(--green)}
+.mc-trend.down{background:var(--red-l);color:var(--red)}
+.mc-trend.flat{background:var(--light);color:var(--gray)}
+.mc-trend.na{background:var(--light);color:var(--gray)}
+.mc-foot{font-size:10.5px;color:var(--gray);margin-top:10px;padding-top:8px;border-top:1px solid var(--border)}
+
+.tbl-wrap{background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.08);overflow:hidden;margin-top:8px}
+.tbl-hdr-bar{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.tbl-hdr-bar h2{font-size:13px;font-weight:800}
+.tbl-select{padding:5px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;font-weight:600;font-family:inherit;color:var(--dark);background:#fff;cursor:pointer}
+.tbl-search{padding:5px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;font-family:inherit;min-width:200px}
+.tbl-count{margin-left:auto;font-size:11px;color:var(--gray);font-weight:600}
+table.crm-tbl{width:100%;border-collapse:collapse;font-size:11.5px}
+table.crm-tbl thead th{background:var(--dark);color:#fff;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;padding:8px 8px;text-align:center;white-space:nowrap;position:sticky;top:0}
+table.crm-tbl thead th.txt-left{text-align:left}
+table.crm-tbl tbody td{padding:6px 8px;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap}
+table.crm-tbl tbody td.txt-left{text-align:left;font-weight:600}
+table.crm-tbl tbody tr:nth-child(even){background:var(--light)}
+table.crm-tbl tbody tr:hover{background:#EEF6F5}
+.na-cell{color:#B0B4BC;font-style:italic;background:#FAFAFA!important}
+.zero-cell{color:var(--gray)}
+.linha-badge{font-size:9px;font-weight:800;padding:2px 8px;border-radius:10px;text-transform:uppercase}
+.linha-badge.nexus{background:var(--nexus-l);color:var(--nexus)}
+.linha-badge.vital{background:var(--red-l);color:var(--red)}
+.share-hi{color:var(--green);font-weight:800}
+.share-lo{color:var(--red-d);font-weight:700}
+
+.notes{background:#fff;border-radius:12px;padding:16px 20px;margin-top:16px;box-shadow:0 1px 8px rgba(0,0,0,.06)}
+.notes h3{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--gray);margin-bottom:8px}
+.notes li{font-size:11.5px;color:var(--gray);line-height:1.6;margin-left:16px;margin-bottom:4px}
+
+.preview-tag{position:fixed;bottom:16px;right:16px;background:#111827;color:#fff;font-size:11px;font-weight:700;padding:8px 14px;border-radius:20px;box-shadow:0 4px 16px rgba(0,0,0,.25);z-index:600}
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loading">
+  <div class="loading-spinner"></div>
+  <div class="loading-txt" id="loading-txt">Carregando CRM Chave…</div>
+</div>
+
+<div class="hdr">
+  <div class="hdr-inner">
+    <div class="logo">EMS</div>
+    <div class="hdr-sep"></div>
+    <div class="hdr-text">
+      <h1>💊 CRM Chave — Prescrição por Marca</h1>
+      <p>Regional SPI OESTE · Cardiometabólico · Rx Mercado &amp; Market Share dos médicos CRM Chave</p>
+    </div>
+    <div class="hdr-pills">
+      <span class="hpill hi" id="pill-mes">—</span>
+      <span class="hpill" id="pill-medicos">—</span>
+    </div>
+  </div>
+</div>
+
+<div class="mes-bar" id="mes-bar" style="display:none">
+  <span class="mes-bar-label">Ciclo:</span>
+  <div id="mes-btns"></div>
+</div>
+
+<div class="filtro-bar" id="filtro-bar">
+  <span class="filtro-bar-label">Filtrar:</span>
+  <select class="tbl-select" id="filtro-linha-sel">
+    <option value="">Todas as linhas</option>
+    <option value="NEXUS">Nexus</option>
+    <option value="VITAL">Vital</option>
+  </select>
+  <select class="tbl-select" id="filtro-gd-sel">
+    <option value="">Todos os GDs</option>
+  </select>
+  <button class="filtro-clear" id="filtro-clear-btn">Limpar filtro</button>
+</div>
+
+<div class="main" id="main-content"></div>
+
+<script id="preview-data" type="application/json">__PREVIEW_DATA__</script>
+<script>
+var CONFIG = {};
+var TAB_NAME = 'crm_chave_prescricao';
+var TODOS_MESES = ["JAN","FEV","MAR","ABR","MAI","JUN","JUL","AGO","SET","OUT","NOV","DEZ"];
+
+var NEXUS_MARCAS = ['CONCARDIO','LYBERDIA','OZIVY'];
+var VITAL_MARCAS = ['BUPIUM XL','LINADIB','LINADIB DUO','OZIVY'];
+
+function sheetsUrl(aba) {
+  return 'https://sheets.googleapis.com/v4/spreadsheets/' + CONFIG.spreadsheet_id +
+    '/values/' + encodeURIComponent(aba) + '?key=' + CONFIG.api_key;
+}
+
+async function fetchAba(aba, tentativa) {
+  tentativa = tentativa || 0;
+  var res = await fetch(sheetsUrl(aba), { cache: 'no-store' });
+  if (res.status === 429 && tentativa < 6) {
+    var espera = 500 * Math.pow(1.8, tentativa) + Math.random() * 400;
+    await new Promise(function(r) { setTimeout(r, espera); });
+    return fetchAba(aba, tentativa + 1);
+  }
+  if (!res.ok) throw new Error('Erro ao buscar aba: ' + aba + ' (' + res.status + ')');
+  var json = await res.json();
+  var rows = json.values || [];
+  if (rows.length < 2) return [];
+  var headers = rows[0];
+  return rows.slice(1).map(function(row) {
+    var obj = {};
+    headers.forEach(function(h, i) { obj[h] = row[i] !== undefined ? row[i] : null; });
+    return obj;
+  });
+}
+
+function numOrNull(v) {
+  if (v === null || v === undefined || v === '') return null;
+  var f = parseFloat(v);
+  return isNaN(f) ? null : f;
+}
+
+function fmtRx(v) {
+  var n = numOrNull(v);
+  return n === null ? '—' : n.toLocaleString('pt-BR');
+}
+
+function fmtShare(v) {
+  var n = numOrNull(v);
+  if (n === null) return '—';
+  return (n * 100).toLocaleString('pt-BR', {minimumFractionDigits:1, maximumFractionDigits:1}) + '%';
+}
+
+function shareClass(v) {
+  var n = numOrNull(v);
+  if (n === null) return '';
+  if (n >= 0.25) return 'share-hi';
+  if (n < 0.10) return 'share-lo';
+  return '';
+}
+
+// ── Agregação por linha/marca para os cards ─────────────────────────────
+
+function agregarCards(registrosMes) {
+  var out = [];
+  [['NEXUS', NEXUS_MARCAS], ['VITAL', VITAL_MARCAS]].forEach(function(par) {
+    var linha = par[0], marcas = par[1];
+    marcas.forEach(function(marca) {
+      var regs = registrosMes.filter(function(r) { return r.linha === linha && r.marca === marca; });
+      var aplicaveis = regs.length;
+      var comShare = regs.filter(function(r) { return numOrNull(r.market_share) !== null; });
+      var somaRx = regs.reduce(function(a, r) { return a + (numOrNull(r.rx_mercado) || 0); }, 0);
+      var mediaShare = comShare.length
+        ? comShare.reduce(function(a, r) { return a + numOrNull(r.market_share); }, 0) / comShare.length
+        : null;
+      out.push({
+        linha: linha, marca: marca, aplicaveis: aplicaveis,
+        comPrescricao: comShare.length, somaRx: somaRx, mediaShare: mediaShare
+      });
+    });
+  });
+  return out;
+}
+
+function cardHtml(c, cardAnterior) {
+  var linhaCls = c.linha === 'NEXUS' ? 'nexus' : 'vital';
+  var penet = c.aplicaveis ? (c.comPrescricao / c.aplicaveis * 100) : 0;
+  var trendHtml = '<span class="mc-trend na">1º ciclo</span>';
+  if (cardAnterior && cardAnterior.mediaShare !== null && c.mediaShare !== null) {
+    var delta = c.mediaShare - cardAnterior.mediaShare;
+    var pp = (delta * 100).toFixed(1);
+    if (Math.abs(delta) < 0.001) trendHtml = '<span class="mc-trend flat">➖ estável</span>';
+    else if (delta > 0) trendHtml = '<span class="mc-trend up">▲ +' + pp + 'pp</span>';
+    else trendHtml = '<span class="mc-trend down">▼ ' + pp + 'pp</span>';
+  }
+  return '<div class="mc-card ' + linhaCls + '">' +
+    '<div class="mc-card-nome">' + c.marca + '</div>' +
+    '<div class="mc-stat-row"><span>Market Share médio</span>' + trendHtml + '</div>' +
+    '<div class="mc-stat-row"><b>' + fmtShare(c.mediaShare) + '</b></div>' +
+    '<div class="mc-stat-row"><span>Rx Mercado (soma)</span><b>' + fmtRx(c.somaRx) + '</b></div>' +
+    '<div class="mc-stat-row"><span>Médicos com prescrição</span><b>' + c.comPrescricao + ' / ' + c.aplicaveis + '</b></div>' +
+    '<div class="mc-foot">Penetração: ' + penet.toFixed(0) + '% dos médicos CRM Chave da marca têm prescrição mensurável no ciclo</div>' +
+  '</div>';
+}
+
+// ── Tabela detalhada ─────────────────────────────────────────────────
+
+function medicosPorLinhaGd(registrosMes) {
+  var porMedico = {};
+  registrosMes.forEach(function(r) {
+    if (!porMedico[r.crm]) porMedico[r.crm] = { linha: r.linha, gd: r.gd, nome: r.nome, crm: r.crm, marcas: {} };
+    porMedico[r.crm].marcas[r.marca] = r;
+  });
+  return Object.values(porMedico);
+}
+
+function listarGds(registrosMes, filtroLinha) {
+  var medicos = medicosPorLinhaGd(registrosMes).filter(function(m) {
+    return !filtroLinha || m.linha === filtroLinha;
+  });
+  var set = {};
+  medicos.forEach(function(m) { if (m.gd) set[m.gd] = true; });
+  return Object.keys(set).sort();
+}
+
+function buildTabelaHtml(registrosMes, filtroBusca) {
+  var medicos = medicosPorLinhaGd(registrosMes).filter(function(m) {
+    if (filtroBusca) {
+      var q = filtroBusca.toLowerCase();
+      if (m.nome.toLowerCase().indexOf(q) === -1 && m.crm.toLowerCase().indexOf(q) === -1 && (m.gd||'').toLowerCase().indexOf(q) === -1) return false;
+    }
+    return true;
+  }).sort(function(a,b){ return (a.linha+a.gd+a.nome).localeCompare(b.linha+b.gd+b.nome); });
+
+  var todasMarcas = NEXUS_MARCAS.concat(VITAL_MARCAS.filter(function(m){ return NEXUS_MARCAS.indexOf(m) === -1; }));
+
+  var thead = '<tr><th class="txt-left">Linha</th><th class="txt-left">GD</th><th class="txt-left">Médico</th><th>CRM</th>';
+  todasMarcas.forEach(function(m) { thead += '<th colspan="2">' + m + '</th>'; });
+  thead += '</tr><tr><th></th><th></th><th></th><th></th>';
+  todasMarcas.forEach(function() { thead += '<th>Rx Mercado</th><th>Market Share</th>'; });
+  thead += '</tr>';
+
+  var linhaMarcas = { NEXUS: NEXUS_MARCAS, VITAL: VITAL_MARCAS };
+
+  var rows = medicos.map(function(m) {
+    var tr = '<tr><td><span class="linha-badge ' + (m.linha==='NEXUS'?'nexus':'vital') + '">' + m.linha + '</span></td>' +
+      '<td class="txt-left">' + (m.gd||'') + '</td><td class="txt-left">' + m.nome + '</td><td>' + m.crm + '</td>';
+    todasMarcas.forEach(function(marca) {
+      var aplicavel = linhaMarcas[m.linha].indexOf(marca) >= 0;
+      if (!aplicavel) {
+        tr += '<td class="na-cell">N/A</td><td class="na-cell">N/A</td>';
+      } else {
+        var r = m.marcas[marca];
+        var rx = r ? numOrNull(r.rx_mercado) : null;
+        var share = r ? r.market_share : null;
+        var rxCls = (rx === 0 || rx === null) ? 'zero-cell' : '';
+        tr += '<td class="' + rxCls + '">' + fmtRx(rx) + '</td>' +
+              '<td class="' + shareClass(share) + '">' + fmtShare(share) + '</td>';
+      }
+    });
+    tr += '</tr>';
+    return tr;
+  }).join('');
+
+  return { thead: thead, rows: rows, total: medicos.length };
+}
+
+// ── Render principal ─────────────────────────────────────────────────
+
+var STATE = { registros: [], mesAtual: null, mesesDisp: [], filtroLinha: '', filtroGd: '', filtroBusca: '' };
+
+function filtrarPorLinhaGd(regs, filtroLinha, filtroGd) {
+  return regs.filter(function(r) {
+    if (filtroLinha && r.linha !== filtroLinha) return false;
+    if (filtroGd && r.gd !== filtroGd) return false;
+    return true;
+  });
+}
+
+function renderFiltroBar(regMes) {
+  var gdsDisponiveis = listarGds(regMes, STATE.filtroLinha);
+  if (STATE.filtroGd && gdsDisponiveis.indexOf(STATE.filtroGd) === -1) STATE.filtroGd = '';
+
+  var linhaSel = document.getElementById('filtro-linha-sel');
+  linhaSel.value = STATE.filtroLinha;
+  linhaSel.onchange = function() { STATE.filtroLinha = this.value; STATE.filtroGd = ''; renderPagina(); };
+
+  var gdSel = document.getElementById('filtro-gd-sel');
+  gdSel.innerHTML = '<option value="">Todos os GDs</option>' +
+    gdsDisponiveis.map(function(gd) { return '<option value="' + gd + '">' + gd + '</option>'; }).join('');
+  gdSel.value = STATE.filtroGd;
+  gdSel.onchange = function() { STATE.filtroGd = this.value; renderPagina(); };
+
+  document.getElementById('filtro-clear-btn').onclick = function() {
+    STATE.filtroLinha = ''; STATE.filtroGd = ''; STATE.filtroBusca = ''; renderPagina();
+  };
+}
+
+function renderPagina() {
+  var regMes = STATE.registros.filter(function(r) { return r.mes === STATE.mesAtual; });
+  var idxAtual = STATE.mesesDisp.indexOf(STATE.mesAtual);
+  var mesAnterior = idxAtual > 0 ? STATE.mesesDisp[idxAtual - 1] : null;
+  var regAnterior = mesAnterior ? STATE.registros.filter(function(r) { return r.mes === mesAnterior; }) : [];
+
+  renderFiltroBar(regMes);
+
+  var regMesF = filtrarPorLinhaGd(regMes, STATE.filtroLinha, STATE.filtroGd);
+  var regAnteriorF = filtrarPorLinhaGd(regAnterior, STATE.filtroLinha, STATE.filtroGd);
+
+  var cardsAtual = agregarCards(regMesF);
+  var cardsAnterior = mesAnterior ? agregarCards(regAnteriorF) : [];
+
+  document.getElementById('pill-mes').textContent = STATE.mesAtual ? (STATE.mesAtual + '/2026') : '—';
+  var nMedicos = {}; regMesF.forEach(function(r){ nMedicos[r.crm]=1; });
+  document.getElementById('pill-medicos').textContent = Object.keys(nMedicos).length + ' médicos CRM Chave' +
+    (STATE.filtroLinha || STATE.filtroGd ? ' (filtrado)' : '');
+
+  var temNexus = regMesF.some(function(r){ return r.linha === 'NEXUS'; });
+  var temVital = regMesF.some(function(r){ return r.linha === 'VITAL'; });
+
+  var html = '';
+  if (temNexus) {
+    html += '<div class="linha-hdr">🔵 NEXUS</div><div class="card-grid">' +
+      cardsAtual.filter(function(c){return c.linha==='NEXUS';}).map(function(c) {
+        var ant = cardsAnterior.filter(function(a){ return a.linha===c.linha && a.marca===c.marca; })[0];
+        return cardHtml(c, ant);
+      }).join('') + '</div>';
+  }
+  if (temVital) {
+    html += '<div class="linha-hdr">🔴 VITAL</div><div class="card-grid">' +
+      cardsAtual.filter(function(c){return c.linha==='VITAL';}).map(function(c) {
+        var ant = cardsAnterior.filter(function(a){ return a.linha===c.linha && a.marca===c.marca; })[0];
+        return cardHtml(c, ant);
+      }).join('') + '</div>';
+  }
+  if (!temNexus && !temVital) {
+    html += '<div class="tend-empty" style="padding:24px;text-align:center;color:var(--gray);font-size:12px;background:#fff;border-radius:12px">Nenhum médico para esse filtro.</div>';
+  }
+
+  var tbl = buildTabelaHtml(regMesF, STATE.filtroBusca);
+  html += '<div class="tbl-wrap">' +
+    '<div class="tbl-hdr-bar">' +
+      '<h2>📋 Detalhe por médico</h2>' +
+      '<input class="tbl-search" id="busca-input" placeholder="Buscar médico, CRM ou GD…">' +
+      '<span class="tbl-count">' + tbl.total + ' médicos</span>' +
+    '</div>' +
+    '<div style="overflow-x:auto"><table class="crm-tbl"><thead>' + tbl.thead + '</thead><tbody>' + tbl.rows + '</tbody></table></div>' +
+  '</div>';
+
+  html += '<div class="notes"><h3>Notas metodológicas</h3><ul>' +
+    '<li>Fonte: Power BI Raio X, página "Prescrição | Análise de Performance". Mês de referência dos dados: ' + STATE.mesAtual + '/2026 (mês fechado no Power BI no momento da extração).</li>' +
+    '<li>Colunas de marca populadas por linha: todo médico Nexus recebe CONCARDIO, LYBERDIA e OZIVY; todo médico Vital recebe BUPIUM XL, LINADIB, LINADIB DUO e OZIVY — não pelas marcas individuais do cadastro original de CRM Chave.</li>' +
+    '<li>"N/A" (cinza) = marca não é chave para a linha do médico. Rx Mercado = 0/— = marca aplicável, mas o médico não aparece na base de prescrição desse mercado no período (sem volume mensurável).</li>' +
+    '<li>LINADIB (sem DUO): a consulta nacional do Power BI excede o tempo limite (recursos excedidos, 90s) de forma consistente. Extração feita com filtro UGN = SPI — não afeta a cobertura dos 92 médicos (todos da SPI OESTE), mas esse dado específico não é estritamente comparável em metodologia às demais marcas (nacionais, sem filtro de UGN).</li>' +
+    '<li>LINADIB e LINADIB DUO têm volume de Rx Mercado muito baixo por médico (1 a 2 prescrições no período em vários casos) — os Market Share de 100% que aparecem nesses casos refletem essa base pequena (o médico só teve 1 prescrição no mercado, e foi nossa), não necessariamente domínio real de mercado. Tratar como sinal fraco até acumular mais ciclos.</li>' +
+  '</ul></div>';
+
+  document.getElementById('main-content').innerHTML = html;
+
+  document.getElementById('busca-input').value = STATE.filtroBusca;
+  document.getElementById('busca-input').oninput = function() { STATE.filtroBusca = this.value; renderPagina(); };
+}
+
+function renderMesBar() {
+  if (STATE.mesesDisp.length < 2) return;
+  document.getElementById('mes-bar').style.display = 'flex';
+  var btns = document.getElementById('mes-btns');
+  btns.innerHTML = STATE.mesesDisp.map(function(m) {
+    return '<button class="mes-btn' + (m === STATE.mesAtual ? ' active' : '') + '" data-mes="' + m + '">' + m + '</button>';
+  }).join('');
+  Array.prototype.forEach.call(btns.querySelectorAll('.mes-btn'), function(b) {
+    b.onclick = function() { STATE.mesAtual = b.getAttribute('data-mes'); renderMesBar(); renderPagina(); };
+  });
+}
+
+function renderErro(msg) {
+  document.getElementById('main-content').innerHTML =
+    '<div class="error-card"><div class="error-icon">⚠️</div>' +
+    '<div class="error-title">Erro ao carregar dados</div>' +
+    '<div class="error-sub">' + (msg || 'Verifique a conexão e as configurações.') + '</div></div>';
+}
+
+function mostrarLoading(show) { document.getElementById('loading').style.display = show ? 'flex' : 'none'; }
+function setLoadingTxt(txt) { document.getElementById('loading-txt').textContent = txt; }
+
+async function init() {
+  mostrarLoading(true);
+  try {
+    var previewEl = document.getElementById('preview-data');
+    var previewRaw = previewEl ? previewEl.textContent.trim() : '';
+    var registros;
+
+    if (previewRaw && previewRaw !== '__PREVIEW_DATA__') {
+      registros = JSON.parse(previewRaw);
+      document.body.insertAdjacentHTML('beforeend', '<div class="preview-tag">⚠ PRÉVIA — dados fixos, ainda não publicado</div>');
+    } else {
+      setLoadingTxt('Carregando configuração…');
+      var res = await fetch('config.json?t=' + Date.now(), { cache: 'no-store' });
+      if (!res.ok) throw new Error('config.json não encontrado.');
+      CONFIG = await res.json();
+      if (!CONFIG.spreadsheet_id || !CONFIG.api_key) throw new Error('SPREADSHEET_ID ou API_KEY não configurados em config.json.');
+      setLoadingTxt('Carregando CRM Chave…');
+      try {
+        registros = await fetchAba(TAB_NAME);
+      } catch (eAba) {
+        registros = [];
+      }
+    }
+
+    if (!registros.length) {
+      document.getElementById('main-content').innerHTML =
+        '<div class="error-card"><div class="error-icon">🗓️</div>' +
+        '<div class="error-title">Ainda não há dados publicados</div>' +
+        '<div class="error-sub">A aba <code>' + TAB_NAME + '</code> ainda não existe ou está vazia no Sheets. Rode a ingestão mensal de CRM Chave (<code>python scripts/ingest.py --crm-chave --mes MES</code>) para publicar o primeiro ciclo.</div></div>';
+      mostrarLoading(false);
+      return;
+    }
+
+    STATE.registros = registros;
+    var mesesSet = {};
+    registros.forEach(function(r) { mesesSet[r.mes] = true; });
+    STATE.mesesDisp = Object.keys(mesesSet).sort(function(a,b){ return TODOS_MESES.indexOf(a) - TODOS_MESES.indexOf(b); });
+    STATE.mesAtual = STATE.mesesDisp[STATE.mesesDisp.length - 1];
+
+    renderMesBar();
+    renderPagina();
+  } catch (e) {
+    renderErro(e.message);
+  }
+  mostrarLoading(false);
+}
+
+init();
+</script>
+</body>
+</html>
