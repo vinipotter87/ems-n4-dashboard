@@ -1536,14 +1536,14 @@ async function abrirVisitasGD() {
 // automático (Sheets/ingest.py) — atualização mensal é manual até lá.
 
 var FREQ_DIST = [
-  {gd:"Joao Rafael de Franca Nunes Leardini", regional:"SPI", linha:"NEXUS", setores:8, painel:2042, f0:49, f20:42, f40:111, f60:250, f80:511, f100:1079, cob:77.9},
-  {gd:"Murillo Cesar Barbosa dos Santos", regional:"SPI", linha:"NEXUS", setores:9, painel:2286, f0:132, f20:145, f40:219, f60:235, f80:420, f100:1135, cob:68.0},
-  {gd:"Geovana Buttignon", regional:"SPI", linha:"NEXUS", setores:8, painel:1965, f0:185, f20:106, f40:198, f60:368, f80:407, f100:701, cob:56.4},
-  {gd:"Vanessa Araujo Ferreira Lima", regional:"SPI", linha:"NEXUS", setores:7, painel:1674, f0:296, f20:34, f40:112, f60:286, f80:309, f100:637, cob:56.5},
-  {gd:"Fabiano Atanazio Machado", regional:"SPI", linha:"VITAL", setores:8, painel:2060, f0:44, f20:74, f40:150, f60:235, f80:455, f100:1102, cob:75.6},
-  {gd:"Daniel Antonio Costa", regional:"SPI", linha:"VITAL", setores:9, painel:2256, f0:37, f20:122, f40:212, f60:199, f80:461, f100:1225, cob:74.7},
-  {gd:"Matheus Landulpho Allonso", regional:"SPI", linha:"VITAL", setores:8, painel:2054, f0:329, f20:169, f40:306, f60:362, f80:359, f100:529, cob:43.2},
-  {gd:"Michael Aparecido da Silva Mota", regional:"SPI", linha:"VITAL", setores:7, painel:1744, f0:58, f20:59, f40:139, f60:305, f80:491, f100:692, cob:67.8}
+  {gd:"Joao Rafael de Franca Nunes Leardini", distrito_id:"110301000", regional:"SPI", linha:"NEXUS", setores:8, painel:2042, f0:49, f20:42, f40:111, f60:250, f80:511, f100:1079, cob:77.9},
+  {gd:"Murillo Cesar Barbosa dos Santos", distrito_id:"110302000", regional:"SPI", linha:"NEXUS", setores:9, painel:2286, f0:132, f20:145, f40:219, f60:235, f80:420, f100:1135, cob:68.0},
+  {gd:"Geovana Buttignon", distrito_id:"110303000", regional:"SPI", linha:"NEXUS", setores:8, painel:1965, f0:185, f20:106, f40:198, f60:368, f80:407, f100:701, cob:56.4},
+  {gd:"Vanessa Araujo Ferreira Lima", distrito_id:"110304000", regional:"SPI", linha:"NEXUS", setores:7, painel:1674, f0:296, f20:34, f40:112, f60:286, f80:309, f100:637, cob:56.5},
+  {gd:"Fabiano Atanazio Machado", distrito_id:"116301000", regional:"SPI", linha:"VITAL", setores:8, painel:2060, f0:44, f20:74, f40:150, f60:235, f80:455, f100:1102, cob:75.6},
+  {gd:"Daniel Antonio Costa", distrito_id:"116302000", regional:"SPI", linha:"VITAL", setores:9, painel:2256, f0:37, f20:122, f40:212, f60:199, f80:461, f100:1225, cob:74.7},
+  {gd:"Matheus Landulpho Allonso", distrito_id:"116303000", regional:"SPI", linha:"VITAL", setores:8, painel:2054, f0:329, f20:169, f40:306, f60:362, f80:359, f100:529, cob:43.2},
+  {gd:"Michael Aparecido da Silva Mota", distrito_id:"116304000", regional:"SPI", linha:"VITAL", setores:7, painel:1744, f0:58, f20:59, f40:139, f60:305, f80:491, f100:692, cob:67.8}
 ];
 
 var FREQ_SETORES_RAW = `11030101|Lucas Marchi Grossi|NEXUS|SPI|252|8|5|19|23|64|133|78
@@ -1632,8 +1632,9 @@ function renderFrequenciaDistTable(dist) {
   html += '<th class="th-gd">GD / Distrito</th><th>Setores</th><th>Painel</th><th>Freq 0</th><th>Freq 20</th><th>Freq 40</th><th>Freq 60</th><th>Freq 80</th><th>Freq 100</th><th>Cobertura</th>';
   html += '</tr></thead><tbody>';
   ['NEXUS', 'VITAL'].forEach(function(linha) {
-    html += '<tr class="row-sep"><td colspan="10">' + (linha === 'NEXUS' ? '🔵 NEXUS' : '🔴 VITAL') + '</td></tr>';
     var rows = dist.filter(function(d) { return d.linha === linha; });
+    if (!rows.length) return; // linha ausente com filtro de distrito ativo — não mostra grupo vazio
+    html += '<tr class="row-sep"><td colspan="10">' + (linha === 'NEXUS' ? '🔵 NEXUS' : '🔴 VITAL') + '</td></tr>';
     var tot = {setores:0, painel:0, f0:0, f20:0, f40:0, f60:0, f80:0, f100:0};
     rows.forEach(function(d) {
       html += '<tr class="' + (linha === 'NEXUS' ? 'row-nexus' : 'row-vital') + '">';
@@ -1678,8 +1679,12 @@ function toggleFrequenciaSetores(btn) {
 
 function renderFrequencia() {
   VIEW_ATUAL = 'frequencia';
-  var dist = FREQ_DIST;
-  var raw  = FREQ_SETORES_RAW;
+  var prefixo = DISTRITO_FILTRO ? DISTRITO_FILTRO.substring(0, 6) : null;
+  var dist = prefixo ? FREQ_DIST.filter(function(d) { return d.distrito_id && d.distrito_id.substring(0, 6) === prefixo; }) : FREQ_DIST;
+  var rawLinhas = FREQ_SETORES_RAW.trim().split('\n');
+  if (prefixo) rawLinhas = rawLinhas.filter(function(l) { return l.split('|')[0].substring(0, 6) === prefixo; });
+  var raw = rawLinhas.join('\n');
+  var gdFiltrado = prefixo && dist.length ? dist[0].gd : null;
 
   var tot = {painel:0, f80:0, f100:0, setores:0};
   dist.forEach(function(d) { tot.painel += d.painel; tot.f80 += d.f80; tot.f100 += d.f100; tot.setores += d.setores; });
@@ -1693,17 +1698,18 @@ function renderFrequencia() {
   html += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">';
   html += '<h2 style="margin:0;font-size:17px;font-weight:700;color:var(--text)">🩺 Frequência de Visitação Médica</h2>';
   html += '<span style="font-size:12px;background:#e0f2fe;color:#0369a1;padding:3px 10px;border-radius:20px;font-weight:600">AGO/2026</span>';
+  if (gdFiltrado) html += '<span style="font-size:12px;background:#fef3c7;color:#92400e;padding:3px 10px;border-radius:20px;font-weight:600">🎯 ' + gdFiltrado + '</span>';
   html += '</div>';
 
   html += '<div class="visitas-kpi-grid">';
   html += kpiCard('Cobertura de Frequência', cobGeral.toFixed(1).replace('.', ',') + '%', 'Freq 80 + Freq 100 ÷ Painel', 'hi');
   html += kpiCard('Frequência Painel', freqFmt(tot.painel), 'médicos no painel ativo', 'hi');
   html += kpiCard('Frequência Realizado', freqFmt(tot.f80 + tot.f100), 'visitas no ciclo (Freq 80+100)', 'hi');
-  html += kpiCard('Qtde. Setores', tot.setores, dist.length + ' distritos', 'hi');
+  html += kpiCard('Qtde. Setores', tot.setores, dist.length + (dist.length === 1 ? ' distrito' : ' distritos'), 'hi');
   html += '</div>';
 
   html += '<div class="visitas-chart-wrap">';
-  html += '<h3>📋 Frequência por Distrito (GD)</h3>';
+  html += '<h3>📋 Frequência por Distrito (GD)' + (gdFiltrado ? ' — ' + gdFiltrado : '') + '</h3>';
   html += '<p style="font-size:11px;color:var(--gray);margin:0 0 12px">Cobertura = (Freq 80 + Freq 100) ÷ Painel &nbsp;·&nbsp; ';
   html += '<span style="display:inline-block;width:10px;height:10px;background:#22c55e;border-radius:2px;margin-right:4px"></span>≥75%&nbsp;&nbsp;';
   html += '<span style="display:inline-block;width:10px;height:10px;background:#f59e0b;border-radius:2px;margin-right:4px"></span>50–74%&nbsp;&nbsp;';
@@ -1714,9 +1720,9 @@ function renderFrequencia() {
   html += '<div class="visitas-chart-wrap">';
   html += '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">';
   html += '<h3 style="margin:0">🔎 Detalhamento por Setor (' + tot.setores + ' setores)</h3>';
-  html += '<button onclick="toggleFrequenciaSetores(this)" style="padding:6px 14px;border-radius:8px;border:2px solid var(--border);background:#fff;font-size:11px;font-weight:700;cursor:pointer;color:var(--brand);font-family:inherit">Mostrar detalhamento por setor</button>';
+  html += '<button onclick="toggleFrequenciaSetores(this)" style="padding:6px 14px;border-radius:8px;border:2px solid var(--border);background:#fff;font-size:11px;font-weight:700;cursor:pointer;color:var(--brand);font-family:inherit">' + (gdFiltrado ? 'Ocultar detalhamento por setor' : 'Mostrar detalhamento por setor') + '</button>';
   html += '</div>';
-  html += '<div id="freq-setor-wrap" style="display:none;margin-top:12px">' + renderFrequenciaSetorTable(raw) + '</div>';
+  html += '<div id="freq-setor-wrap" style="display:' + (gdFiltrado ? 'block' : 'none') + ';margin-top:12px">' + renderFrequenciaSetorTable(raw) + '</div>';
   html += '</div>';
 
   html += '<p style="font-size:11px;color:var(--gray);margin-top:6px;line-height:1.5">';
@@ -1735,6 +1741,7 @@ function abrirFrequencia() {
   var meses = (CONFIG && CONFIG._meses && CONFIG._meses.length) ? CONFIG._meses : [MES_ATUAL];
   renderCycleBar(meses, MES_ATUAL);
   renderFrequencia();
+  atualizarVisibilidadeFiltroDistrito();
 }
 
 // ── Filtro por distrito (topo da página) ───────────────────────────
@@ -1796,6 +1803,15 @@ function renderDistritoFiltroBar(distritos) {
 
 function aplicarFiltroDistrito(distritoId) {
   DISTRITO_FILTRO = distritoId || null;
+
+  // Na Frequência, o filtro não navega pra página principal — ela mesma
+  // se restringe ao distrito selecionado, mantendo a view atual.
+  if (VIEW_ATUAL === 'frequencia') {
+    renderFrequencia();
+    atualizarVisibilidadeFiltroDistrito();
+    return;
+  }
+
   var dados = DADOS_CACHE[MES_ATUAL];
   if (!dados) return;
 
@@ -1828,7 +1844,7 @@ function abrirDetalheDoFiltroAtivo() {
 
 function atualizarVisibilidadeFiltroDistrito() {
   var bar = document.getElementById('distrito-filtro-bar');
-  if (bar) bar.style.display = (VIEW_ATUAL === 'principal') ? 'flex' : 'none';
+  if (bar) bar.style.display = (VIEW_ATUAL === 'principal' || VIEW_ATUAL === 'frequencia') ? 'flex' : 'none';
 }
 
 // ── Renderização: Mês ─────────────────────────────────────────────
@@ -1852,8 +1868,8 @@ function renderCycleBar(meses, mesAtual) {
   btns += '<span style="display:inline-block;width:1px;height:22px;background:var(--border);margin:0 6px;align-self:center"></span>';
   btns += '<button class="cycle-btn anual-btn'   + (isAnual   ? ' active' : '') + '" onclick="abrirVisaoAnual()">📅 Visão Anual</button>';
   btns += '<button class="cycle-btn cota-btn'    + (isCota    ? ' active' : '') + '" onclick="abrirEvolucaoCota()">📈 Cota</button>';
-  btns += '<button class="cycle-btn visitas-btn' + (isVisitas ? ' active' : '') + '" onclick="abrirVisitasGD()">👁 Visitas GD</button>';
   btns += '<button class="cycle-btn freq-btn'    + (isFreq    ? ' active' : '') + '" onclick="abrirFrequencia()">🩺 Frequência</button>';
+  btns += '<button class="cycle-btn visitas-btn' + (isVisitas ? ' active' : '') + '" onclick="abrirVisitasGD()">👁 Visitas GD</button>';
   btns += '<button class="cycle-btn gap-btn'     + (isGap     ? ' active' : '') + '" onclick="abrirGapAnalise()">🔍 Gap & Outliers</button>';
   btns += '<button class="cycle-btn mtz-btn'     + (isMatrix  ? ' active' : '') + '" onclick="abrirMatrizPerformance()">🎯 Matriz</button>';
   btns += '<button class="cycle-btn gloss-btn'    + (isGloss    ? ' active' : '') + '" onclick="abrirGlossario()">📖 Glossário</button>';
@@ -5063,8 +5079,9 @@ async function trocarMes(mes) {
   var wasGap     = VIEW_ATUAL === 'gap';
   var wasMatrix  = VIEW_ATUAL === 'matrix';
   var wasCrm     = VIEW_ATUAL === 'crm';
-  if (wasAnual || wasCota || wasVisitas || wasGloss || wasGap || wasMatrix || wasCrm) VIEW_ATUAL = 'principal';
-  if (MES_ATUAL === mes && !wasAnual && !wasCota && !wasVisitas && !wasGloss && !wasGap && !wasMatrix && !wasCrm) return;
+  var wasFreq    = VIEW_ATUAL === 'frequencia';
+  if (wasAnual || wasCota || wasVisitas || wasGloss || wasGap || wasMatrix || wasCrm || wasFreq) VIEW_ATUAL = 'principal';
+  if (MES_ATUAL === mes && !wasAnual && !wasCota && !wasVisitas && !wasGloss && !wasGap && !wasMatrix && !wasCrm && !wasFreq) return;
   MES_ATUAL = mes;
   DISTRITO_ATIVO = null;
 
@@ -5073,7 +5090,7 @@ async function trocarMes(mes) {
     if (btn.classList.contains('anual-btn') || btn.classList.contains('cota-btn') ||
         btn.classList.contains('visitas-btn') || btn.classList.contains('gloss-btn') ||
         btn.classList.contains('gap-btn') || btn.classList.contains('mtz-btn') ||
-        btn.classList.contains('crm-btn')) {
+        btn.classList.contains('crm-btn') || btn.classList.contains('freq-btn')) {
       btn.classList.remove('active');
     } else {
       btn.classList.toggle('active', btn.textContent.startsWith(mes));
