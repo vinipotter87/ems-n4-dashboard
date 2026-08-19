@@ -1528,6 +1528,215 @@ async function abrirVisitasGD() {
   finally    { mostrarLoading(false); }
 }
 
+// ── Frequência de Visitação Médica ──────────────────────────────
+// Fonte: Power BI "Velos - Produtividade EMS" (Médico → Frequência).
+// Snapshot manual do ciclo AGO/2026 — export nativo do relatório está
+// desabilitado pela organização; extração feita via leitura direta da
+// tabela (ver nota no rodapé da seção). Ainda não plugado ao pipeline
+// automático (Sheets/ingest.py) — atualização mensal é manual até lá.
+
+var FREQ_DIST = [
+  {gd:"Joao Rafael de Franca Nunes Leardini", regional:"SPI", linha:"NEXUS", setores:8, painel:2042, f0:49, f20:42, f40:111, f60:250, f80:511, f100:1079, cob:77.9},
+  {gd:"Murillo Cesar Barbosa dos Santos", regional:"SPI", linha:"NEXUS", setores:9, painel:2286, f0:132, f20:145, f40:219, f60:235, f80:420, f100:1135, cob:68.0},
+  {gd:"Geovana Buttignon", regional:"SPI", linha:"NEXUS", setores:8, painel:1965, f0:185, f20:106, f40:198, f60:368, f80:407, f100:701, cob:56.4},
+  {gd:"Vanessa Araujo Ferreira Lima", regional:"SPI", linha:"NEXUS", setores:7, painel:1674, f0:296, f20:34, f40:112, f60:286, f80:309, f100:637, cob:56.5},
+  {gd:"Fabiano Atanazio Machado", regional:"SPI", linha:"VITAL", setores:8, painel:2060, f0:44, f20:74, f40:150, f60:235, f80:455, f100:1102, cob:75.6},
+  {gd:"Daniel Antonio Costa", regional:"SPI", linha:"VITAL", setores:9, painel:2256, f0:37, f20:122, f40:212, f60:199, f80:461, f100:1225, cob:74.7},
+  {gd:"Matheus Landulpho Allonso", regional:"SPI", linha:"VITAL", setores:8, painel:2054, f0:329, f20:169, f40:306, f60:362, f80:359, f100:529, cob:43.2},
+  {gd:"Michael Aparecido da Silva Mota", regional:"SPI", linha:"VITAL", setores:7, painel:1744, f0:58, f20:59, f40:139, f60:305, f80:491, f100:692, cob:67.8}
+];
+
+var FREQ_SETORES_RAW = `11030101|Lucas Marchi Grossi|NEXUS|SPI|252|8|5|19|23|64|133|78
+11030102|Camila de Souza Lage|NEXUS|SPI|231|0|4|17|30|61|119|78
+11030103|Daniele Argenta Kresta|NEXUS|SPI|273|6|7|15|26|49|170|80
+11030105|Andre Luiz Soares de Moraes|NEXUS|SPI|245|9|12|12|38|70|104|71
+11030106|Gustavo Soncin Rodrigues Teixeira|NEXUS|SPI|252|0|2|8|31|51|160|84
+11030107|Natalia Silva Pile|NEXUS|SPI|264|13|6|16|53|91|85|67
+11030108|Ali Mouhanna|NEXUS|SPI|273|12|3|10|30|78|140|80
+11030109|Grazielli Borges de Freitas|NEXUS|SPI|252|1|3|14|19|47|168|85
+11030201|Isabela Fernanda Moreira|NEXUS|SPI|247|9|15|16|28|61|118|72
+11030202|Cezar Rogerio Henrique Junior|NEXUS|SPI|240|3|13|11|29|63|121|77
+11030203|Harley Dias de Oliveira|NEXUS|SPI|247|3|3|16|31|42|152|79
+11030204|Waldemar Ruza Neto|NEXUS|SPI|256|0|5|18|18|57|158|84
+11030206|Eduarda Vazarin Biancho|NEXUS|SPI|276|97|52|44|8|0|75|27
+11030207|Leticia Rodrigues dos Santos|NEXUS|SPI|254|2|12|13|12|56|159|85
+11030208|Thaislane Beatriz Cardoso Borges|NEXUS|SPI|248|2|5|14|23|59|145|82
+11030209|Talita Juliana Morais dos Santos|NEXUS|SPI|248|0|0|6|12|50|180|93
+11030210|Sinara Leibnitz|NEXUS|SPI|270|16|40|81|74|32|27|22
+11030301|Rafael Moraes Pontes|NEXUS|SPI|266|12|42|74|105|8|25|12
+11030302|Gabriela Benini de Oliveira Correa|NEXUS|SPI|255|4|4|11|29|61|146|81
+11030303|Grazielle Fernanda Fascina|NEXUS|SPI|227|10|6|17|24|46|124|75
+11030304|Leticia Jessica Amoedo de Souza|NEXUS|SPI|239|6|3|17|31|102|80|76
+11030305|Gabriela Italia Sartori|NEXUS|SPI|265|6|13|33|51|46|116|61
+11030306|Bianca Freitas Borja Chaves|NEXUS|SPI|241|13|4|24|87|83|30|47
+11030307|Evandro Gomes Da Silva|NEXUS|SPI|225|122|30|4|9|0|60|27
+11030308|Anaisa Marchiori Moretto|NEXUS|SPI|247|12|4|18|32|61|120|73
+11030401|Amanda Nogueira|NEXUS|SPI|226|3|2|8|20|45|148|85
+11030402|Karla Marques de Oliveira|NEXUS|SPI|240|0|6|13|41|57|123|75
+11030403|Thiago Henrique Soares Alonso|NEXUS|SPI|242|34|21|52|135|0|0|0
+11030404|Maria Fernanda Silva E Silva|NEXUS|SPI|254|9|3|14|46|65|117|72
+11030405|Paulo Henrique Silva|NEXUS|SPI|225|2|2|9|16|70|126|87
+11030407|Filipe Pereira Vicente|NEXUS|SPI|254|15|0|16|28|72|123|77
+11030408|Luan de Melo Souza|NEXUS|SPI|233|233|0|0|0|0|0|0
+11630101|Lucas Caserta|VITAL|SPI|251|0|1|5|20|35|190|90
+11630102|Lucia Maria da Silva Rosa Ernandes|VITAL|SPI|253|3|9|14|18|48|161|83
+11630103|Elouise Batisti de Souza Palma|VITAL|SPI|254|0|10|19|34|45|146|75
+11630105|Wesley Alves Trindade|VITAL|SPI|271|15|11|24|55|87|79|61
+11630106|Andre Vessoni Ferri|VITAL|SPI|255|10|5|7|20|51|162|84
+11630107|Isabella Fernanda de Oliveira Moreira|VITAL|SPI|252|5|16|27|24|47|133|71
+11630108|Renato Lopes de Souza|VITAL|SPI|253|4|14|20|19|57|139|77
+11630109|Adriely Rebecchi Ferreira|VITAL|SPI|271|7|8|34|45|85|92|65
+11630201|Janaina Aparecida Sertori|VITAL|SPI|246|0|3|9|29|60|145|83
+11630202|Denise Miyuri Thomaz Wakabayashi|VITAL|SPI|241|0|5|7|40|65|124|78
+11630203|Luis Fernando Alves Verissimo|VITAL|SPI|249|0|4|7|23|62|153|86
+11630204|Mirella Leao Alves Lima|VITAL|SPI|246|0|10|12|21|59|144|83
+11630206|Aline de Jesus Munhoz|VITAL|SPI|263|28|87|137|1|1|9|4
+11630207|Natalia Lopes Ferreira|VITAL|SPI|257|0|1|17|26|64|149|83
+11630208|Flavia Luciana Braga Rocha|VITAL|SPI|252|0|0|4|24|58|166|89
+11630209|Walter de Oliveira Nery|VITAL|SPI|250|0|2|9|17|33|189|89
+11630210|Julio Cesar Daibert Filho|VITAL|SPI|252|9|10|10|18|59|146|81
+11630301|Lazara Alexandra Duarte Mariano|VITAL|SPI|268|0|9|14|36|77|132|78
+11630302|Brian Cavalcanti Silva|VITAL|SPI|252|8|7|33|53|73|78|60
+11630303|VAGO|VITAL|SPI|259|259|0|0|0|0|0|0
+11630304|Natalia Fernandes|VITAL|SPI|257|10|15|82|150|0|0|0
+11630305|Renan Registro Reis|VITAL|SPI|252|1|121|130|0|0|0|0
+11630306|Soraia Vieira Scheufen|VITAL|SPI|244|22|4|6|28|50|134|75
+11630307|Talita Carvalho de Sousa Santos|VITAL|SPI|266|24|0|16|63|94|69|61
+11630308|Francine Caroline Souza dos Santos|VITAL|SPI|256|5|13|25|32|65|116|71
+11630401|VAGO|VITAL|SPI|245|2|6|23|54|80|80|65
+11630402|Bruna Peixoto Vargas|VITAL|SPI|239|3|9|29|53|76|69|61
+11630403|Milena Palmira Matielo Marques|VITAL|SPI|231|1|2|6|27|85|110|84
+11630404|Mariane Fleming Araujo|VITAL|SPI|276|40|31|37|58|53|57|40
+11630405|Milton Pereira da Silva Junior|VITAL|SPI|263|7|9|18|52|72|105|67
+11630407|Maria Leticia Reis Casemiro|VITAL|SPI|257|1|2|11|48|76|119|76
+11630408|Eduardo de Souza Lima|VITAL|SPI|233|4|0|15|13|49|152|86`;
+
+function freqCls(v) {
+  if (v === null || isNaN(v)) return '';
+  if (v >= 75) return 'crm-pct ok';
+  if (v >= 50) return 'crm-pct warn';
+  return 'crm-pct crit';
+}
+function freqBarHtml(v) {
+  var clsFill = (v === null || isNaN(v)) ? 'crit' : (v >= 75 ? 'ok' : (v >= 50 ? 'warn' : 'crit'));
+  var w = (v !== null && !isNaN(v)) ? Math.min(100, Math.max(0, v)) : 0;
+  return '<span class="crm-bar-wrap"><span class="crm-bar-fill ' + clsFill + '" style="width:' + w + '%"></span></span>';
+}
+function freqPctHtml(v) {
+  return '<span class="' + freqCls(v) + '">' + v.toFixed(1).replace('.', ',') + '%</span> ' + freqBarHtml(v);
+}
+function freqFmt(n) { return n.toLocaleString('pt-BR'); }
+
+function renderFrequenciaDistTable(dist) {
+  var html = '<div class="visitas-table-wrap"><table class="visitas-table"><thead><tr>';
+  html += '<th class="th-gd">GD / Distrito</th><th>Setores</th><th>Painel</th><th>Freq 0</th><th>Freq 20</th><th>Freq 40</th><th>Freq 60</th><th>Freq 80</th><th>Freq 100</th><th>Cobertura</th>';
+  html += '</tr></thead><tbody>';
+  ['NEXUS', 'VITAL'].forEach(function(linha) {
+    html += '<tr class="row-sep"><td colspan="10">' + (linha === 'NEXUS' ? '🔵 NEXUS' : '🔴 VITAL') + '</td></tr>';
+    var rows = dist.filter(function(d) { return d.linha === linha; });
+    var tot = {setores:0, painel:0, f0:0, f20:0, f40:0, f60:0, f80:0, f100:0};
+    rows.forEach(function(d) {
+      html += '<tr class="' + (linha === 'NEXUS' ? 'row-nexus' : 'row-vital') + '">';
+      html += '<td class="td-gd">' + d.gd + '</td><td>' + d.setores + '</td><td>' + freqFmt(d.painel) + '</td>';
+      html += '<td>' + freqFmt(d.f0) + '</td><td>' + freqFmt(d.f20) + '</td><td>' + freqFmt(d.f40) + '</td><td>' + freqFmt(d.f60) + '</td><td>' + freqFmt(d.f80) + '</td><td>' + freqFmt(d.f100) + '</td>';
+      html += '<td>' + freqPctHtml(d.cob) + '</td></tr>';
+      tot.setores += d.setores; tot.painel += d.painel; tot.f0 += d.f0; tot.f20 += d.f20; tot.f40 += d.f40; tot.f60 += d.f60; tot.f80 += d.f80; tot.f100 += d.f100;
+    });
+    var totCob = tot.painel ? (tot.f80 + tot.f100) / tot.painel * 100 : 0;
+    html += '<tr class="row-total"><td class="td-gd">Total ' + linha + '</td><td>' + tot.setores + '</td><td>' + freqFmt(tot.painel) + '</td>';
+    html += '<td>' + freqFmt(tot.f0) + '</td><td>' + freqFmt(tot.f20) + '</td><td>' + freqFmt(tot.f40) + '</td><td>' + freqFmt(tot.f60) + '</td><td>' + freqFmt(tot.f80) + '</td><td>' + freqFmt(tot.f100) + '</td>';
+    html += '<td>' + freqPctHtml(totCob) + '</td></tr>';
+  });
+  html += '</tbody></table></div>';
+  return html;
+}
+
+function renderFrequenciaSetorTable(raw) {
+  var lines = raw.trim().split('\n');
+  var html = '<div class="visitas-table-wrap"><table class="visitas-table"><thead><tr>';
+  html += '<th class="th-gd">Setor</th><th>Linha</th><th>Painel</th><th>Freq 0</th><th>Freq 20</th><th>Freq 40</th><th>Freq 60</th><th>Freq 80</th><th>Freq 100</th><th>Cobertura</th>';
+  html += '</tr></thead><tbody>';
+  lines.forEach(function(l) {
+    var p = l.split('|');
+    var setor = p[0], nome = p[1], linha = p[2];
+    var painel = +p[4], f0 = +p[5], f20 = +p[6], f40 = +p[7], f60 = +p[8], f80 = +p[9], f100 = +p[10], cob = +p[11];
+    html += '<tr class="' + (linha === 'NEXUS' ? 'row-nexus' : 'row-vital') + '">';
+    html += '<td class="td-gd">' + setor + ' — ' + nome + '</td><td>' + linha + '</td>';
+    html += '<td>' + painel + '</td><td>' + f0 + '</td><td>' + f20 + '</td><td>' + f40 + '</td><td>' + f60 + '</td><td>' + f80 + '</td><td>' + f100 + '</td>';
+    html += '<td>' + freqPctHtml(cob) + '</td></tr>';
+  });
+  html += '</tbody></table></div>';
+  return html;
+}
+
+function toggleFrequenciaSetores(btn) {
+  var wrap = document.getElementById('freq-setor-wrap');
+  var showing = wrap.style.display === 'block';
+  wrap.style.display = showing ? 'none' : 'block';
+  btn.textContent = showing ? 'Ocultar detalhamento por setor' : 'Mostrar detalhamento por setor';
+}
+
+function renderFrequencia() {
+  VIEW_ATUAL = 'frequencia';
+  var dist = FREQ_DIST;
+  var raw  = FREQ_SETORES_RAW;
+
+  var tot = {painel:0, f80:0, f100:0, setores:0};
+  dist.forEach(function(d) { tot.painel += d.painel; tot.f80 += d.f80; tot.f100 += d.f100; tot.setores += d.setores; });
+  var cobGeral = tot.painel ? (tot.f80 + tot.f100) / tot.painel * 100 : 0;
+
+  function kpiCard(titulo, val, sub, cls) {
+    return '<div class="visitas-kpi ' + (cls || '') + '"><div class="vk-label">' + titulo + '</div><div class="vk-val">' + val + '</div><div class="vk-sub">' + sub + '</div></div>';
+  }
+
+  var html = '<div style="padding:24px">';
+  html += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">';
+  html += '<h2 style="margin:0;font-size:17px;font-weight:700;color:var(--text)">🩺 Frequência de Visitação Médica</h2>';
+  html += '<span style="font-size:12px;background:#e0f2fe;color:#0369a1;padding:3px 10px;border-radius:20px;font-weight:600">AGO/2026</span>';
+  html += '</div>';
+
+  html += '<div class="visitas-kpi-grid">';
+  html += kpiCard('Cobertura de Frequência', cobGeral.toFixed(1).replace('.', ',') + '%', 'Freq 80 + Freq 100 ÷ Painel', 'hi');
+  html += kpiCard('Frequência Painel', freqFmt(tot.painel), 'médicos no painel ativo', 'hi');
+  html += kpiCard('Frequência Realizado', freqFmt(tot.f80 + tot.f100), 'visitas no ciclo (Freq 80+100)', 'hi');
+  html += kpiCard('Qtde. Setores', tot.setores, dist.length + ' distritos', 'hi');
+  html += '</div>';
+
+  html += '<div class="visitas-chart-wrap">';
+  html += '<h3>📋 Frequência por Distrito (GD)</h3>';
+  html += '<p style="font-size:11px;color:var(--gray);margin:0 0 12px">Cobertura = (Freq 80 + Freq 100) ÷ Painel &nbsp;·&nbsp; ';
+  html += '<span style="display:inline-block;width:10px;height:10px;background:#22c55e;border-radius:2px;margin-right:4px"></span>≥75%&nbsp;&nbsp;';
+  html += '<span style="display:inline-block;width:10px;height:10px;background:#f59e0b;border-radius:2px;margin-right:4px"></span>50–74%&nbsp;&nbsp;';
+  html += '<span style="display:inline-block;width:10px;height:10px;background:#ef4444;border-radius:2px;margin-right:4px"></span>&lt;50%</p>';
+  html += renderFrequenciaDistTable(dist);
+  html += '</div>';
+
+  html += '<div class="visitas-chart-wrap">';
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">';
+  html += '<h3 style="margin:0">🔎 Detalhamento por Setor (' + tot.setores + ' setores)</h3>';
+  html += '<button onclick="toggleFrequenciaSetores(this)" style="padding:6px 14px;border-radius:8px;border:2px solid var(--border);background:#fff;font-size:11px;font-weight:700;cursor:pointer;color:var(--brand);font-family:inherit">Mostrar detalhamento por setor</button>';
+  html += '</div>';
+  html += '<div id="freq-setor-wrap" style="display:none;margin-top:12px">' + renderFrequenciaSetorTable(raw) + '</div>';
+  html += '</div>';
+
+  html += '<p style="font-size:11px;color:var(--gray);margin-top:6px;line-height:1.5">';
+  html += 'Fonte: Power BI "Velos - Produtividade EMS" (Médico → Frequência), filtrado por Linhas = Nexus + Vital e UGN = SPI. ';
+  html += 'Exportação nativa do relatório está desabilitada pela organização; dados extraídos via leitura direta da tabela e conferidos contra os totais do próprio relatório (Painel e Cobertura). ';
+  html += 'Snapshot manual do ciclo AGO/2026 — ainda não integrado à atualização automática mensal do dashboard (Sheets/ingest.py); atualização de setembro em diante depende de repetir a extração ou de automatizar o pipeline. ';
+  html += 'Setor 11630206 (Aline de Jesus Munhoz) segue com decisão pendente de tratamento no PEX de junho — cobertura de 4% neste setor reflete isso.';
+  html += '</p>';
+
+  html += '</div>';
+  document.getElementById('main-content').innerHTML = html;
+}
+
+function abrirFrequencia() {
+  VIEW_ATUAL = 'frequencia';
+  var meses = (CONFIG && CONFIG._meses && CONFIG._meses.length) ? CONFIG._meses : [MES_ATUAL];
+  renderCycleBar(meses, MES_ATUAL);
+  renderFrequencia();
+}
+
 // ── Filtro por distrito (topo da página) ───────────────────────────
 
 // Recorta um objeto `dados` (do carregarMes) para conter só as linhas do
@@ -1634,7 +1843,8 @@ function renderCycleBar(meses, mesAtual) {
   var isMatrix   = VIEW_ATUAL === 'matrix';
   var isDiagEvol = VIEW_ATUAL === 'diag-evol';
   var isCrm      = VIEW_ATUAL === 'crm';
-  var nenhuma    = isAnual || isCota || isVisitas || isGloss || isGap || isMatrix || isDiagEvol || isCrm;
+  var isFreq     = VIEW_ATUAL === 'frequencia';
+  var nenhuma    = isAnual || isCota || isVisitas || isGloss || isGap || isMatrix || isDiagEvol || isCrm || isFreq;
   var btns = meses.map(function(m) {
     return '<button class="cycle-btn' + (m === mesAtual && !nenhuma ? ' active' : '') +
       '" onclick="trocarMes(\'' + m + '\')">' + m + '/2026</button>';
@@ -1643,6 +1853,7 @@ function renderCycleBar(meses, mesAtual) {
   btns += '<button class="cycle-btn anual-btn'   + (isAnual   ? ' active' : '') + '" onclick="abrirVisaoAnual()">📅 Visão Anual</button>';
   btns += '<button class="cycle-btn cota-btn'    + (isCota    ? ' active' : '') + '" onclick="abrirEvolucaoCota()">📈 Cota</button>';
   btns += '<button class="cycle-btn visitas-btn' + (isVisitas ? ' active' : '') + '" onclick="abrirVisitasGD()">👁 Visitas GD</button>';
+  btns += '<button class="cycle-btn freq-btn'    + (isFreq    ? ' active' : '') + '" onclick="abrirFrequencia()">🩺 Frequência</button>';
   btns += '<button class="cycle-btn gap-btn'     + (isGap     ? ' active' : '') + '" onclick="abrirGapAnalise()">🔍 Gap & Outliers</button>';
   btns += '<button class="cycle-btn mtz-btn'     + (isMatrix  ? ' active' : '') + '" onclick="abrirMatrizPerformance()">🎯 Matriz</button>';
   btns += '<button class="cycle-btn gloss-btn'    + (isGloss    ? ' active' : '') + '" onclick="abrirGlossario()">📖 Glossário</button>';
