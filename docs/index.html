@@ -317,8 +317,8 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
 .cell-atencao{background:#fff7ed;color:#c2410c}
 .cell-critico{background:#fee2e2;color:#b91c1c}
 .anual-trend{font-size:9px;font-weight:600;margin-left:1px;vertical-align:middle}
-.cycle-btn.anual-btn{border-color:var(--nexus);color:var(--nexus)}
-.cycle-btn.anual-btn.active{background:var(--nexus-l);border-color:var(--nexus);color:var(--nexus)}
+.cycle-btn.anual-btn{border-color:var(--border);color:var(--gray)}
+.cycle-btn.anual-btn.active{background:var(--nexus);border-color:var(--nexus);color:#fff}
 
 /* ── Visão Anual — gráficos ── */
 .anual-chart-card{background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.08);margin-bottom:28px;overflow:hidden}
@@ -343,8 +343,8 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
 .aleg-dashed{height:0;background:transparent!important;border-top:2.5px dashed}
 
 /* ── Evolução de Cota ── */
-.cycle-btn.cota-btn{border-color:#7c3aed;color:#7c3aed}
-.cycle-btn.cota-btn.active{background:#f5f3ff;border-color:#7c3aed;color:#7c3aed}
+.cycle-btn.cota-btn{border-color:var(--border);color:var(--gray)}
+.cycle-btn.cota-btn.active{background:var(--nexus);border-color:var(--nexus);color:#fff}
 .cota-page-hdr{display:flex;align-items:center;gap:14px;margin-bottom:22px;padding:16px 22px;background:#fff;border-radius:12px;box-shadow:0 1px 8px rgba(0,0,0,.07)}
 .cota-back-btn{display:flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;border:2px solid var(--border);background:#fff;font-size:12px;font-weight:700;cursor:pointer;color:var(--gray);font-family:inherit;transition:all .15s;white-space:nowrap}
 .cota-back-btn:hover{border-color:var(--red);color:var(--red);background:var(--red-l)}
@@ -389,9 +389,11 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
 .cota-pct-ok{color:#15803d;font-weight:700}
 .cota-pct-warn{color:#854d0e;font-weight:700}
 .cota-pct-crit{color:#b91c1c;font-weight:700}
+.cycle-btn.freq-btn{border-color:var(--border);color:var(--gray)}
+.cycle-btn.freq-btn.active{background:var(--orange);border-color:var(--orange);color:#fff}
 /* Visitas GD */
-.cycle-btn.visitas-btn{border-color:#0369a1;color:#0369a1}
-.cycle-btn.visitas-btn.active{background:#e0f2fe;border-color:#0369a1;color:#0369a1}
+.cycle-btn.visitas-btn{border-color:var(--border);color:var(--gray)}
+.cycle-btn.visitas-btn.active{background:var(--orange);border-color:var(--orange);color:#fff}
 .visitas-kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
 .visitas-kpi{background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px 18px}
 .visitas-kpi.nexus{border-left:4px solid #1e3a8a}
@@ -418,16 +420,15 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
 .visitas-cob-warn{color:#854d0e;font-weight:700}
 .visitas-cob-crit{color:#b91c1c;font-weight:700}
 /* Glossário */
-.cycle-btn.gloss-btn{border-color:#64748b;color:#64748b}
-.cycle-btn.gloss-btn.active{background:#f1f5f9;border-color:#64748b;color:#334155}
+.cycle-btn.gloss-btn{border-color:var(--border);color:var(--gray)}
+.cycle-btn.gloss-btn.active{background:#4B5563;border-color:#4B5563;color:#fff}
 .gloss-wrap{padding:28px;max-width:900px;margin:0 auto}
 /* ── Evolução Diagnóstico ── */
-.cycle-btn.diagevol-btn{border-color:#d97706;color:#d97706}
-.cycle-btn.diagevol-btn.active{background:#fffbeb;border-color:#d97706;color:#b45309}
+.cycle-btn.diagevol-btn{border-color:var(--border);color:var(--gray)}
+.cycle-btn.diagevol-btn.active{background:var(--red-d);border-color:var(--red-d);color:#fff}
 /* ── CRM Chave — Prescrição ── */
-.cycle-btn.crm-btn{border-color:#0d9488;color:#0d9488}
-.cycle-btn.crm-btn:hover:not(.active){background:#f0fdfa}
-.cycle-btn.crm-btn.active{background:#0d9488;border-color:#0d9488;color:#fff}
+.cycle-btn.crm-btn{border-color:var(--border);color:var(--gray)}
+.cycle-btn.crm-btn.active{background:var(--green);border-color:var(--green);color:#fff}
 .crmp-wrap{padding:24px 28px;max-width:1440px;margin:0 auto}
 .crmp-page-hdr{display:flex;align-items:center;gap:14px;margin-bottom:22px;padding:16px 22px;background:#fff;border-radius:12px;box-shadow:0 1px 8px rgba(0,0,0,.07)}
 .crmp-back-btn{display:flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;border:2px solid var(--border);background:#fff;font-size:12px;font-weight:700;cursor:pointer;color:var(--gray);font-family:inherit;transition:all .15s;white-space:nowrap}
@@ -529,8 +530,8 @@ table.crmp-tbl tbody tr:hover{background:#EEF6F5}
 .cota-tab.an{border-color:var(--nexus);color:var(--nexus);background:var(--nexus-l)}
 .cota-tab.av{border-color:var(--red);color:var(--red);background:var(--red-l)}
 /* ── Matriz de Performance ── */
-.cycle-btn.mtz-btn{border-color:#0369a1;color:#0369a1}
-.cycle-btn.mtz-btn.active{background:#0369a1;color:#fff}
+.cycle-btn.mtz-btn{border-color:var(--border);color:var(--gray)}
+.cycle-btn.mtz-btn.active{background:var(--nexus);border-color:var(--nexus);color:#fff}
 .mtz-wrap{padding:24px 28px;max-width:1280px;margin:0 auto}
 .mtz-header{display:flex;align-items:center;gap:14px;margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--border)}
 .mtz-title{font-size:17px;font-weight:800;color:var(--dark)}
@@ -634,8 +635,8 @@ table.crmp-tbl tbody tr:hover{background:#EEF6F5}
 .crm-bar-fill.crit{background:#ef4444}
 .crm-empty{padding:24px;text-align:center;color:var(--gray);font-size:12px}
 /* ── Gap & Outliers ── */
-.cycle-btn.gap-btn{border-color:#7c3aed;color:#7c3aed}
-.cycle-btn.gap-btn.active{background:#7c3aed;color:#fff}
+.cycle-btn.gap-btn{border-color:var(--border);color:var(--gray)}
+.cycle-btn.gap-btn.active{background:var(--red-d);border-color:var(--red-d);color:#fff}
 .gap-wrap{padding:24px 28px;max-width:1200px;margin:0 auto}
 .gap-page-header{display:flex;align-items:center;gap:14px;margin-bottom:24px;padding-bottom:18px;border-bottom:1px solid var(--border)}
 .gap-page-icon{font-size:26px}
