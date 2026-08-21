@@ -1876,6 +1876,7 @@ function renderCycleBar(meses, mesAtual) {
   btns += '<button class="cycle-btn gloss-btn'    + (isGloss    ? ' active' : '') + '" onclick="abrirGlossario()">📖 Glossário</button>';
   btns += '<button class="cycle-btn diagevol-btn' + (isDiagEvol ? ' active' : '') + '" onclick="abrirEvolucaoDiag()">📊 Diag. Evolução</button>';
   btns += '<button class="cycle-btn crm-btn' + (isCrm ? ' active' : '') + '" onclick="abrirCrmChave()">💊 CRM Chave</button>';
+  btns += '<button class="cycle-btn gov-btn" onclick="window.location.href=\'governanca-spi.html\'">🏛️ Governança</button>';
   bar.innerHTML = btns;
   atualizarVisibilidadeFiltroDistrito();
 }
