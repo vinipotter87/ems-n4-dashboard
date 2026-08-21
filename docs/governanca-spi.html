@@ -260,6 +260,7 @@
     <div class="toolbar">
       <input type="text" id="busca-rep" placeholder="Buscar representante ou GD...">
       <select id="filtro-linha"><option value="">Todas as linhas</option></select>
+      <select id="filtro-distrito-rep"><option value="">Todos os distritos</option></select>
       <span class="count" id="contagem-rep"></span>
     </div>
     <div class="table-scroll">
@@ -291,6 +292,7 @@
       </select>
       <input type="text" id="busca-consolidado" placeholder="Buscar...">
       <select id="filtro-linha-consolidado"><option value="">Todas as linhas</option></select>
+      <select id="filtro-distrito-consolidado"><option value="">Todos os distritos</option></select>
       <label class="chk"><input type="checkbox" id="so-afetados"> mostrar só quem tem corte sugerido</label>
       <span class="count" id="contagem-consolidado"></span>
     </div>
@@ -319,6 +321,7 @@
       </select>
       <input type="text" id="busca-diretriz" placeholder="Buscar...">
       <select id="filtro-linha-diretriz"><option value="">Todas as linhas</option></select>
+      <select id="filtro-distrito-diretriz"><option value="">Todos os distritos</option></select>
       <span class="count" id="contagem-diretriz"></span>
     </div>
     <div class="table-scroll">
@@ -360,6 +363,7 @@
     <div class="toolbar">
       <input type="text" id="busca-med" placeholder="Buscar médico, GD ou representante...">
       <select id="filtro-linha-med"><option value="">Todas as linhas</option></select>
+      <select id="filtro-distrito-med"><option value="">Todos os distritos</option></select>
       <label class="chk"><input type="checkbox" id="so-cortar"> mostrar só médicos com corte na linha filtrada</label>
       <span class="count" id="contagem-med"></span>
     </div>
@@ -400,6 +404,7 @@ const DATA = JSON.parse(document.getElementById('dash-data').textContent);
 const DATA_CONS = JSON.parse(document.getElementById('dash-data-consolidado').textContent);
 const DATA_DIR = JSON.parse(document.getElementById('dash-data-diretriz').textContent);
 const LINHAS_ORDEM = ['Nexus','Vital','Clinica','Saude','Fenix','Sirius','Sinapse','Focus','EMS CRDMET','EMS NEURO'];
+const GD_ORDEM = [...new Set(DATA.gds.map(g => g.gd_nome))].sort((a,b)=>a.localeCompare(b));
 
 function fmtInt(n){ return Number(n).toLocaleString('pt-BR'); }
 function fmtNum(n){ return Number(n).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}); }
@@ -426,6 +431,16 @@ document.getElementById('kpis').innerHTML = kpiDefs.map(d =>
   LINHAS_ORDEM.forEach(l=>{
     const opt = document.createElement('option');
     opt.value = l; opt.textContent = l;
+    sel.appendChild(opt);
+  });
+});
+
+// ---------- popular selects de distrito (GD) ----------
+['filtro-distrito-rep','filtro-distrito-consolidado','filtro-distrito-diretriz','filtro-distrito-med'].forEach(id=>{
+  const sel = document.getElementById(id);
+  GD_ORDEM.forEach(gd=>{
+    const opt = document.createElement('option');
+    opt.value = gd; opt.textContent = gd;
     sel.appendChild(opt);
   });
 });
@@ -511,8 +526,10 @@ let sortRep = {key:'gd_nome', dir:1};
 function repFiltered(){
   const busca = document.getElementById('busca-rep').value.trim().toLowerCase();
   const linha = document.getElementById('filtro-linha').value;
+  const distrito = document.getElementById('filtro-distrito-rep').value;
   return DATA.reps.filter(r=>{
     if(linha && r.linha !== linha) return false;
+    if(distrito && r.gd_nome !== distrito) return false;
     if(busca && !(r.rep_nome.toLowerCase().includes(busca) || r.gd_nome.toLowerCase().includes(busca))) return false;
     return true;
   });
@@ -547,6 +564,7 @@ document.querySelectorAll('#tabela-rep thead th').forEach(th=>{
 });
 document.getElementById('busca-rep').addEventListener('input', renderRep);
 document.getElementById('filtro-linha').addEventListener('change', renderRep);
+document.getElementById('filtro-distrito-rep').addEventListener('change', renderRep);
 renderRep();
 
 // ---------- Detalhe por médico ----------
@@ -567,12 +585,14 @@ document.getElementById('detalhe-sub').textContent =
 function medFiltered(){
   const busca = document.getElementById('busca-med').value.trim().toLowerCase();
   const linha = document.getElementById('filtro-linha-med').value;
+  const distrito = document.getElementById('filtro-distrito-med').value;
   const soCortar = document.getElementById('so-cortar').checked;
   return medicos.filter(m=>{
     if(busca){
       const alvo = m.medico.toLowerCase() + ' ' + m.linhas.map(l=>l.gd+' '+l.representante).join(' ').toLowerCase();
       if(!alvo.includes(busca)) return false;
     }
+    if(distrito && !m.linhas.some(l=>l.gd===distrito)) return false;
     if(linha){
       const temLinha = m.linhas.some(l=>l.linha===linha);
       if(!temLinha) return false;
@@ -617,6 +637,7 @@ function renderMed(){
 }
 document.getElementById('busca-med').addEventListener('input', renderMed);
 document.getElementById('filtro-linha-med').addEventListener('change', renderMed);
+document.getElementById('filtro-distrito-med').addEventListener('change', renderMed);
 document.getElementById('so-cortar').addEventListener('change', renderMed);
 renderMed();
 
@@ -649,9 +670,11 @@ function consolidadoChave(r){
 function consolidadoFiltered(){
   const busca = document.getElementById('busca-consolidado').value.trim().toLowerCase();
   const linha = document.getElementById('filtro-linha-consolidado').value;
+  const distrito = document.getElementById('filtro-distrito-consolidado').value;
   const soAfetados = document.getElementById('so-afetados').checked;
   return consolidadoFonte().filter(r=>{
     if(linha && r.linha !== linha) return false;
+    if(distrito && r.gd_nome !== distrito) return false;
     if(soAfetados && (!r.cortados || r.cortados===0)) return false;
     const nomeAlvo = visaoConsolidado === 'gd' ? r.gd_nome : (r.rep_nome + ' ' + r.gd_nome);
     if(busca && !nomeAlvo.toLowerCase().includes(busca)) return false;
@@ -756,6 +779,7 @@ document.getElementById('visao-consolidado').addEventListener('change', (e)=>{
 });
 document.getElementById('busca-consolidado').addEventListener('input', renderConsolidado);
 document.getElementById('filtro-linha-consolidado').addEventListener('change', renderConsolidado);
+document.getElementById('filtro-distrito-consolidado').addEventListener('change', renderConsolidado);
 document.getElementById('so-afetados').addEventListener('change', renderConsolidado);
 
 renderTheadConsolidado();
@@ -816,8 +840,10 @@ function diretrizFonte(){ return visaoDiretriz === 'gd' ? DATA_DIR.gds : DATA_DI
 function diretrizFiltered(){
   const busca = document.getElementById('busca-diretriz').value.trim().toLowerCase();
   const linha = document.getElementById('filtro-linha-diretriz').value;
+  const distrito = document.getElementById('filtro-distrito-diretriz').value;
   return diretrizFonte().filter(r=>{
     if(linha && r.linha !== linha) return false;
+    if(distrito && r.gd_nome !== distrito) return false;
     const nomeAlvo = visaoDiretriz==='gd' ? r.gd_nome : (r.rep_nome + ' ' + r.gd_nome);
     if(busca && !nomeAlvo.toLowerCase().includes(busca)) return false;
     return true;
@@ -871,6 +897,7 @@ document.getElementById('visao-diretriz').addEventListener('change', (e)=>{
 });
 document.getElementById('busca-diretriz').addEventListener('input', renderTabelaDiretriz);
 document.getElementById('filtro-linha-diretriz').addEventListener('change', renderTabelaDiretriz);
+document.getElementById('filtro-distrito-diretriz').addEventListener('change', renderTabelaDiretriz);
 
 LINHAS_ORDEM.forEach(l=>{
   const opt = document.createElement('option');
