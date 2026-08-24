@@ -190,6 +190,7 @@
   <div class="wrap">
     <a href="#" class="tab-link active" data-page="page-painel">Painel de Pontuação</a>
     <a href="#" class="tab-link" data-page="page-sugestoes">Sugestões de Troca</a>
+    <a href="#" class="tab-link" data-page="page-sobreposicao">Análise de Sobreposição</a>
   </div>
 </nav>
 
@@ -304,6 +305,52 @@
     </div>
   </section>
 
+</main>
+
+</div>
+
+<div id="page-sugestoes" class="page" style="display:none">
+
+<div class="kpis" id="kpis-sugestoes"></div>
+
+<div class="banner">
+  <strong id="banner-sugestoes-titulo">Médicos auditados no painel: 79,8%</strong> do painel (61.689 de 77.325 registros
+  médico-representante). Esta lista só existe para médicos que aparecem no export de pontuação — fora dele não há
+  como saber quantas linhas o visitam.
+</div>
+
+<main>
+
+  <section id="sec-detalhe">
+    <h2>Painel atual, pontuação e sugestão de troca por médico</h2>
+    <p class="sub" id="detalhe-sub"></p>
+    <div class="toolbar">
+      <input type="text" id="busca-med" placeholder="Buscar médico, GD ou representante...">
+      <select id="filtro-linha-med"><option value="">Todas as linhas</option></select>
+      <select id="filtro-distrito-med"><option value="">Todos os distritos</option></select>
+      <label class="chk"><input type="checkbox" id="so-cortar"> mostrar só médicos com corte na linha filtrada</label>
+      <span class="count" id="contagem-med"></span>
+    </div>
+    <div id="med-lista"></div>
+    <div class="metodologia">
+      <h3>Como essa lista foi montada</h3>
+      <ul>
+        <li>Diretriz aplicada: um mesmo CRM não pode ser visitado por mais de 4 linhas ao mesmo tempo.</li>
+        <li>Para cada médico acima do limite, as linhas que o visitam foram ordenadas pela pontuação (maior primeiro): as 4 melhores ficam como <span class="status-pill manter">manter</span>, as demais como <span class="status-pill cortar">cortar</span> — é para essas linhas que a leitura "pra onde ele vai" se aplica: ele permanece ativo nas linhas marcadas para manter.</li>
+        <li>462 médicos da regional estão acima do limite de 4 linhas; todos os 462 foram localizados no painel SPI (a nova pontuação, filtrada por UGN, cobre a regional quase inteira).</li>
+        <li>Essa avaliação só existe para médicos que aparecem no export de pontuação. Fora dele, não há como saber quantas linhas o visitam.</li>
+      </ul>
+    </div>
+  </section>
+
+</main>
+
+</div>
+
+<div id="page-sobreposicao" class="page" style="display:none">
+
+<main>
+
   <section id="sec-diretriz">
     <h2>Aderência à diretriz de roteirização</h2>
     <div class="toolbar" style="margin-bottom:14px;">
@@ -344,44 +391,6 @@
         <li>"% do painel" é médico único com sobreposição dividido pelo total de médicos daquele distrito/representante — não conta a mesma sobreposição mais de uma vez.</li>
         <li>EMS CRDMET e EMS NEURO não aparecem: essas linhas não entram na lógica de rotação por território da diretriz.</li>
         <li>96,3% de toda a sobreposição no ciclo acontece entre linhas que a diretriz não coloca no mesmo território na mesma semana — os 4 pares que ela espera juntos são, na prática, os que menos se sobrepõem.</li>
-      </ul>
-    </div>
-  </section>
-
-</main>
-
-</div>
-
-<div id="page-sugestoes" class="page" style="display:none">
-
-<div class="kpis" id="kpis-sugestoes"></div>
-
-<div class="banner">
-  <strong id="banner-sugestoes-titulo">Médicos auditados no painel: 79,8%</strong> do painel (61.689 de 77.325 registros
-  médico-representante). Esta lista só existe para médicos que aparecem no export de pontuação — fora dele não há
-  como saber quantas linhas o visitam.
-</div>
-
-<main>
-
-  <section id="sec-detalhe">
-    <h2>Painel atual, pontuação e sugestão de troca por médico</h2>
-    <p class="sub" id="detalhe-sub"></p>
-    <div class="toolbar">
-      <input type="text" id="busca-med" placeholder="Buscar médico, GD ou representante...">
-      <select id="filtro-linha-med"><option value="">Todas as linhas</option></select>
-      <select id="filtro-distrito-med"><option value="">Todos os distritos</option></select>
-      <label class="chk"><input type="checkbox" id="so-cortar"> mostrar só médicos com corte na linha filtrada</label>
-      <span class="count" id="contagem-med"></span>
-    </div>
-    <div id="med-lista"></div>
-    <div class="metodologia">
-      <h3>Como essa lista foi montada</h3>
-      <ul>
-        <li>Diretriz aplicada: um mesmo CRM não pode ser visitado por mais de 4 linhas ao mesmo tempo.</li>
-        <li>Para cada médico acima do limite, as linhas que o visitam foram ordenadas pela pontuação (maior primeiro): as 4 melhores ficam como <span class="status-pill manter">manter</span>, as demais como <span class="status-pill cortar">cortar</span> — é para essas linhas que a leitura "pra onde ele vai" se aplica: ele permanece ativo nas linhas marcadas para manter.</li>
-        <li>462 médicos da regional estão acima do limite de 4 linhas; todos os 462 foram localizados no painel SPI (a nova pontuação, filtrada por UGN, cobre a regional quase inteira).</li>
-        <li>Essa avaliação só existe para médicos que aparecem no export de pontuação. Fora dele, não há como saber quantas linhas o visitam.</li>
       </ul>
     </div>
   </section>
@@ -961,6 +970,10 @@ const headerTextos = {
   'page-sugestoes': {
     titulo: 'Sugestões de Troca — Regional SPI',
     sub: 'Médicos acima do limite de 4 linhas visitando, com recomendação de manter/cortar por pontuação'
+  },
+  'page-sobreposicao': {
+    titulo: 'Análise de Sobreposição — Regional SPI',
+    sub: 'Aderência à diretriz de roteirização: sobreposição entre pares de linha e % do painel por distrito/representante'
   }
 };
 
