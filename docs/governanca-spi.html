@@ -920,7 +920,7 @@ function renderTabelaDiretriz(){
       <td>${visaoDiretriz==='gd' ? r.gd_nome : r.rep_nome}</td>
       <td class="num">${fmtInt(r.total)}</td>
       <td class="num">${fmtInt(r.com_sobreposicao)}</td>
-      <td class="num"><div class="barra-cell"><div class="barra ${r.pct_painel>30?'cobertura-baixa':(r.pct_painel>15?'cobertura-media':'cobertura-alta')}"><i style="width:${Math.min(r.pct_painel*2,100)}%"></i></div>${fmtPct(r.pct_painel)}</div></td>
+      <td class="num"><div class="barra-cell"><div class="barra ${r.pct_painel>20?'cobertura-baixa':(r.pct_painel>=10?'cobertura-media':'cobertura-alta')}"><i style="width:${Math.min(r.pct_painel*2,100)}%"></i></div>${fmtPct(r.pct_painel)}</div></td>
     </tr>`).join('');
   document.getElementById('contagem-diretriz').textContent = rows.length + (visaoDiretriz==='gd' ? ' GD(s)' : ' representante(s)');
 }
