@@ -1208,6 +1208,7 @@ def processar_crm_chave_prescricao(mes: str, regional: str = "SPI") -> list:
                 "marca":        marca,
                 "rx_mercado":   rx if rx is not None else "",
                 "market_share": share if share is not None else "",
+                "substituido":  bool(d.get("substituido", False)),
             })
 
     print(f"  ✓ CRM Chave — Prescrição {mes}: {len(registros)} registros ({len(medicos)} médicos)")

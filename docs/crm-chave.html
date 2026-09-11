@@ -74,6 +74,7 @@ table.crm-tbl tbody tr:hover{background:#EEF6F5}
 .linha-badge{font-size:9px;font-weight:800;padding:2px 8px;border-radius:10px;text-transform:uppercase}
 .linha-badge.nexus{background:var(--nexus-l);color:var(--nexus)}
 .linha-badge.vital{background:var(--red-l);color:var(--red)}
+.badge-substituido{font-size:9px;font-weight:800;padding:2px 7px;border-radius:9px;background:var(--orange-l);color:#9a4a0f;margin-left:6px;white-space:nowrap}
 .share-hi{color:var(--green);font-weight:800}
 .share-lo{color:var(--red-d);font-weight:700}
 
@@ -234,7 +235,7 @@ function cardHtml(c, cardAnterior) {
 function medicosPorLinhaGd(registrosMes) {
   var porMedico = {};
   registrosMes.forEach(function(r) {
-    if (!porMedico[r.crm]) porMedico[r.crm] = { linha: r.linha, gd: r.gd, nome: r.nome, crm: r.crm, marcas: {} };
+    if (!porMedico[r.crm]) porMedico[r.crm] = { linha: r.linha, gd: r.gd, nome: r.nome, crm: r.crm, substituido: r.substituido === 'True', marcas: {} };
     porMedico[r.crm].marcas[r.marca] = r;
   });
   return Object.values(porMedico);
@@ -270,7 +271,9 @@ function buildTabelaHtml(registrosMes, filtroBusca) {
 
   var rows = medicos.map(function(m) {
     var tr = '<tr><td><span class="linha-badge ' + (m.linha==='NEXUS'?'nexus':'vital') + '">' + m.linha + '</span></td>' +
-      '<td class="txt-left">' + (m.gd||'') + '</td><td class="txt-left">' + m.nome + '</td><td>' + m.crm + '</td>';
+      '<td class="txt-left">' + (m.gd||'') + '</td><td class="txt-left">' + m.nome +
+      (m.substituido ? '<span class="badge-substituido">🆕 Substituído</span>' : '') +
+      '</td><td>' + m.crm + '</td>';
     todasMarcas.forEach(function(marca) {
       var aplicavel = linhaMarcas[m.linha].indexOf(marca) >= 0;
       if (!aplicavel) {
@@ -378,6 +381,7 @@ function renderPagina() {
     '<li>Colunas de marca populadas por linha: todo médico Nexus recebe CONCARDIO, LYBERDIA e OZIVY; todo médico Vital recebe BUPIUM XL, LINADIB, LINADIB DUO e OZIVY — não pelas marcas individuais do cadastro original de CRM Chave.</li>' +
     '<li>"N/A" (cinza) = marca não é chave para a linha do médico. Rx Mercado = 0/— = marca aplicável, mas o médico não aparece na base de prescrição desse mercado no período (sem volume mensurável).</li>' +
     '<li>LINADIB (sem DUO): a consulta nacional do Power BI excede o tempo limite (recursos excedidos, 90s) de forma consistente. Extração feita com filtro UGN = SPI — não afeta a cobertura dos 92 médicos (todos da SPI OESTE), mas esse dado específico não é estritamente comparável em metodologia às demais marcas (nacionais, sem filtro de UGN).</li>' +
+    '<li>🆕 Substituído = médico novo no painel de CRM Chave desde a virada de quadrimestre de SET/2026 (não estava no painel anterior, mai-ago) — sem histórico de meses antes da entrada.</li>' +
     '<li>LINADIB e LINADIB DUO têm volume de Rx Mercado muito baixo por médico (1 a 2 prescrições no período em vários casos) — os Market Share de 100% que aparecem nesses casos refletem essa base pequena (o médico só teve 1 prescrição no mercado, e foi nossa), não necessariamente domínio real de mercado. Tratar como sinal fraco até acumular mais ciclos.</li>' +
   '</ul></div>';
 

@@ -1,102 +1,6 @@
 [
   {
     "linha": "NEXUS",
-    "gd": "Joao Leardini",
-    "nome": "AMANDA SAMPAIO MANGOLIM",
-    "crm": "PR0030569"
-  },
-  {
-    "linha": "NEXUS",
-    "gd": "Joao Leardini",
-    "nome": "ANTONIO FERNANDO AMARAL SANT'ANNA",
-    "crm": "PR0013280"
-  },
-  {
-    "linha": "NEXUS",
-    "gd": "Joao Leardini",
-    "nome": "CARINA BERTOLDI FRANCO",
-    "crm": "PR0020211"
-  },
-  {
-    "linha": "NEXUS",
-    "gd": "Joao Leardini",
-    "nome": "CARLOS ALBERTO DE CASTRO",
-    "crm": "PR0011778"
-  },
-  {
-    "linha": "NEXUS",
-    "gd": "Joao Leardini",
-    "nome": "DANIEL CATTO DE MARCHI",
-    "crm": "PR0039028"
-  },
-  {
-    "linha": "NEXUS",
-    "gd": "Joao Leardini",
-    "nome": "JAQUELINE LYRIO BERMUDES OKAWA",
-    "crm": "PR0018813"
-  },
-  {
-    "linha": "NEXUS",
-    "gd": "Joao Leardini",
-    "nome": "KAREN KAROLINY SANTINI",
-    "crm": "PR0037770"
-  },
-  {
-    "linha": "NEXUS",
-    "gd": "Joao Leardini",
-    "nome": "MARCUS ROBERTO ANDREUCCI",
-    "crm": "PR0030011"
-  },
-  {
-    "linha": "NEXUS",
-    "gd": "Joao Leardini",
-    "nome": "OTTON LUIS RAFFO SOUZA",
-    "crm": "PR0017876"
-  },
-  {
-    "linha": "NEXUS",
-    "gd": "Joao Leardini",
-    "nome": "ROGERIO ISSAMU TAKEDA",
-    "crm": "PR0026934"
-  },
-  {
-    "linha": "NEXUS",
-    "gd": "Joao Leardini",
-    "nome": "SIDNEY SENHORINI JUNIOR",
-    "crm": "PR0017870"
-  },
-  {
-    "linha": "NEXUS",
-    "gd": "Joao Leardini",
-    "nome": "SILVIO ALVES DO NASCIMENTO",
-    "crm": "PR0016755"
-  },
-  {
-    "linha": "NEXUS",
-    "gd": "Joao Leardini",
-    "nome": "THIAGO HONORIO DUTRA DA SILVA",
-    "crm": "PR0033575"
-  },
-  {
-    "linha": "NEXUS",
-    "gd": "Joao Leardini",
-    "nome": "VALMIR ROSA",
-    "crm": "PR0013819"
-  },
-  {
-    "linha": "NEXUS",
-    "gd": "Joao Leardini",
-    "nome": "VICTOR HUGO FERREIRA",
-    "crm": "PR0019875"
-  },
-  {
-    "linha": "NEXUS",
-    "gd": "Murillo Santos",
-    "nome": "PATRICIA FERREIRA RIBEIRO",
-    "crm": "MG0040872"
-  },
-  {
-    "linha": "NEXUS",
     "gd": "Geovana Buttignon",
     "nome": "ANA LUIZE MERTEN",
     "crm": "SP0145821"
@@ -178,6 +82,111 @@
     "gd": "Geovana Buttignon",
     "nome": "VANESSA BARSOTTI DE CARVALHO",
     "crm": "SP0130231"
+  },
+  {
+    "linha": "NEXUS",
+    "gd": "Joao Leardini",
+    "nome": "ADRIANA ABRÃO",
+    "crm": "PR0018340",
+    "substituido": true
+  },
+  {
+    "linha": "NEXUS",
+    "gd": "Joao Leardini",
+    "nome": "AMANDA SAMPAIO MANGOLIM",
+    "crm": "PR0030569"
+  },
+  {
+    "linha": "NEXUS",
+    "gd": "Joao Leardini",
+    "nome": "ANTONIO FERNANDO AMARAL SANT'ANNA",
+    "crm": "PR0013280"
+  },
+  {
+    "linha": "NEXUS",
+    "gd": "Joao Leardini",
+    "nome": "CARINA BERTOLDI FRANCO",
+    "crm": "PR0020211"
+  },
+  {
+    "linha": "NEXUS",
+    "gd": "Joao Leardini",
+    "nome": "CARLOS ALBERTO DE CASTRO",
+    "crm": "PR0011778"
+  },
+  {
+    "linha": "NEXUS",
+    "gd": "Joao Leardini",
+    "nome": "JAQUELINE LYRIO BERMUDES OKAWA",
+    "crm": "PR0018813"
+  },
+  {
+    "linha": "NEXUS",
+    "gd": "Joao Leardini",
+    "nome": "KAREN KAROLINY SANTINI",
+    "crm": "PR0037770"
+  },
+  {
+    "linha": "NEXUS",
+    "gd": "Joao Leardini",
+    "nome": "MARCUS ROBERTO ANDREUCCI",
+    "crm": "PR0030011"
+  },
+  {
+    "linha": "NEXUS",
+    "gd": "Joao Leardini",
+    "nome": "OTTON LUIS RAFFO SOUZA",
+    "crm": "PR0017876"
+  },
+  {
+    "linha": "NEXUS",
+    "gd": "Joao Leardini",
+    "nome": "ROGERIO ISSAMU TAKEDA",
+    "crm": "PR0026934"
+  },
+  {
+    "linha": "NEXUS",
+    "gd": "Joao Leardini",
+    "nome": "SILVIO ALVES DO NASCIMENTO",
+    "crm": "PR0016755"
+  },
+  {
+    "linha": "NEXUS",
+    "gd": "Joao Leardini",
+    "nome": "THIAGO HONORIO DUTRA DA SILVA",
+    "crm": "PR0033575"
+  },
+  {
+    "linha": "NEXUS",
+    "gd": "Joao Leardini",
+    "nome": "VALMIR ROSA",
+    "crm": "PR0013819"
+  },
+  {
+    "linha": "NEXUS",
+    "gd": "Joao Leardini",
+    "nome": "VICTOR HUGO FERREIRA",
+    "crm": "PR0019875"
+  },
+  {
+    "linha": "NEXUS",
+    "gd": "Murillo Santos",
+    "nome": "FERNANDO MATTAR ACCETTI",
+    "crm": "MG0056214",
+    "substituido": true
+  },
+  {
+    "linha": "NEXUS",
+    "gd": "Murillo Santos",
+    "nome": "FERNANDO VAZ VIEIRA",
+    "crm": "MG0059016",
+    "substituido": true
+  },
+  {
+    "linha": "NEXUS",
+    "gd": "Murillo Santos",
+    "nome": "PATRICIA FERREIRA RIBEIRO",
+    "crm": "MG0040872"
   },
   {
     "linha": "NEXUS",
@@ -271,6 +280,98 @@
   },
   {
     "linha": "VITAL",
+    "gd": "Daniel Costa",
+    "nome": "EDUARDO BARCELOS RACHED",
+    "crm": "SP0139565"
+  },
+  {
+    "linha": "VITAL",
+    "gd": "Daniel Costa",
+    "nome": "ELDO BENEDITO CASSARO",
+    "crm": "MG0020723"
+  },
+  {
+    "linha": "VITAL",
+    "gd": "Daniel Costa",
+    "nome": "FERNANDO DE MELO MARTINELLI",
+    "crm": "MG0041909"
+  },
+  {
+    "linha": "VITAL",
+    "gd": "Daniel Costa",
+    "nome": "JOEL ROGÉRIO HEITOR FILHO",
+    "crm": "MG0035488"
+  },
+  {
+    "linha": "VITAL",
+    "gd": "Daniel Costa",
+    "nome": "KARINE BEATRIZ LIMA DE SOUZA",
+    "crm": "MG0044873"
+  },
+  {
+    "linha": "VITAL",
+    "gd": "Daniel Costa",
+    "nome": "MARCUS VINÍCIUS RODRIGUES DE SOUZA",
+    "crm": "MG0063918",
+    "substituido": true
+  },
+  {
+    "linha": "VITAL",
+    "gd": "Daniel Costa",
+    "nome": "MAURÍCIO ROSA DE ALMEIDA JUNIOR",
+    "crm": "MG0050378"
+  },
+  {
+    "linha": "VITAL",
+    "gd": "Daniel Costa",
+    "nome": "MOZART ALVES DE LIMA FURTADO",
+    "crm": "SP0068400"
+  },
+  {
+    "linha": "VITAL",
+    "gd": "Daniel Costa",
+    "nome": "RENATO SERGIO FERNANDES PINTO",
+    "crm": "MG0075301",
+    "substituido": true
+  },
+  {
+    "linha": "VITAL",
+    "gd": "Daniel Costa",
+    "nome": "ROBERTO RACHED SOBRINHO",
+    "crm": "SP0030334"
+  },
+  {
+    "linha": "VITAL",
+    "gd": "Daniel Costa",
+    "nome": "ROBLEDO VITORINO",
+    "crm": "MG0046179"
+  },
+  {
+    "linha": "VITAL",
+    "gd": "Daniel Costa",
+    "nome": "SERGIO APARECIDO GOMES",
+    "crm": "SP0055245"
+  },
+  {
+    "linha": "VITAL",
+    "gd": "Daniel Costa",
+    "nome": "SERGIO MONTEIRO FAIM",
+    "crm": "MG0045382"
+  },
+  {
+    "linha": "VITAL",
+    "gd": "Daniel Costa",
+    "nome": "TIAGO FEROLLA NUNES",
+    "crm": "MG0047222"
+  },
+  {
+    "linha": "VITAL",
+    "gd": "Daniel Costa",
+    "nome": "WELINGHTON DE SOUZA OLIVEIRA",
+    "crm": "MG0095818"
+  },
+  {
+    "linha": "VITAL",
     "gd": "Fabiano Machado",
     "nome": "ADRIANO SOLEO DONADON",
     "crm": "PR0027616"
@@ -358,96 +459,6 @@
     "gd": "Fabiano Machado",
     "nome": "WILLYAN ISSAMU NAZIMA",
     "crm": "PR0019986"
-  },
-  {
-    "linha": "VITAL",
-    "gd": "Daniel Costa",
-    "nome": "EDUARDO BARCELOS RACHED",
-    "crm": "SP0139565"
-  },
-  {
-    "linha": "VITAL",
-    "gd": "Daniel Costa",
-    "nome": "ELDO BENEDITO CASSARO",
-    "crm": "MG0020723"
-  },
-  {
-    "linha": "VITAL",
-    "gd": "Daniel Costa",
-    "nome": "FERNANDO DE MELO MARTINELLI",
-    "crm": "MG0041909"
-  },
-  {
-    "linha": "VITAL",
-    "gd": "Daniel Costa",
-    "nome": "IVAN DE CARVALHO CARNEIRO",
-    "crm": "MG0041353"
-  },
-  {
-    "linha": "VITAL",
-    "gd": "Daniel Costa",
-    "nome": "JOEL ROGÉRIO HEITOR FILHO",
-    "crm": "MG0035488"
-  },
-  {
-    "linha": "VITAL",
-    "gd": "Daniel Costa",
-    "nome": "KARINE BEATRIZ LIMA DE SOUZA",
-    "crm": "MG0044873"
-  },
-  {
-    "linha": "VITAL",
-    "gd": "Daniel Costa",
-    "nome": "LINEU JOAO SANTORO BIAZOTTI",
-    "crm": "SP0039306"
-  },
-  {
-    "linha": "VITAL",
-    "gd": "Daniel Costa",
-    "nome": "MAURÍCIO ROSA DE ALMEIDA JUNIOR",
-    "crm": "MG0050378"
-  },
-  {
-    "linha": "VITAL",
-    "gd": "Daniel Costa",
-    "nome": "MOZART ALVES DE LIMA FURTADO",
-    "crm": "SP0068400"
-  },
-  {
-    "linha": "VITAL",
-    "gd": "Daniel Costa",
-    "nome": "ROBERTO RACHED SOBRINHO",
-    "crm": "SP0030334"
-  },
-  {
-    "linha": "VITAL",
-    "gd": "Daniel Costa",
-    "nome": "ROBLEDO VITORINO",
-    "crm": "MG0046179"
-  },
-  {
-    "linha": "VITAL",
-    "gd": "Daniel Costa",
-    "nome": "SERGIO APARECIDO GOMES",
-    "crm": "SP0055245"
-  },
-  {
-    "linha": "VITAL",
-    "gd": "Daniel Costa",
-    "nome": "SERGIO MONTEIRO FAIM",
-    "crm": "MG0045382"
-  },
-  {
-    "linha": "VITAL",
-    "gd": "Daniel Costa",
-    "nome": "TIAGO FEROLLA NUNES",
-    "crm": "MG0047222"
-  },
-  {
-    "linha": "VITAL",
-    "gd": "Daniel Costa",
-    "nome": "WELINGHTON DE SOUZA OLIVEIRA",
-    "crm": "MG0095818"
   },
   {
     "linha": "VITAL",
@@ -550,5 +561,19 @@
     "gd": "Michael Mota",
     "nome": "ANA PAULA COMARELLA",
     "crm": "SP0167752"
+  },
+  {
+    "linha": "VITAL",
+    "gd": "Michael Mota",
+    "nome": "ANTONIO CEZAR GULLA",
+    "crm": "SP0058416",
+    "substituido": true
+  },
+  {
+    "linha": "VITAL",
+    "gd": "Michael Mota",
+    "nome": "CLEBER DE MOURA PINHEIRO",
+    "crm": "SP0096300",
+    "substituido": true
   }
 ]
