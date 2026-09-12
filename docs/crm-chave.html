@@ -77,6 +77,10 @@ table.crm-tbl tbody tr:hover{background:#EEF6F5}
 .badge-substituido{font-size:9px;font-weight:800;padding:2px 7px;border-radius:9px;background:var(--orange-l);color:#9a4a0f;margin-left:6px;white-space:nowrap}
 .share-hi{color:var(--green);font-weight:800}
 .share-lo{color:var(--red-d);font-weight:700}
+.tbl-trend{display:inline-block;font-size:9px;font-weight:800;margin-left:4px;padding:0 4px;border-radius:6px;vertical-align:middle}
+.tbl-trend.up{background:var(--green-l);color:var(--green)}
+.tbl-trend.down{background:var(--red-l);color:var(--red-d)}
+.tbl-trend.flat{background:var(--light);color:var(--gray)}
 
 .notes{background:#fff;border-radius:12px;padding:16px 20px;margin-top:16px;box-shadow:0 1px 8px rgba(0,0,0,.06)}
 .notes h3{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--gray);margin-bottom:8px}
@@ -250,7 +254,16 @@ function listarGds(registrosMes, filtroLinha) {
   return Object.keys(set).sort();
 }
 
-function buildTabelaHtml(registrosMes, filtroBusca) {
+function trendBadgeHtml(shareAtual, shareAnterior) {
+  if (shareAtual === null || shareAnterior === null) return '';
+  var delta = shareAtual - shareAnterior;
+  var pp = (delta * 100).toLocaleString('pt-BR', {minimumFractionDigits:1, maximumFractionDigits:1});
+  if (Math.abs(delta) < 0.001) return '<span class="tbl-trend flat" title="Igual ao mês anterior">➖</span>';
+  if (delta > 0) return '<span class="tbl-trend up" title="vs. mês anterior">▲' + pp + '</span>';
+  return '<span class="tbl-trend down" title="vs. mês anterior">▼' + pp + '</span>';
+}
+
+function buildTabelaHtml(registrosMes, filtroBusca, registrosAnteriores) {
   var medicos = medicosPorLinhaGd(registrosMes).filter(function(m) {
     if (filtroBusca) {
       var q = filtroBusca.toLowerCase();
@@ -259,12 +272,16 @@ function buildTabelaHtml(registrosMes, filtroBusca) {
     return true;
   }).sort(function(a,b){ return (a.linha+a.gd+a.nome).localeCompare(b.linha+b.gd+b.nome); });
 
+  var medicosAnterior = medicosPorLinhaGd(registrosAnteriores || []);
+  var anteriorPorCrm = {};
+  medicosAnterior.forEach(function(m) { anteriorPorCrm[m.crm] = m.marcas; });
+
   var todasMarcas = NEXUS_MARCAS.concat(VITAL_MARCAS.filter(function(m){ return NEXUS_MARCAS.indexOf(m) === -1; }));
 
   var thead = '<tr><th class="txt-left">Linha</th><th class="txt-left">GD</th><th class="txt-left">Médico</th><th>CRM</th>';
   todasMarcas.forEach(function(m) { thead += '<th colspan="2">' + m + '</th>'; });
   thead += '</tr><tr><th></th><th></th><th></th><th></th>';
-  todasMarcas.forEach(function() { thead += '<th>Rx Mercado</th><th>Market Share</th>'; });
+  todasMarcas.forEach(function() { thead += '<th>Rx Mercado</th><th>Market Share (vs. mês ant.)</th>'; });
   thead += '</tr>';
 
   var linhaMarcas = { NEXUS: NEXUS_MARCAS, VITAL: VITAL_MARCAS };
@@ -274,6 +291,7 @@ function buildTabelaHtml(registrosMes, filtroBusca) {
       '<td class="txt-left">' + (m.gd||'') + '</td><td class="txt-left">' + m.nome +
       (m.substituido ? '<span class="badge-substituido">🆕 Substituído</span>' : '') +
       '</td><td>' + m.crm + '</td>';
+    var marcasAnteriorMedico = anteriorPorCrm[m.crm] || {};
     todasMarcas.forEach(function(marca) {
       var aplicavel = linhaMarcas[m.linha].indexOf(marca) >= 0;
       if (!aplicavel) {
@@ -281,10 +299,12 @@ function buildTabelaHtml(registrosMes, filtroBusca) {
       } else {
         var r = m.marcas[marca];
         var rx = r ? numOrNull(r.rx_mercado) : null;
-        var share = r ? r.market_share : null;
+        var share = r ? numOrNull(r.market_share) : null;
+        var rAnterior = marcasAnteriorMedico[marca];
+        var shareAnterior = rAnterior ? numOrNull(rAnterior.market_share) : null;
         var rxCls = (rx === 0 || rx === null) ? 'zero-cell' : '';
         tr += '<td class="' + rxCls + '">' + fmtRx(rx) + '</td>' +
-              '<td class="' + shareClass(share) + '">' + fmtShare(share) + '</td>';
+              '<td class="' + shareClass(share) + '">' + fmtShare(share) + trendBadgeHtml(share, shareAnterior) + '</td>';
       }
     });
     tr += '</tr>';
@@ -366,7 +386,7 @@ function renderPagina() {
     html += '<div class="tend-empty" style="padding:24px;text-align:center;color:var(--gray);font-size:12px;background:#fff;border-radius:12px">Nenhum médico para esse filtro.</div>';
   }
 
-  var tbl = buildTabelaHtml(regMesF, STATE.filtroBusca);
+  var tbl = buildTabelaHtml(regMesF, STATE.filtroBusca, regAnteriorF);
   html += '<div class="tbl-wrap">' +
     '<div class="tbl-hdr-bar">' +
       '<h2>📋 Detalhe por médico</h2>' +
@@ -382,6 +402,7 @@ function renderPagina() {
     '<li>"N/A" (cinza) = marca não é chave para a linha do médico. Rx Mercado = 0/— = marca aplicável, mas o médico não aparece na base de prescrição desse mercado no período (sem volume mensurável).</li>' +
     '<li>LINADIB (sem DUO): a consulta nacional do Power BI excede o tempo limite (recursos excedidos, 90s) de forma consistente. Extração feita com filtro UGN = SPI — não afeta a cobertura dos 92 médicos (todos da SPI OESTE), mas esse dado específico não é estritamente comparável em metodologia às demais marcas (nacionais, sem filtro de UGN).</li>' +
     '<li>🆕 Substituído = médico novo no painel de CRM Chave desde a virada de quadrimestre de SET/2026 (não estava no painel anterior, mai-ago) — sem histórico de meses antes da entrada.</li>' +
+    '<li>▲/▼/➖ ao lado do Market Share = variação em pontos percentuais (pp) vs. o ciclo anterior publicado (não necessariamente o mês civil anterior, e sim o último ciclo com dado na aba), para o mesmo médico e marca. Sem badge = médico/marca sem dado comparável no ciclo anterior (1º ciclo do médico, marca sem prescrição num dos dois meses, etc.).</li>' +
     '<li>LINADIB e LINADIB DUO têm volume de Rx Mercado muito baixo por médico (1 a 2 prescrições no período em vários casos) — os Market Share de 100% que aparecem nesses casos refletem essa base pequena (o médico só teve 1 prescrição no mercado, e foi nossa), não necessariamente domínio real de mercado. Tratar como sinal fraco até acumular mais ciclos.</li>' +
   '</ul></div>';
 
