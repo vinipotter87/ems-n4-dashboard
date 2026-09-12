@@ -472,6 +472,7 @@ table.crmp-tbl tbody tr:hover{background:#EEF6F5}
 .crmp-linha-badge{font-size:9px;font-weight:800;padding:2px 8px;border-radius:10px;text-transform:uppercase}
 .crmp-linha-badge.nexus{background:var(--nexus-l);color:var(--nexus)}
 .crmp-linha-badge.vital{background:var(--red-l);color:var(--red)}
+.crmp-badge-substituido{font-size:9px;font-weight:800;padding:2px 7px;border-radius:9px;background:var(--orange-l);color:#9a4a0f;margin-left:6px;white-space:nowrap}
 .crmp-share-hi{color:var(--green);font-weight:800}
 .crmp-share-lo{color:var(--red-d);font-weight:700}
 .crmp-tbl-trend{display:inline-block;font-size:9px;font-weight:800;margin-left:4px;padding:0 4px;border-radius:6px;vertical-align:middle}
@@ -6537,7 +6538,7 @@ function crmCardHtml(c, cardAnterior) {
 function crmMedicosPorLinhaGd(registrosMes) {
   var porMedico = {};
   registrosMes.forEach(function(r) {
-    if (!porMedico[r.crm]) porMedico[r.crm] = { linha: r.linha, gd: r.gd, nome: r.nome, crm: r.crm, marcas: {} };
+    if (!porMedico[r.crm]) porMedico[r.crm] = { linha: r.linha, gd: r.gd, nome: r.nome, crm: r.crm, substituido: r.substituido === 'True', marcas: {} };
     porMedico[r.crm].marcas[r.marca] = r;
   });
   return Object.values(porMedico);
@@ -6592,7 +6593,9 @@ function crmBuildTabelaHtml(registrosMes, filtroBusca, registrosAnteriores) {
 
   var rows = medicos.map(function(m) {
     var tr = '<tr><td><span class="crmp-linha-badge ' + (m.linha==='NEXUS'?'nexus':'vital') + '">' + m.linha + '</span></td>' +
-      '<td class="txt-left">' + (m.gd||'') + '</td><td class="txt-left">' + m.nome + '</td><td>' + m.crm + '</td>';
+      '<td class="txt-left">' + (m.gd||'') + '</td><td class="txt-left">' + m.nome +
+      (m.substituido ? '<span class="crmp-badge-substituido">🆕 Substituído</span>' : '') +
+      '</td><td>' + m.crm + '</td>';
     var marcasAnteriorMedico = anteriorPorCrm[m.crm] || {};
     todasMarcas.forEach(function(marca) {
       var aplicavel = linhaMarcas[m.linha].indexOf(marca) >= 0;
@@ -6704,6 +6707,7 @@ function crmRenderPagina() {
     '<li>LINADIB (sem DUO): a consulta nacional do Power BI excede o tempo limite (recursos excedidos, 90s) de forma consistente. Extração feita com filtro UGN = SPI — não afeta a cobertura dos 92 médicos (todos da SPI OESTE), mas esse dado específico não é estritamente comparável em metodologia às demais marcas (nacionais, sem filtro de UGN).</li>' +
     '<li>LINADIB e LINADIB DUO têm volume de Rx Mercado muito baixo por médico (1 a 2 prescrições no período em vários casos) — os Market Share de 100% que aparecem nesses casos refletem essa base pequena (o médico só teve 1 prescrição no mercado, e foi nossa), não necessariamente domínio real de mercado. Tratar como sinal fraco até acumular mais ciclos.</li>' +
     '<li>▲/▼/➖ ao lado do Market Share = variação em pontos percentuais (pp) vs. o ciclo anterior publicado (não necessariamente o mês civil anterior, e sim o último ciclo com dado na aba), para o mesmo médico e marca. Sem badge = médico/marca sem dado comparável no ciclo anterior (1º ciclo do médico, marca sem prescrição num dos dois meses, etc.).</li>' +
+    '<li>🆕 Substituído = médico novo no painel de CRM Chave desde a virada de quadrimestre de SET/2026 (não estava no painel anterior, mai-ago) — sem histórico de meses antes da entrada.</li>' +
   '</ul></div>';
 
   document.getElementById('main-content').innerHTML =
