@@ -26,7 +26,14 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--da
 .hpill{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);color:#fff;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
 .hpill.hi{background:#fff;color:var(--brand)}
 
-.local-banner{background:var(--gold-l);border-bottom:1px solid #f0dca3;padding:8px 24px;font-size:11.5px;color:#7a5600;font-weight:600;text-align:center}
+.status-banner{padding:8px 24px;font-size:11.5px;font-weight:600;text-align:center;border-bottom:1px solid var(--border)}
+.status-banner.ok{background:var(--brand-l);color:var(--brand-d)}
+.status-banner.warn{background:var(--gold-l);color:#7a5600;border-bottom-color:#f0dca3}
+
+.loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,.92);z-index:900;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+.loading-spinner{width:48px;height:48px;border:4px solid var(--brand-l);border-top:4px solid var(--brand);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-txt{font-size:14px;font-weight:600;color:var(--gray)}
 
 .filtro-bar{display:flex;gap:10px;padding:12px 24px;background:#fff;border-bottom:1px solid var(--border);flex-wrap:wrap;align-items:center}
 .filtro-bar-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)}
@@ -68,6 +75,8 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--da
 .btn-primary{background:var(--brand);color:#fff;border:none;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
 .btn-primary:hover{background:var(--brand-d)}
 .btn-primary:disabled{background:var(--light);color:var(--gray);cursor:not-allowed}
+.btn-refresh{background:#fff;border:1.5px solid var(--border);color:var(--gray);padding:7px 14px;border-radius:8px;font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap}
+.btn-refresh:hover{background:var(--light);color:var(--dark)}
 table.led-tbl{width:100%;border-collapse:collapse;font-size:11.5px}
 table.led-tbl thead th{background:var(--dark);color:#fff;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;padding:9px 8px;text-align:center;white-space:nowrap}
 table.led-tbl thead th.txt-left{text-align:left}
@@ -85,6 +94,7 @@ table.led-tbl tbody tr.editada{background:var(--gold-l)}
 .row-actions{display:flex;gap:6px;justify-content:center}
 .icon-btn{border:1.5px solid var(--border);background:#fff;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;white-space:nowrap}
 .icon-btn:hover{background:var(--light)}
+.icon-btn:disabled{opacity:.4;cursor:not-allowed}
 .icon-btn.danger{color:var(--danger);border-color:#f3c6c2}
 .icon-btn.danger:hover{background:var(--danger-l)}
 .edit-tag{font-size:9px;font-weight:800;color:var(--gold);margin-left:5px}
@@ -114,6 +124,11 @@ table.led-tbl tbody tr.editada{background:var(--gold-l)}
 </head>
 <body>
 
+<div class="loading-overlay" id="loading">
+  <div class="loading-spinner"></div>
+  <div class="loading-txt" id="loading-txt">Carregando Budget…</div>
+</div>
+
 <div class="hdr">
   <div class="hdr-inner">
     <div class="logo">EMS</div>
@@ -129,7 +144,7 @@ table.led-tbl tbody tr.editada{background:var(--gold-l)}
   </div>
 </div>
 
-<div class="local-banner">⚠ Versão inicial: os lançamentos ficam salvos só neste navegador (não são compartilhados entre dispositivos/pessoas ainda). Gravação centralizada está em desenvolvimento.</div>
+<div id="status-banner-slot"></div>
 
 <div class="filtro-bar">
   <span class="filtro-bar-label">Linha:</span>
@@ -152,25 +167,17 @@ table.led-tbl tbody tr.editada{background:var(--gold-l)}
 <script>
 var BASE_ALLOC = [{"linha": "VITAL", "produto": "BUPIUM XL", "codigo": "11630100", "gd": "Fabiano Atanazio Machado", "verba": 2250, "regional": "SPI OESTE"}, {"linha": "VITAL", "produto": "BUPIUM XL", "codigo": "11630200", "gd": "Daniel Antonio Costa", "verba": 1950, "regional": "SPI OESTE"}, {"linha": "VITAL", "produto": "BUPIUM XL", "codigo": "11630300", "gd": "Matheus Landulpho Allonso", "verba": 1800, "regional": "SPI OESTE"}, {"linha": "VITAL", "produto": "BUPIUM XL", "codigo": "11630400", "gd": "Michael Aparecido da Silva Mota", "verba": 1650, "regional": "SPI OESTE"}, {"linha": "NEXUS", "produto": "LYBERDIA", "codigo": "11030100", "gd": "Joao Rafael de Franca Nunes Leardini", "verba": 1000, "regional": "SPI OESTE"}, {"linha": "NEXUS", "produto": "LYBERDIA", "codigo": "11030200", "gd": "Murillo Cesar Barbosa dos Santos", "verba": 1000, "regional": "SPI OESTE"}, {"linha": "NEXUS", "produto": "LYBERDIA", "codigo": "11030300", "gd": "Geovana Buttignon", "verba": 1000, "regional": "SPI OESTE"}, {"linha": "NEXUS", "produto": "LYBERDIA", "codigo": "11030400", "gd": "Vanessa Araujo Ferreira Lima", "verba": 1000, "regional": "SPI OESTE"}, {"linha": "NEXUS", "produto": "CONCARDIO - CRM-CHAVE E DEMAIS AÇÕES", "codigo": "11030200", "gd": "Murillo Cesar Barbosa dos Santos", "verba": 6752.75, "regional": "SPI OESTE"}, {"linha": "NEXUS", "produto": "CONCARDIO - CRM-CHAVE E DEMAIS AÇÕES", "codigo": "11030100", "gd": "Joao Rafael de Franca Nunes Leardini", "verba": 5620.27, "regional": "SPI OESTE"}, {"linha": "NEXUS", "produto": "CONCARDIO - CRM-CHAVE E DEMAIS AÇÕES", "codigo": "11030400", "gd": "Vanessa Araujo Ferreira Lima", "verba": 3653.48, "regional": "SPI OESTE"}, {"linha": "NEXUS", "produto": "CONCARDIO - CRM-CHAVE E DEMAIS AÇÕES", "codigo": "11030300", "gd": "Geovana Buttignon", "verba": 3373.8, "regional": "SPI OESTE"}];
 
-var STORAGE_KEY = 'ems_budget_lancamentos_v1';
+var TAB_NAME = 'budget_lancamentos';
 var ACOES = ['Almoço/jantar','Cesta de presente','Bloco de receituário','Outros'];
+var CONFIG = {};
+var BACKEND_PRONTO = false;
 
 function uid(){ return 'l' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
-
-function loadLancamentos(){
-  try{
-    var raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  }catch(e){ return []; }
-}
-function saveLancamentos(){
-  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE.lancamentos)); }catch(e){}
-}
 
 var STATE = {
   filtroLinha: '',
   filtroGd: '',
-  lancamentos: loadLancamentos()
+  lancamentos: []
 };
 
 function fmtBRL(v){
@@ -217,6 +224,66 @@ function utilizadoDoProduto(gd, produto){
     .reduce(function(a,l){ return a + l.valor; }, 0);
 }
 
+// ── Sheets (leitura) e Apps Script Web App (gravação) ───────────────────
+
+function sheetsUrl(aba){
+  return 'https://sheets.googleapis.com/v4/spreadsheets/' + CONFIG.spreadsheet_id +
+    '/values/' + encodeURIComponent(aba) + '?key=' + CONFIG.api_key;
+}
+
+async function fetchAba(aba, tentativa){
+  tentativa = tentativa || 0;
+  var res = await fetch(sheetsUrl(aba), { cache: 'no-store' });
+  if (res.status === 429 && tentativa < 6){
+    var espera = 500 * Math.pow(1.8, tentativa) + Math.random() * 400;
+    await new Promise(function(r){ setTimeout(r, espera); });
+    return fetchAba(aba, tentativa + 1);
+  }
+  if (!res.ok) throw new Error('Erro ao buscar aba: ' + aba + ' (' + res.status + ')');
+  var json = await res.json();
+  var rows = json.values || [];
+  if (rows.length < 2) return [];
+  var headers = rows[0];
+  return rows.slice(1).map(function(row){
+    var obj = {};
+    headers.forEach(function(h, i){ obj[h] = row[i] !== undefined ? row[i] : ''; });
+    return obj;
+  });
+}
+
+async function carregarLancamentos(){
+  var registros = await fetchAba(TAB_NAME);
+  return registros.map(function(r){
+    return {
+      id: r.id, gd: r.gd, linha: r.linha, produto: r.produto, crm: r.crm,
+      medico: r.medico, valor: parseFloat(r.valor) || 0, acao: r.acao,
+      data: r.data, criadoEm: r.criadoEm, editado: r.editado === 'TRUE'
+    };
+  });
+}
+
+function enviarAoSheet(operacao, dados){
+  var payload = {
+    token: CONFIG.budget_token,
+    acao: operacao, // 'add' | 'edit' | 'delete'
+    id: dados.id, gd: dados.gd, linha: dados.linha, produto: dados.produto,
+    crm: dados.crm, medico: dados.medico, valor: dados.valor,
+    acao_lancamento: dados.acao, data: dados.data, criadoEm: dados.criadoEm
+  };
+  return fetch(CONFIG.budget_webapp_url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(payload)
+  }).then(function(r){ return r.json(); });
+}
+
+async function recarregar(){
+  STATE.lancamentos = await carregarLancamentos();
+  render();
+}
+
+// ── Filtros ───────────────────────────────────────────────────────────
+
 function renderFiltros(){
   var linhaSel = document.getElementById('filtro-linha');
   linhaSel.value = STATE.filtroLinha;
@@ -237,6 +304,8 @@ function renderFiltros(){
     STATE.filtroLinha = ''; STATE.filtroGd = ''; render();
   };
 }
+
+// ── Cards ────────────────────────────────────────────────────────────
 
 function renderCards(gd){
   var produtos = produtosDoGd(gd);
@@ -310,6 +379,8 @@ function renderOverview(){
   return html;
 }
 
+// ── Ledger ───────────────────────────────────────────────────────────
+
 function renderLedger(gd){
   var lancs = STATE.lancamentos.filter(function(l){
     if (gd) return l.gd === gd;
@@ -321,11 +392,12 @@ function renderLedger(gd){
     '<div class="tbl-hdr-bar">' +
       '<h2>📒 Lançamentos' + (gd ? ' — ' + gd : '') + '</h2>' +
       '<span class="tbl-count">' + lancs.length + ' registro(s)</span>' +
-      (gd ? '<button class="btn-primary" id="btn-novo">+ Novo lançamento</button>' : '') +
+      '<button type="button" class="btn-refresh" id="btn-refresh">🔄 Atualizar</button>' +
+      (gd && BACKEND_PRONTO ? '<button class="btn-primary" id="btn-novo">+ Novo lançamento</button>' : '') +
     '</div>';
 
   if (!lancs.length){
-    html += '<div class="tbl-empty">Nenhum lançamento ' + (gd ? 'para este GD ainda. Use "Novo lançamento" para registrar o primeiro CRM.' : 'encontrado para este filtro.') + '</div></div>';
+    html += '<div class="tbl-empty">Nenhum lançamento ' + (gd ? 'para este GD ainda.' + (BACKEND_PRONTO ? ' Use "Novo lançamento" para registrar o primeiro CRM.' : '') : 'encontrado para este filtro.') + '</div></div>';
     return html;
   }
 
@@ -355,8 +427,8 @@ function renderLedger(gd){
       '<td class="val-cell">-' + fmtBRL(l.valor) + '</td>' +
       '<td class="saldo-cell ' + (saldoApos<0?'neg':'') + '">' + fmtBRL(saldoApos) + '</td>' +
       '<td><div class="row-actions">' +
-        '<button type="button" class="icon-btn" data-action="editar" data-id="' + l.id + '">✏️ Editar</button>' +
-        '<button type="button" class="icon-btn danger" data-action="excluir" data-id="' + l.id + '">🗑️</button>' +
+        '<button type="button" class="icon-btn" data-action="editar" data-id="' + l.id + '" ' + (BACKEND_PRONTO ? '' : 'disabled') + '>✏️ Editar</button>' +
+        '<button type="button" class="icon-btn danger" data-action="excluir" data-id="' + l.id + '" ' + (BACKEND_PRONTO ? '' : 'disabled') + '>🗑️</button>' +
       '</div></td>' +
     '</tr>';
   });
@@ -365,8 +437,20 @@ function renderLedger(gd){
   return html;
 }
 
+// ── Render principal ─────────────────────────────────────────────────
+
+function renderStatusBanner(){
+  var slot = document.getElementById('status-banner-slot');
+  if (BACKEND_PRONTO){
+    slot.innerHTML = '<div class="status-banner ok">✅ Lançamentos gravados no Google Sheets — compartilhados entre todo mundo. Outras pessoas só aparecem depois de clicar em "🔄 Atualizar".</div>';
+  } else {
+    slot.innerHTML = '<div class="status-banner warn">⚠ Gravação centralizada ainda não configurada (falta ligar o backend no Google Sheets) — lançar/editar/excluir está desativado até isso ser concluído. Os dados abaixo já vêm do Sheets em tempo real.</div>';
+  }
+}
+
 function render(){
   renderFiltros();
+  renderStatusBanner();
   var gd = STATE.filtroGd;
   document.getElementById('pill-gd').textContent = gd || 'Selecione um GD';
   document.getElementById('pill-lanc').textContent = STATE.lancamentos.length + ' lançamento(s) no total';
@@ -382,7 +466,7 @@ function render(){
   html += '<div class="notes"><h3>Notas metodológicas</h3><ul>' +
     '<li><b>Escopo: só SPI OESTE.</b> Verba por GD/produto cruzada com o mapeamento oficial do projeto (config/mapping.json: prefixos de distrito 11030 = SPI Nexus, 11630 = SPI Vital). Produtos: BUPIUM XL (Vital) e LYBERDIA/CONCARDIO (Nexus).</li>' +
     '<li>A conta corrente é calculada por Produto: cada lançamento desconta do saldo daquele produto específico dentro do GD selecionado (não existe um "saldo único" por GD somando produtos diferentes — o card consolidado é só informativo).</li>' +
-    '<li>Lançamentos ficam salvos no navegador de quem está usando (localStorage) — ainda não há gravação centralizada compartilhada entre dispositivos/pessoas.</li>' +
+    '<li>Lançamentos são gravados na aba <code>budget_lancamentos</code> do Google Sheets do dashboard, através de um Apps Script Web App — não há atualização automática entre abas abertas: use "🔄 Atualizar" para ver o que outras pessoas lançaram.</li>' +
     '<li>Lista de "Ação": Almoço/jantar, Cesta de presente, Bloco de receituário, Outros.</li>' +
     '<li>Edição recalcula o saldo automaticamente (o saldo nunca é digitado à mão, sempre = verba − soma dos lançamentos).</li>' +
     '<li><b>Trava de saldo:</b> o campo de valor nunca aceita mais do que o saldo disponível daquele produto, e o lançamento fica bloqueado quando o produto zera. Produto esgotado aparece marcado "🔒 ESGOTADO".</li>' +
@@ -392,9 +476,22 @@ function render(){
 
   var btnNovo = document.getElementById('btn-novo');
   if (btnNovo) btnNovo.onclick = function(){ abrirModal(null); };
+
+  var btnRefresh = document.getElementById('btn-refresh');
+  if (btnRefresh) btnRefresh.onclick = function(){
+    btnRefresh.textContent = '⏳ Atualizando…';
+    btnRefresh.disabled = true;
+    recarregar().catch(function(e){ alert('Erro ao atualizar: ' + e.message); }).finally(function(){
+      var b = document.getElementById('btn-refresh');
+      if (b){ b.textContent = '🔄 Atualizar'; b.disabled = false; }
+    });
+  };
 }
 
+// ── Modal de lançamento ──────────────────────────────────────────────
+
 function abrirModal(lancamentoId){
+  if (!BACKEND_PRONTO) return;
   var editando = lancamentoId ? STATE.lancamentos.filter(function(l){ return l.id === lancamentoId; })[0] : null;
   var gd = editando ? editando.gd : STATE.filtroGd;
   if (!gd) return;
@@ -488,6 +585,7 @@ function abrirModal(lancamentoId){
     var acao = document.getElementById('f-acao').value;
     var data = document.getElementById('f-data').value;
     var err = document.getElementById('modal-err');
+    var btnSalvar = document.getElementById('btn-salvar');
 
     if (!crm || !medico || !data || !valor || valor <= 0){
       err.textContent = 'Preencha CRM, nome completo, data e um valor maior que zero.';
@@ -507,28 +605,35 @@ function abrirModal(lancamentoId){
       return;
     }
 
-    if (editando){
-      editando.linha = linha; editando.produto = produto; editando.crm = crm;
-      editando.medico = medico; editando.valor = valor; editando.acao = acao; editando.data = data;
-      editando.editado = true;
-    } else {
-      STATE.lancamentos.push({
-        id: uid(), gd: gd, linha: linha, produto: produto,
-        crm: crm, medico: medico, valor: valor, acao: acao, data: data,
-        criadoEm: Date.now().toString(), editado: false
-      });
-    }
-    saveLancamentos();
-    document.getElementById('modal-root').innerHTML = '';
-    render();
+    var registro = {
+      id: editando ? editando.id : uid(), gd: gd, linha: linha, produto: produto,
+      crm: crm, medico: medico, valor: valor, acao: acao, data: data,
+      criadoEm: editando ? editando.criadoEm : Date.now().toString()
+    };
+
+    btnSalvar.disabled = true;
+    btnSalvar.textContent = 'Salvando…';
+    enviarAoSheet(editando ? 'edit' : 'add', registro).then(function(resp){
+      if (!resp || !resp.ok) throw new Error((resp && resp.erro) || 'falha desconhecida');
+      return recarregar();
+    }).then(function(){
+      document.getElementById('modal-root').innerHTML = '';
+    }).catch(function(e){
+      err.textContent = 'Erro ao gravar no Sheets: ' + e.message;
+      err.style.display = 'block';
+      btnSalvar.disabled = false;
+      btnSalvar.textContent = editando ? 'Salvar edição' : 'Lançar';
+    });
   };
 }
 
 function excluirLancamento(id){
+  if (!BACKEND_PRONTO) return;
   var l = STATE.lancamentos.filter(function(x){ return x.id === id; })[0];
   if (!l) return;
   var html = '<div class="modal-bg" id="modal-bg"><div class="modal" style="max-width:380px">' +
     '<h3>🗑️ Excluir lançamento?</h3>' +
+    '<div class="modal-err" id="modal-err-del"></div>' +
     '<p style="font-size:12.5px;color:var(--gray);line-height:1.5;margin-bottom:6px">Isso remove permanentemente o lançamento de <b style="color:var(--dark)">' + l.medico + '</b> (CRM ' + l.crm + '), valor <b style="color:var(--dark)">' + fmtBRL(l.valor) + '</b> em ' + fmtData(l.data) + '.</p>' +
     '<p style="font-size:11.5px;color:var(--danger);font-weight:700;margin-bottom:16px">Essa ação não pode ser desfeita.</p>' +
     '<div class="modal-actions">' +
@@ -540,23 +645,60 @@ function excluirLancamento(id){
   document.getElementById('btn-cancelar-excluir').onclick = function(){ document.getElementById('modal-root').innerHTML = ''; };
   document.getElementById('modal-bg').onclick = function(e){ if (e.target.id === 'modal-bg') document.getElementById('modal-root').innerHTML = ''; };
   document.getElementById('btn-confirmar-excluir').onclick = function(){
-    STATE.lancamentos = STATE.lancamentos.filter(function(x){ return x.id !== id; });
-    saveLancamentos();
-    document.getElementById('modal-root').innerHTML = '';
-    render();
+    var btn = document.getElementById('btn-confirmar-excluir');
+    var err = document.getElementById('modal-err-del');
+    btn.disabled = true;
+    btn.textContent = 'Excluindo…';
+    enviarAoSheet('delete', { id: id }).then(function(resp){
+      if (!resp || !resp.ok) throw new Error((resp && resp.erro) || 'falha desconhecida');
+      return recarregar();
+    }).then(function(){
+      document.getElementById('modal-root').innerHTML = '';
+    }).catch(function(e){
+      err.textContent = 'Erro ao excluir no Sheets: ' + e.message;
+      err.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Excluir';
+    });
   };
 }
 
 document.getElementById('main').addEventListener('click', function(e){
   var btn = e.target.closest('button[data-action]');
-  if (!btn) return;
+  if (!btn || btn.disabled) return;
   var id = btn.getAttribute('data-id');
   var action = btn.getAttribute('data-action');
   if (action === 'editar') abrirModal(id);
   else if (action === 'excluir') excluirLancamento(id);
 });
 
-render();
+// ── Inicialização ────────────────────────────────────────────────────
+
+function mostrarLoading(show){ document.getElementById('loading').style.display = show ? 'flex' : 'none'; }
+function setLoadingTxt(txt){ document.getElementById('loading-txt').textContent = txt; }
+
+async function init(){
+  mostrarLoading(true);
+  try {
+    setLoadingTxt('Carregando configuração…');
+    var res = await fetch('config.json?t=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) throw new Error('config.json não encontrado.');
+    CONFIG = await res.json();
+    if (!CONFIG.spreadsheet_id || !CONFIG.api_key) throw new Error('SPREADSHEET_ID ou API_KEY não configurados em config.json.');
+    BACKEND_PRONTO = !!(CONFIG.budget_webapp_url && CONFIG.budget_token);
+
+    setLoadingTxt('Carregando lançamentos…');
+    STATE.lancamentos = await carregarLancamentos();
+
+    render();
+  } catch (e) {
+    document.getElementById('main').innerHTML =
+      '<div class="gd-empty"><b>Erro ao carregar</b><br>' + e.message + '</div>';
+  }
+  mostrarLoading(false);
+}
+
+init();
 </script>
 </body>
 </html>
