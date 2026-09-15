@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>EMS | Budget — Conta Corrente Tática</title>
+<style>
+:root{
+  --brand:#047857;--brand-d:#03543f;--brand-hi:#10b981;--brand-l:#e7f6ef;
+  --nexus:#1A3A6B;--nexus-l:#EEF2FA;--vital:#C8102E;--vital-l:#fce8ec;
+  --dark:#111827;--gray:#6B7280;--light:#F3F4F6;--border:#E5E7EB;--white:#FFFFFF;
+  --danger:#B42318;--danger-l:#FEE4E2;--gold:#9C6D00;--gold-l:#FFF7E0;
+  --bg:#ECEDF0;--card-bg:#fff;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--dark);min-height:100vh;padding-bottom:40px}
+
+.hdr{background:linear-gradient(135deg,var(--brand-d),var(--brand) 55%,var(--brand-hi));position:sticky;top:0;z-index:200;box-shadow:0 2px 16px rgba(0,0,0,.2)}
+.hdr-inner{display:flex;align-items:center;padding:12px 24px;gap:16px;flex-wrap:wrap}
+.logo{background:#fff;padding:4px 10px;border-radius:6px;font-size:20px;font-weight:900;color:var(--brand);letter-spacing:-1px}
+.hdr-sep{width:1px;height:36px;background:rgba(255,255,255,.2)}
+.hdr-text h1{color:#fff;font-size:15px;font-weight:700}
+.hdr-text p{color:rgba(255,255,255,.7);font-size:11px;margin-top:2px}
+.hdr-pills{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap;align-items:center}
+.hpill{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);color:#fff;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+.hpill.hi{background:#fff;color:var(--brand)}
+
+.local-banner{background:var(--gold-l);border-bottom:1px solid #f0dca3;padding:8px 24px;font-size:11.5px;color:#7a5600;font-weight:600;text-align:center}
+
+.filtro-bar{display:flex;gap:10px;padding:12px 24px;background:#fff;border-bottom:1px solid var(--border);flex-wrap:wrap;align-items:center}
+.filtro-bar-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)}
+.sel,.txt-input{padding:6px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;font-weight:600;font-family:inherit;color:var(--dark);background:#fff}
+.sel{cursor:pointer;min-width:150px}
+.filtro-clear{font-size:11px;font-weight:700;color:var(--gray);background:none;border:none;cursor:pointer;text-decoration:underline;margin-left:auto}
+
+.main{padding:20px 24px;max-width:1320px;margin:0 auto}
+
+.gd-empty{background:#fff;border-radius:14px;padding:40px 24px;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,.06);color:var(--gray)}
+.gd-empty b{color:var(--dark)}
+
+.consol-row{display:flex;gap:14px;margin-bottom:18px;flex-wrap:wrap}
+.consol-card{flex:1;min-width:190px;background:linear-gradient(135deg,var(--brand-d),var(--brand));border-radius:14px;padding:16px 20px;color:#fff;box-shadow:0 4px 16px rgba(4,120,87,.25)}
+.consol-card .lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;opacity:.85;font-weight:700}
+.consol-card .val{font-size:22px;font-weight:800;margin-top:4px}
+.consol-card .sub{font-size:11px;opacity:.8;margin-top:6px}
+
+.linha-hdr{font-size:12px;font-weight:800;display:flex;align-items:center;gap:10px;margin:22px 0 10px;padding-bottom:7px;border-bottom:2px solid var(--border);text-transform:uppercase;letter-spacing:.3px}
+.card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.pc-card{background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.08);padding:16px 18px;border-top:3px solid var(--border)}
+.pc-card.nexus{border-top-color:var(--nexus)}
+.pc-card.vital{border-top-color:var(--vital)}
+.pc-nome{font-size:12.5px;font-weight:800;color:var(--dark);margin-bottom:10px;line-height:1.3}
+.pc-row{display:flex;justify-content:space-between;font-size:11.5px;color:var(--gray);margin-bottom:5px}
+.pc-row b{color:var(--dark);font-weight:800}
+.pc-row.saldo b{font-size:16px}
+.pc-row.saldo b.neg{color:var(--danger)}
+.pc-bar-track{height:7px;border-radius:4px;background:var(--light);margin:8px 0 4px;overflow:hidden}
+.pc-bar-fill{height:100%;border-radius:4px;background:var(--brand)}
+.pc-bar-fill.warn{background:var(--gold)}
+.pc-bar-fill.over{background:var(--danger)}
+.pc-pct{font-size:10px;color:var(--gray);text-align:right}
+
+.tbl-wrap{background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.08);overflow:hidden;margin-top:18px}
+.tbl-hdr-bar{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.tbl-hdr-bar h2{font-size:13px;font-weight:800}
+.tbl-count{margin-left:auto;font-size:11px;color:var(--gray);font-weight:600}
+.btn-primary{background:var(--brand);color:#fff;border:none;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+.btn-primary:hover{background:var(--brand-d)}
+.btn-primary:disabled{background:var(--light);color:var(--gray);cursor:not-allowed}
+table.led-tbl{width:100%;border-collapse:collapse;font-size:11.5px}
+table.led-tbl thead th{background:var(--dark);color:#fff;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;padding:9px 8px;text-align:center;white-space:nowrap}
+table.led-tbl thead th.txt-left{text-align:left}
+table.led-tbl tbody td{padding:8px 8px;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap}
+table.led-tbl tbody td.txt-left{text-align:left}
+table.led-tbl tbody tr:nth-child(even){background:var(--light)}
+table.led-tbl tbody tr:hover{background:#EEF6F5}
+table.led-tbl tbody tr.editada{background:var(--gold-l)}
+.linha-badge{font-size:9px;font-weight:800;padding:2px 8px;border-radius:10px;text-transform:uppercase}
+.linha-badge.nexus{background:var(--nexus-l);color:var(--nexus)}
+.linha-badge.vital{background:var(--vital-l);color:var(--vital)}
+.acao-tag{font-size:10px;font-weight:700;padding:2px 8px;border-radius:8px;background:var(--light);color:var(--dark)}
+.val-cell{font-weight:800;color:var(--danger)}
+.saldo-cell{font-weight:800}
+.row-actions{display:flex;gap:6px;justify-content:center}
+.icon-btn{border:1.5px solid var(--border);background:#fff;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;white-space:nowrap}
+.icon-btn:hover{background:var(--light)}
+.icon-btn.danger{color:var(--danger);border-color:#f3c6c2}
+.icon-btn.danger:hover{background:var(--danger-l)}
+.edit-tag{font-size:9px;font-weight:800;color:var(--gold);margin-left:5px}
+.tbl-empty{padding:30px;text-align:center;color:var(--gray);font-size:12px}
+
+.modal-bg{position:fixed;inset:0;background:rgba(17,24,39,.5);z-index:800;display:flex;align-items:center;justify-content:center;padding:20px}
+.modal{background:#fff;border-radius:14px;width:100%;max-width:440px;padding:22px 24px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.modal h3{font-size:14px;font-weight:800;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:var(--gray);margin-bottom:4px}
+.field input,.field select{width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit}
+.field input:focus,.field select:focus{outline:none;border-color:var(--brand)}
+.field-row{display:flex;gap:10px}
+.field-row .field{flex:1}
+.saldo-hint{font-size:11px;color:var(--gray);margin-top:4px}
+.saldo-hint.over{color:var(--danger);font-weight:700}
+.modal-err{background:var(--danger-l);color:var(--danger);font-size:11.5px;font-weight:600;padding:8px 10px;border-radius:8px;margin-bottom:12px;display:none}
+.modal-actions{display:flex;gap:10px;margin-top:18px}
+.btn-secondary{flex:1;background:#fff;border:1.5px solid var(--border);padding:9px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;color:var(--gray)}
+.btn-secondary:hover{background:var(--light)}
+.modal .btn-primary{flex:1;padding:9px}
+
+.notes{background:#fff;border-radius:12px;padding:16px 20px;margin-top:20px;box-shadow:0 1px 8px rgba(0,0,0,.06)}
+.notes h3{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--gray);margin-bottom:8px}
+.notes li{font-size:11.5px;color:var(--gray);line-height:1.6;margin-left:16px;margin-bottom:4px}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-inner">
+    <div class="logo">EMS</div>
+    <div class="hdr-sep"></div>
+    <div class="hdr-text">
+      <h1>💰 Budget — Conta Corrente Tática</h1>
+      <p>Regional SPI OESTE · Cardiometabólico · Saldo e lançamentos de verba por Gerente Distrital</p>
+    </div>
+    <div class="hdr-pills">
+      <span class="hpill hi" id="pill-gd">Selecione um GD</span>
+      <span class="hpill" id="pill-lanc">0 lançamentos</span>
+    </div>
+  </div>
+</div>
+
+<div class="local-banner">⚠ Versão inicial: os lançamentos ficam salvos só neste navegador (não são compartilhados entre dispositivos/pessoas ainda). Gravação centralizada está em desenvolvimento.</div>
+
+<div class="filtro-bar">
+  <span class="filtro-bar-label">Linha:</span>
+  <select class="sel" id="filtro-linha">
+    <option value="">Todas</option>
+    <option value="NEXUS">Nexus</option>
+    <option value="VITAL">Vital</option>
+  </select>
+  <span class="filtro-bar-label">Gerente Distrital:</span>
+  <select class="sel" id="filtro-gd" style="min-width:240px">
+    <option value="">— Selecione —</option>
+  </select>
+  <button class="filtro-clear" id="btn-clear">Limpar filtro</button>
+</div>
+
+<div class="main" id="main"></div>
+
+<div id="modal-root"></div>
+
+<script>
+var BASE_ALLOC = [{"linha": "VITAL", "produto": "BUPIUM XL", "codigo": "11630100", "gd": "Fabiano Atanazio Machado", "verba": 2250, "regional": "SPI OESTE"}, {"linha": "VITAL", "produto": "BUPIUM XL", "codigo": "11630200", "gd": "Daniel Antonio Costa", "verba": 1950, "regional": "SPI OESTE"}, {"linha": "VITAL", "produto": "BUPIUM XL", "codigo": "11630300", "gd": "Matheus Landulpho Allonso", "verba": 1800, "regional": "SPI OESTE"}, {"linha": "VITAL", "produto": "BUPIUM XL", "codigo": "11630400", "gd": "Michael Aparecido da Silva Mota", "verba": 1650, "regional": "SPI OESTE"}, {"linha": "NEXUS", "produto": "LYBERDIA", "codigo": "11030100", "gd": "Joao Rafael de Franca Nunes Leardini", "verba": 1000, "regional": "SPI OESTE"}, {"linha": "NEXUS", "produto": "LYBERDIA", "codigo": "11030200", "gd": "Murillo Cesar Barbosa dos Santos", "verba": 1000, "regional": "SPI OESTE"}, {"linha": "NEXUS", "produto": "LYBERDIA", "codigo": "11030300", "gd": "Geovana Buttignon", "verba": 1000, "regional": "SPI OESTE"}, {"linha": "NEXUS", "produto": "LYBERDIA", "codigo": "11030400", "gd": "Vanessa Araujo Ferreira Lima", "verba": 1000, "regional": "SPI OESTE"}, {"linha": "NEXUS", "produto": "CONCARDIO - CRM-CHAVE E DEMAIS AÇÕES", "codigo": "11030200", "gd": "Murillo Cesar Barbosa dos Santos", "verba": 6752.75, "regional": "SPI OESTE"}, {"linha": "NEXUS", "produto": "CONCARDIO - CRM-CHAVE E DEMAIS AÇÕES", "codigo": "11030100", "gd": "Joao Rafael de Franca Nunes Leardini", "verba": 5620.27, "regional": "SPI OESTE"}, {"linha": "NEXUS", "produto": "CONCARDIO - CRM-CHAVE E DEMAIS AÇÕES", "codigo": "11030400", "gd": "Vanessa Araujo Ferreira Lima", "verba": 3653.48, "regional": "SPI OESTE"}, {"linha": "NEXUS", "produto": "CONCARDIO - CRM-CHAVE E DEMAIS AÇÕES", "codigo": "11030300", "gd": "Geovana Buttignon", "verba": 3373.8, "regional": "SPI OESTE"}];
+
+var STORAGE_KEY = 'ems_budget_lancamentos_v1';
+var ACOES = ['Almoço/jantar','Cesta de presente','Bloco de receituário','Outros'];
+
+function uid(){ return 'l' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+function loadLancamentos(){
+  try{
+    var raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  }catch(e){ return []; }
+}
+function saveLancamentos(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE.lancamentos)); }catch(e){}
+}
+
+var STATE = {
+  filtroLinha: '',
+  filtroGd: '',
+  lancamentos: loadLancamentos()
+};
+
+function fmtBRL(v){
+  return (v||0).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+}
+function fmtData(iso){
+  var d = new Date(iso + 'T12:00:00');
+  return d.toLocaleDateString('pt-BR');
+}
+
+function nomeProduto(produto){
+  return produto === 'CONCARDIO - CRM-CHAVE E DEMAIS AÇÕES' ? 'CONCARDIO' : produto;
+}
+
+function distritoDoGd(gd){
+  var a = BASE_ALLOC.filter(function(x){ return x.gd === gd; })[0];
+  return a ? a.codigo : null;
+}
+
+function gdList(filtroLinha){
+  var set = {};
+  BASE_ALLOC.forEach(function(a){
+    if (a.gd === 'VAGO') return;
+    if (filtroLinha && a.linha !== filtroLinha) return;
+    set[a.gd] = true;
+  });
+  return Object.keys(set).sort();
+}
+
+function produtosDoGd(gd){
+  var out = [];
+  BASE_ALLOC.forEach(function(a){
+    if (a.gd !== gd) return;
+    var existing = out.filter(function(p){ return p.produto === a.produto && p.linha === a.linha; })[0];
+    if (existing) existing.verba += a.verba;
+    else out.push({ linha: a.linha, produto: a.produto, verba: a.verba });
+  });
+  return out;
+}
+
+function utilizadoDoProduto(gd, produto){
+  return STATE.lancamentos
+    .filter(function(l){ return l.gd === gd && l.produto === produto; })
+    .reduce(function(a,l){ return a + l.valor; }, 0);
+}
+
+function renderFiltros(){
+  var linhaSel = document.getElementById('filtro-linha');
+  linhaSel.value = STATE.filtroLinha;
+  linhaSel.onchange = function(){
+    STATE.filtroLinha = this.value;
+    if (STATE.filtroGd && gdList(STATE.filtroLinha).indexOf(STATE.filtroGd) === -1) STATE.filtroGd = '';
+    render();
+  };
+
+  var gds = gdList(STATE.filtroLinha);
+  var gdSel = document.getElementById('filtro-gd');
+  gdSel.innerHTML = '<option value="">— Selecione —</option>' +
+    gds.map(function(g){ return '<option value="' + g.replace(/"/g,'&quot;') + '">' + g + '</option>'; }).join('');
+  gdSel.value = STATE.filtroGd;
+  gdSel.onchange = function(){ STATE.filtroGd = this.value; render(); };
+
+  document.getElementById('btn-clear').onclick = function(){
+    STATE.filtroLinha = ''; STATE.filtroGd = ''; render();
+  };
+}
+
+function renderCards(gd){
+  var produtos = produtosDoGd(gd);
+  var verbaTotal = 0, utilizadoTotal = 0;
+  produtos.forEach(function(p){
+    verbaTotal += p.verba;
+    utilizadoTotal += utilizadoDoProduto(gd, p.produto);
+  });
+  var saldoTotal = verbaTotal - utilizadoTotal;
+  var pctTotal = verbaTotal ? (utilizadoTotal / verbaTotal * 100) : 0;
+
+  var html = '<div class="consol-row">' +
+    '<div class="consol-card"><div class="lbl">Verba total (todas as linhas)</div><div class="val">' + fmtBRL(verbaTotal) + '</div><div class="sub">' + produtos.length + ' produto(s) sob gestão</div></div>' +
+    '<div class="consol-card" style="background:linear-gradient(135deg,#7c2d12,#c2410c)"><div class="lbl">Utilizado</div><div class="val">' + fmtBRL(utilizadoTotal) + '</div><div class="sub">' + pctTotal.toFixed(0) + '% da verba consolidada</div></div>' +
+    '<div class="consol-card" style="background:linear-gradient(135deg,' + (saldoTotal < 0 ? '#7f1d1d,#b91c1c' : '#1e3a5f,#1d4ed8') + ')"><div class="lbl">Saldo disponível</div><div class="val">' + fmtBRL(saldoTotal) + '</div><div class="sub">Conta corrente consolidada do GD</div></div>' +
+  '</div>';
+
+  html += '<div class="card-grid">';
+  produtos.forEach(function(p){
+    var utilizado = utilizadoDoProduto(gd, p.produto);
+    var saldo = p.verba - utilizado;
+    var esgotado = saldo <= 0;
+    var pct = p.verba ? Math.min(100, utilizado / p.verba * 100) : 0;
+    var barCls = esgotado ? 'over' : (pct >= 80 ? 'warn' : '');
+    var linhaCls = p.linha === 'NEXUS' ? 'nexus' : 'vital';
+    html += '<div class="pc-card ' + linhaCls + '">' +
+      '<div class="pc-nome"><span class="linha-badge ' + linhaCls + '">' + p.linha + '</span> &nbsp;' + nomeProduto(p.produto) +
+      (esgotado ? ' <span class="acao-tag" style="background:var(--danger-l);color:var(--danger)">🔒 ESGOTADO</span>' : '') + '</div>' +
+      '<div class="pc-row"><span>Verba total</span><b>' + fmtBRL(p.verba) + '</b></div>' +
+      '<div class="pc-row"><span>Utilizado</span><b>' + fmtBRL(utilizado) + '</b></div>' +
+      '<div class="pc-bar-track"><div class="pc-bar-fill ' + barCls + '" style="width:' + Math.min(100,pct) + '%"></div></div>' +
+      '<div class="pc-pct">' + pct.toFixed(0) + '% utilizado</div>' +
+      '<div class="pc-row saldo" style="margin-top:8px"><span>Saldo disponível</span><b class="' + (saldo <= 0 ? 'neg' : '') + '">' + fmtBRL(saldo) + '</b></div>' +
+    '</div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+function renderOverview(){
+  var linhas = STATE.filtroLinha ? [STATE.filtroLinha] : ['NEXUS','VITAL'];
+  var html = '<div class="gd-empty" style="margin-bottom:18px">Selecione um <b>Gerente Distrital</b> acima para abrir a conta corrente dele e lançar/editar movimentações. Abaixo, a visão consolidada por linha e produto.</div>';
+  linhas.forEach(function(linha){
+    var produtosSet = {};
+    BASE_ALLOC.filter(function(a){ return a.linha === linha; }).forEach(function(a){
+      if (!produtosSet[a.produto]) produtosSet[a.produto] = { linha: linha, produto: a.produto, verba: 0, gds: {}, vago: 0 };
+      produtosSet[a.produto].verba += a.verba;
+      if (a.gd === 'VAGO') produtosSet[a.produto].vago += a.verba;
+      else produtosSet[a.produto].gds[a.gd] = true;
+    });
+    var produtos = Object.values(produtosSet);
+    if (!produtos.length) return;
+    html += '<div class="linha-hdr">' + (linha === 'NEXUS' ? '🔵' : '🔴') + ' ' + linha + '</div><div class="card-grid">';
+    produtos.forEach(function(p){
+      var utilizado = STATE.lancamentos.filter(function(l){ return l.linha === linha && l.produto === p.produto; }).reduce(function(a,l){ return a+l.valor; }, 0);
+      var saldo = p.verba - utilizado;
+      var pct = p.verba ? Math.min(100, utilizado/p.verba*100) : 0;
+      var barCls = pct >= 100 ? 'over' : (pct >= 80 ? 'warn' : '');
+      var linhaCls = linha === 'NEXUS' ? 'nexus' : 'vital';
+      html += '<div class="pc-card ' + linhaCls + '">' +
+        '<div class="pc-nome">' + nomeProduto(p.produto) + '</div>' +
+        '<div class="pc-row"><span>Verba total (' + Object.keys(p.gds).length + ' GDs' + (p.vago ? ' + vaga(s)' : '') + ')</span><b>' + fmtBRL(p.verba) + '</b></div>' +
+        '<div class="pc-row"><span>Utilizado</span><b>' + fmtBRL(utilizado) + '</b></div>' +
+        '<div class="pc-bar-track"><div class="pc-bar-fill ' + barCls + '" style="width:' + pct + '%"></div></div>' +
+        '<div class="pc-pct">' + pct.toFixed(0) + '% utilizado</div>' +
+        '<div class="pc-row saldo" style="margin-top:8px"><span>Saldo</span><b class="' + (saldo<0?'neg':'') + '">' + fmtBRL(saldo) + '</b></div>' +
+      '</div>';
+    });
+    html += '</div>';
+  });
+  return html;
+}
+
+function renderLedger(gd){
+  var lancs = STATE.lancamentos.filter(function(l){
+    if (gd) return l.gd === gd;
+    if (STATE.filtroLinha) return l.linha === STATE.filtroLinha;
+    return true;
+  }).slice().sort(function(a,b){ return (b.data+b.criadoEm) < (a.data+a.criadoEm) ? -1 : 1; });
+
+  var html = '<div class="tbl-wrap">' +
+    '<div class="tbl-hdr-bar">' +
+      '<h2>📒 Lançamentos' + (gd ? ' — ' + gd : '') + '</h2>' +
+      '<span class="tbl-count">' + lancs.length + ' registro(s)</span>' +
+      (gd ? '<button class="btn-primary" id="btn-novo">+ Novo lançamento</button>' : '') +
+    '</div>';
+
+  if (!lancs.length){
+    html += '<div class="tbl-empty">Nenhum lançamento ' + (gd ? 'para este GD ainda. Use "Novo lançamento" para registrar o primeiro CRM.' : 'encontrado para este filtro.') + '</div></div>';
+    return html;
+  }
+
+  html += '<div style="overflow-x:auto"><table class="led-tbl"><thead><tr>' +
+    '<th>Data</th>' +
+    (gd ? '' : '<th class="txt-left">GD</th><th>Distrito</th>') +
+    '<th>Linha</th><th class="txt-left">Produto</th>' +
+    '<th>CRM</th><th class="txt-left">Médico</th><th class="txt-left">Ação</th><th>Valor</th><th>Saldo após</th><th>—</th>' +
+  '</tr></thead><tbody>';
+
+  lancs.forEach(function(l){
+    var verbaProduto = produtosDoGd(l.gd).filter(function(p){ return p.produto === l.produto; })[0];
+    var verba = verbaProduto ? verbaProduto.verba : 0;
+    var utilizadoAteAqui = STATE.lancamentos
+      .filter(function(x){ return x.gd === l.gd && x.produto === l.produto && (x.data+x.criadoEm) <= (l.data+l.criadoEm); })
+      .reduce(function(a,x){ return a+x.valor; }, 0);
+    var saldoApos = verba - utilizadoAteAqui;
+    var linhaCls = l.linha === 'NEXUS' ? 'nexus' : 'vital';
+    html += '<tr class="' + (l.editado ? 'editada' : '') + '">' +
+      '<td>' + fmtData(l.data) + '</td>' +
+      (gd ? '' : '<td class="txt-left">' + l.gd + '</td><td>' + (distritoDoGd(l.gd) || '—') + '</td>') +
+      '<td><span class="linha-badge ' + linhaCls + '">' + l.linha + '</span></td>' +
+      '<td class="txt-left">' + nomeProduto(l.produto) + '</td>' +
+      '<td>' + l.crm + '</td>' +
+      '<td class="txt-left">' + l.medico + (l.editado ? '<span class="edit-tag">editado</span>' : '') + '</td>' +
+      '<td class="txt-left"><span class="acao-tag">' + l.acao + '</span></td>' +
+      '<td class="val-cell">-' + fmtBRL(l.valor) + '</td>' +
+      '<td class="saldo-cell ' + (saldoApos<0?'neg':'') + '">' + fmtBRL(saldoApos) + '</td>' +
+      '<td><div class="row-actions">' +
+        '<button type="button" class="icon-btn" data-action="editar" data-id="' + l.id + '">✏️ Editar</button>' +
+        '<button type="button" class="icon-btn danger" data-action="excluir" data-id="' + l.id + '">🗑️</button>' +
+      '</div></td>' +
+    '</tr>';
+  });
+
+  html += '</tbody></table></div></div>';
+  return html;
+}
+
+function render(){
+  renderFiltros();
+  var gd = STATE.filtroGd;
+  document.getElementById('pill-gd').textContent = gd || 'Selecione um GD';
+  document.getElementById('pill-lanc').textContent = STATE.lancamentos.length + ' lançamento(s) no total';
+
+  var html = '';
+  if (gd){
+    html += renderCards(gd);
+  } else {
+    html += renderOverview();
+  }
+  html += renderLedger(gd);
+
+  html += '<div class="notes"><h3>Notas metodológicas</h3><ul>' +
+    '<li><b>Escopo: só SPI OESTE.</b> Verba por GD/produto cruzada com o mapeamento oficial do projeto (config/mapping.json: prefixos de distrito 11030 = SPI Nexus, 11630 = SPI Vital). Produtos: BUPIUM XL (Vital) e LYBERDIA/CONCARDIO (Nexus).</li>' +
+    '<li>A conta corrente é calculada por Produto: cada lançamento desconta do saldo daquele produto específico dentro do GD selecionado (não existe um "saldo único" por GD somando produtos diferentes — o card consolidado é só informativo).</li>' +
+    '<li>Lançamentos ficam salvos no navegador de quem está usando (localStorage) — ainda não há gravação centralizada compartilhada entre dispositivos/pessoas.</li>' +
+    '<li>Lista de "Ação": Almoço/jantar, Cesta de presente, Bloco de receituário, Outros.</li>' +
+    '<li>Edição recalcula o saldo automaticamente (o saldo nunca é digitado à mão, sempre = verba − soma dos lançamentos).</li>' +
+    '<li><b>Trava de saldo:</b> o campo de valor nunca aceita mais do que o saldo disponível daquele produto, e o lançamento fica bloqueado quando o produto zera. Produto esgotado aparece marcado "🔒 ESGOTADO".</li>' +
+  '</ul></div>';
+
+  document.getElementById('main').innerHTML = html;
+
+  var btnNovo = document.getElementById('btn-novo');
+  if (btnNovo) btnNovo.onclick = function(){ abrirModal(null); };
+}
+
+function abrirModal(lancamentoId){
+  var editando = lancamentoId ? STATE.lancamentos.filter(function(l){ return l.id === lancamentoId; })[0] : null;
+  var gd = editando ? editando.gd : STATE.filtroGd;
+  if (!gd) return;
+  var produtos = produtosDoGd(gd);
+
+  var hoje = new Date().toISOString().slice(0,10);
+  function saldoRestanteProduto(produto){
+    var p = produtos.filter(function(x){ return x.produto === produto; })[0];
+    var utilizadoOutros = STATE.lancamentos
+      .filter(function(l){ return l.gd === gd && l.produto === produto && (!editando || l.id !== editando.id); })
+      .reduce(function(a,l){ return a+l.valor; }, 0);
+    return { p: p, saldoDisponivel: p.verba - utilizadoOutros };
+  }
+
+  var html = '<div class="modal-bg" id="modal-bg"><div class="modal">' +
+    '<h3>' + (editando ? '✏️ Editar lançamento' : '➕ Novo lançamento') + '</h3>' +
+    '<div class="modal-err" id="modal-err"></div>' +
+    '<div class="field"><label>Produto</label><select id="f-produto">' +
+      produtos.map(function(p){
+        var isSel = editando ? editando.produto === p.produto : false;
+        var saldo = saldoRestanteProduto(p.produto).saldoDisponivel;
+        var esgotado = saldo <= 0 && !isSel;
+        return '<option value="' + p.produto.replace(/"/g,'&quot;') + '" data-linha="' + p.linha + '" ' + (isSel ? 'selected' : '') + (esgotado ? ' disabled' : '') + '>' +
+          p.linha + ' — ' + nomeProduto(p.produto) + (esgotado ? ' (ESGOTADO)' : '') + '</option>';
+      }).join('') +
+    '</select></div>' +
+    '<div class="field-row">' +
+      '<div class="field"><label>CRM do médico</label><input id="f-crm" type="text" placeholder="Ex: 123456" value="' + (editando ? editando.crm : '') + '"></div>' +
+      '<div class="field"><label>Data</label><input id="f-data" type="date" value="' + (editando ? editando.data : hoje) + '"></div>' +
+    '</div>' +
+    '<div class="field"><label>Nome completo do médico</label><input id="f-medico" type="text" placeholder="Nome completo" value="' + (editando ? editando.medico.replace(/"/g,'&quot;') : '') + '"></div>' +
+    '<div class="field-row">' +
+      '<div class="field"><label>Valor utilizado (R$)</label><input id="f-valor" type="number" step="0.01" min="0.01" placeholder="0,00" value="' + (editando ? editando.valor : '') + '"></div>' +
+      '<div class="field"><label>Ação</label><select id="f-acao">' +
+        ACOES.map(function(a){ return '<option ' + (editando && editando.acao === a ? 'selected' : '') + '>' + a + '</option>'; }).join('') +
+      '</select></div>' +
+    '</div>' +
+    '<div class="saldo-hint" id="saldo-hint"></div>' +
+    '<div class="modal-actions">' +
+      '<button class="btn-secondary" id="btn-cancelar">Cancelar</button>' +
+      '<button class="btn-primary" id="btn-salvar">' + (editando ? 'Salvar edição' : 'Lançar') + '</button>' +
+    '</div>' +
+  '</div></div>';
+
+  document.getElementById('modal-root').innerHTML = html;
+
+  function atualizarHint(){
+    var produtoSel = document.getElementById('f-produto');
+    var produto = produtoSel.value;
+    var check = saldoRestanteProduto(produto);
+    var saldoDisponivel = check.saldoDisponivel;
+    var valorInput = document.getElementById('f-valor');
+    var btnSalvar = document.getElementById('btn-salvar');
+    var hint = document.getElementById('saldo-hint');
+
+    var maxPermitido = Math.max(0, saldoDisponivel);
+    valorInput.max = maxPermitido;
+    if (parseFloat(valorInput.value) > maxPermitido) valorInput.value = maxPermitido || '';
+
+    var valor = parseFloat(valorInput.value) || 0;
+    var restante = saldoDisponivel - valor;
+
+    if (saldoDisponivel <= 0){
+      hint.className = 'saldo-hint over';
+      hint.textContent = '🔒 Saldo ESGOTADO neste produto — não é possível lançar mais nenhum valor.';
+      valorInput.disabled = true;
+      btnSalvar.disabled = true;
+    } else {
+      valorInput.disabled = false;
+      hint.className = 'saldo-hint' + (restante < 0 ? ' over' : '');
+      hint.textContent = 'Saldo disponível neste produto: ' + fmtBRL(saldoDisponivel) + (valor ? ' · saldo após este lançamento: ' + fmtBRL(restante) : '');
+      btnSalvar.disabled = restante < 0;
+    }
+    return check;
+  }
+
+  document.getElementById('f-produto').onchange = atualizarHint;
+  document.getElementById('f-valor').oninput = atualizarHint;
+  atualizarHint();
+
+  document.getElementById('btn-cancelar').onclick = function(){ document.getElementById('modal-root').innerHTML = ''; };
+  document.getElementById('modal-bg').onclick = function(e){ if (e.target.id === 'modal-bg') document.getElementById('modal-root').innerHTML = ''; };
+
+  document.getElementById('btn-salvar').onclick = function(){
+    var produtoSel = document.getElementById('f-produto');
+    var produto = produtoSel.value;
+    var linha = produtoSel.selectedOptions[0].getAttribute('data-linha');
+    var crm = document.getElementById('f-crm').value.trim();
+    var medico = document.getElementById('f-medico').value.trim();
+    var valor = parseFloat(document.getElementById('f-valor').value);
+    var acao = document.getElementById('f-acao').value;
+    var data = document.getElementById('f-data').value;
+    var err = document.getElementById('modal-err');
+
+    if (!crm || !medico || !data || !valor || valor <= 0){
+      err.textContent = 'Preencha CRM, nome completo, data e um valor maior que zero.';
+      err.style.display = 'block';
+      return;
+    }
+
+    var check = atualizarHint();
+    if (check.saldoDisponivel <= 0){
+      err.textContent = 'Este produto está com o saldo ESGOTADO para este GD — não é possível lançar mais nada nele.';
+      err.style.display = 'block';
+      return;
+    }
+    if (valor > check.saldoDisponivel){
+      err.textContent = 'Valor maior que o saldo disponível neste produto (' + fmtBRL(check.saldoDisponivel) + '). Ajuste o valor ou escolha outro produto.';
+      err.style.display = 'block';
+      return;
+    }
+
+    if (editando){
+      editando.linha = linha; editando.produto = produto; editando.crm = crm;
+      editando.medico = medico; editando.valor = valor; editando.acao = acao; editando.data = data;
+      editando.editado = true;
+    } else {
+      STATE.lancamentos.push({
+        id: uid(), gd: gd, linha: linha, produto: produto,
+        crm: crm, medico: medico, valor: valor, acao: acao, data: data,
+        criadoEm: Date.now().toString(), editado: false
+      });
+    }
+    saveLancamentos();
+    document.getElementById('modal-root').innerHTML = '';
+    render();
+  };
+}
+
+function excluirLancamento(id){
+  var l = STATE.lancamentos.filter(function(x){ return x.id === id; })[0];
+  if (!l) return;
+  var html = '<div class="modal-bg" id="modal-bg"><div class="modal" style="max-width:380px">' +
+    '<h3>🗑️ Excluir lançamento?</h3>' +
+    '<p style="font-size:12.5px;color:var(--gray);line-height:1.5;margin-bottom:6px">Isso remove permanentemente o lançamento de <b style="color:var(--dark)">' + l.medico + '</b> (CRM ' + l.crm + '), valor <b style="color:var(--dark)">' + fmtBRL(l.valor) + '</b> em ' + fmtData(l.data) + '.</p>' +
+    '<p style="font-size:11.5px;color:var(--danger);font-weight:700;margin-bottom:16px">Essa ação não pode ser desfeita.</p>' +
+    '<div class="modal-actions">' +
+      '<button class="btn-secondary" id="btn-cancelar-excluir">Cancelar</button>' +
+      '<button class="btn-primary" id="btn-confirmar-excluir" style="background:var(--danger)">Excluir</button>' +
+    '</div>' +
+  '</div></div>';
+  document.getElementById('modal-root').innerHTML = html;
+  document.getElementById('btn-cancelar-excluir').onclick = function(){ document.getElementById('modal-root').innerHTML = ''; };
+  document.getElementById('modal-bg').onclick = function(e){ if (e.target.id === 'modal-bg') document.getElementById('modal-root').innerHTML = ''; };
+  document.getElementById('btn-confirmar-excluir').onclick = function(){
+    STATE.lancamentos = STATE.lancamentos.filter(function(x){ return x.id !== id; });
+    saveLancamentos();
+    document.getElementById('modal-root').innerHTML = '';
+    render();
+  };
+}
+
+document.getElementById('main').addEventListener('click', function(e){
+  var btn = e.target.closest('button[data-action]');
+  if (!btn) return;
+  var id = btn.getAttribute('data-id');
+  var action = btn.getAttribute('data-action');
+  if (action === 'editar') abrirModal(id);
+  else if (action === 'excluir') excluirLancamento(id);
+});
+
+render();
+</script>
+</body>
+</html>

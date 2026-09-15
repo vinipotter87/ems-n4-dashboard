@@ -429,6 +429,8 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
 /* ── CRM Chave — Prescrição ── */
 .cycle-btn.crm-btn{border-color:var(--border);color:var(--gray)}
 .cycle-btn.crm-btn.active{background:var(--green);border-color:var(--green);color:#fff}
+/* ── Budget — Conta Corrente Tática ── */
+.cycle-btn.budget-btn{border-color:var(--border);color:var(--gray)}
 .crmp-wrap{padding:24px 28px;max-width:1440px;margin:0 auto}
 .crmp-page-hdr{display:flex;align-items:center;gap:14px;margin-bottom:22px;padding:16px 22px;background:#fff;border-radius:12px;box-shadow:0 1px 8px rgba(0,0,0,.07)}
 .crmp-back-btn{display:flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;border:2px solid var(--border);background:#fff;font-size:12px;font-weight:700;cursor:pointer;color:var(--gray);font-family:inherit;transition:all .15s;white-space:nowrap}
@@ -1882,6 +1884,7 @@ function renderCycleBar(meses, mesAtual) {
   btns += '<button class="cycle-btn gloss-btn'    + (isGloss    ? ' active' : '') + '" onclick="abrirGlossario()">📖 Glossário</button>';
   btns += '<button class="cycle-btn diagevol-btn' + (isDiagEvol ? ' active' : '') + '" onclick="abrirEvolucaoDiag()">📊 Diag. Evolução</button>';
   btns += '<button class="cycle-btn crm-btn' + (isCrm ? ' active' : '') + '" onclick="abrirCrmChave()">💊 CRM Chave</button>';
+  btns += '<button class="cycle-btn budget-btn" onclick="window.location.href=\'budget.html\'">💰 Budget</button>';
   btns += '<button class="cycle-btn gov-btn" onclick="window.location.href=\'governanca-spi.html\'">🏛️ Governança</button>';
   bar.innerHTML = btns;
   atualizarVisibilidadeFiltroDistrito();
