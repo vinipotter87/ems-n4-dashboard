@@ -14,5 +14,7 @@
   "ultima_atualizacao": "2026-08-01T00:00:00.000000",
   "versao": "4.1",
   "regional": "SPI OESTE",
-  "divisao": "Cardiometabolico"
+  "divisao": "Cardiometabolico",
+   "budget_webapp_url": "https://script.google.com/macros/s/AKfycbx7did67cB01a7U-PhNDFxG4yHCJxMhVoutceH-49TDJrN_v9iCGo5kQso6LpmwEpOajw/exec",
+  "budget_token": "Bo4T58LY6hFd_9VF3YCZSoOmckrMHwCP"
 }
