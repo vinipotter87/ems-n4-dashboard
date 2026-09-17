@@ -262,7 +262,8 @@ async function carregarLancamentos(){
   });
 }
 
-function enviarAoSheet(operacao, dados){
+function enviarAoSheet(operacao, dados, tentativa){
+  tentativa = tentativa || 0;
   var payload = {
     token: CONFIG.budget_token,
     acao: operacao, // 'add' | 'edit' | 'delete'
@@ -274,7 +275,20 @@ function enviarAoSheet(operacao, dados){
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify(payload)
-  }).then(function(r){ return r.json(); });
+  }).then(function(r){ return r.text(); }).then(function(texto){
+    try {
+      return JSON.parse(texto);
+    } catch (e) {
+      // o Apps Script às vezes devolve uma página de erro em HTML em vez do JSON
+      // esperado (falha transitória do lado do Google) — tenta de novo antes de desistir
+      if (tentativa < 2){
+        var espera = 600 * (tentativa + 1);
+        return new Promise(function(resolve){ setTimeout(resolve, espera); })
+          .then(function(){ return enviarAoSheet(operacao, dados, tentativa + 1); });
+      }
+      throw new Error('O Google Sheets não respondeu corretamente após algumas tentativas. Tente novamente em instantes.');
+    }
+  });
 }
 
 async function recarregar(){
