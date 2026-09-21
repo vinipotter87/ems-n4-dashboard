@@ -510,6 +510,9 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
 .mtz-p-tab{padding:5px 16px;border-radius:8px;border:1.5px solid var(--border);background:#fff;font-size:11px;font-weight:700;cursor:pointer;color:var(--gray);font-family:inherit;transition:all .12s}
 .mtz-p-tab.active{background:#0369a1;color:#fff;border-color:#0369a1}
 .mtz-p-tab:hover:not(.active){border-color:#0369a1;color:#0369a1}
+.mtz-chk{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--gray);cursor:pointer;user-select:none;padding:5px 12px;border-radius:8px;border:1.5px solid var(--border);background:#fff}
+.mtz-chk input{accent-color:#0369a1;cursor:pointer;margin:0}
+.mtz-chk:has(input:checked){border-color:#0369a1;color:#0369a1;background:#f0f9ff}
 .mtz-p-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
 @media(max-width:960px){.mtz-p-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:540px){.mtz-p-grid{grid-template-columns:1fr}}
@@ -4836,6 +4839,7 @@ function buildChartProdutividade(distritos) {
 // ── Matriz na View Principal ──────────────────────────────────────
 
 function renderMatrizPrincipal(dados, mes) {
+  _mtzPrincipalMes = mes;
   var meses = (CONFIG && CONFIG._meses) ? CONFIG._meses : [mes];
 
   var tabs = meses.slice().map(function(m) {
@@ -4849,7 +4853,10 @@ function renderMatrizPrincipal(dados, mes) {
     '<div class="jornada-sec-hdr" style="margin-bottom:12px">' +
       '<div class="sec-title" style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px">🎯 Matriz de Performance</div>' +
     '</div>' +
-    '<div class="mtz-p-tabs">' + tabs + '</div>' +
+    '<div class="mtz-p-tabs">' + tabs +
+      '<label class="mtz-chk" style="margin-left:auto" title="Remove OZIVY do cálculo de atingimento de cota (produto com cota alta que distorce o resultado)">' +
+        '<input type="checkbox"' + (_mtzSemOzivy ? ' checked' : '') + ' onchange="mtzToggleSemOzivy(this.checked)"> Sem OZIVY</label>' +
+    '</div>' +
     '<div id="mtz-p-grid" class="mtz-p-grid">' + grid + '</div>' +
   '</div>';
 }
@@ -4898,6 +4905,7 @@ function _mtzPrincipalGrid(dados) {
 }
 
 async function mtzPrincipalTab(mes) {
+  _mtzPrincipalMes = mes;
   // Atualiza aba ativa
   document.querySelectorAll('.mtz-p-tab').forEach(function(b) {
     b.classList.toggle('active', b.textContent.trim() === mes);
@@ -5128,6 +5136,8 @@ var _mtzView     = 'quadrantes'; // 'quadrantes' | 'correlacao'
 var _mtzReps     = [];
 var _mtzChart    = null;
 var _mtzCorrChart = null;
+var _mtzSemOzivy  = false; // true = exclui OZIVY da cota (MDV não muda: não depende de produto)
+var _mtzPrincipalMes = null; // mês selecionado na matriz inline
 
 async function abrirMatrizPerformance() {
   VIEW_ATUAL = 'matrix';
@@ -5204,6 +5214,10 @@ function _mtzRenderPage() {
             '<option value="100"' + (_mtzThrAt===100?' selected':'') + '>≥ 100%</option>' +
           '</select>' +
         '</div>' +
+        '<div class="gap-ctrl-group"><label class="gap-ctrl-label">Produtos</label>' +
+          '<label class="mtz-chk" title="Remove OZIVY do cálculo de atingimento de cota">' +
+            '<input type="checkbox"' + (_mtzSemOzivy ? ' checked' : '') + ' onchange="mtzToggleSemOzivy(this.checked)"> Sem OZIVY</label>' +
+        '</div>' +
       '</div>' +
       '<div class="gap-ctrl-group"><label class="gap-ctrl-label">Visão</label>' +
           '<div class="mtz-ytd-toggle">' +
@@ -5261,6 +5275,7 @@ function _mtzBuildReps(mes, dados, linha) {
   var repProd = (dados.prodRepNex||[]).concat(dados.prodRepVit||[]);
   var atMap   = {};
   repProd.forEach(function(p){
+    if (_mtzSemOzivy && normProd(p.produto) === 'OZIVY') return;
     var sid = p.setor_id;
     if (!atMap[sid]) atMap[sid] = {c:0, r:0};
     atMap[sid].c += safeFloat(p.cota)      || 0;
@@ -5298,6 +5313,7 @@ function _mtzBuildRepsYtd(meses, linha) {
     var repProd = (dados.prodRepNex||[]).concat(dados.prodRepVit||[]);
     var atMap   = {};
     repProd.forEach(function(p){
+      if (_mtzSemOzivy && normProd(p.produto) === 'OZIVY') return;
       var sid = p.setor_id;
       if (!atMap[sid]) atMap[sid] = {c:0, r:0};
       atMap[sid].c += safeFloat(p.cota)      || 0;
@@ -5671,6 +5687,14 @@ function mtzToggleYtd(ytd) {
   var body = document.getElementById('mtz-body');
   if (body) body.innerHTML = _mtzBodyHtml(_mtzReps);
   _mtzMountCharts(_mtzReps);
+}
+
+// Filtro "Sem OZIVY": um único estado para a matriz inline e para a página Matriz.
+function mtzToggleSemOzivy(on) {
+  _mtzSemOzivy = !!on;
+  document.querySelectorAll('.mtz-chk input').forEach(function(c){ c.checked = _mtzSemOzivy; });
+  if (VIEW_ATUAL === 'matrix') mtzUpdate();
+  else if (_mtzPrincipalMes) mtzPrincipalTab(_mtzPrincipalMes);
 }
 
 function mtzUpdate() {
