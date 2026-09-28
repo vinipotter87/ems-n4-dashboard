@@ -25,6 +25,8 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--da
 .hdr-pills{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap;align-items:center}
 .hpill{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);color:#fff;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
 .hpill.hi{background:#fff;color:var(--brand)}
+.hdr-back{background:var(--gold-l);color:var(--brand-d);border:1px solid #fff;padding:5px 14px;border-radius:20px;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;transition:filter .15s}
+.hdr-back:hover{filter:brightness(.93)}
 
 .status-banner{padding:8px 24px;font-size:11.5px;font-weight:600;text-align:center;border-bottom:1px solid var(--border)}
 .status-banner.ok{background:var(--brand-l);color:var(--brand-d)}
@@ -139,6 +141,7 @@ table.led-tbl tbody tr.editada{background:var(--gold-l)}
       <p>Regional SPI OESTE · Cardiometabólico · Saldo e lançamentos de verba por Gerente Distrital</p>
     </div>
     <div class="hdr-pills">
+      <a class="hdr-back" href="index.html">← Voltar ao Dashboard</a>
       <span class="hpill hi" id="pill-gd">Selecione um GD</span>
       <span class="hpill" id="pill-lanc">0 lançamentos</span>
     </div>
