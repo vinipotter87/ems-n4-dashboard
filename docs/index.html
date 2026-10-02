@@ -1216,7 +1216,7 @@ function renderBudgetResumo() {
   if (BUDGET_LANC === null) {
     html += bloco('Utilizado', '—') + '<div class="kpi-sub">lançamentos indisponíveis no momento</div>';
   } else {
-    var usado = BUDGET_LANC.filter(function(l){ return gds.indexOf(l.gd) >= 0; })
+    var usado = BUDGET_LANC.filter(function(l){ return l.produto !== 'GLEMPA' && gds.indexOf(l.gd) >= 0; })
       .reduce(function(t, l){ return t + (parseFloat(l.valor) || 0); }, 0);
     var pctU = verba ? usado / verba * 100 : 0;
     var saldo = verba - usado;
@@ -1241,7 +1241,7 @@ function renderBudgetPorGd() {
   var semLanc = BUDGET_LANC === null;
   function brl(v) { return v.toLocaleString('pt-BR', {style:'currency', currency:'BRL'}); }
   function usadoDe(gd) {
-    return (BUDGET_LANC || []).filter(function(l){ return l.gd === gd; })
+    return (BUDGET_LANC || []).filter(function(l){ return l.produto !== 'GLEMPA' && l.gd === gd; })
       .reduce(function(t, l){ return t + (parseFloat(l.valor) || 0); }, 0);
   }
   function pctHtml(usado, verba) {

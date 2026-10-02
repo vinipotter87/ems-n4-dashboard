@@ -123,6 +123,32 @@ table.led-tbl tbody tr.editada{background:var(--gold-l)}
 .notes{background:#fff;border-radius:12px;padding:16px 20px;margin-top:20px;box-shadow:0 1px 8px rgba(0,0,0,.06)}
 .notes h3{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--gray);margin-bottom:8px}
 .notes li{font-size:11.5px;color:var(--gray);line-height:1.6;margin-left:16px;margin-bottom:4px}
+
+.view-tabs{display:flex;gap:8px;padding:12px 24px 0;background:#fff;flex-wrap:wrap}
+.view-tab{border:1.5px solid var(--border);border-bottom:none;background:var(--light);color:var(--gray);padding:9px 18px;border-radius:10px 10px 0 0;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit}
+.view-tab.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.gl-dist{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:22px 0 0;padding:12px 18px;background:var(--dark);color:#fff;border-radius:14px 14px 0 0;font-size:12.5px;font-weight:800}
+.gl-dist .gl-dist-sub{font-size:11px;font-weight:600;opacity:.8}
+.gl-dist .gl-dist-nums{margin-left:auto;font-size:11px;font-weight:700;opacity:.95;white-space:nowrap}
+.gl-wrap{background:#fff;border-radius:0 0 14px 14px;box-shadow:0 2px 12px rgba(0,0,0,.08);overflow-x:auto}
+table.led-tbl tbody tr.gl-setor td{background:var(--brand-l);color:var(--brand-d);font-weight:800;text-align:left;font-size:11px}
+.st-badge{font-size:9px;font-weight:800;padding:2px 8px;border-radius:10px;text-transform:uppercase;white-space:nowrap}
+.st-badge.fato{background:var(--brand-l);color:var(--brand-d)}
+.st-badge.fake{background:var(--danger-l);color:var(--danger)}
+.st-badge.pend{background:var(--light);color:var(--gray)}
+.gl-bar{width:90px;display:inline-block;vertical-align:middle}
+.gl-bar .pc-bar-track{margin:0}
+.neg{color:var(--danger)}
+.cl-group{display:inline-flex;border:1.5px solid var(--border);border-radius:8px;overflow:hidden}
+.cl-btn{border:none;background:#fff;color:var(--gray);padding:3px 10px;font-size:10px;font-weight:800;text-transform:uppercase;cursor:pointer;font-family:inherit}
+.cl-btn + .cl-btn{border-left:1.5px solid var(--border)}
+.cl-btn:hover{background:var(--light)}
+.cl-btn.on.fato{background:var(--brand);color:#fff}
+.cl-btn.on.fake{background:var(--danger);color:#fff}
+.cl-btn:disabled{opacity:.5;cursor:not-allowed}
+table.led-tbl tbody tr.gl-inativo td{color:#9CA3AF;background:#F9FAFB}
+table.led-tbl tbody tr.gl-inativo td b{font-weight:600;text-decoration:line-through}
+table.led-tbl tbody tr.gl-inativo .pc-bar-track{opacity:.4}
 </style>
 </head>
 <body>
@@ -150,7 +176,33 @@ table.led-tbl tbody tr.editada{background:var(--gold-l)}
 
 <div id="status-banner-slot"></div>
 
-<div class="filtro-bar">
+<div class="view-tabs">
+  <button type="button" class="view-tab" id="tab-tatica">💰 Verba tática</button>
+  <button type="button" class="view-tab" id="tab-glempa">🎯 GLEMPA — Prescritores EMPA (R$ 1.000/CRM)</button>
+</div>
+
+<div class="filtro-bar" id="bar-glempa" style="display:none">
+  <span class="filtro-bar-label">Setor:</span>
+  <select class="sel" id="gl-setor"></select>
+  <span class="filtro-bar-label">Classificação:</span>
+  <select class="sel" id="gl-status">
+    <option value="">Todas</option>
+    <option value="FATO">Fato</option>
+    <option value="PEND">A classificar</option>
+    <option value="FAKE">Fake</option>
+  </select>
+  <span class="filtro-bar-label">Situação:</span>
+  <select class="sel" id="gl-situacao">
+    <option value="">Todas</option>
+    <option value="COM">Com lançamento</option>
+    <option value="SEM">Sem lançamento</option>
+    <option value="ESG">Verba esgotada</option>
+  </select>
+  <input class="txt-input" id="gl-busca" type="search" placeholder="Buscar médico, CRM ou cidade" style="min-width:220px">
+  <button class="filtro-clear" id="gl-clear">Limpar filtro</button>
+</div>
+
+<div class="filtro-bar" id="bar-tatica">
   <span class="filtro-bar-label">Linha:</span>
   <select class="sel" id="filtro-linha">
     <option value="">Todas</option>
@@ -164,7 +216,7 @@ table.led-tbl tbody tr.editada{background:var(--gold-l)}
   <button class="filtro-clear" id="btn-clear">Limpar filtro</button>
 </div>
 
-<div class="alerta-prazo">⚠️ Execução da verba tática até <b>20/11/2026</b></div>
+<div class="alerta-prazo" id="alerta-prazo">⚠️ Execução da verba tática até <b>20/11/2026</b></div>
 
 <div class="main" id="main"></div>
 
@@ -172,6 +224,23 @@ table.led-tbl tbody tr.editada{background:var(--gold-l)}
 
 <script>
 var BASE_ALLOC = [{"linha": "VITAL", "produto": "BUPIUM XL", "codigo": "11630100", "gd": "Fabiano Atanazio Machado", "verba": 2250, "regional": "SPI OESTE"}, {"linha": "VITAL", "produto": "BUPIUM XL", "codigo": "11630200", "gd": "Daniel Antonio Costa", "verba": 1950, "regional": "SPI OESTE"}, {"linha": "VITAL", "produto": "BUPIUM XL", "codigo": "11630300", "gd": "Matheus Landulpho Allonso", "verba": 1800, "regional": "SPI OESTE"}, {"linha": "VITAL", "produto": "BUPIUM XL", "codigo": "11630400", "gd": "Michael Aparecido da Silva Mota", "verba": 1650, "regional": "SPI OESTE"}, {"linha": "NEXUS", "produto": "LYBERDIA", "codigo": "11030100", "gd": "Joao Rafael de Franca Nunes Leardini", "verba": 1000, "regional": "SPI OESTE"}, {"linha": "NEXUS", "produto": "LYBERDIA", "codigo": "11030200", "gd": "Murillo Cesar Barbosa dos Santos", "verba": 1000, "regional": "SPI OESTE"}, {"linha": "NEXUS", "produto": "LYBERDIA", "codigo": "11030300", "gd": "Geovana Buttignon", "verba": 1000, "regional": "SPI OESTE"}, {"linha": "NEXUS", "produto": "LYBERDIA", "codigo": "11030400", "gd": "Vanessa Araujo Ferreira Lima", "verba": 1000, "regional": "SPI OESTE"}, {"linha": "NEXUS", "produto": "CONCARDIO - CRM-CHAVE E DEMAIS AÇÕES", "codigo": "11030200", "gd": "Murillo Cesar Barbosa dos Santos", "verba": 6752.75, "regional": "SPI OESTE"}, {"linha": "NEXUS", "produto": "CONCARDIO - CRM-CHAVE E DEMAIS AÇÕES", "codigo": "11030100", "gd": "Joao Rafael de Franca Nunes Leardini", "verba": 5620.27, "regional": "SPI OESTE"}, {"linha": "NEXUS", "produto": "CONCARDIO - CRM-CHAVE E DEMAIS AÇÕES", "codigo": "11030400", "gd": "Vanessa Araujo Ferreira Lima", "verba": 3653.48, "regional": "SPI OESTE"}, {"linha": "NEXUS", "produto": "CONCARDIO - CRM-CHAVE E DEMAIS AÇÕES", "codigo": "11030300", "gd": "Geovana Buttignon", "verba": 3373.79, "regional": "SPI OESTE"}, {"linha": "VITAL", "produto": "LINADIB", "codigo": "11630100", "gd": "Fabiano Atanazio Machado", "verba": 1328.01, "regional": "SPI OESTE"}, {"linha": "VITAL", "produto": "LINADIB", "codigo": "11630200", "gd": "Daniel Antonio Costa", "verba": 1473.38, "regional": "SPI OESTE"}, {"linha": "VITAL", "produto": "LINADIB", "codigo": "11630300", "gd": "Matheus Landulpho Allonso", "verba": 1460.12, "regional": "SPI OESTE"}, {"linha": "VITAL", "produto": "LINADIB", "codigo": "11630400", "gd": "Michael Aparecido da Silva Mota", "verba": 1027.09, "regional": "SPI OESTE"}, {"linha": "VITAL", "produto": "LINADIB DUO", "codigo": "11630100", "gd": "Fabiano Atanazio Machado", "verba": 1623.26, "regional": "SPI OESTE"}, {"linha": "VITAL", "produto": "LINADIB DUO", "codigo": "11630200", "gd": "Daniel Antonio Costa", "verba": 1302.25, "regional": "SPI OESTE"}, {"linha": "VITAL", "produto": "LINADIB DUO", "codigo": "11630300", "gd": "Matheus Landulpho Allonso", "verba": 1482.55, "regional": "SPI OESTE"}, {"linha": "VITAL", "produto": "LINADIB DUO", "codigo": "11630400", "gd": "Michael Aparecido da Silva Mota", "verba": 1044.88, "regional": "SPI OESTE"}, {"linha": "VITAL", "produto": "OZIVY", "codigo": "11630100", "gd": "Fabiano Atanazio Machado", "verba": 1700.56, "regional": "SPI OESTE"}, {"linha": "VITAL", "produto": "OZIVY", "codigo": "11630200", "gd": "Daniel Antonio Costa", "verba": 2704.92, "regional": "SPI OESTE"}, {"linha": "VITAL", "produto": "OZIVY", "codigo": "11630300", "gd": "Matheus Landulpho Allonso", "verba": 2953.74, "regional": "SPI OESTE"}, {"linha": "VITAL", "produto": "OZIVY", "codigo": "11630400", "gd": "Michael Aparecido da Silva Mota", "verba": 2810.11, "regional": "SPI OESTE"}, {"linha": "NEXUS", "produto": "OZIVY", "codigo": "11030100", "gd": "Joao Rafael de Franca Nunes Leardini", "verba": 1700.56, "regional": "SPI OESTE"}, {"linha": "NEXUS", "produto": "OZIVY", "codigo": "11030200", "gd": "Murillo Cesar Barbosa dos Santos", "verba": 2704.92, "regional": "SPI OESTE"}, {"linha": "NEXUS", "produto": "OZIVY", "codigo": "11030300", "gd": "Geovana Buttignon", "verba": 2953.74, "regional": "SPI OESTE"}, {"linha": "NEXUS", "produto": "OZIVY", "codigo": "11030400", "gd": "Vanessa Araujo Ferreira Lima", "verba": 2810.11, "regional": "SPI OESTE"}];
+
+// ── GLEMPA — prescritores EMPA (Jardiance) YTD jan–jul/2026 ─────────────
+// Base "Prescritores EMPA - YTD 2026 - Jan a Jul" (aba base total), recortada
+// na SPI OESTE e deduplicada por CRM (médico que aparecia no setor do rep e
+// no código do GD fica só no setor do rep).
+// d=distrito, s=setor, m=médico, c=CRM, e=especialidade, rx=Rx YTD, ci=cidade,
+// st=classificação da planilha (FATO/FAKE/vazio = a classificar).
+var GLEMPA_PROD = 'GLEMPA';
+// Classificação fato/fake marcada na página: 1 linha por CRM na mesma aba
+// budget_lancamentos, com produto = GLEMPA_CLASSIF, valor 0 e a classificação
+// no campo "acao" (reaproveita o Web App de gravação sem mudar o backend).
+var GLEMPA_CLASSIF = 'GLEMPA_CLASSIF';
+var GLEMPA_VERBA = 1000;
+var GLEMPA_DISTRITOS = {
+  '11630400': { gd: 'Michael Aparecido da Silva Mota', regional: 'SPI OESTE' }
+};
+var GLEMPA_MEDICOS = [{"d":"11630400","s":"11630400","m":"DANILO GLAUCO PEREIRA VILLAGELIN NETO","c":"SP0109461","e":"ENDO","rx":1,"ci":"CAMPINAS","st":""},{"d":"11630400","s":"11630401","m":"CAROLINA DE OLIVEIRA PEREIRA","c":"SP0119322","e":"CARDIO","rx":8,"ci":"CAMPINAS","st":""},{"d":"11630400","s":"11630401","m":"ALBERTO FRANCISCO PICCOLOTTO NACCARATO","c":"SP0012166","e":"CARDIO","rx":3,"ci":"CAMPINAS","st":""},{"d":"11630400","s":"11630401","m":"EDER ANTONELLI","c":"SP0047143","e":"ENDO","rx":3,"ci":"CAMPINAS","st":""},{"d":"11630400","s":"11630401","m":"LAERTE DE MELLO MACHADO","c":"SP0052649","e":"CARDIO","rx":3,"ci":"CAMPINAS","st":""},{"d":"11630400","s":"11630401","m":"MARCO AURELIO BASSI TREVISAN","c":"SP0077549","e":"ENDO","rx":3,"ci":"CAMPINAS","st":""},{"d":"11630400","s":"11630401","m":"MARIANA BALDINI CAMPOS","c":"SP0172391","e":"ENDO","rx":3,"ci":"CAMPINAS","st":""},{"d":"11630400","s":"11630401","m":"FERNANDA MARIA POSSIDONIO FILGUEIRA HIRSCH","c":"SP0126421","e":"ENDO","rx":2,"ci":"CAMPINAS","st":""},{"d":"11630400","s":"11630401","m":"MARCELO EDUARDO PERALTA","c":"SP0069144","e":"ENDO","rx":2,"ci":"CAMPINAS","st":""},{"d":"11630400","s":"11630401","m":"ROGER LIMA VIEIRA","c":"SP0092319","e":"CARDIO","rx":2,"ci":"CAMPINAS","st":""},{"d":"11630400","s":"11630401","m":"VIRGILIO RODRIGUES SILVA DE MORAES","c":"SP0150405","e":"CARDIO","rx":2,"ci":"VALINHOS","st":""},{"d":"11630400","s":"11630401","m":"WALTER JOSE MINICUCCI","c":"SP0020820","e":"ENDO","rx":2,"ci":"CAMPINAS","st":""},{"d":"11630400","s":"11630401","m":"ALECSANDRA GHANNAGE MASSAI","c":"SP0058108","e":"ENDO","rx":1,"ci":"CAMPINAS","st":""},{"d":"11630400","s":"11630401","m":"BRUNO BINDI","c":"SP0120855","e":"ENDO","rx":1,"ci":"VINHEDO","st":""},{"d":"11630400","s":"11630401","m":"CAROLINE SCHNOLL","c":"SP0153799","e":"ENDO","rx":1,"ci":"VINHEDO","st":""},{"d":"11630400","s":"11630401","m":"EDSON ADEMIR BOCCHI","c":"SP0029039","e":"CARDIO","rx":1,"ci":"CAMPINAS","st":""},{"d":"11630400","s":"11630401","m":"FERNANDO MELLO PORTO","c":"SP0086196","e":"CARDIO","rx":1,"ci":"CAMPINAS","st":""},{"d":"11630400","s":"11630401","m":"FLAVIO FERRAMOLA POZZUTO","c":"SP0058676","e":"CARDIO","rx":1,"ci":"CAMPINAS","st":""},{"d":"11630400","s":"11630401","m":"GABRIEL BARRETO BASTOS","c":"SP0178994","e":"ENDO","rx":1,"ci":"CAMPINAS","st":""},{"d":"11630400","s":"11630401","m":"GUSTAVO CORTES VIEIRA","c":"SP0087943","e":"CARDIO","rx":1,"ci":"CAMPINAS","st":""},{"d":"11630400","s":"11630401","m":"HALIM CURY FILHO","c":"SP0058413","e":"CARDIO","rx":1,"ci":"CAMPINAS","st":""},{"d":"11630400","s":"11630401","m":"ILKA MARA BORGES BOTELHO","c":"SP0148841","e":"ENDO","rx":1,"ci":"CAMPINAS","st":""},{"d":"11630400","s":"11630401","m":"LUIS ANTONIO TEIXEIRA DE CAMARGO","c":"SP0043641","e":"ENDO","rx":1,"ci":"CAMPINAS","st":""},{"d":"11630400","s":"11630401","m":"RENATO ALVES PRADO FORTUNA","c":"SP0068880","e":"CARDIO","rx":1,"ci":"CAMPINAS","st":""},{"d":"11630400","s":"11630402","m":"ANALICE MARTINS BONILHA SILVA","c":"SP0111741","e":"CARDIO","rx":5,"ci":"PAULINIA","st":""},{"d":"11630400","s":"11630402","m":"VITOR JOSE FANTINATO PANSANI","c":"SP0032449","e":"ENDO","rx":3,"ci":"CAMPINAS","st":""},{"d":"11630400","s":"11630402","m":"ELIANDRA APARECIDA MARSARO","c":"SP0099377","e":"CARDIO","rx":2,"ci":"PAULINIA","st":""},{"d":"11630400","s":"11630402","m":"ALESSANDRO CAPATTI ALVES","c":"SP0105174","e":"ENDO","rx":1,"ci":"CAMPINAS","st":""},{"d":"11630400","s":"11630402","m":"ANA CAROLINA BUZACHERO MACHADO","c":"SP0099353","e":"ENDO","rx":1,"ci":"CAMPINAS","st":""},{"d":"11630400","s":"11630402","m":"ANDRE RICARDO LAMBERTI OBICI","c":"SP0091147","e":"CARDIO","rx":1,"ci":"CAMPINAS","st":""},{"d":"11630400","s":"11630402","m":"ANDRES WILLIAMS VARONA RAMIREZ","c":"SP0187023","e":"ENDO","rx":1,"ci":"ARTUR NOGUEIRA","st":""},{"d":"11630400","s":"11630402","m":"BRUNO GELONEZE NETO","c":"SP0059913","e":"ENDO","rx":1,"ci":"CAMPINAS","st":""},{"d":"11630400","s":"11630402","m":"DANIEL AFONSO DALLANORA SEVERINO","c":"SP0102038","e":"CARDIO","rx":1,"ci":"PAULINIA","st":""},{"d":"11630400","s":"11630402","m":"DANIEL LAGES DIAS","c":"SP0070301","e":"CARDIO","rx":1,"ci":"PAULINIA","st":""},{"d":"11630400","s":"11630402","m":"EVANDRO SERGIO NAIA DA SILVA","c":"SP0104090","e":"CARDIO","rx":1,"ci":"COSMOPOLIS","st":""},{"d":"11630400","s":"11630402","m":"FELIPE GAVRANIC DOS REIS","c":"SP0043713","e":"CARDIO","rx":1,"ci":"CAMPINAS","st":""},{"d":"11630400","s":"11630402","m":"GILSON PEREIRA DA SILVA","c":"SP0073474","e":"CARDIO","rx":1,"ci":"COSMOPOLIS","st":""},{"d":"11630400","s":"11630402","m":"GUILHERME NUNES DA SILVA","c":"SP0135577","e":"CARDIO","rx":1,"ci":"CAMPINAS","st":""},{"d":"11630400","s":"11630402","m":"LUCIANA JUNQUEIRA GUIMARAES","c":"SP0113701","e":"ENDO","rx":1,"ci":"CAMPINAS","st":""},{"d":"11630400","s":"11630402","m":"MARIANA MARTINS BONILHA BUTION","c":"SP0140779","e":"CARDIO","rx":1,"ci":"PAULÍNIA","st":""},{"d":"11630400","s":"11630402","m":"MAURICIO SAMUEL GOLDBAUM","c":"SP0047165","e":"CARDIO","rx":1,"ci":"CAMPINAS","st":""},{"d":"11630400","s":"11630402","m":"TESSA VIRGINIA DE OLIVEIRA PASSARELLA MADEIRA","c":"SP0105560","e":"CARDIO","rx":1,"ci":"CAMPINAS","st":""},{"d":"11630400","s":"11630403","m":"RODRIGO PORTELA DE SANTANA","c":"SP0101569","e":"CARDIO","rx":11,"ci":"CAMPINAS","st":""},{"d":"11630400","s":"11630403","m":"ALESSANDRO FRANJOTTI CHAGAS","c":"SP0093820","e":"CARDIO","rx":4,"ci":"CAMPINAS","st":""},{"d":"11630400","s":"11630403","m":"LUCIANO FREIRE","c":"SP0058596","e":"CARDIO","rx":3,"ci":"CAMPINAS","st":""},{"d":"11630400","s":"11630403","m":"VALERIA BAHDUR CHUEIRE","c":"SP0064133","e":"ENDO","rx":3,"ci":"CAMPINAS","st":""},{"d":"11630400","s":"11630403","m":"ADOLFO ROCHA SUERO","c":"SP0121659","e":"CARDIO","rx":2,"ci":"CAMPINAS","st":""},{"d":"11630400","s":"11630403","m":"LEANDRO NISTA SPIS","c":"SP0097745","e":"CARDIO","rx":2,"ci":"CAMPINAS","st":""},{"d":"11630400","s":"11630403","m":"YANKO GONCALVES MELLO","c":"SP0110819","e":"CARDIO","rx":2,"ci":"CAMPINAS","st":""},{"d":"11630400","s":"11630404","m":"ABRAO ABDALA FILHO","c":"SP0055610","e":"CARDIO","rx":1,"ci":"ARARAS","st":""},{"d":"11630400","s":"11630404","m":"FERNANDA CANOVA DENARDI","c":"SP0119963","e":"ENDO","rx":1,"ci":"ARARAS","st":""},{"d":"11630400","s":"11630404","m":"MAYARA BRUNHEROTO LOURENCO","c":"SP0102767","e":"CARDIO","rx":1,"ci":"HOLAMBRA","st":""},{"d":"11630400","s":"11630404","m":"PEDRO DIRCEU ORTOLANI JUNIOR","c":"SP0112724","e":"ENDO","rx":1,"ci":"ARARAS","st":""},{"d":"11630400","s":"11630405","m":"WEBER SPEGIORIN SOUZA LEITE","c":"SP0103930","e":"CARDIO","rx":8,"ci":"PORTO FERREIRA","st":""},{"d":"11630400","s":"11630405","m":"JOSE ROBERTO MERLI","c":"SP0032845","e":"CARDIO","rx":5,"ci":"SÃO JOSÉ DO RIO PARDO","st":""},{"d":"11630400","s":"11630405","m":"MARCOS AURELIO DOS REIS","c":"SP0030608","e":"CARDIO","rx":4,"ci":"PORTO FERREIRA","st":""},{"d":"11630400","s":"11630405","m":"ROBERTO ANTONIO DE JESUS PATREZZE","c":"SP0040947","e":"ENDO","rx":3,"ci":"PORTO FERREIRA","st":""},{"d":"11630400","s":"11630405","m":"ROGERIO ULYSSES MONEZZI","c":"SP0051103","e":"ENDO","rx":3,"ci":"ITAPIRA","st":""},{"d":"11630400","s":"11630405","m":"EDUARDO CARDOSO JUNIOR","c":"SP0022863","e":"ENDO","rx":2,"ci":"LEME","st":""},{"d":"11630400","s":"11630405","m":"EZEQUIEL SILVEIRA","c":"SP0068921","e":"CARDIO","rx":2,"ci":"AGUAÍ","st":""},{"d":"11630400","s":"11630405","m":"JOSE SABINO NETO","c":"SP0021102","e":"CARDIO","rx":2,"ci":"SÃO JOÃO DA BOA VISTA","st":""},{"d":"11630400","s":"11630405","m":"VIVIAN BRONZATI","c":"SP0129909","e":"ENDO","rx":2,"ci":"MOGI MIRIM","st":""},{"d":"11630400","s":"11630405","m":"WYLHO MARCOS CASAGRANDE","c":"MG0072171","e":"ENDO","rx":2,"ci":"GUAXUPÉ","st":""},{"d":"11630400","s":"11630405","m":"ARIELLA CABRAL DE LIMA PEREIRA","c":"MG0056051","e":"ENDO","rx":1,"ci":"GUAXUPÉ","st":""},{"d":"11630400","s":"11630405","m":"ARLINDO DE OLIVEIRA JUNIOR","c":"SP0062479","e":"CARDIO","rx":1,"ci":"SANTA CRUZ DAS PALMEIRAS","st":""},{"d":"11630400","s":"11630405","m":"CAMILA FREITAS CALLEGARI","c":"SP0249033","e":"ENDO","rx":1,"ci":"SÃO JOSÉ DO RIO PARDO","st":""},{"d":"11630400","s":"11630405","m":"CRISTINA NADJA MUNIZ LIMA DE FALCO","c":"SP0058595","e":"CARDIO","rx":1,"ci":"MOGI MIRIM","st":""},{"d":"11630400","s":"11630405","m":"EDSON ROSSI","c":"SP0042362","e":"CARDIO","rx":1,"ci":"ESPÍRITO SANTO DO PINHAL","st":""},{"d":"11630400","s":"11630405","m":"ERICA FRAGOSO ROCHA","c":"SP0157484","e":"CARDIO","rx":1,"ci":"ITAPIRA","st":""},{"d":"11630400","s":"11630405","m":"FABIO DA CUNHA BALBAO","c":"SP0108009","e":"CARDIO","rx":1,"ci":"MOGI MIRIM","st":""},{"d":"11630400","s":"11630405","m":"JOANA KARIN PREVIATO","c":"SP0116373","e":"ENDO","rx":1,"ci":"PIRASSUNUNGA","st":""},{"d":"11630400","s":"11630405","m":"JOSE RENATO FURLANETTO ROMANO","c":"SP0041193","e":"CARDIO","rx":1,"ci":"CASA BRANCA","st":""},{"d":"11630400","s":"11630405","m":"MATHEUS DINIZ RODRIGUES","c":"SP0135090","e":"ENDO","rx":1,"ci":"PORTO FERREIRA","st":""},{"d":"11630400","s":"11630405","m":"PAULO HENRIQUE ELIAS","c":"SP0125148","e":"CARDIO","rx":1,"ci":"ESPÍRITO SANTO DO PINHAL","st":""},{"d":"11630400","s":"11630405","m":"PEDRO HENRIQUE ROQUE TOZINI","c":"SP0146934","e":"CARDIO","rx":1,"ci":"SÃO JOSÉ DO RIO PARDO","st":""},{"d":"11630400","s":"11630405","m":"RAFAEL GASTON BASSANEZE VISENTAINER","c":"SP0182885","e":"CARDIO","rx":1,"ci":"TAMBAU","st":""},{"d":"11630400","s":"11630405","m":"ROGERIO CASTELLAN DE MORAES","c":"SP0126022","e":"CARDIO","rx":1,"ci":"PIRASSUNUNGA","st":""},{"d":"11630400","s":"11630405","m":"THAIS RIBEIRO MINGORANCE TOZINI","c":"SP0149751","e":"ENDO","rx":1,"ci":"SÃO JOSÉ DO RIO PARDO","st":""},{"d":"11630400","s":"11630407","m":"ARMANDO MARTINS PINTO","c":"MG0008538","e":"CARDIO","rx":16,"ci":"VARGINHA","st":""},{"d":"11630400","s":"11630407","m":"PABLO REIS","c":"MG0039114","e":"ENDO","rx":9,"ci":"VARGINHA","st":""},{"d":"11630400","s":"11630407","m":"PAULO DE FROTA VASCONCELOS","c":"MG0009599","e":"CARDIO","rx":8,"ci":"NÃO INFORMADO","st":""},{"d":"11630400","s":"11630407","m":"MARIELLE COSTA NOBRE","c":"MG0035461","e":"ENDO","rx":6,"ci":"CAXAMBU","st":""},{"d":"11630400","s":"11630407","m":"NATANAEL VILELA MORAIS","c":"MG0030050","e":"CARDIO","rx":5,"ci":"BOA ESPERANCA","st":""},{"d":"11630400","s":"11630407","m":"MARCELO HUMBERTO CARDENAS ECHEVERRIA","c":"MG0025848","e":"CARDIO","rx":4,"ci":"BOA ESPERANÇA","st":""},{"d":"11630400","s":"11630407","m":"LUIZ ROBERTO LAURINDO DIAS","c":"MG0020923","e":"CARDIO","rx":3,"ci":"TRES PONTAS","st":""},{"d":"11630400","s":"11630407","m":"PAULO CESAR COSSETTE DA SILVA","c":"MG0033469","e":"CARDIO","rx":3,"ci":"ELOI MENDES","st":""},{"d":"11630400","s":"11630407","m":"PRISCILA RABELO CINTRA","c":"MG0046922","e":"CARDIO","rx":3,"ci":"LAVRAS","st":""},{"d":"11630400","s":"11630407","m":"RAPHAEL AUGUSTO PENZIM DE MIRANDA GOMES","c":"MG0044322","e":"ENDO","rx":3,"ci":"ALFENAS","st":""},{"d":"11630400","s":"11630407","m":"ANGELA CRISTINA MENEGATO MIRANDA","c":"MG0021334","e":"ENDO","rx":2,"ci":"TRÊS PONTAS","st":""},{"d":"11630400","s":"11630407","m":"JOÃO EUGÊNIO DO PRADO NETO","c":"MG0020930","e":"ENDO","rx":2,"ci":"VARGINHA","st":""},{"d":"11630400","s":"11630407","m":"KATIUCIA LIMA VILELA","c":"MG0067730","e":"ENDO","rx":2,"ci":"TRES PONTAS","st":""},{"d":"11630400","s":"11630407","m":"LEANDRO BOUERI TICLE","c":"MG0034111","e":"CARDIO","rx":2,"ci":"LAVRAS","st":""},{"d":"11630400","s":"11630407","m":"MARCELO BISCARO CARVALHO","c":"MG0054114","e":"CARDIO","rx":2,"ci":"VARGINHA","st":""},{"d":"11630400","s":"11630407","m":"ALESSANDRO FELICIO BRANQUINHO","c":"MG0034841","e":"CARDIO","rx":1,"ci":"TRES CORACOES","st":""},{"d":"11630400","s":"11630407","m":"CARLOS ALBERTO FILGUEIRA RESENDE","c":"MG0011294","e":"CARDIO","rx":1,"ci":"VARGINHA","st":""},{"d":"11630400","s":"11630407","m":"EVANDRO BARBOSA DUARTE","c":"MG0016662","e":"CARDIO","rx":1,"ci":"ALFENAS","st":""},{"d":"11630400","s":"11630407","m":"JORGE DENNYS VASCONCELOS","c":"MG0028500","e":"CARDIO","rx":1,"ci":"MACHADO","st":""},{"d":"11630400","s":"11630407","m":"JORGE FERNANDO PORTO MEJIAS","c":"MG0022100","e":"CARDIO","rx":1,"ci":"PARAGUACU","st":""},{"d":"11630400","s":"11630407","m":"LAIS ANDRADE REZENDE","c":"MG0063655","e":"CARDIO","rx":1,"ci":"LAVRAS","st":""},{"d":"11630400","s":"11630407","m":"LEONARDO PENHA DE OLIVEIRA","c":"MG0019535","e":"CARDIO","rx":1,"ci":"VARGINHA","st":""},{"d":"11630400","s":"11630407","m":"LUIS MARQUES RABELO","c":"MG0048474","e":"CARDIO","rx":1,"ci":"CAMPOS GERAIS","st":""},{"d":"11630400","s":"11630407","m":"RACHEL BUENO NOGUEIRA","c":"MG0050009","e":"ENDO","rx":1,"ci":"VARGINHA","st":""},{"d":"11630400","s":"11630407","m":"SANDRO MAURICIO BATISTA DA GLORIA SILVA","c":"MG0030297","e":"CARDIO","rx":1,"ci":"TRES CORACOES","st":""},{"d":"11630400","s":"11630407","m":"SERGIO HENRIQUE CORREA NOGUEIRA","c":"MG0010131","e":"CARDIO","rx":1,"ci":"TRÊS PONTAS","st":""},{"d":"11630400","s":"11630407","m":"WANESSA DE LOURDES PINTO GONÇALVES","c":"MG0073839","e":"ENDO","rx":1,"ci":"SÃO LOURENÇO","st":""},{"d":"11630400","s":"11630408","m":"MICHEL DE BRITO MURAD","c":"MG0042888","e":"ENDO","rx":20,"ci":"SANTA RITA DO SAPUCAI","st":""},{"d":"11630400","s":"11630408","m":"MARCOS FLAVIO DE ALMEIDA NORONHA","c":"MG0047481","e":"CARDIO","rx":8,"ci":"LAMBARI","st":""},{"d":"11630400","s":"11630408","m":"SÉRGIO RODRIGO BERALDO","c":"MG0034591","e":"CARDIO","rx":8,"ci":"POUSO ALEGRE","st":""},{"d":"11630400","s":"11630408","m":"ANDRE LUIZ GOUVEIA","c":"MG0023082","e":"CARDIO","rx":6,"ci":"POUSO ALEGRE","st":""},{"d":"11630400","s":"11630408","m":"JOAO VICENTE LAGRECA DE SALES CABRAL","c":"MG0006319","e":"CARDIO","rx":4,"ci":"ITAJUBA","st":""},{"d":"11630400","s":"11630408","m":"LUCAS DE BRITO MURAD","c":"MG0041271","e":"CARDIO","rx":3,"ci":"SANTA RITA DO SAPUCAI","st":""},{"d":"11630400","s":"11630408","m":"NATALI MARCÍLIO RODRIGUES","c":"MG0054525","e":"CARDIO","rx":3,"ci":"POUSO ALEGRE","st":""},{"d":"11630400","s":"11630408","m":"ANTONIO CESAR SIQUEIRA","c":"MG0043030","e":"ENDO","rx":2,"ci":"POUSO ALEGRE","st":""},{"d":"11630400","s":"11630408","m":"CRISTINA BASTOS VIEIRA","c":"MG0071315","e":"ENDO","rx":2,"ci":"POÇOS DE CALDAS","st":""},{"d":"11630400","s":"11630408","m":"GERALDO MAJELA ANDRADE DO AMARAL","c":"MG0016658","e":"ENDO","rx":2,"ci":"POUSO ALEGRE","st":""},{"d":"11630400","s":"11630408","m":"JOSE GERALDO VILELA REIS","c":"MG0012044","e":"CARDIO","rx":2,"ci":"ITAJUBA","st":""},{"d":"11630400","s":"11630408","m":"LUIZ GUSTAVO VIMIEIRO","c":"MG0046358","e":"ENDO","rx":2,"ci":"POÇOS DE CALDAS","st":""},{"d":"11630400","s":"11630408","m":"REGINALDO CIPULLO","c":"MG0056579","e":"CARDIO","rx":2,"ci":"ITAJUBA","st":""},{"d":"11630400","s":"11630408","m":"ADRIANO PINHEIRO DE LEMOS MASSON","c":"MG0028451","e":"ENDO","rx":1,"ci":"POÇOS DE CALDAS","st":""},{"d":"11630400","s":"11630408","m":"AURELIANO INACIO DE SOUZA NETO","c":"MG0057347","e":"CARDIO","rx":1,"ci":"POCOS DE CALDAS","st":""},{"d":"11630400","s":"11630408","m":"FABRÍCIO RODRIGUES DOS ANJOS","c":"MG0041017","e":"CARDIO","rx":1,"ci":"POUSO ALEGRE","st":""},{"d":"11630400","s":"11630408","m":"GUILHERME CARNEIRO ADAMI RIBEIRO","c":"MG0057779","e":"CARDIO","rx":1,"ci":"SANTA RITA DO SAPUCAÍ","st":""},{"d":"11630400","s":"11630408","m":"LÉLIO TEIXEIRA DA SILVA","c":"MG0033157","e":"CARDIO","rx":1,"ci":"ANDRADAS","st":""},{"d":"11630400","s":"11630408","m":"NADJA SOTERO NATIVIDADE MENDES","c":"MG0021962","e":"CARDIO","rx":1,"ci":"POUSO ALEGRE","st":""},{"d":"11630400","s":"11630408","m":"RICARDO MENI GONCALVES","c":"MG0041387","e":"ENDO","rx":1,"ci":"ITAJUBA","st":""}];
 
 var TAB_NAME = 'budget_lancamentos';
 var ACOES = ['Almoço/jantar','Cesta de presente','Bloco de receituário','Outros'];
@@ -181,6 +250,8 @@ var BACKEND_PRONTO = false;
 function uid(){ return 'l' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 
 var STATE = {
+  view: 'tatica',
+  gl: { setor: '', status: '', situacao: '', busca: '' },
   filtroLinha: '',
   filtroGd: '',
   lancamentos: []
@@ -188,6 +259,9 @@ var STATE = {
 
 function fmtBRL(v){
   return (v||0).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+}
+function esc(s){
+  return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 function fmtData(iso){
   var d = new Date(iso + 'T12:00:00');
@@ -403,6 +477,7 @@ function renderOverview(){
 
 function renderLedger(gd){
   var lancs = STATE.lancamentos.filter(function(l){
+    if (ehGlempa(l)) return false; // GLEMPA tem aba própria
     if (gd) return l.gd === gd;
     if (STATE.filtroLinha) return l.linha === STATE.filtroLinha;
     return true;
@@ -471,9 +546,24 @@ function renderStatusBanner(){
 function render(){
   renderFiltros();
   renderStatusBanner();
+  var glempa = STATE.view === 'glempa';
+  document.getElementById('tab-tatica').className = 'view-tab' + (glempa ? '' : ' on');
+  document.getElementById('tab-glempa').className = 'view-tab' + (glempa ? ' on' : '');
+  document.getElementById('bar-tatica').style.display = glempa ? 'none' : '';
+  document.getElementById('bar-glempa').style.display = glempa ? '' : 'none';
+  document.getElementById('alerta-prazo').innerHTML = glempa
+    ? '🎯 GLEMPA — até <b>' + fmtBRL(GLEMPA_VERBA) + ' por CRM</b> classificado como FATO · ações de relacionamento em <b>setembro e outubro</b>'
+    : '⚠️ Execução da verba tática até <b>20/11/2026</b>';
+  if (glempa){
+    document.getElementById('pill-gd').textContent = 'GLEMPA · ' + GLEMPA_MEDICOS.length + ' CRMs';
+    document.getElementById('pill-lanc').textContent = glempaLancs().length + ' lançamento(s) GLEMPA';
+    renderGlempaFiltros();
+    renderGlempa();
+    return;
+  }
   var gd = STATE.filtroGd;
   document.getElementById('pill-gd').textContent = gd || 'Selecione um GD';
-  document.getElementById('pill-lanc').textContent = STATE.lancamentos.length + ' lançamento(s) no total';
+  document.getElementById('pill-lanc').textContent = STATE.lancamentos.filter(function(l){ return !ehGlempa(l); }).length + ' lançamento(s) no total';
 
   var html = '';
   if (gd){
@@ -497,6 +587,10 @@ function render(){
   var btnNovo = document.getElementById('btn-novo');
   if (btnNovo) btnNovo.onclick = function(){ abrirModal(null); };
 
+  ligarBtnRefresh();
+}
+
+function ligarBtnRefresh(){
   var btnRefresh = document.getElementById('btn-refresh');
   if (btnRefresh) btnRefresh.onclick = function(){
     btnRefresh.textContent = '⏳ Atualizando…';
@@ -504,6 +598,300 @@ function render(){
     recarregar().catch(function(e){ alert('Erro ao atualizar: ' + e.message); }).finally(function(){
       var b = document.getElementById('btn-refresh');
       if (b){ b.textContent = '🔄 Atualizar'; b.disabled = false; }
+    });
+  };
+}
+
+// ── GLEMPA — acompanhamento por CRM ──────────────────────────────────
+
+function glempaLancs(){
+  return STATE.lancamentos.filter(function(l){ return l.produto === GLEMPA_PROD; });
+}
+function glempaUsadoPorCrm(){
+  var m = {};
+  glempaLancs().forEach(function(l){ m[l.crm] = (m[l.crm] || 0) + l.valor; });
+  return m;
+}
+function ehGlempa(l){ return l.produto === GLEMPA_PROD || l.produto === GLEMPA_CLASSIF; }
+function glempaClassifReg(crm){
+  var regs = STATE.lancamentos.filter(function(l){ return l.produto === GLEMPA_CLASSIF && l.crm === crm; });
+  return regs.length ? regs[regs.length - 1] : null;
+}
+// classificação marcada na página prevalece sobre a que veio da planilha
+function glempaStatus(med){
+  var reg = glempaClassifReg(med.c);
+  return reg ? reg.acao : (med.st || '');
+}
+function glempaVerba(med){ return glempaStatus(med) === 'FAKE' ? 0 : GLEMPA_VERBA; }
+
+var GLEMPA_SALVANDO = false;
+function classificarGlempa(crm, status){
+  if (!BACKEND_PRONTO || GLEMPA_SALVANDO) return;
+  var med = GLEMPA_MEDICOS.filter(function(m){ return m.c === crm; })[0];
+  if (!med) return;
+  var reg = glempaClassifReg(crm);
+  var atual = glempaStatus(med);
+  var op, dados;
+  if (atual === status){
+    // clicar de novo na classificação ativa desmarca (volta para "a classificar")
+    if (!reg) return;
+    op = 'delete'; dados = { id: reg.id };
+  } else {
+    op = reg ? 'edit' : 'add';
+    dados = {
+      id: reg ? reg.id : uid(), gd: GLEMPA_DISTRITOS[med.d].gd, linha: 'VITAL', produto: GLEMPA_CLASSIF,
+      crm: med.c, medico: med.m, valor: 0, acao: status, data: new Date().toISOString().slice(0,10),
+      criadoEm: reg ? reg.criadoEm : Date.now().toString()
+    };
+  }
+  GLEMPA_SALVANDO = true;
+  document.querySelectorAll('.cl-btn').forEach(function(b){ b.disabled = true; });
+  enviarAoSheet(op, dados).then(function(resp){
+    if (!resp || !resp.ok) throw new Error((resp && resp.erro) || 'falha desconhecida');
+    return carregarLancamentos();
+  }).then(function(lancs){
+    STATE.lancamentos = lancs;
+  }).catch(function(e){
+    alert('Erro ao gravar a classificação no Sheets: ' + e.message);
+  }).finally(function(){
+    GLEMPA_SALVANDO = false;
+    var y = window.scrollY;
+    renderGlempa();
+    window.scrollTo(0, y);
+  });
+}
+
+function renderGlempaFiltros(){
+  var f = STATE.gl;
+  var setores = {};
+  GLEMPA_MEDICOS.forEach(function(m){ setores[m.s] = true; });
+  var sSel = document.getElementById('gl-setor');
+  sSel.innerHTML = '<option value="">Todos</option>' + Object.keys(setores).sort().map(function(s){
+    return '<option value="' + s + '">' + s + '</option>';
+  }).join('');
+  sSel.value = f.setor;
+  document.getElementById('gl-status').value = f.status;
+  document.getElementById('gl-situacao').value = f.situacao;
+  document.getElementById('gl-busca').value = f.busca;
+
+  sSel.onchange = function(){ f.setor = this.value; renderGlempa(); };
+  document.getElementById('gl-status').onchange = function(){ f.status = this.value; renderGlempa(); };
+  document.getElementById('gl-situacao').onchange = function(){ f.situacao = this.value; renderGlempa(); };
+  document.getElementById('gl-busca').oninput = function(){ f.busca = this.value; renderGlempa(); };
+  document.getElementById('gl-clear').onclick = function(){
+    STATE.gl = { setor: '', status: '', situacao: '', busca: '' }; render();
+  };
+}
+
+function renderGlempa(){
+  var f = STATE.gl;
+  var usado = glempaUsadoPorCrm();
+  var busca = f.busca.trim().toUpperCase();
+  var lista = GLEMPA_MEDICOS.filter(function(m){
+    if (f.setor && m.s !== f.setor) return false;
+    if (f.status && (glempaStatus(m) || 'PEND') !== f.status) return false;
+    var u = usado[m.c] || 0;
+    if (f.situacao === 'COM' && !u) return false;
+    if (f.situacao === 'SEM' && u) return false;
+    if (f.situacao === 'ESG' && !(glempaVerba(m) > 0 && u >= glempaVerba(m))) return false;
+    if (busca && (m.m + ' ' + m.c + ' ' + m.ci).toUpperCase().indexOf(busca) === -1) return false;
+    return true;
+  });
+
+  function soma(arr){
+    var t = { n: arr.length, verba: 0, usado: 0, com: 0, fato: 0, fake: 0 };
+    arr.forEach(function(m){
+      var u = usado[m.c] || 0;
+      t.verba += glempaVerba(m); t.usado += u;
+      if (u) t.com++;
+      if (glempaStatus(m) === 'FATO') t.fato++;
+      if (glempaStatus(m) === 'FAKE') t.fake++;
+    });
+    return t;
+  }
+  var tot = soma(lista);
+  var saldoTot = tot.verba - tot.usado;
+  var pctTot = tot.verba ? tot.usado / tot.verba * 100 : 0;
+
+  var html = '<div class="consol-row">' +
+    '<div class="consol-card"><div class="lbl">CRMs na lista</div><div class="val">' + tot.n + '</div><div class="sub">' + tot.fato + ' fato · ' + tot.fake + ' fake · ' + (tot.n - tot.fato - tot.fake) + ' a classificar</div></div>' +
+    '<div class="consol-card" style="background:linear-gradient(135deg,#374151,#111827)"><div class="lbl">Verba potencial</div><div class="val">' + fmtBRL(tot.verba) + '</div><div class="sub">' + fmtBRL(GLEMPA_VERBA) + ' por CRM (fake não conta)</div></div>' +
+    '<div class="consol-card" style="background:linear-gradient(135deg,#7c2d12,#c2410c)"><div class="lbl">Utilizado</div><div class="val">' + fmtBRL(tot.usado) + '</div><div class="sub">' + tot.com + ' CRM(s) com lançamento · ' + pctTot.toFixed(0) + '%</div></div>' +
+    '<div class="consol-card" style="background:linear-gradient(135deg,#1e3a5f,#1d4ed8)"><div class="lbl">Saldo</div><div class="val">' + fmtBRL(saldoTot) + '</div><div class="sub">verba potencial − utilizado</div></div>' +
+  '</div>';
+
+  if (!lista.length){
+    html += '<div class="gd-empty">Nenhum médico encontrado para este filtro.</div>';
+  }
+
+  Object.keys(GLEMPA_DISTRITOS).forEach(function(d){
+    var meds = lista.filter(function(m){ return m.d === d; });
+    if (!meds.length) return;
+    var info = GLEMPA_DISTRITOS[d], t = soma(meds);
+    html += '<div class="gl-dist"><span>📍 Distrito ' + d + ' — ' + esc(info.gd) + '</span>' +
+      '<span class="gl-dist-sub">' + info.regional + ' · Vital</span>' +
+      '<span class="gl-dist-nums">' + t.n + ' CRMs · utilizado ' + fmtBRL(t.usado) + ' · saldo ' + fmtBRL(t.verba - t.usado) + '</span></div>';
+    html += '<div class="gl-wrap"><table class="led-tbl"><thead><tr>' +
+      '<th class="txt-left">Médico</th><th>CRM</th><th>Esp.</th><th class="txt-left">Cidade</th><th>Rx YTD</th><th>Classif.</th>' +
+      '<th>Verba</th><th>Utilizado</th><th>Saldo</th><th>% usado</th><th>—</th></tr></thead><tbody>';
+    var setorAtual = null;
+    meds.forEach(function(m){
+      if (m.s !== setorAtual){
+        setorAtual = m.s;
+        var ts = soma(meds.filter(function(x){ return x.s === m.s; }));
+        html += '<tr class="gl-setor"><td colspan="11">Setor ' + m.s + (m.s === d ? ' (código do GD)' : '') +
+          ' · ' + ts.n + ' CRM(s) · utilizado ' + fmtBRL(ts.usado) + ' · saldo ' + fmtBRL(ts.verba - ts.usado) + '</td></tr>';
+      }
+      var verba = glempaVerba(m), u = usado[m.c] || 0, saldo = verba - u;
+      var pct = verba ? Math.min(100, u / verba * 100) : 0;
+      var barCls = pct >= 100 ? 'over' : (pct >= 80 ? 'warn' : '');
+      var st = glempaStatus(m);
+      var podeLancar = BACKEND_PRONTO && verba > 0 && saldo > 0;
+      var clDis = BACKEND_PRONTO ? '' : ' disabled';
+      html += '<tr class="' + (st === 'FAKE' ? 'gl-inativo' : '') + '">' +
+        '<td class="txt-left"><b>' + esc(m.m) + '</b></td>' +
+        '<td>' + m.c + '</td><td>' + m.e + '</td>' +
+        '<td class="txt-left">' + esc(m.ci) + '</td>' +
+        '<td>' + m.rx + '</td>' +
+        '<td><span class="cl-group">' +
+          '<button type="button" class="cl-btn fato' + (st === 'FATO' ? ' on' : '') + '" data-action="gl-classif" data-id="' + m.c + '" data-st="FATO"' + clDis + '>Fato</button>' +
+          '<button type="button" class="cl-btn fake' + (st === 'FAKE' ? ' on' : '') + '" data-action="gl-classif" data-id="' + m.c + '" data-st="FAKE"' + clDis + '>Fake</button>' +
+        '</span></td>' +
+        '<td>' + (verba ? fmtBRL(verba) : '—') + '</td>' +
+        '<td class="' + (u ? 'val-cell' : '') + '">' + fmtBRL(u) + '</td>' +
+        '<td class="saldo-cell ' + (verba && saldo <= 0 ? 'neg' : '') + '">' + (verba ? fmtBRL(saldo) : '—') + '</td>' +
+        '<td><span class="gl-bar"><div class="pc-bar-track"><div class="pc-bar-fill ' + barCls + '" style="width:' + pct + '%"></div></div></span> ' + pct.toFixed(0) + '%</td>' +
+        '<td>' + (st === 'FAKE' ? '<span class="acao-tag">inativo</span>'
+          : (verba && saldo <= 0 ? '<span class="acao-tag" style="background:var(--danger-l);color:var(--danger)">🔒 ESGOTADO</span>'
+          : '<button type="button" class="icon-btn" data-action="gl-lancar" data-id="' + m.c + '" ' + (podeLancar ? '' : 'disabled') + '>+ Lançar</button>')) + '</td>' +
+      '</tr>';
+    });
+    html += '</tbody></table></div>';
+  });
+
+  // lançamentos GLEMPA dos CRMs visíveis no filtro
+  var visiveis = {};
+  lista.forEach(function(m){ visiveis[m.c] = m; });
+  var lancs = glempaLancs().filter(function(l){ return visiveis[l.crm]; })
+    .sort(function(a,b){ return (b.data+b.criadoEm) < (a.data+a.criadoEm) ? -1 : 1; });
+  var orfaos = glempaLancs().filter(function(l){ return !GLEMPA_MEDICOS.some(function(m){ return m.c === l.crm; }); });
+  html += '<div class="tbl-wrap"><div class="tbl-hdr-bar"><h2>📒 Lançamentos GLEMPA</h2>' +
+    '<span class="tbl-count">' + lancs.length + ' registro(s)</span>' +
+    '<button type="button" class="btn-refresh" id="btn-refresh">🔄 Atualizar</button></div>';
+  if (!lancs.length){
+    html += '<div class="tbl-empty">Nenhum lançamento GLEMPA ' + (glempaLancs().length ? 'para este filtro.' : 'ainda. Use "+ Lançar" na linha do médico.') + '</div>';
+  } else {
+    html += '<div style="overflow-x:auto"><table class="led-tbl"><thead><tr><th>Data</th><th>Setor</th><th>CRM</th><th class="txt-left">Médico</th><th class="txt-left">Ação</th><th>Valor</th><th>Saldo do CRM após</th><th>—</th></tr></thead><tbody>';
+    lancs.forEach(function(l){
+      var m = visiveis[l.crm];
+      var ate = glempaLancs().filter(function(x){ return x.crm === l.crm && (x.data+x.criadoEm) <= (l.data+l.criadoEm); })
+        .reduce(function(a,x){ return a + x.valor; }, 0);
+      var saldoApos = glempaVerba(m) - ate;
+      html += '<tr class="' + (l.editado ? 'editada' : '') + '">' +
+        '<td>' + fmtData(l.data) + '</td><td>' + m.s + '</td><td>' + m.c + '</td>' +
+        '<td class="txt-left">' + esc(m.m) + (l.editado ? '<span class="edit-tag">editado</span>' : '') + '</td>' +
+        '<td class="txt-left"><span class="acao-tag">' + esc(l.acao) + '</span></td>' +
+        '<td class="val-cell">-' + fmtBRL(l.valor) + '</td>' +
+        '<td class="saldo-cell ' + (saldoApos < 0 ? 'neg' : '') + '">' + fmtBRL(saldoApos) + '</td>' +
+        '<td><div class="row-actions">' +
+          '<button type="button" class="icon-btn" data-action="editar" data-id="' + l.id + '" ' + (BACKEND_PRONTO ? '' : 'disabled') + '>✏️ Editar</button>' +
+          '<button type="button" class="icon-btn danger" data-action="excluir" data-id="' + l.id + '" ' + (BACKEND_PRONTO ? '' : 'disabled') + '>🗑️</button>' +
+        '</div></td></tr>';
+    });
+    html += '</tbody></table></div>';
+  }
+  html += '</div>';
+
+  html += '<div class="notes"><h3>Notas metodológicas — GLEMPA</h3><ul>' +
+    '<li><b>Base:</b> planilha "Prescritores EMPA — YTD 2026 (jan a jul)" enviada pela Gerência de Produto, recortada na SPI OESTE. Só o distrito 11630400 tem médicos na base; os demais distritos da regional não aparecem na lista.</li>' +
+    '<li><b>1 linha por CRM.</b> Médico que aparecia duas vezes (no setor do representante e no código do GD) foi mantido só no setor do representante. Rx YTD = prescrições de empagliflozina no período.</li>' +
+    '<li><b>Verba:</b> ' + fmtBRL(GLEMPA_VERBA) + ' por CRM para ações de relacionamento em setembro e outubro; produto pagante GLEMPA, linha sponsor IDENTIDADE (ou VITAL quando não houver cobertura). A verba vale para CRM classificado como <b>FATO</b> — médico "FAKE" fica sem verba e sem lançamento; "A classificar" aceita lançamento, mas depende da classificação na planilha.</li>' +
+    '<li><b>Classificação</b> (fato/fake): marque direto na coluna "Classif." de cada médico — fica gravada no Sheets e vale para todo mundo. Marcar <b>Fake</b> deixa o médico inativo (nome riscado, sem verba e sem lançamento); clicar de novo na opção ativa desmarca e volta para "a classificar".</li>' +
+    '<li><b>Trava:</b> a soma dos lançamentos de um CRM nunca passa de ' + fmtBRL(GLEMPA_VERBA) + '. Os lançamentos ficam na mesma aba <code>budget_lancamentos</code> do Sheets, com produto = GLEMPA, e <b>não</b> entram na conta corrente da verba tática.</li>' +
+    (orfaos.length ? '<li style="color:var(--danger)"><b>Atenção:</b> ' + orfaos.length + ' lançamento(s) GLEMPA com CRM fora da lista — confira direto na planilha.</li>' : '') +
+  '</ul></div>';
+
+  document.getElementById('main').innerHTML = html;
+  ligarBtnRefresh();
+}
+
+function abrirModalGlempa(crm, lancamentoId){
+  if (!BACKEND_PRONTO) return;
+  var editando = lancamentoId ? STATE.lancamentos.filter(function(l){ return l.id === lancamentoId; })[0] : null;
+  if (editando) crm = editando.crm;
+  var med = GLEMPA_MEDICOS.filter(function(m){ return m.c === crm; })[0];
+  if (!med) return;
+  var usadoOutros = glempaLancs()
+    .filter(function(l){ return l.crm === crm && (!editando || l.id !== editando.id); })
+    .reduce(function(a,l){ return a + l.valor; }, 0);
+  var saldoDisponivel = Math.round((glempaVerba(med) - usadoOutros) * 100) / 100;
+  var hoje = new Date().toISOString().slice(0,10);
+
+  document.getElementById('modal-root').innerHTML = '<div class="modal-bg" id="modal-bg"><div class="modal">' +
+    '<h3>' + (editando ? '✏️ Editar lançamento GLEMPA' : '➕ Lançamento GLEMPA') + '</h3>' +
+    '<div class="modal-err" id="modal-err"></div>' +
+    '<p style="font-size:12.5px;line-height:1.5;margin-bottom:12px"><b>' + esc(med.m) + '</b><br><span style="color:var(--gray);font-size:11.5px">CRM ' + med.c + ' · ' + med.e + ' · ' + esc(med.ci) + ' · setor ' + med.s + '</span></p>' +
+    '<div class="field-row">' +
+      '<div class="field"><label>Valor utilizado (R$)</label><input id="f-valor" type="number" step="0.01" min="0.01" max="' + Math.max(0, saldoDisponivel) + '" placeholder="0,00" value="' + (editando ? editando.valor : '') + '"></div>' +
+      '<div class="field"><label>Data</label><input id="f-data" type="date" value="' + (editando ? editando.data : hoje) + '"></div>' +
+    '</div>' +
+    '<div class="field"><label>Ação</label><select id="f-acao">' +
+      ACOES.map(function(a){ return '<option ' + (editando && editando.acao === a ? 'selected' : '') + '>' + a + '</option>'; }).join('') +
+    '</select></div>' +
+    '<div class="saldo-hint" id="saldo-hint"></div>' +
+    '<div class="modal-actions">' +
+      '<button class="btn-secondary" id="btn-cancelar">Cancelar</button>' +
+      '<button class="btn-primary" id="btn-salvar">' + (editando ? 'Salvar edição' : 'Lançar') + '</button>' +
+    '</div>' +
+  '</div></div>';
+
+  var valorInput = document.getElementById('f-valor');
+  var btnSalvar = document.getElementById('btn-salvar');
+  var err = document.getElementById('modal-err');
+  function atualizarHint(){
+    var hint = document.getElementById('saldo-hint');
+    var valor = parseFloat(valorInput.value) || 0;
+    var restante = saldoDisponivel - valor;
+    hint.className = 'saldo-hint' + (restante < 0 ? ' over' : '');
+    hint.textContent = 'Saldo deste CRM: ' + fmtBRL(saldoDisponivel) + ' de ' + fmtBRL(glempaVerba(med)) +
+      (valor ? ' · saldo após este lançamento: ' + fmtBRL(restante) : '');
+    btnSalvar.disabled = restante < 0 || saldoDisponivel <= 0;
+  }
+  valorInput.oninput = atualizarHint;
+  atualizarHint();
+
+  function fechar(){ document.getElementById('modal-root').innerHTML = ''; }
+  document.getElementById('btn-cancelar').onclick = fechar;
+  document.getElementById('modal-bg').onclick = function(e){ if (e.target.id === 'modal-bg') fechar(); };
+
+  btnSalvar.onclick = function(){
+    var valor = parseFloat(valorInput.value);
+    var data = document.getElementById('f-data').value;
+    if (!data || !valor || valor <= 0){
+      err.textContent = 'Preencha a data e um valor maior que zero.';
+      err.style.display = 'block';
+      return;
+    }
+    if (valor > saldoDisponivel){
+      err.textContent = 'Valor maior que o saldo deste CRM (' + fmtBRL(saldoDisponivel) + ').';
+      err.style.display = 'block';
+      return;
+    }
+    var registro = {
+      id: editando ? editando.id : uid(), gd: GLEMPA_DISTRITOS[med.d].gd, linha: 'VITAL', produto: GLEMPA_PROD,
+      crm: med.c, medico: med.m, valor: valor, acao: document.getElementById('f-acao').value, data: data,
+      criadoEm: editando ? editando.criadoEm : Date.now().toString()
+    };
+    btnSalvar.disabled = true;
+    btnSalvar.textContent = 'Salvando…';
+    enviarAoSheet(editando ? 'edit' : 'add', registro).then(function(resp){
+      if (!resp || !resp.ok) throw new Error((resp && resp.erro) || 'falha desconhecida');
+      return recarregar();
+    }).then(fechar).catch(function(e){
+      err.textContent = 'Erro ao gravar no Sheets: ' + e.message;
+      err.style.display = 'block';
+      btnSalvar.disabled = false;
+      btnSalvar.textContent = editando ? 'Salvar edição' : 'Lançar';
     });
   };
 }
@@ -688,9 +1076,19 @@ document.getElementById('main').addEventListener('click', function(e){
   if (!btn || btn.disabled) return;
   var id = btn.getAttribute('data-id');
   var action = btn.getAttribute('data-action');
-  if (action === 'editar') abrirModal(id);
+  if (action === 'gl-lancar') abrirModalGlempa(id, null);
+  else if (action === 'gl-classif') classificarGlempa(id, btn.getAttribute('data-st'));
+  else if (action === 'editar'){
+    var lanc = STATE.lancamentos.filter(function(l){ return l.id === id; })[0];
+    if (lanc && lanc.produto === GLEMPA_PROD) abrirModalGlempa(null, id);
+    else abrirModal(id);
+  }
   else if (action === 'excluir') excluirLancamento(id);
 });
+
+document.getElementById('tab-tatica').onclick = function(){ STATE.view = 'tatica'; history.replaceState(null, '', location.pathname); render(); };
+document.getElementById('tab-glempa').onclick = function(){ STATE.view = 'glempa'; history.replaceState(null, '', '#glempa'); render(); };
+if (location.hash === '#glempa') STATE.view = 'glempa';
 
 // ── Inicialização ────────────────────────────────────────────────────
 
