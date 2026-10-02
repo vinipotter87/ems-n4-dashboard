@@ -1089,14 +1089,84 @@ function renderKPIs(dados) {
 
   // Linha 2: status + alerta MDV
   var semMDVCls = repsSemMDV === 0 ? 'g' : repsSemMDV <= 10 ? 'o' : 'r';
-  var row2 = '<div class="kpi-row" style="grid-template-columns:repeat(4,1fr)">' +
+  var row2 = '<div class="kpi-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:10px">' +
     kpiCard('g', 'OK',            ok,          'distritos ≥ 100% MDV') +
     kpiCard('o', 'ATENÇÃO',       warn,        'distritos 80–99% MDV') +
     kpiCard('r', 'CRÍTICO',       crit,        'distritos < 80% MDV') +
     kpiCard(semMDVCls, 'REPS SEM MDV 12', repsSemMDV, 'abaixo do obj. — prod < 100%') +
   '</div>';
 
-  return row1 + row2;
+  // Linha 3: número macro dos demais KPIs (regional, ou do distrito filtrado)
+  var mes = dados.distritos && dados.distritos[0] ? dados.distritos[0].mes : MES_ATUAL;
+  var escopo = DISTRITO_FILTRO ? 'distrito' : 'regional';
+  var prefixo = DISTRITO_FILTRO ? DISTRITO_FILTRO.substring(0, 6) : null;
+  function soma(arr, campo) {
+    return (arr || []).reduce(function(t, r){ var v = safeFloat(r[campo]); return t + (v !== null ? v : 0); }, 0);
+  }
+  function clsMeta(v) { return v === null ? 'n' : (v >= 100 ? 'g' : (v >= 80 ? 'o' : 'r')); }
+  function pp(v) { return v.toFixed(1).replace('.', ',') + '%'; }
+  var SEM = 'sem dados para ' + mes;
+
+  // Visitas GD — realizado ÷ objetivo, somando os GDs
+  var vis = (dados.visitasNex || []).concat(dados.visitasVit || []);
+  var visObj = soma(vis, 'obj'), visReal = soma(vis, 'real');
+  var visPct = visObj ? visReal / visObj * 100 : null;
+  var cVis = kpiCard(clsMeta(visPct), 'VISITAS GD', visPct !== null ? pp(visPct) : '—',
+    visPct !== null ? Math.round(visReal) + ' de ' + Math.round(visObj) + ' visitas · ' + vis.length + ' GD' + (vis.length !== 1 ? 's' : '') : SEM);
+
+  // CRM Chave — interações realizadas ÷ objetivo
+  var crmObj = soma(dados.crm, 'obj_interacoes'), crmReal = soma(dados.crm, 'real_interacoes');
+  var crmPct = crmObj ? crmReal / crmObj * 100 : null;
+  var cCrm = kpiCard(clsMeta(crmPct), 'CRM CHAVE', crmPct !== null ? pp(crmPct) : '—',
+    crmPct !== null ? Math.round(crmReal) + ' de ' + Math.round(crmObj) + ' interações' : SEM);
+
+  // Frequência — cobertura (Freq 80 + 100 ÷ painel) do snapshot do ciclo
+  var fDist = FREQ_SETORES_RAW[mes] ? freqDistritos(mes, prefixo) : [];
+  var cFreq;
+  if (fDist.length) {
+    var fTot = freqSoma(fDist), fAntC = freqCicloAnterior(mes);
+    var fAnt = fAntC ? freqDistritos(fAntC, prefixo) : [];
+    cFreq = kpiCard(fTot.cob >= 75 ? 'g' : (fTot.cob >= 50 ? 'o' : 'r'), 'FREQUÊNCIA', pp(fTot.cob),
+      'cobertura do painel' + (fAnt.length ? ' · ' + freqDeltaHtml(fTot.cob, freqSoma(fAnt).cob) + ' vs ' + fAntC : ''));
+  } else {
+    cFreq = kpiCard('n', 'FREQUÊNCIA', '—', SEM);
+  }
+
+  // Sobreposição Nexus × Vital — % do painel
+  var sob = null;
+  if (SOBREP_DIST[mes]) {
+    if (prefixo) sob = SOBREP_DIST[mes].find(function(d){ return d.id === prefixo; }) || null;
+    else if (SOBREP_LINHA[mes]) {
+      var sl = SOBREP_LINHA[mes];
+      sob = {painel: sl.NEXUS.painel + sl.VITAL.painel, nv: sl.NEXUS.nv + sl.VITAL.nv, todas: sl.NEXUS.todas + sl.VITAL.todas};
+    }
+  }
+  var cSob;
+  if (sob && sob.painel) {
+    var sNv = sob.nv / sob.painel * 100, sTd = sob.todas / sob.painel * 100;
+    var sc = sobrepCls(sNv);
+    cSob = kpiCard(sc === 'ok' ? 'g' : (sc === 'warn' ? 'o' : 'r'), 'SOBREPOSIÇÃO NEXUS × VITAL', pp(sNv),
+      '% do painel · todas as linhas: ' + pp(sTd));
+  } else {
+    cSob = kpiCard('n', 'SOBREPOSIÇÃO NEXUS × VITAL', '—', SEM);
+  }
+
+  // PEX — pontuação média dos representantes
+  var pexPts = (dados.pex || []).map(function(r){ return safeFloat(r.pts); }).filter(function(v){ return v !== null; });
+  var cPex;
+  if (pexPts.length) {
+    var pexMed = pexPts.reduce(function(a, b){ return a + b; }, 0) / pexPts.length;
+    var nOuro = (dados.pex || []).filter(function(r){ return (r.medalha || '').toUpperCase() === 'OURO'; }).length;
+    cPex = kpiCard('n', 'PEX MÉDIO', pexMed.toFixed(1).replace('.', ','), 'pts · ' + pexPts.length + ' reps · ' + nOuro + ' ouro');
+  } else {
+    cPex = kpiCard('n', 'PEX MÉDIO', '—', 'ainda não disponível para ' + mes);
+  }
+
+  var row3 = '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--gray);margin:4px 0 8px">KPIs — visão macro ' +
+    (escopo === 'distrito' ? 'do distrito' : 'da regional') + '</div>' +
+    '<div class="kpi-row" style="grid-template-columns:repeat(5,1fr)">' + cVis + cCrm + cFreq + cSob + cPex + '</div>';
+
+  return row1 + row2 + row3;
 }
 
 function kpiCard(cls, lbl, val, sub) {
