@@ -2255,6 +2255,38 @@ function renderFrequencia() {
   document.getElementById('main-content').innerHTML = html;
 }
 
+// Bloco de Frequência dentro da página do mês (renderTudo): por distrito
+// sem filtro, por setor com distrito filtrado. Só aparece nos meses que
+// têm snapshot em FREQ_SETORES_RAW.
+function renderFrequenciaMes(mes) {
+  if (!FREQ_SETORES_RAW[mes]) return '';
+  var cicloAnt = freqCicloAnterior(mes);
+  var prefixo = DISTRITO_FILTRO ? DISTRITO_FILTRO.substring(0, 6) : null;
+  var dist = freqDistritos(mes, prefixo);
+  if (!dist.length) return '';
+  var distAnt = cicloAnt ? freqDistritos(cicloAnt, prefixo) : [];
+  var tot = freqSoma(dist);
+  var totAnt = distAnt.length ? freqSoma(distAnt) : null;
+
+  var html = '<div style="margin:0 0 28px">';
+  html += '<div class="sec-hdr"><div class="sec-title">PANORAMA — FREQUÊNCIA DE VISITAÇÃO</div><div class="sec-line"></div>';
+  html += '<span style="font-size:11px;color:var(--gray)">' + mes + '/2026</span></div>';
+  html += '<div class="visitas-chart-wrap" style="margin-top:8px">';
+  html += '<h3>🩺 Cobertura de frequência ' + (prefixo ? 'por setor — ' + dist[0].gd : 'por distrito') + ': ' + freqPctTxt(tot.cob) +
+    (totAnt ? ' &nbsp;' + freqDeltaHtml(tot.cob, totAnt.cob) + ' <span style="font-weight:400;color:var(--gray)">vs ' + cicloAnt + '</span>' : '') + '</h3>';
+  html += '<p style="font-size:11px;color:var(--gray);margin:0 0 12px">Cobertura = (Freq 80 + Freq 100) ÷ Painel' +
+    (prefixo ? '' : ' &nbsp;·&nbsp; selecione um distrito no filtro do topo para ver por setor') + ' &nbsp;·&nbsp; ';
+  html += '<span style="display:inline-block;width:10px;height:10px;background:#22c55e;border-radius:2px;margin-right:4px"></span>≥75%&nbsp;&nbsp;';
+  html += '<span style="display:inline-block;width:10px;height:10px;background:#f59e0b;border-radius:2px;margin-right:4px"></span>50–74%&nbsp;&nbsp;';
+  html += '<span style="display:inline-block;width:10px;height:10px;background:#ef4444;border-radius:2px;margin-right:4px"></span>&lt;50%</p>';
+  html += prefixo
+    ? renderFrequenciaSetorTable(freqSetores(mes, prefixo), cicloAnt ? freqSetores(cicloAnt, prefixo) : [], cicloAnt)
+    : renderFrequenciaDistTable(dist, distAnt, cicloAnt);
+  html += '<p style="font-size:11px;color:var(--gray);margin:12px 0 0">Histórico e evolução entre ciclos na aba <a href="#" onclick="FREQ_CICLO=\'' + mes + '\';abrirFrequencia();window.scrollTo(0,0);return false" style="color:#0369a1;font-weight:700">🩺 Frequência</a>.</p>';
+  html += '</div></div>';
+  return html;
+}
+
 function abrirFrequencia() {
   VIEW_ATUAL = 'frequencia';
   var meses = (CONFIG && CONFIG._meses && CONFIG._meses.length) ? CONFIG._meses : [MES_ATUAL];
@@ -5565,6 +5597,9 @@ function renderTudo(dados, mes) {
 
   // 4.5 CRM CHAVE
   html += renderCrmChave(dados.crm || [], mes);
+
+  // 4.55 FREQUÊNCIA DE VISITAÇÃO (snapshot do ciclo, quando existir)
+  html += renderFrequenciaMes(mes);
 
   // 4.6 SOBREPOSIÇÃO NEXUS × VITAL (por representante quando há distrito filtrado)
   html += renderSobreposicaoMes(mes);
