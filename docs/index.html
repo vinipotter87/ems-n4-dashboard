@@ -389,6 +389,8 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
 .cota-pct-ok{color:#15803d;font-weight:700}
 .cota-pct-warn{color:#854d0e;font-weight:700}
 .cota-pct-crit{color:#b91c1c;font-weight:700}
+.cota-table .row-dist.row-sel td{background:#fffbeb;font-weight:700}
+.cota-table .row-dist.row-dim td{opacity:.45}
 .cycle-btn.freq-btn{border-color:var(--border);color:var(--gray)}
 .cycle-btn.freq-btn.active{background:var(--orange);border-color:var(--orange);color:#fff}
 /* Visitas GD */
@@ -2551,6 +2553,13 @@ function aplicarFiltroDistrito(distritoId) {
     return;
   }
 
+  // Na Cota, idem: a própria página passa a mostrar só o distrito selecionado.
+  if (VIEW_ATUAL === 'cota') {
+    renderEvolucaoCota(window._cotaMeses || [], window._cotaDistritos || []);
+    atualizarVisibilidadeFiltroDistrito();
+    return;
+  }
+
   var dados = DADOS_CACHE[MES_ATUAL];
   if (!dados) return;
 
@@ -2583,7 +2592,7 @@ function abrirDetalheDoFiltroAtivo() {
 
 function atualizarVisibilidadeFiltroDistrito() {
   var bar = document.getElementById('distrito-filtro-bar');
-  if (bar) bar.style.display = (VIEW_ATUAL === 'principal' || VIEW_ATUAL === 'frequencia') ? 'flex' : 'none';
+  if (bar) bar.style.display = (VIEW_ATUAL === 'principal' || VIEW_ATUAL === 'frequencia' || VIEW_ATUAL === 'cota') ? 'flex' : 'none';
 }
 
 // ── Renderização: Mês ─────────────────────────────────────────────
@@ -4184,6 +4193,64 @@ async function irParaMes(mes) {
 var COTA_CHARTS  = {};
 var COTA_LINHA_BAR = 'TOTAL'; // estado do toggle do gráfico de barras
 
+// Distrito selecionado no filtro do topo (objeto de `distritos`), ou null.
+// Só vale dentro da página Cota — outras views que reaproveitam getCotaProd/
+// getRealProd continuam sempre regionais, mesmo com DISTRITO_FILTRO ligado.
+function cotaDistFiltro() {
+  if (VIEW_ATUAL !== 'cota' || !DISTRITO_FILTRO) return null;
+  return (window._cotaDistritos || []).find(function(d){ return d.distrito_id === DISTRITO_FILTRO; }) || null;
+}
+function cotaDistNome(d) { return d.ab || d.nm || d.nome || d.distrito_id; }
+
+// Getters {cota(mes), real(mes)} por escopo:
+// 'TOTAL'/null | 'NEXUS' | 'VITAL' (regional) | 'DIST' (distrito filtrado)
+function cotaEscopo(key) {
+  if (key === 'DIST') {
+    var dist = cotaDistFiltro();
+    return {
+      cota: function(m){ return getCotaDist(m, dist.distrito_id, dist.linha); },
+      real: function(m){ return getRealDist(m, dist.distrito_id, dist.linha); }
+    };
+  }
+  var lin = (!key || key === 'TOTAL') ? null : key;
+  return {
+    cota: function(m){ return getCotaReg(m, lin); },
+    real: function(m){ return getRealReg(m, lin); }
+  };
+}
+
+// Séries dos gráficos de linha: regional (Total/NEXUS/VITAL) ou, com filtro,
+// o distrito contra a linha regional dele como referência.
+function cotaSeries() {
+  var dist = cotaDistFiltro();
+  if (dist) return [
+    { label: cotaDistNome(dist), key: 'DIST', color: '#111827', width: 3, dash: [] },
+    { label: dist.linha + ' regional', key: dist.linha, color: dist.linha === 'NEXUS' ? '#1A3A6B' : '#b91c1c', width: 2.2, dash: [8,4] }
+  ];
+  return [
+    { label: 'Total Regional', key: 'TOTAL', color: '#111827', width: 3,   dash: [] },
+    { label: 'NEXUS',          key: 'NEXUS', color: '#1A3A6B', width: 2.2, dash: [8,4] },
+    { label: 'VITAL',          key: 'VITAL', color: '#b91c1c', width: 2.2, dash: [8,4] }
+  ];
+}
+
+// Linhas de produto da linha — ou só as do distrito filtrado, quando há filtro
+function cotaProdArr(d, linha) {
+  var dist = cotaDistFiltro();
+  if (dist) {
+    return (linha === 'NEXUS' ? (d.prodDistNex||[]) : (d.prodDistVit||[]))
+      .filter(function(r){ return r.distrito_id === dist.distrito_id; });
+  }
+  return linha === 'NEXUS' ? (d.prodNex||[]) : (d.prodVit||[]);
+}
+
+// Classe da linha de distrito nas tabelas: destaca o filtrado, esmaece os demais
+function cotaRowCls(d) {
+  var sel = cotaDistFiltro();
+  if (!sel) return '';
+  return d.distrito_id === sel.distrito_id ? ' row-sel' : ' row-dim';
+}
+
 function fmtBRL(v) {
   if (v === null || v === undefined || isNaN(v) || v === 0) return '—';
   return 'R$ ' + Math.round(v).toLocaleString('pt-BR');
@@ -4257,7 +4324,7 @@ function getRealDist(mes, distId, linhaD) {
 // Cota/Realizado por produto (regional)
 function getCotaProd(mes, produto, linha) {
   var d = DADOS_CACHE[mes]; if (!d) return 0;
-  var arr = linha === 'NEXUS' ? (d.prodNex||[]) : (d.prodVit||[]);
+  var arr = cotaProdArr(d, linha);
   for (var i = 0; i < arr.length; i++) {
     if (normProd(arr[i].produto) === normProd(produto)) return safeFloat(arr[i].cota) || 0;
   }
@@ -4266,7 +4333,7 @@ function getCotaProd(mes, produto, linha) {
 function getRealProd(mes, produto, linha) {
   if (isMesParcial(mes)) return null;
   var d = DADOS_CACHE[mes]; if (!d) return 0;
-  var arr = linha === 'NEXUS' ? (d.prodNex||[]) : (d.prodVit||[]);
+  var arr = cotaProdArr(d, linha);
   for (var i = 0; i < arr.length; i++) {
     if (normProd(arr[i].produto) === normProd(produto)) return safeFloat(arr[i].realizado) || 0;
   }
@@ -4345,19 +4412,14 @@ function buildCotaBarChart(canvasId, meses, cotaArr, realArr) {
 }
 
 // ── Chart: linha % atingimento regional ──────────────────────────
-function buildCotaAtingChart(canvasId, meses, fn) {
-  // fn(mes, linha) => pct or null
-  var datasets = [
-    { label: 'Total Regional',
-      data: meses.map(function(m){ var c=fn(m,null,'cota'),r=fn(m,null,'real'); return c>0?r/c*100:null; }),
-      borderColor: '#111827', borderWidth: 3, pointRadius: 5, tension: .35, fill: false, _group:'regional' },
-    { label: 'NEXUS',
-      data: meses.map(function(m){ var c=fn(m,'NEXUS','cota'),r=fn(m,'NEXUS','real'); return c>0?r/c*100:null; }),
-      borderColor: '#1A3A6B', borderWidth: 2.2, borderDash: [8,4], pointRadius: 4, tension: .35, fill: false },
-    { label: 'VITAL',
-      data: meses.map(function(m){ var c=fn(m,'VITAL','cota'),r=fn(m,'VITAL','real'); return c>0?r/c*100:null; }),
-      borderColor: '#b91c1c', borderWidth: 2.2, borderDash: [8,4], pointRadius: 4, tension: .35, fill: false }
-  ];
+function buildCotaAtingChart(canvasId, meses) {
+  var datasets = cotaSeries().map(function(s) {
+    var e = cotaEscopo(s.key);
+    return { label: s.label,
+      data: meses.map(function(m){ var c=e.cota(m),r=e.real(m); return c>0?r/c*100:null; }),
+      borderColor: s.color, borderWidth: s.width, borderDash: s.dash,
+      pointRadius: s.dash.length ? 4 : 5, tension: .35, fill: false };
+  });
   var el = document.getElementById(canvasId); if (!el) return;
   if (COTA_CHARTS[canvasId]) COTA_CHARTS[canvasId].destroy();
   var refLines = [{ v: 100, color: 'rgba(21,105,58,.4)' }, { v: 80, color: 'rgba(200,16,46,.25)' }];
@@ -4425,6 +4487,12 @@ function buildCotaDistAtingChart(canvasId, meses, distritos) {
       tension: .35, fill: false, _group: 'vital', _distId: d.distrito_id
     });
   });
+  // Com filtro de distrito: mantém todos, destacando o selecionado
+  var sel = cotaDistFiltro();
+  if (sel) datasets.forEach(function(ds) {
+    if (ds._distId === sel.distrito_id) { ds.borderWidth = 4; ds.pointRadius = 5; ds.order = 0; }
+    else { ds.borderColor = ds.borderColor + '40'; ds.borderWidth = 1.5; ds.pointRadius = 2; ds.order = 1; }
+  });
   var el = document.getElementById(canvasId); if (!el) return;
   if (COTA_CHARTS[canvasId]) COTA_CHARTS[canvasId].destroy();
   var refLines = [{ v: 100, color: 'rgba(21,105,58,.4)' }, { v: 80, color: 'rgba(200,16,46,.25)' }];
@@ -4482,7 +4550,11 @@ function cotaSwitchBarLinha(linhaKey, btn, meses) {
 
 // ── Tabela Regional ───────────────────────────────────────────────
 function renderCotaTableRegional(meses) {
-  var linhas = [
+  var dist = cotaDistFiltro();
+  var linhas = dist ? [
+    { key: 'DIST',     label: cotaDistNome(dist),                  cls: 'row-total' },
+    { key: dist.linha, label: 'Ref.: ' + dist.linha + ' regional', cls: dist.linha === 'NEXUS' ? 'row-nexus' : 'row-vital' }
+  ] : [
     { key: 'TOTAL', label: 'Total Regional',   cls: 'row-total' },
     { key: 'NEXUS', label: '↳ NEXUS',          cls: 'row-nexus' },
     { key: 'VITAL', label: '↳ VITAL',          cls: 'row-vital' }
@@ -4490,7 +4562,7 @@ function renderCotaTableRegional(meses) {
   var html = '<div class="cota-table-wrap"><table class="cota-table">';
   // Header
   html += '<thead><tr>';
-  html += '<th class="th-label" rowspan="2">Linha</th>';
+  html += '<th class="th-label" rowspan="2">' + (dist ? 'Nível' : 'Linha') + '</th>';
   meses.forEach(function(m) {
     var lbl = m + (isMesParcial(m) ? ' <span style="font-size:8px;font-weight:700;background:#fef3c7;color:#92400e;padding:1px 5px;border-radius:4px;vertical-align:middle">PARCIAL</span>' : '');
     html += '<th class="th-mes-hdr" colspan="3">' + lbl + '</th>';
@@ -4504,13 +4576,13 @@ function renderCotaTableRegional(meses) {
   html += '</tr></thead><tbody>';
   // Rows
   linhas.forEach(function(lin) {
-    var getLinha = lin.key === 'TOTAL' ? null : lin.key;
+    var esc = cotaEscopo(lin.key);
     var ytdC = 0, ytdR = 0;
     html += '<tr class="' + lin.cls + '">';
     html += '<td class="td-label">' + lin.label + '</td>';
     meses.forEach(function(m, idx) {
-      var c = getCotaReg(m, getLinha);
-      var r = getRealReg(m, getLinha); // null se parcial
+      var c = esc.cota(m);
+      var r = esc.real(m); // null se parcial
       var pct = (c > 0 && r !== null) ? r / c * 100 : null;
       ytdC += c; if (r !== null) ytdR += r;
       var sep = idx === 0 ? '' : 'td-mes-sep';
@@ -4548,7 +4620,7 @@ function renderCotaTableDist(meses, distritos) {
     var ci = linhaD === 'NEXUS' ? nexusIdx : vitalIdx;
     var cor = colorArr[ci % colorArr.length];
     var ytdC = 0, ytdR = 0;
-    var row = '<tr class="row-dist ' + rowCls + '">';
+    var row = '<tr class="row-dist' + cotaRowCls(d) + '">';
     row += '<td class="td-label"><span style="display:inline-flex;align-items:center;gap:6px">' +
       '<span style="width:8px;height:8px;border-radius:50%;background:' + cor + ';flex-shrink:0"></span>' +
       (d.ab || d.nome || d.distrito_id) + '</span></td>';
@@ -4585,7 +4657,7 @@ function renderCotaTableProduto(meses, linha) {
   var produtosSet = {};
   meses.forEach(function(m) {
     var d = DADOS_CACHE[m]; if (!d) return;
-    var arr = linha === 'NEXUS' ? (d.prodNex||[]) : (d.prodVit||[]);
+    var arr = cotaProdArr(d, linha);
     arr.forEach(function(r) { if (r.produto) produtosSet[normProd(r.produto)] = r.produto; });
   });
   var produtos = Object.keys(produtosSet).sort(function(a, b) {
@@ -4632,9 +4704,10 @@ function renderCotaTableProduto(meses, linha) {
 }
 
 // ── YTD KPI Card ──────────────────────────────────────────────────
-function renderCotaYTDCard(titulo, cor, meses, getLinha) {
-  var c = calcYTD(meses, function(m){ return getCotaReg(m, getLinha); });
-  var r = calcYTD(meses, function(m){ return getRealReg(m, getLinha); });
+function renderCotaYTDCard(titulo, cor, meses, escopoKey) {
+  var esc = cotaEscopo(escopoKey);
+  var c = calcYTD(meses, esc.cota);
+  var r = calcYTD(meses, esc.real);
   var pct = c > 0 ? r / c * 100 : null;
   var pctCls = pct !== null ? (pct >= 100 ? 'ok' : pct >= 80 ? 'warn' : 'crit') : '';
   var temParcial = meses.some(function(m){ return isMesParcial(m); });
@@ -4670,8 +4743,7 @@ function calcIncrementos(meses, getCotaFn) {
 var COTA_INCR_LINHA = 'TOTAL'; // estado do toggle
 
 function buildCotaIncrementoChart(canvasId, meses, linhaKey) {
-  var getLinha = linhaKey === 'TOTAL' ? null : linhaKey;
-  var incrs = calcIncrementos(meses, function(m){ return getCotaReg(m, getLinha); });
+  var incrs = calcIncrementos(meses, cotaEscopo(linhaKey).cota);
   var absArr = incrs.map(function(d){ return d ? d.abs : null; });
 
   var bgColors = absArr.map(function(v) {
@@ -4729,15 +4801,10 @@ function buildCotaIncrementoChart(canvasId, meses, linhaKey) {
   });
 }
 
-// Gráfico de linhas — Δ% por mês, Total + NEXUS + VITAL sobrepostos
+// Gráfico de linhas — Δ% por mês, séries de cotaSeries() sobrepostas
 function buildCotaIncrementoPctChart(canvasId, meses) {
-  var linhasInfo = [
-    { label: 'Total Regional', key: null, color: '#111827', width: 3, dash: [] },
-    { label: 'NEXUS',          key: 'NEXUS', color: '#1A3A6B', width: 2.2, dash: [8,4] },
-    { label: 'VITAL',          key: 'VITAL', color: '#b91c1c', width: 2.2, dash: [8,4] }
-  ];
-  var datasets = linhasInfo.map(function(l) {
-    var incrs = calcIncrementos(meses, function(m){ return getCotaReg(m, l.key); });
+  var datasets = cotaSeries().map(function(l) {
+    var incrs = calcIncrementos(meses, cotaEscopo(l.key).cota);
     return {
       label: l.label,
       data: incrs.map(function(d){ return d ? d.pct : null; }),
@@ -4850,7 +4917,7 @@ function renderCotaIncrementoTable(meses, distritos) {
   html += '<tr class="row-nexus"><td class="td-label" colspan="' + (nDataCols + 1) + '" style="font-size:9.5px;letter-spacing:.8px;padding:6px 10px">NEXUS — distritos</td></tr>';
   nexusDists.forEach(function(d, i) {
     var cor = ANUAL_NEXUS_COLORS[i % ANUAL_NEXUS_COLORS.length];
-    html += '<tr class="row-dist"><td class="td-label"><span style="display:inline-flex;align-items:center;gap:6px">' +
+    html += '<tr class="row-dist' + cotaRowCls(d) + '"><td class="td-label"><span style="display:inline-flex;align-items:center;gap:6px">' +
       '<span style="width:7px;height:7px;border-radius:50%;background:' + cor + ';flex-shrink:0"></span>' +
       (d.ab || d.nome || d.distrito_id) + '</span></td>' +
       _incrRowCells(meses, function(m){ return getCotaDist(m, d.distrito_id, 'NEXUS'); }) + '</tr>';
@@ -4860,7 +4927,7 @@ function renderCotaIncrementoTable(meses, distritos) {
   html += '<tr class="row-vital"><td class="td-label" colspan="' + (nDataCols + 1) + '" style="font-size:9.5px;letter-spacing:.8px;padding:6px 10px">VITAL — distritos</td></tr>';
   vitalDists.forEach(function(d, i) {
     var cor = ANUAL_VITAL_COLORS[i % ANUAL_VITAL_COLORS.length];
-    html += '<tr class="row-dist"><td class="td-label"><span style="display:inline-flex;align-items:center;gap:6px">' +
+    html += '<tr class="row-dist' + cotaRowCls(d) + '"><td class="td-label"><span style="display:inline-flex;align-items:center;gap:6px">' +
       '<span style="width:7px;height:7px;border-radius:50%;background:' + cor + ';flex-shrink:0"></span>' +
       (d.ab || d.nome || d.distrito_id) + '</span></td>' +
       _incrRowCells(meses, function(m){ return getCotaDist(m, d.distrito_id, 'VITAL'); }) + '</tr>';
@@ -4876,7 +4943,7 @@ function renderCotaIncrementoProdutoTable(meses, linha) {
   var produtosSet = {};
   meses.forEach(function(m) {
     var d = DADOS_CACHE[m]; if (!d) return;
-    var arr = linha === 'NEXUS' ? (d.prodNex || []) : (d.prodVit || []);
+    var arr = cotaProdArr(d, linha);
     arr.forEach(function(r) { if (r.produto) produtosSet[normProd(r.produto)] = r.produto; });
   });
   var produtos = Object.keys(produtosSet).sort(function(a, b) {
@@ -4927,17 +4994,30 @@ function cotaSwitchIncrLinha(linhaKey, btn) {
 
 // ── Render Principal ──────────────────────────────────────────────
 function renderEvolucaoCota(meses, distritos) {
-  // Tab produto inicial
-  var _cotaProdTab = 'NEXUS';
+  // Expõe meses/distritos para os callbacks dos botões e para o filtro de distrito
+  window._cotaMeses = meses;
+  window._cotaDistritos = distritos;
 
-  var ytdHtml = '<div class="cota-ytd-row">' +
-    renderCotaYTDCard('📍 Total Regional', '#111827', meses, null) +
-    renderCotaYTDCard('🔵 NEXUS', '#1A3A6B', meses, 'NEXUS') +
-    renderCotaYTDCard('🔴 VITAL', '#b91c1c', meses, 'VITAL') +
-  '</div>';
+  // Com filtro de distrito ligado a página inteira vira a do distrito: os
+  // toggles de linha somem (o distrito pertence a uma linha só).
+  var dist = cotaDistFiltro();
+  var distNome = dist ? cotaDistNome(dist) : '';
+  var prodLinha = dist ? dist.linha : 'NEXUS'; // tab produto inicial
+
+  var ytdHtml = dist
+    ? '<div class="cota-ytd-row" style="grid-template-columns:repeat(2,1fr)">' +
+        renderCotaYTDCard('🎯 ' + distNome, '#111827', meses, 'DIST') +
+        renderCotaYTDCard((dist.linha === 'NEXUS' ? '🔵 ' : '🔴 ') + dist.linha + ' regional · referência',
+          dist.linha === 'NEXUS' ? '#1A3A6B' : '#b91c1c', meses, dist.linha) +
+      '</div>'
+    : '<div class="cota-ytd-row">' +
+        renderCotaYTDCard('📍 Total Regional', '#111827', meses, null) +
+        renderCotaYTDCard('🔵 NEXUS', '#1A3A6B', meses, 'NEXUS') +
+        renderCotaYTDCard('🔴 VITAL', '#b91c1c', meses, 'VITAL') +
+      '</div>';
 
   // Gráfico barras regional — filtro de linha
-  var barTabs = '<div class="cota-filter-row">' +
+  var barTabs = dist ? '' : '<div class="cota-filter-row">' +
     '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)">Linha:</span>' +
     '<button class="afbtn cota-bar-tab active" onclick="cotaSwitchBarLinha(\'TOTAL\',this,_cotaMeses)">Total</button>' +
     '<button class="afbtn afbtn-nexus cota-bar-tab" onclick="cotaSwitchBarLinha(\'NEXUS\',this,_cotaMeses)">NEXUS</button>' +
@@ -4946,7 +5026,7 @@ function renderEvolucaoCota(meses, distritos) {
 
   var sec1Html =
     '<div class="cota-section">' +
-    '<div class="cota-section-hdr">📊 Evolução Regional</div>' +
+    '<div class="cota-section-hdr">' + (dist ? '📊 Evolução do Distrito · ' + distNome : '📊 Evolução Regional') + '</div>' +
     '<div class="cota-charts-row">' +
       '<div class="cota-chart-card">' +
         '<div class="cota-chart-hdr"><span>Cota vs Realizado (R$)</span></div>' +
@@ -4962,7 +5042,7 @@ function renderEvolucaoCota(meses, distritos) {
     '</div>';
 
   // Seção Incremento de Cota
-  var incrBarTabs = '<div class="cota-filter-row">' +
+  var incrBarTabs = dist ? '' : '<div class="cota-filter-row">' +
     '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)">Linha:</span>' +
     '<button class="afbtn cota-incr-tab active" onclick="cotaSwitchIncrLinha(\'TOTAL\',this)">Total</button>' +
     '<button class="afbtn afbtn-nexus cota-incr-tab" onclick="cotaSwitchIncrLinha(\'NEXUS\',this)">NEXUS</button>' +
@@ -4981,19 +5061,19 @@ function renderEvolucaoCota(meses, distritos) {
         '<div class="cota-canvas-wrap"><canvas id="cota-chart-incr-bar"></canvas></div>' +
       '</div>' +
       '<div class="cota-chart-card">' +
-        '<div class="cota-chart-hdr"><span>Δ% Cota · Total · NEXUS · VITAL</span><span style="font-size:10px;color:var(--gray)">pontos = crescimento (verde) ou queda (vermelho)</span></div>' +
+        '<div class="cota-chart-hdr"><span>' + (dist ? 'Δ% Cota · ' + distNome + ' vs ' + dist.linha + ' regional' : 'Δ% Cota · Total · NEXUS · VITAL') + '</span><span style="font-size:10px;color:var(--gray)">pontos = crescimento (verde) ou queda (vermelho)</span></div>' +
         '<div class="cota-canvas-wrap"><canvas id="cota-chart-incr-pct"></canvas></div>' +
       '</div>' +
     '</div>' +
     renderCotaIncrementoTable(meses, distritos) +
     '<div style="font-size:13px;font-weight:700;display:flex;align-items:center;gap:10px;margin:24px 0 14px;padding-top:18px;border-top:1px solid var(--border)">' +
-      '<span>📦</span><span>Incremento por Produto</span>' +
+      '<span>📦</span><span>Incremento por Produto' + (dist ? ' · ' + distNome : '') + '</span>' +
     '</div>' +
-    '<div class="cota-tabs">' +
+    (dist ? '' : '<div class="cota-tabs">' +
       '<button class="cota-tab an" id="cota-incr-prod-tab-nex" onclick="cotaSwitchIncrProdTab(\'NEXUS\')">NEXUS</button>' +
       '<button class="cota-tab" id="cota-incr-prod-tab-vit" onclick="cotaSwitchIncrProdTab(\'VITAL\')">VITAL</button>' +
-    '</div>' +
-    '<div id="cota-incr-prod-content">' + renderCotaIncrementoProdutoTable(meses, 'NEXUS') + '</div>' +
+    '</div>') +
+    '<div id="cota-incr-prod-content">' + renderCotaIncrementoProdutoTable(meses, prodLinha) + '</div>' +
     '</div>';
 
   var sec2Html =
@@ -5008,19 +5088,19 @@ function renderEvolucaoCota(meses, distritos) {
 
   var sec3Html =
     '<div class="cota-section">' +
-    '<div class="cota-section-hdr">📦 Evolução por Produto</div>' +
-    '<div class="cota-tabs">' +
+    '<div class="cota-section-hdr">📦 Evolução por Produto' + (dist ? ' · ' + distNome : '') + '</div>' +
+    (dist ? '' : '<div class="cota-tabs">' +
       '<button class="cota-tab an" id="cota-tab-nex" onclick="cotaSwitchProdTab(\'NEXUS\')">NEXUS</button>' +
       '<button class="cota-tab" id="cota-tab-vit" onclick="cotaSwitchProdTab(\'VITAL\')">VITAL</button>' +
-    '</div>' +
-    '<div id="cota-prod-content">' + renderCotaTableProduto(meses, 'NEXUS') + '</div>' +
+    '</div>') +
+    '<div id="cota-prod-content">' + renderCotaTableProduto(meses, prodLinha) + '</div>' +
     '</div>';
 
   var pageHdr =
     '<div class="cota-page-hdr">' +
     '<button class="cota-back-btn" onclick="irParaMes(MES_ATUAL)">← Voltar ao Dashboard</button>' +
     '<div>' +
-      '<div style="font-size:16px;font-weight:800">📈 Evolução de Cota · 2026</div>' +
+      '<div style="font-size:16px;font-weight:800">📈 Evolução de Cota · 2026' + (dist ? ' · ' + distNome + ' (' + dist.linha + ')' : '') + '</div>' +
       '<div style="font-size:11px;color:var(--gray);margin-top:2px">Regional SPI OESTE · Cardiometabólico · Cota vs Realizado mês a mês</div>' +
     '</div>' +
     '</div>';
@@ -5028,27 +5108,21 @@ function renderEvolucaoCota(meses, distritos) {
   document.getElementById('main-content').innerHTML =
     pageHdr + ytdHtml + sec1Html + secIncrHtml + sec2Html + sec3Html;
 
-  // Expõe meses para os callbacks dos botões
-  window._cotaMeses = meses;
   window._mesesDisponiveis = meses;
 
   requestAnimationFrame(function() {
-    // Bar chart — Total inicial
-    buildCotaBarChart('cota-chart-bar',
-      meses,
-      meses.map(function(m){ return getCotaReg(m, null); }),
-      meses.map(function(m){ return getRealReg(m, null); }));
+    // Bar chart — Total inicial (ou o distrito filtrado)
+    var escBar = cotaEscopo(dist ? 'DIST' : 'TOTAL');
+    buildCotaBarChart('cota-chart-bar', meses, meses.map(escBar.cota), meses.map(escBar.real));
 
-    // % Atingimento regional
-    buildCotaAtingChart('cota-chart-ating-reg', meses, function(m, lin, field) {
-      return field === 'cota' ? getCotaReg(m, lin) : getRealReg(m, lin);
-    });
+    // % Atingimento regional (ou distrito vs linha)
+    buildCotaAtingChart('cota-chart-ating-reg', meses);
 
     // % Atingimento por distrito
     buildCotaDistAtingChart('cota-chart-dist', meses, distritos);
 
     // Incremento de cota
-    buildCotaIncrementoChart('cota-chart-incr-bar', meses, 'TOTAL');
+    buildCotaIncrementoChart('cota-chart-incr-bar', meses, dist ? 'DIST' : 'TOTAL');
     buildCotaIncrementoPctChart('cota-chart-incr-pct', meses);
   });
 }
@@ -5074,6 +5148,7 @@ async function abrirEvolucaoCota() {
     var mesPivot = meses[meses.length - 1];
     var dadosPivot = DADOS_CACHE[mesPivot];
     if (!dadosPivot) throw new Error('Sem dados para montar a evolução de cota.');
+    renderDistritoFiltroBar(dadosPivot.distritos || []);
     renderEvolucaoCota(meses, dadosPivot.distritos || []);
   } catch(e) {
     renderErro(e.message);
