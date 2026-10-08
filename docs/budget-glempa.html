@@ -44,7 +44,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--da
 .alerta-prazo{margin:14px 24px 0;padding:12px 18px;background:var(--danger-l);color:var(--danger);border:1px solid #f3c6c2;border-left:5px solid var(--danger);border-radius:8px;font-size:14px;font-weight:700;text-align:center}
 .filtro-clear{font-size:11px;font-weight:700;color:var(--gray);background:none;border:none;cursor:pointer;text-decoration:underline;margin-left:auto}
 
-.main{padding:20px 24px;max-width:1320px;margin:0 auto}
+.main{padding:20px 16px;max-width:none;margin:0 auto}
 
 .gd-empty{background:#fff;border-radius:14px;padding:40px 24px;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,.06);color:var(--gray)}
 .gd-empty b{color:var(--dark)}
@@ -131,6 +131,10 @@ table.led-tbl tbody tr.editada{background:var(--gold-l)}
 .gl-dist .gl-dist-sub{font-size:11px;font-weight:600;opacity:.8}
 .gl-dist .gl-dist-nums{margin-left:auto;font-size:11px;font-weight:700;opacity:.95;white-space:nowrap}
 .gl-wrap{background:#fff;border-radius:0 0 14px 14px;box-shadow:0 2px 12px rgba(0,0,0,.08);overflow-x:auto}
+/* tabelas por distrito: ocupam a largura toda e quebram linha nas colunas de texto, sem rolagem lateral */
+.gl-wrap table.led-tbl thead th{padding:9px 5px;white-space:normal}
+.gl-wrap table.led-tbl tbody td{padding:7px 5px}
+.gl-wrap table.led-tbl tbody td.txt-left{white-space:normal}
 table.led-tbl tbody tr.gl-setor td{background:var(--brand-l);color:var(--brand-d);font-weight:800;text-align:left;font-size:11px}
 .gl-bar{width:90px;display:inline-block;vertical-align:middle}
 .gl-bar .pc-bar-track{margin:0}
