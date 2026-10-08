@@ -138,10 +138,10 @@ table.led-tbl tbody tr.editada{background:var(--gold-l)}
     <div class="hdr-sep"></div>
     <div class="hdr-text">
       <h1>💰 Budget — Conta Corrente Tática</h1>
-      <p>Regional SPI OESTE · Cardiometabólico · Saldo e lançamentos de verba por Gerente Distrital</p>
+      <p id="hdr-sub">Regional SPI OESTE · Cardiometabólico · Saldo e lançamentos de verba por Gerente Distrital</p>
     </div>
     <div class="hdr-pills">
-      <a class="hdr-back" href="index.html">← Voltar ao Dashboard</a>
+      <a class="hdr-back" id="hdr-back" href="index.html">← Voltar ao Dashboard</a>
       <span class="hpill hi" id="pill-gd">Selecione um GD</span>
       <span class="hpill" id="pill-lanc">0 lançamentos</span>
     </div>
@@ -172,6 +172,15 @@ table.led-tbl tbody tr.editada{background:var(--gold-l)}
 
 <script>
 var BASE_ALLOC = [{"linha": "VITAL", "produto": "BUPIUM XL", "codigo": "11630100", "gd": "Fabiano Atanazio Machado", "verba": 2250, "regional": "SPI OESTE"}, {"linha": "VITAL", "produto": "BUPIUM XL", "codigo": "11630200", "gd": "Daniel Antonio Costa", "verba": 1950, "regional": "SPI OESTE"}, {"linha": "VITAL", "produto": "BUPIUM XL", "codigo": "11630300", "gd": "Matheus Landulpho Allonso", "verba": 1800, "regional": "SPI OESTE"}, {"linha": "VITAL", "produto": "BUPIUM XL", "codigo": "11630400", "gd": "Michael Aparecido da Silva Mota", "verba": 1650, "regional": "SPI OESTE"}, {"linha": "NEXUS", "produto": "LYBERDIA", "codigo": "11030100", "gd": "Joao Rafael de Franca Nunes Leardini", "verba": 1000, "regional": "SPI OESTE"}, {"linha": "NEXUS", "produto": "LYBERDIA", "codigo": "11030200", "gd": "Murillo Cesar Barbosa dos Santos", "verba": 1000, "regional": "SPI OESTE"}, {"linha": "NEXUS", "produto": "LYBERDIA", "codigo": "11030300", "gd": "Geovana Buttignon", "verba": 1000, "regional": "SPI OESTE"}, {"linha": "NEXUS", "produto": "LYBERDIA", "codigo": "11030400", "gd": "Vanessa Araujo Ferreira Lima", "verba": 1000, "regional": "SPI OESTE"}, {"linha": "NEXUS", "produto": "CONCARDIO - CRM-CHAVE E DEMAIS AÇÕES", "codigo": "11030200", "gd": "Murillo Cesar Barbosa dos Santos", "verba": 6752.75, "regional": "SPI OESTE"}, {"linha": "NEXUS", "produto": "CONCARDIO - CRM-CHAVE E DEMAIS AÇÕES", "codigo": "11030100", "gd": "Joao Rafael de Franca Nunes Leardini", "verba": 5620.27, "regional": "SPI OESTE"}, {"linha": "NEXUS", "produto": "CONCARDIO - CRM-CHAVE E DEMAIS AÇÕES", "codigo": "11030400", "gd": "Vanessa Araujo Ferreira Lima", "verba": 3653.48, "regional": "SPI OESTE"}, {"linha": "NEXUS", "produto": "CONCARDIO - CRM-CHAVE E DEMAIS AÇÕES", "codigo": "11030300", "gd": "Geovana Buttignon", "verba": 3373.79, "regional": "SPI OESTE"}, {"linha": "VITAL", "produto": "LINADIB", "codigo": "11630100", "gd": "Fabiano Atanazio Machado", "verba": 1328.01, "regional": "SPI OESTE"}, {"linha": "VITAL", "produto": "LINADIB", "codigo": "11630200", "gd": "Daniel Antonio Costa", "verba": 1473.38, "regional": "SPI OESTE"}, {"linha": "VITAL", "produto": "LINADIB", "codigo": "11630300", "gd": "Matheus Landulpho Allonso", "verba": 1460.12, "regional": "SPI OESTE"}, {"linha": "VITAL", "produto": "LINADIB", "codigo": "11630400", "gd": "Michael Aparecido da Silva Mota", "verba": 1027.09, "regional": "SPI OESTE"}, {"linha": "VITAL", "produto": "LINADIB DUO", "codigo": "11630100", "gd": "Fabiano Atanazio Machado", "verba": 1623.26, "regional": "SPI OESTE"}, {"linha": "VITAL", "produto": "LINADIB DUO", "codigo": "11630200", "gd": "Daniel Antonio Costa", "verba": 1302.25, "regional": "SPI OESTE"}, {"linha": "VITAL", "produto": "LINADIB DUO", "codigo": "11630300", "gd": "Matheus Landulpho Allonso", "verba": 1482.55, "regional": "SPI OESTE"}, {"linha": "VITAL", "produto": "LINADIB DUO", "codigo": "11630400", "gd": "Michael Aparecido da Silva Mota", "verba": 1044.88, "regional": "SPI OESTE"}, {"linha": "VITAL", "produto": "OZIVY", "codigo": "11630100", "gd": "Fabiano Atanazio Machado", "verba": 1700.56, "regional": "SPI OESTE"}, {"linha": "VITAL", "produto": "OZIVY", "codigo": "11630200", "gd": "Daniel Antonio Costa", "verba": 2704.92, "regional": "SPI OESTE"}, {"linha": "VITAL", "produto": "OZIVY", "codigo": "11630300", "gd": "Matheus Landulpho Allonso", "verba": 2953.74, "regional": "SPI OESTE"}, {"linha": "VITAL", "produto": "OZIVY", "codigo": "11630400", "gd": "Michael Aparecido da Silva Mota", "verba": 2810.11, "regional": "SPI OESTE"}, {"linha": "NEXUS", "produto": "OZIVY", "codigo": "11030100", "gd": "Joao Rafael de Franca Nunes Leardini", "verba": 1700.56, "regional": "SPI OESTE"}, {"linha": "NEXUS", "produto": "OZIVY", "codigo": "11030200", "gd": "Murillo Cesar Barbosa dos Santos", "verba": 2704.92, "regional": "SPI OESTE"}, {"linha": "NEXUS", "produto": "OZIVY", "codigo": "11030300", "gd": "Geovana Buttignon", "verba": 2953.74, "regional": "SPI OESTE"}, {"linha": "NEXUS", "produto": "OZIVY", "codigo": "11030400", "gd": "Vanessa Araujo Ferreira Lima", "verba": 2810.11, "regional": "SPI OESTE"}];
+// Regional LESTE — mesma fonte (Painel Executivo — Verba Tática Q3, 02/10).
+// A página atende uma regional por vez: budget.html (SPI OESTE, padrão) ou
+// budget.html?regional=LESTE. Os lançamentos das duas ficam na mesma aba
+// budget_lancamentos, separados pelo nome do GD.
+var BASE_ALLOC_LESTE = [{"linha": "NEXUS", "produto": "CONCARDIO", "codigo": "11050100", "gd": "Larissa de Melo Poubel Gomes", "verba": 5220.23, "regional": "LESTE"}, {"linha": "NEXUS", "produto": "CONCARDIO", "codigo": "11050200", "gd": "Carla Patricia de Melo Ziviani", "verba": 4494.55, "regional": "LESTE"}, {"linha": "NEXUS", "produto": "LYBERDIA", "codigo": "11050100", "gd": "Larissa de Melo Poubel Gomes", "verba": 1000.0, "regional": "LESTE"}, {"linha": "NEXUS", "produto": "LYBERDIA", "codigo": "11050200", "gd": "Carla Patricia de Melo Ziviani", "verba": 1000.0, "regional": "LESTE"}, {"linha": "NEXUS", "produto": "OZIVY", "codigo": "11050100", "gd": "Larissa de Melo Poubel Gomes", "verba": 2370.58, "regional": "LESTE"}, {"linha": "NEXUS", "produto": "OZIVY", "codigo": "11050200", "gd": "Carla Patricia de Melo Ziviani", "verba": 4804.86, "regional": "LESTE"}, {"linha": "VITAL", "produto": "BUPIUM XL", "codigo": "11650100", "gd": "Julio Cesar dos Santos Oliveira", "verba": 1650.0, "regional": "LESTE"}, {"linha": "VITAL", "produto": "BUPIUM XL", "codigo": "11650200", "gd": "Rafael Oliveira Almeida", "verba": 3000.0, "regional": "LESTE"}, {"linha": "VITAL", "produto": "LINADIB", "codigo": "11650100", "gd": "Julio Cesar dos Santos Oliveira", "verba": 1199.5, "regional": "LESTE"}, {"linha": "VITAL", "produto": "LINADIB", "codigo": "11650200", "gd": "Rafael Oliveira Almeida", "verba": 1256.01, "regional": "LESTE"}, {"linha": "VITAL", "produto": "LINADIB DUO", "codigo": "11650100", "gd": "Julio Cesar dos Santos Oliveira", "verba": 1214.51, "regional": "LESTE"}, {"linha": "VITAL", "produto": "LINADIB DUO", "codigo": "11650200", "gd": "Rafael Oliveira Almeida", "verba": 752.8, "regional": "LESTE"}, {"linha": "VITAL", "produto": "OZIVY", "codigo": "11650100", "gd": "Julio Cesar dos Santos Oliveira", "verba": 2370.58, "regional": "LESTE"}, {"linha": "VITAL", "produto": "OZIVY", "codigo": "11650200", "gd": "Rafael Oliveira Almeida", "verba": 4804.86, "regional": "LESTE"}];
+var REGIONAL_LESTE = /[?&]regional=leste(&|$)/i.test(window.location.search);
+if (REGIONAL_LESTE) BASE_ALLOC = BASE_ALLOC_LESTE;
+var GDS_DA_REGIONAL = {};
+BASE_ALLOC.forEach(function(a){ GDS_DA_REGIONAL[a.gd] = true; });
 
 var TAB_NAME = 'budget_lancamentos';
 // A aba budget_lancamentos também guarda os lançamentos e classificações da
@@ -262,7 +271,7 @@ async function fetchAba(aba, tentativa){
 
 async function carregarLancamentos(){
   var registros = await fetchAba(TAB_NAME);
-  return registros.filter(function(r){ return !ehGlempa(r); }).map(function(r){
+  return registros.filter(function(r){ return !ehGlempa(r) && GDS_DA_REGIONAL[r.gd]; }).map(function(r){
     return {
       id: r.id, gd: r.gd, linha: r.linha, produto: r.produto, crm: r.crm,
       medico: r.medico, valor: parseFloat(r.valor) || 0, acao: r.acao,
@@ -487,7 +496,7 @@ function render(){
   html += renderLedger(gd);
 
   html += '<div class="notes"><h3>Notas metodológicas</h3><ul>' +
-    '<li><b>Escopo: só SPI OESTE.</b> Verba por GD/produto cruzada com o mapeamento oficial do projeto (config/mapping.json: prefixos de distrito 11030 = SPI Nexus, 11630 = SPI Vital). Produtos: BUPIUM XL, LINADIB, LINADIB DUO e OZIVY (Vital); LYBERDIA, CONCARDIO e OZIVY (Nexus). Verba conforme Painel Executivo — Verba Tática Q3 (prazo de utilização 20/11/2026); OZIVY tem verba própria em cada linha.</li>' +
+    '<li><b>Escopo: só ' + (REGIONAL_LESTE ? 'LESTE' : 'SPI OESTE') + '.</b> Verba por GD/produto cruzada com o mapeamento oficial do projeto (config/mapping.json: prefixos de distrito ' + (REGIONAL_LESTE ? '1105 = LESTE Nexus, 1165 = LESTE Vital' : '11030 = SPI Nexus, 11630 = SPI Vital') + '). Produtos: BUPIUM XL, LINADIB, LINADIB DUO e OZIVY (Vital); LYBERDIA, CONCARDIO e OZIVY (Nexus). Verba conforme Painel Executivo — Verba Tática Q3 (prazo de utilização 20/11/2026); OZIVY tem verba própria em cada linha.</li>' +
     '<li>A conta corrente é calculada por Produto: cada lançamento desconta do saldo daquele produto específico dentro do GD selecionado (não existe um "saldo único" por GD somando produtos diferentes — o card consolidado é só informativo).</li>' +
     '<li>Lançamentos são gravados na aba <code>budget_lancamentos</code> do Google Sheets do dashboard, através de um Apps Script Web App — não há atualização automática entre abas abertas: use "🔄 Atualizar" para ver o que outras pessoas lançaram.</li>' +
     '<li>Lista de "Ação": Almoço/jantar, Cesta de presente, Bloco de receituário, Outros.</li>' +
@@ -702,6 +711,10 @@ function setLoadingTxt(txt){ document.getElementById('loading-txt').textContent 
 
 async function init(){
   mostrarLoading(true);
+  if (REGIONAL_LESTE){
+    document.getElementById('hdr-sub').textContent = 'Regional LESTE · Cardiometabólico · Saldo e lançamentos de verba por Gerente Distrital';
+    document.getElementById('hdr-back').href = 'leste.html';
+  }
   try {
     setLoadingTxt('Carregando configuração…');
     var res = await fetch('config.json?t=' + Date.now(), { cache: 'no-store' });
