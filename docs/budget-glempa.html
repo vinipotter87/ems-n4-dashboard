@@ -426,13 +426,30 @@ function glempaClassifReg(crm){
 // classificação marcada na página prevalece sobre a que veio da planilha
 function glempaStatus(med){
   var reg = glempaClassifReg(med.c);
-  return reg ? reg.acao : (med.st || '');
+  var st = reg ? reg.acao : (med.st || '');
+  // classificação travada: quem ficou em branco conta como FAKE
+  if (!st && glempaClassifTravada(med.c)) st = 'FAKE';
+  return st;
 }
 function glempaVerba(med){ return glempaStatus(med) === 'FAKE' ? 0 : GLEMPA_VERBA; }
+
+// Classificação fato/fake TRAVADA (08/10/2026): os CRMs da aba "Distrito
+// Michael" ficam com a classificação como está — ninguém altera mais pela
+// página. Vale pelo CRM, então o mesmo médico também fica travado se
+// aparecer na aba Glyxambi. Lançamentos de verba continuam liberados.
+var GLEMPA_CLASSIF_TRAVADA_CACHE = null;
+function glempaClassifTravada(crm){
+  if (!GLEMPA_CLASSIF_TRAVADA_CACHE){
+    GLEMPA_CLASSIF_TRAVADA_CACHE = {};
+    glempaDaAba(GLEMPA_ABA_SOBRA).forEach(function(m){ GLEMPA_CLASSIF_TRAVADA_CACHE[m.c] = true; });
+  }
+  return !!GLEMPA_CLASSIF_TRAVADA_CACHE[crm];
+}
 
 var GLEMPA_SALVANDO = false;
 function classificarGlempa(crm, status){
   if (!BACKEND_PRONTO || GLEMPA_SALVANDO) return;
+  if (glempaClassifTravada(crm)) return;
   var med = GLEMPA_MEDICOS.filter(function(m){ return m.c === crm; })[0];
   if (!med) return;
   var reg = glempaClassifReg(crm);
@@ -555,7 +572,8 @@ function renderGlempa(){
       var barCls = pct >= 100 ? 'over' : (pct >= 80 ? 'warn' : '');
       var st = glempaStatus(m);
       var podeLancar = BACKEND_PRONTO && verba > 0 && saldo > 0;
-      var clDis = BACKEND_PRONTO ? '' : ' disabled';
+      var clTrav = glempaClassifTravada(m.c);
+      var clDis = (BACKEND_PRONTO && !clTrav) ? '' : (' disabled' + (clTrav ? ' title="Classificação travada — não pode mais ser alterada"' : ''));
       html += '<tr class="' + (st === 'FAKE' ? 'gl-inativo' : '') + '">' +
         '<td class="txt-left"><b>' + esc(m.m) + '</b></td>' +
         '<td>' + m.c + '</td><td>' + m.e + '</td>' +
@@ -565,7 +583,7 @@ function renderGlempa(){
         '<td><span class="cl-group">' +
           '<button type="button" class="cl-btn fato' + (st === 'FATO' ? ' on' : '') + '" data-action="gl-classif" data-id="' + m.c + '" data-st="FATO"' + clDis + '>Fato</button>' +
           '<button type="button" class="cl-btn fake' + (st === 'FAKE' ? ' on' : '') + '" data-action="gl-classif" data-id="' + m.c + '" data-st="FAKE"' + clDis + '>Fake</button>' +
-        '</span></td>' +
+        '</span>' + (clTrav ? ' <span title="Classificação travada">🔒</span>' : '') + '</td>' +
         '<td>' + (verba ? fmtBRL(verba) : '—') + '</td>' +
         '<td class="' + (u ? 'val-cell' : '') + '">' + fmtBRL(u) + '</td>' +
         '<td class="saldo-cell ' + (verba && saldo <= 0 ? 'neg' : '') + '">' + (verba ? fmtBRL(saldo) : '—') + '</td>' +
@@ -617,7 +635,7 @@ function renderGlempa(){
     '<li><b>Aba Distrito Michael — 11630400 (Vital):</b> é a <b>sobra</b> — só os médicos da aba "base total" (cardiologistas e endocrinologistas) que <b>não</b> estão na lista dos consultores; um CRM nunca aparece nas duas abas. Rx = prescrições de empagliflozina no ano. 1 linha por CRM: quem aparecia no setor do representante e no código do GD ficou só no setor do representante.</li>' +
     '<li><b>Aba Glyxambi — distritos 11630100 a 11630400 (Vital):</b> médicos da aba "Base PX Glyxambi" com Px de Jardiance ou de Glyxambi maior que zero (quem só tem dapagliflozina ou nenhum Px não entra). A planilha lista esses médicos com o representante Nexus (setor 1103xxxx), mas a empagliflozina é trabalhada pela Vital: como os setores das duas linhas são espelhados, cada médico foi colocado no setor Vital equivalente (1163xxxx), com o GD da Vital. "Marcas prescritas" mostra o que cada médico prescreveu (Jardiance, Jardiance Duo, Glyxambi); "Px Jardiance" soma Jardiance e Jardiance Duo, porque a planilha traz um único número para os dois. Quem já está na aba Consultores não se repete aqui; a aba Distrito Michael não muda (nenhum CRM coincide com o distrito 11630400 desta aba).</li>' +
     '<li><b>Verba:</b> ' + fmtBRL(GLEMPA_VERBA) + ' por CRM para ações de relacionamento em setembro e outubro; produto pagante GLEMPA, linha sponsor IDENTIDADE (ou VITAL quando não houver cobertura). A verba vale para CRM classificado como <b>FATO</b> — médico "FAKE" fica sem verba e sem lançamento; "A classificar" aceita lançamento, mas depende da classificação na planilha.</li>' +
-    '<li><b>Classificação</b> (fato/fake): marque direto na coluna "Classif." de cada médico — fica gravada no Sheets e vale para todo mundo. Marcar <b>Fake</b> deixa o médico inativo (nome riscado, sem verba e sem lançamento); clicar de novo na opção ativa desmarca e volta para "a classificar".</li>' +
+    '<li><b>Classificação</b> (fato/fake): marque direto na coluna "Classif." de cada médico — fica gravada no Sheets e vale para todo mundo. Marcar <b>Fake</b> deixa o médico inativo (nome riscado, sem verba e sem lançamento); clicar de novo na opção ativa desmarca e volta para "a classificar". <b>Na aba Distrito Michael a classificação está travada (🔒)</b> desde 08/10/2026 e não pode mais ser alterada; os médicos que estavam sem classificação ficaram como <b>Fake</b>.</li>' +
     '<li><b>Trava:</b> a soma dos lançamentos de um CRM nunca passa de ' + fmtBRL(GLEMPA_VERBA) + '. Os lançamentos ficam na mesma aba <code>budget_lancamentos</code> do Sheets, com produto = GLEMPA, e <b>não</b> entram na conta corrente da verba tática (página Budget).</li>' +
     (orfaos.length ? '<li style="color:var(--danger)"><b>Atenção:</b> ' + orfaos.length + ' lançamento(s) GLEMPA com CRM fora da lista — confira direto na planilha.</li>' : '') +
   '</ul></div>';
