@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EMS | Planos SPI</title>
+<style>
+:root{--red:#C8102E;--orange:#E87722;--green:#15693A;--dark:#111827;--gray:#6B7280;--light:#F3F4F6;--border:#E5E7EB;--brand:#0057B8;--brand-d:#003D82;--text:#111827}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,-apple-system,Arial,sans-serif;background:#ECEDF0;color:var(--text);font-size:13px}
+button,select,input{font-family:inherit}
+.hdr{background:linear-gradient(135deg,var(--brand-d),var(--brand));color:#fff;padding:16px 28px;display:flex;align-items:center;gap:16px}
+.logo{background:#fff;color:var(--brand);font-weight:900;font-size:16px;padding:5px 11px;border-radius:7px}
+.hdr h1{font-size:19px;font-weight:800}
+.hdr p{font-size:12px;opacity:.85;margin-top:2px}
+.hdr a{margin-left:auto;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);color:#fff;text-decoration:none;font-size:12px;font-weight:700;padding:6px 14px;border-radius:20px;white-space:nowrap}
+.bar{background:#fff;border-bottom:1px solid var(--border);padding:10px 28px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;position:sticky;top:0;z-index:5}
+.bar label{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)}
+.bar select,.bar input{border:1.5px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12.5px;background:#fff}
+.bar input{min-width:220px}
+.bar button{margin-left:auto;background:#fff;border:1.5px solid var(--border);border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;color:var(--brand);cursor:pointer}
+.main{padding:20px 28px 40px}
+.kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:18px}
+.kpi{background:#fff;border-radius:12px;border-top:4px solid var(--brand);padding:12px 16px;box-shadow:0 1px 6px rgba(0,0,0,.06)}
+.kpi .l{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)}
+.kpi .v{font-size:26px;font-weight:800;line-height:1.2}
+.kpi .s{font-size:11.5px;color:var(--gray)}
+.card{background:#fff;border-radius:12px;box-shadow:0 1px 6px rgba(0,0,0,.06);padding:16px 18px;margin-bottom:18px}
+.card h2{font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--brand-d);margin-bottom:10px}
+.card h2 small{font-weight:600;text-transform:none;letter-spacing:0;color:var(--gray);margin-left:8px}
+table{width:100%;border-collapse:collapse}
+th{background:#f1f5f9;color:#334155;font-size:10px;text-transform:uppercase;letter-spacing:.4px;padding:8px 9px;text-align:left;font-weight:800}
+td{padding:8px 9px;border-bottom:1px solid var(--border);vertical-align:top;line-height:1.45}
+td.c,th.c{text-align:center}
+.gd{font-weight:700}
+.tag{display:inline-block;font-size:10px;font-weight:800;border-radius:20px;padding:2px 9px;white-space:nowrap}
+.tag.fund{background:#e0f2fe;color:#075985}.tag.marca{background:#fef3c7;color:#92400e}
+.tag.NEXUS{background:#e0e7ff;color:#3730a3}.tag.VITAL{background:#fce7f3;color:#9d174d}
+.sim{color:#15803d;font-weight:800}.nao{color:#d1d5db}
+.plano{border:1px solid var(--border);border-left:5px solid var(--brand);border-radius:10px;margin-bottom:12px;overflow:hidden}
+.plano summary{list-style:none;cursor:pointer;padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fafbfc}
+.plano summary::-webkit-details-marker{display:none}
+.plano summary b{font-size:13.5px}
+.plano summary .raiz{flex:1;min-width:240px;color:var(--gray);font-size:12px}
+.plano summary .raiz i{font-style:normal;font-weight:800;color:#b91c1c}
+.plano .corpo{padding:12px 14px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:18px}
+.plano .prob{grid-column:1/-1;background:#f8fafc;border-radius:8px;padding:8px 12px}
+.sub{display:block;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--gray);margin-bottom:4px}
+.pq{border-left:3px solid #cbd5e1;padding:2px 0 2px 10px;margin-bottom:6px}
+.pq i{display:block;font-style:normal;font-size:10px;font-weight:800;text-transform:uppercase;color:var(--gray)}
+.pq.raiz{border-left-color:#ef4444;background:#fef2f2;border-radius:0 8px 8px 0;padding:6px 10px;font-weight:700}
+.pq.raiz i{color:#b91c1c}
+.kp{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.kp span{background:#fee2e2;color:#991b1b;font-size:10.5px;font-weight:700;border-radius:20px;padding:2px 9px}
+.vazio{text-align:center;color:var(--gray);padding:40px 20px;line-height:1.7}
+.vazio b{display:block;font-size:16px;color:var(--text)}
+.nota{font-size:11px;color:var(--gray);line-height:1.5;margin-top:4px}
+@media(max-width:1000px){.kpis{grid-template-columns:repeat(2,1fr)}.plano .corpo{grid-template-columns:1fr}}
+@media print{.bar{position:static}.bar button,.hdr a{display:none}details.plano{break-inside:avoid}}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="logo">EMS</div>
+  <div><h1>📋 Planos SPI</h1><p>Regional SPI Oeste · planos de ação dos GDs (5 porquês + 5W2H) preenchidos na apresentação</p></div>
+  <a href="index.html">← Voltar ao Dashboard</a>
+</div>
+
+<div class="bar">
+  <label for="f-mes">Mês</label><select id="f-mes"></select>
+  <label for="f-gd">GD</label><select id="f-gd"></select>
+  <label for="f-tipo">Plano</label>
+  <select id="f-tipo"><option value="">Todos</option><option value="fund">Fundamentos</option><option value="marca">Marca-chave</option></select>
+  <input id="f-busca" type="search" placeholder="Buscar em problema, causa ou ação">
+  <button id="btn-atualizar">🔄 Atualizar</button>
+</div>
+
+<div class="main" id="main"><div class="vazio">Carregando planos…</div></div>
+
+<script>
+// ── Planos SPI ───────────────────────────────────────────────────
+// Consolida os planos que os GDs preenchem no modo apresentação do
+// dashboard (index.html → ▶ Apresentação). Cada plano é 1 linha da aba
+// budget_lancamentos com produto = N4_PLANO, gd = "N4:<distrito_id>",
+// crm = "<plano>|<mês>" e o conteúdo em JSON no campo "acao". Aqui só se lê.
+var TAB = 'budget_lancamentos', PROD = 'N4_PLANO';
+var MESES = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+var W = [['oque','O quê'],['porque','Por quê'],['onde','Onde'],['quando','Quando'],['quem','Quem'],['como','Como'],['quanto','Quanto custa']];
+var CONFIG = {}, PLANOS = [];
+
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function dataBr(iso){ var x = String(iso || '').split('-'); return x.length === 3 ? x[2] + '/' + x[1] + '/' + x[0] : ''; }
+function ehSpi(distrito){ return /^(1103|1163)/.test(distrito); }
+
+async function fetchAba(aba, tent){
+  tent = tent || 0;
+  var res = await fetch('https://sheets.googleapis.com/v4/spreadsheets/' + CONFIG.spreadsheet_id + '/values/' + encodeURIComponent(aba) + '?key=' + CONFIG.api_key, {cache:'no-store'});
+  if (res.status === 429 && tent < 6){ await new Promise(function(r){ setTimeout(r, 600 * Math.pow(1.8, tent)); }); return fetchAba(aba, tent + 1); }
+  if (!res.ok) throw new Error('Erro ao buscar a aba ' + aba + ' (' + res.status + ')');
+  var rows = (await res.json()).values || [];
+  if (rows.length < 2) return [];
+  var h = rows[0];
+  return rows.slice(1).map(function(r){ var o = {}; h.forEach(function(k, i){ o[k] = r[i] !== undefined ? r[i] : ''; }); return o; });
+}
+
+// linha da planilha → plano
+function lerPlanos(linhas){
+  var out = [];
+  linhas.forEach(function(l){
+    if (l.produto !== PROD || String(l.gd).indexOf('N4:') !== 0) return;
+    var distrito = String(l.gd).slice(3);
+    if (!ehSpi(distrito)) return;
+    var p; try { p = JSON.parse(l.acao); } catch(e){ return; }
+    var partes = String(l.crm).split('|'), chave = partes[0], mes = partes[1] || '';
+    var fund = chave === 'fund';
+    out.push({
+      distrito: distrito, gd: l.medico || distrito, linha: (l.linha || '').toUpperCase(), mes: mes, tipo: fund ? 'fund' : 'marca',
+      titulo: fund ? 'Fundamentos' : chave.replace(/^marca-/, '').replace(/_/g, ' '),
+      problema: p.problema || '', kpis: p.kpis || [], porques: p.porques || [], acoes: p.acoes || [], data: l.data
+    });
+  });
+  return out.sort(function(a, b){
+    return (MESES.indexOf(b.mes) - MESES.indexOf(a.mes)) || a.linha.localeCompare(b.linha) || a.gd.localeCompare(b.gd) || (a.tipo === b.tipo ? a.titulo.localeCompare(b.titulo) : (a.tipo === 'fund' ? -1 : 1));
+  });
+}
+
+function filtrados(){
+  var mes = $('f-mes').value, gd = $('f-gd').value, tipo = $('f-tipo').value, q = $('f-busca').value.trim().toLowerCase();
+  return PLANOS.filter(function(p){
+    if (mes && p.mes !== mes) return false;
+    if (gd && p.distrito !== gd) return false;
+    if (tipo && p.tipo !== tipo) return false;
+    if (q){
+      var txt = [p.gd, p.titulo, p.problema].concat(p.porques, p.kpis, p.acoes.map(function(a){ return W.map(function(w){ return a[w[0]] || ''; }).join(' '); })).join(' ').toLowerCase();
+      if (txt.indexOf(q) < 0) return false;
+    }
+    return true;
+  });
+}
+
+function montarFiltros(){
+  var meses = [], gds = {};
+  PLANOS.forEach(function(p){ if (meses.indexOf(p.mes) < 0) meses.push(p.mes); gds[p.distrito] = p.gd + ' (' + p.linha + ')'; });
+  meses.sort(function(a, b){ return MESES.indexOf(b) - MESES.indexOf(a); });
+  var mAtual = $('f-mes').value, gAtual = $('f-gd').value;
+  $('f-mes').innerHTML = '<option value="">Todos</option>' + meses.map(function(m){ return '<option value="' + m + '">' + m + '/2026</option>'; }).join('');
+  $('f-gd').innerHTML = '<option value="">Todos</option>' + Object.keys(gds).sort(function(a, b){ return gds[a].localeCompare(gds[b]); }).map(function(d){ return '<option value="' + d + '">' + esc(gds[d]) + '</option>'; }).join('');
+  // abre no mês mais recente que tem plano
+  $('f-mes').value = mAtual && meses.indexOf(mAtual) >= 0 ? mAtual : (meses[0] || '');
+  $('f-gd').value = gds[gAtual] ? gAtual : '';
+}
+
+function kpi(l, v, s){ return '<div class="kpi"><div class="l">' + l + '</div><div class="v">' + v + '</div><div class="s">' + s + '</div></div>'; }
+
+function render(){
+  var main = $('main');
+  if (!PLANOS.length){
+    main.innerHTML = '<div class="card vazio"><b>Nenhum plano preenchido ainda</b>Os planos aparecem aqui quando um GD salva o plano de Fundamentos ou de uma marca-chave no modo apresentação do dashboard (▶ Apresentação).</div>';
+    return;
+  }
+  var ps = filtrados();
+  var nAcoes = ps.reduce(function(t, p){ return t + p.acoes.length; }, 0);
+  var gds = {}; ps.forEach(function(p){ gds[p.distrito] = p; });
+  var nFund = ps.filter(function(p){ return p.tipo === 'fund'; }).length;
+  var marcas = {}; ps.forEach(function(p){ if (p.tipo === 'marca') marcas[p.titulo] = (marcas[p.titulo] || 0) + 1; });
+  var topMarca = Object.keys(marcas).sort(function(a, b){ return marcas[b] - marcas[a]; });
+
+  var h = '<div class="kpis">' +
+    kpi('Planos', ps.length, 'no filtro atual') +
+    kpi('Ações (5W2H)', nAcoes, 'somando todos os planos') +
+    kpi('GDs com plano', Object.keys(gds).length, 'de 8 distritos da SPI') +
+    kpi('Fundamentos', nFund, 'planos de execução') +
+    kpi('Marca-chave', ps.length - nFund, topMarca.length ? topMarca.map(function(m){ return m + ' ' + marcas[m]; }).join(' · ') : 'nenhum') + '</div>';
+
+  if (!ps.length){ main.innerHTML = h + '<div class="card vazio"><b>Nenhum plano neste filtro</b>Ajuste o mês, o GD ou a busca.</div>'; return; }
+
+  // 1. quem fez o quê — GD × plano
+  var colunas = ['Fundamentos'].concat(topMarca.sort());
+  h += '<div class="card"><h2>Visão por GD <small>quais planos cada GD preencheu</small></h2><table><thead><tr><th>GD</th><th>Linha</th><th class="c">Mês</th>' +
+    colunas.map(function(c){ return '<th class="c">' + esc(c) + '</th>'; }).join('') + '<th class="c">Ações</th></tr></thead><tbody>';
+  var porGdMes = {};
+  ps.forEach(function(p){ var k = p.distrito + '|' + p.mes; (porGdMes[k] = porGdMes[k] || {gd:p.gd, linha:p.linha, mes:p.mes, t:{}, n:0}); porGdMes[k].t[p.titulo] = true; porGdMes[k].n += p.acoes.length; });
+  Object.keys(porGdMes).forEach(function(k){
+    var g = porGdMes[k];
+    h += '<tr><td class="gd">' + esc(g.gd) + '</td><td><span class="tag ' + g.linha + '">' + g.linha + '</span></td><td class="c">' + g.mes + '</td>' +
+      colunas.map(function(c){ return '<td class="c">' + (g.t[c] ? '<span class="sim">✓</span>' : '<span class="nao">—</span>') + '</td>'; }).join('') + '<td class="c"><b>' + g.n + '</b></td></tr>';
+  });
+  h += '</tbody></table><div class="nota">"—" significa que não há plano salvo: ou o GD não tinha desvio naquele item, ou ainda não preencheu. Esta página não sabe distinguir os dois casos.</div></div>';
+
+  // 2. todas as ações
+  h += '<div class="card"><h2>Ações <small>' + nAcoes + ' no filtro atual</small></h2><table><thead><tr><th>GD</th><th>Plano</th><th>Causa raiz</th><th>O quê</th><th>Quem</th><th>Quando</th><th>Como</th><th>Quanto custa</th></tr></thead><tbody>';
+  ps.forEach(function(p){
+    p.acoes.forEach(function(a, k){
+      h += '<tr>' + (k === 0 ? '<td class="gd" rowspan="' + p.acoes.length + '">' + esc(p.gd) + '<div class="nota">' + p.mes + '/2026</div></td>' +
+        '<td rowspan="' + p.acoes.length + '"><span class="tag ' + p.tipo + '">' + esc(p.titulo) + '</span></td><td rowspan="' + p.acoes.length + '">' + esc(p.porques[p.porques.length - 1] || '—') + '</td>' : '') +
+        '<td>' + (esc(a.oque) || '—') + '</td><td>' + (esc(a.quem) || '—') + '</td><td>' + (esc(a.quando) || '—') + '</td><td>' + (esc(a.como) || '—') + '</td><td>' + (esc(a.quanto) || '—') + '</td></tr>';
+    });
+  });
+  h += '</tbody></table></div>';
+
+  // 3. planos completos
+  h += '<div class="card"><h2>Planos completos <small>clique para abrir o problema, os 5 porquês e o 5W2H</small></h2>';
+  ps.forEach(function(p){
+    h += '<details class="plano"><summary><b>' + esc(p.gd) + '</b><span class="tag ' + p.linha + '">' + p.linha + '</span><span class="tag ' + p.tipo + '">' + esc(p.titulo) + '</span>' +
+      '<span class="raiz"><i>Causa raiz:</i> ' + esc(p.porques[p.porques.length - 1] || '—') + '</span><span class="nota">' + p.mes + '/2026 · salvo em ' + dataBr(p.data) + ' · ' + p.acoes.length + ' ação(ões)</span></summary>' +
+      '<div class="corpo"><div class="prob"><span class="sub">Problema</span>' + esc(p.problema) + (p.kpis.length ? '<div class="kp">' + p.kpis.map(function(k){ return '<span>' + esc(k) + '</span>'; }).join('') + '</div>' : '') + '</div>' +
+      '<div><span class="sub">5 porquês</span>' + p.porques.map(function(t, k){ var r = k === p.porques.length - 1; return '<div class="pq' + (r ? ' raiz' : '') + '"><i>' + (r ? 'Causa raiz' : (k + 1) + 'º por quê') + '</i>' + esc(t) + '</div>'; }).join('') + '</div>' +
+      '<div><span class="sub">Plano de ação — 5W2H</span><table><thead><tr>' + W.map(function(w){ return '<th>' + w[1] + '</th>'; }).join('') + '</tr></thead><tbody>' +
+      p.acoes.map(function(a){ return '<tr>' + W.map(function(w){ return '<td>' + (esc(a[w[0]]) || '—') + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div></div></details>';
+  });
+  h += '</div>';
+  main.innerHTML = h;
+}
+
+async function carregar(){
+  $('main').innerHTML = '<div class="vazio">Carregando planos…</div>';
+  try {
+    if (!CONFIG.spreadsheet_id){
+      var res = await fetch('config.json?t=' + Date.now(), {cache:'no-store'});
+      if (!res.ok) throw new Error('config.json não encontrado.');
+      CONFIG = await res.json();
+    }
+    PLANOS = lerPlanos(await fetchAba(TAB));
+    montarFiltros();
+    render();
+  } catch(e){
+    $('main').innerHTML = '<div class="card vazio"><b>Erro ao carregar</b>' + esc(e.message) + '</div>';
+  }
+}
+
+['f-mes','f-gd','f-tipo'].forEach(function(id){ $(id).onchange = render; });
+$('f-busca').oninput = render;
+$('btn-atualizar').onclick = carregar;
+carregar();
+</script>
+</body>
+</html>
