@@ -1221,9 +1221,9 @@ function renderKPIs(dados) {
   // Linha 2: status + alerta MDV
   var semMDVCls = repsSemMDV === 0 ? 'g' : repsSemMDV <= 10 ? 'o' : 'r';
   var row2 = '<div class="kpi-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:10px">' +
-    kpiCard('g', 'OK',            ok,          'distritos ≥ 100% MDV') +
-    kpiCard('o', 'ATENÇÃO',       warn,        'distritos 80–99% MDV') +
-    kpiCard('r', 'CRÍTICO',       crit,        'distritos < 80% MDV') +
+    kpiCard('g', 'MDV ENTREGUE',   ok,          'distritos ≥ 100% MDV') +
+    kpiCard('o', 'MDV EM ATENÇÃO', warn,        'distritos 80–99% MDV') +
+    kpiCard('r', 'MDV CRÍTICA',    crit,        'distritos < 80% MDV') +
     kpiCard(semMDVCls, 'REPS SEM MDV 12', repsSemMDV, 'abaixo do obj. — prod < 100%') +
   '</div>';
 
@@ -6299,7 +6299,7 @@ function renderDistritoCard(d, reps, prodDist) {
     '</div>' +
     '<div class="dcard-body">' +
       '<div class="diag ' + dgClass(d.diagnostico) + '">' + dgIcon(d.diagnostico) + ' ' +
-        (d.diagnostico === 'ok' ? 'Prod. 100%+' : d.diagnostico === 'warn' ? 'Prod. abaixo da meta' : 'Crítico — Plano urgente') +
+        (d.diagnostico === 'ok' ? 'MDV Entregue' : d.diagnostico === 'warn' ? 'MDV em Atenção' : 'MDV Crítica — plano urgente') +
       '</div>' +
       miniJHtml +
     '</div>' +
@@ -6787,9 +6787,9 @@ function renderAchados(dados, mes) {
   }
 
   var html = '<div class="achados"><div class="sec-hdr"><div class="sec-title">Achados Estratégicos</div><div class="sec-line"></div></div>';
-  html += grupo(criticos, '🔴', 'r', 'Crítico',  'Produtividade abaixo de 80% — plano de ação imediato.');
-  html += grupo(atencao,  '⚠️', 'y', 'Atenção',  'Entre 80% e 99% — monitorar e intensificar acompanhamento.');
-  html += grupo(destaque, '✅', 'g', 'Destaque', 'Atingiram 100%+ em produtividade — identificar e replicar boas práticas.');
+  html += grupo(criticos, '🔴', 'r', 'MDV Crítica',  'Produtividade abaixo de 80% — plano de ação imediato.');
+  html += grupo(atencao,  '⚠️', 'y', 'MDV em Atenção',  'Entre 80% e 99% — monitorar e intensificar acompanhamento.');
+  html += grupo(destaque, '✅', 'g', 'MDV Entregue', 'Atingiram 100%+ em produtividade — identificar e replicar boas práticas.');
   if (!criticos.length && !atencao.length && !destaque.length) {
     html += '<p style="color:var(--gray);font-size:13px;padding:8px 0">Sem dados disponíveis.</p>';
   }
