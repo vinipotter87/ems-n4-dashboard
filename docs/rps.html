@@ -460,8 +460,12 @@ function ataEscopo(){ return ST.modelo === 'individual' ? 'rpsi|' + ST.setor + '
 function ataRegDe(alvo){
   var gd = 'N4:' + ST.gd, e = ataEscopo();
   var rs = ST.lanc.filter(function(l){ var c = String(l.crm); return l.produto === 'RPS_ATA' && l.gd === gd && c.indexOf(e) === 0 && /^\d{4}-\d{2}-\d{2}$/.test(c.slice(e.length)); });
-  if (alvo === 'atual'){ rs = rs.filter(function(l){ return l.crm === e + ST.data; }); return rs.length ? rs[rs.length - 1] : null; }
-  rs = rs.filter(function(l){ return l.crm.slice(e.length) < ST.data; }).sort(function(a, b){ return a.crm.localeCompare(b.crm); });
+  // "daReuniao" marca a ata anexada no último slide. Atas sem a marca foram anexadas direto no slide 2
+  // (na primeira RPS, antes deste fluxo): valem como combinados anteriores inclusive na própria data.
+  function daReuniao(l){ try { return !!JSON.parse(l.acao).daReuniao; } catch(x){ return false; } }
+  if (alvo === 'atual'){ rs = rs.filter(function(l){ return l.crm === e + ST.data && daReuniao(l); }); return rs.length ? rs[rs.length - 1] : null; }
+  rs = rs.filter(function(l){ var d = l.crm.slice(e.length); return d < ST.data || (d === ST.data && !daReuniao(l)); })
+    .sort(function(a, b){ return a.crm.localeCompare(b.crm) || (Number(a.criadoEm) || 0) - (Number(b.criadoEm) || 0); });
   return rs.length ? rs[rs.length - 1] : null;
 }
 function ataReg(){ return ataRegDe(ST.alvo || 'ant'); }
@@ -533,6 +537,7 @@ async function ataGravar(ata, apagar){
   var reg = ataReg(), st = ataSt(), d = ST.d.dist;
   if (!(CONFIG.budget_webapp_url && CONFIG.budget_token)){ if (st) st.textContent = 'Gravação indisponível nesta página.'; return false; }
   if (st) st.textContent = 'Salvando…';
+  if (ata && ST.alvo === 'atual') ata.daReuniao = true;
   var env = null;
   try {
     var r = await fetch(CONFIG.budget_webapp_url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(env = {
