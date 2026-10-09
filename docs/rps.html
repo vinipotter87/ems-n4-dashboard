@@ -319,13 +319,13 @@ function sMarcas(){
 }
 function sProd(){
   var reps = ST.d.reps.slice().sort(function(a, b){ return (num(a.prod) === null ? 999 : num(a.prod)) - (num(b.prod) === null ? 999 : num(b.prod)); });
-  var h = '<div class="card"><h3>Produtividade por representante <small>do menor para o maior</small></h3><table><thead><tr><th>Representante</th><th>Produtividade (MDV)</th><th>Q1</th><th>Q2</th><th>Q3</th><th>Cob. painel</th><th>Dias trab.</th></tr></thead><tbody>';
+  var h = '<div class="card"><h3>Produtividade por representante <small>do menor para o maior</small></h3><table><thead><tr><th>Representante</th><th>Produtividade (MDV)</th><th>Q1</th><th>Q2</th><th>Q3</th><th>Q4</th><th>Cob. painel</th><th>Dias trab.</th></tr></thead><tbody>';
   reps.forEach(function(r){
     var p = num(r.prod);
     function q(k){ var v = num(r[k]); return '<td><span class="cel ' + cls(v, 90, 80) + '">' + p1(v) + '</span></td>'; }
-    h += '<tr><td class="n">' + esc(r.nome) + '</td><td>' + barra(p, cls(p)) + '</td>' + q('q1') + q('q2') + q('q3') + q('cob_painel') + '<td>' + (num(r.dias_trabalhados) === null ? '—' : Math.round(num(r.dias_trabalhados))) + '</td></tr>';
+    h += '<tr><td class="n">' + esc(r.nome) + '</td><td>' + barra(p, cls(p)) + '</td>' + q('q1') + q('q2') + q('q3') + q('q4') + q('cob_painel') + '<td>' + (num(r.dias_trabalhados) === null ? '—' : Math.round(num(r.dias_trabalhados))) + '</td></tr>';
   });
-  h += '</tbody></table><div class="nota">Q1 a Q3 e cobertura de painel: verde ≥ 90% · amarelo 80–89% · vermelho &lt; 80%.</div></div>';
+  h += '</tbody></table><div class="nota">Q1 a Q4 e cobertura de painel: verde ≥ 90% · amarelo 80–89% · vermelho &lt; 80%.</div></div>';
   var ab = reps.filter(function(r){ var p = num(r.prod); return p !== null && p < 100; }).length;
   return { nome: 'Produtividade', msg: ab ? ab + ' de ' + reps.length + ' representantes abaixo de 100% de MDV' : 'Todos os representantes em 100% ou mais de MDV', html: h };
 }
@@ -569,8 +569,8 @@ function iRetrato(){
   var r = repSel(), px = ST.d.pex.filter(function(x){ return x.setor_id === ST.setor; })[0], f = freqSetor(ST.mes), s = sobSetor(ST.mes), sim = EXTRA.pexSim.indexOf(ST.mes) >= 0;
   function k(l, v, c, sub){ return '<div class="kpi ' + c + '"><div class="l">' + l + '</div><div class="v">' + v + '</div><div class="s">' + sub + '</div></div>'; }
   function comp(campo, ok, warn){ var v = num(r[campo]), m = mediaDist(campo); return [p1(v), cls(v, ok, warn), 'distrito ' + p1(m) + (v !== null && m !== null ? ' · ' + (v - m >= 0 ? '+' : '') + (v - m).toFixed(1).replace('.', ',') + ' pp' : '')]; }
-  var a = comp('prod'), q1 = comp('q1', 90, 80), q2 = comp('q2', 90, 80), q3 = comp('q3', 90, 80), cp = comp('cob_painel', 90, 80);
-  var h = '<div class="kpis">' + k('Produtividade (MDV)', a[0], a[1], a[2]) + k('Cobertura Q1', q1[0], q1[1], q1[2]) + k('Cobertura Q2', q2[0], q2[1], q2[2]) + k('Cobertura Q3', q3[0], q3[1], q3[2]) + k('Cobertura de painel', cp[0], cp[1], cp[2]) + '</div><div class="kpis">' +
+  var a = comp('prod'), q1 = comp('q1', 90, 80), q2 = comp('q2', 90, 80), q3 = comp('q3', 90, 80), q4 = comp('q4', 90, 80), cp = comp('cob_painel', 90, 80);
+  var h = '<div class="kpis">' + k('Produtividade (MDV)', a[0], a[1], a[2]) + k('Cobertura Q1', q1[0], q1[1], q1[2]) + k('Cobertura Q2', q2[0], q2[1], q2[2]) + k('Cobertura Q3', q3[0], q3[1], q3[2]) + k('Cobertura Q4', q4[0], q4[1], q4[2]) + '</div><div class="kpis" style="grid-template-columns:repeat(6,minmax(0,1fr))">' + k('Cobertura de painel', cp[0], cp[1], cp[2]) +
     k('Dias trabalhados', num(r.dias_trabalhados) === null ? '—' : Math.round(num(r.dias_trabalhados)), '', 'no mês') +
     k('Frequência de visitação', f ? p1(f.cob) : '—', f ? (f.cob >= 75 ? 'ok' : (f.cob >= 50 ? 'warn' : 'crit')) : '', f ? 'meta 75% · painel de ' + f.painel : 'sem snapshot no mês') +
     k('Sobreposição Nexus × Vital', s ? p1(s.pNv) : '—', s ? (s.pNv > 20 ? 'crit' : (s.pNv >= 10 ? 'warn' : 'ok')) : '', s ? 'meta até 10% · todas as linhas ' + p1(s.pTd) : 'sem snapshot no mês') +
@@ -602,7 +602,7 @@ function iEvolucao(){ // últimos 3 meses do setor: fundamentos (execução) e p
   function campo(k){ return serie.map(function(s){ var r = rep(s); return r ? num(r[k]) : null; }); }
   function c100(v){ return cls(v); } function c90(v){ return cls(v, 90, 80); }
   var f = tabela('Fundamentos', 'indicadores de execução');
-  f += linha('Produtividade (MDV)', campo('prod'), c100, p1, ' pp') + linha('Cobertura Q1', campo('q1'), c90, p1, ' pp') + linha('Cobertura Q2', campo('q2'), c90, p1, ' pp') + linha('Cobertura Q3', campo('q3'), c90, p1, ' pp') + linha('Cobertura de painel', campo('cob_painel'), c90, p1, ' pp');
+  f += linha('Produtividade (MDV)', campo('prod'), c100, p1, ' pp') + linha('Cobertura Q1', campo('q1'), c90, p1, ' pp') + linha('Cobertura Q2', campo('q2'), c90, p1, ' pp') + linha('Cobertura Q3', campo('q3'), c90, p1, ' pp') + linha('Cobertura Q4', campo('q4'), c90, p1, ' pp') + linha('Cobertura de painel', campo('cob_painel'), c90, p1, ' pp');
   f += linha('Dias trabalhados', campo('dias_trabalhados'), function(){ return ''; }, function(v){ return Math.round(v); }, ' d');
   f += linha('Frequência de visitação', serie.map(function(s){ var x = freqSetor(s.mes); return x ? x.cob : null; }), function(v){ return v >= 75 ? 'ok' : (v >= 50 ? 'warn' : 'crit'); }, p1, ' pp');
   f += linha('Sobreposição Nexus × Vital', serie.map(function(s){ var x = sobSetor(s.mes); return x ? x.pNv : null; }), function(v){ return v > 20 ? 'crit' : (v >= 10 ? 'warn' : 'ok'); }, p1, ' pp', true);
@@ -635,11 +635,11 @@ function iDemais(){ return demaisSlide(ST.d.pr.filter(function(x){ return x.seto
 function iProd(){
   var r = repSel(), n = ST.d.reps.length;
   var h = '<div class="card"><h3>Produtividade do setor <small>comparada com a média do distrito</small></h3><table><thead><tr><th>Indicador</th><th>Setor</th><th>Média do distrito</th><th>Diferença</th><th>Posição no distrito</th></tr></thead><tbody>';
-  [['prod', 'Produtividade (MDV)', 100, 80], ['q1', 'Cobertura Q1', 90, 80], ['q2', 'Cobertura Q2', 90, 80], ['q3', 'Cobertura Q3', 90, 80], ['cob_painel', 'Cobertura de painel', 90, 80]].forEach(function(c){
+  [['prod', 'Produtividade (MDV)', 100, 80], ['q1', 'Cobertura Q1', 90, 80], ['q2', 'Cobertura Q2', 90, 80], ['q3', 'Cobertura Q3', 90, 80], ['q4', 'Cobertura Q4', 90, 80], ['cob_painel', 'Cobertura de painel', 90, 80]].forEach(function(c){
     var v = num(r[c[0]]), m = mediaDist(c[0]), pos = v === null ? null : ST.d.reps.filter(function(x){ var y = num(x[c[0]]); return y !== null && y > v; }).length + 1;
     h += '<tr><td class="n">' + c[1] + '</td><td>' + barra(v, cls(v, c[2], c[3])) + '</td><td>' + p1(m) + '</td><td>' + (v === null || m === null ? '—' : ((v - m >= 0 ? '▲ +' : '▼ ') + (v - m).toFixed(1).replace('.', ',') + ' pp')) + '</td><td>' + (pos ? pos + 'º de ' + n : '—') + '</td></tr>'; });
   var dt = num(r.dias_trabalhados);
-  h += '<tr><td class="n">Dias trabalhados</td><td><b>' + (dt === null ? '—' : Math.round(dt)) + '</b></td><td></td><td></td><td></td></tr></tbody></table><div class="nota">MDV: verde ≥ 100% · amarelo 80–99% · vermelho &lt; 80%. Q1 a Q3 e cobertura de painel: verde ≥ 90% · amarelo 80–89% · vermelho &lt; 80%.</div></div>';
+  h += '<tr><td class="n">Dias trabalhados</td><td><b>' + (dt === null ? '—' : Math.round(dt)) + '</b></td><td></td><td></td><td></td></tr></tbody></table><div class="nota">MDV: verde ≥ 100% · amarelo 80–99% · vermelho &lt; 80%. Q1 a Q4 e cobertura de painel: verde ≥ 90% · amarelo 80–89% · vermelho &lt; 80%.</div></div>';
   var p = num(r.prod);
   return { nome: 'Produtividade', msg: p === null ? 'Sem MDV no mês' : (p >= 100 ? 'MDV em ' + p1(p) + ' — objetivo entregue' : 'MDV em ' + p1(p) + ' — abaixo de 100%'), html: h };
 }
@@ -648,7 +648,7 @@ function fundamentosRep(){
   var r = repSel(), out = [], f = freqSetor(ST.mes), s = sobSetor(ST.mes), px = ST.d.pex.filter(function(x){ return x.setor_id === ST.setor; })[0];
   function add(nome, v, meta, desvio){ out.push({ nome: nome, valor: v === null ? '—' : p1(v), meta: meta, desvio: v !== null && desvio, sem: v === null }); }
   var p = num(r.prod); add('Produtividade (MDV)', p, '≥ 100%', p < 100);
-  [['q1','Cobertura Q1'],['q2','Cobertura Q2'],['q3','Cobertura Q3'],['cob_painel','Cobertura de painel']].forEach(function(q){ var v = num(r[q[0]]); add(q[1], v, '≥ 90%', v < 90); });
+  [['q1','Cobertura Q1'],['q2','Cobertura Q2'],['q3','Cobertura Q3'],['q4','Cobertura Q4'],['cob_painel','Cobertura de painel']].forEach(function(q){ var v = num(r[q[0]]); add(q[1], v, '≥ 90%', v < 90); });
   add('Frequência de visitação', f ? f.cob : null, '≥ 75%', f && f.cob < 75);
   add('Sobreposição Nexus × Vital', s ? s.pNv : null, '≤ 10%', s && s.pNv > 10);
   if (px && /ATEN|CR[IÍ]T/i.test(px.medalha)) out.push({ nome: 'PEX — ' + String(px.medalha).toLowerCase(), valor: num(px.pts).toFixed(1).replace('.', ',') + ' pts', meta: 'bronze ou acima', desvio: true, sem: false });
