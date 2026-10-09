@@ -137,6 +137,11 @@ tr.tot td{background:#f3f4f6;font-weight:800}
 .det summary::-webkit-details-marker{display:none}
 .det summary span{display:block;font-size:11.5px;color:var(--gray);margin-top:2px}
 .detc{padding:12px 14px}
+/* evolução dos planos */
+.evol{margin-top:12px}
+.ev{display:inline-block;background:#f3f4f6;border-radius:8px;padding:4px 9px;margin:2px 0;font-size:12.5px;font-weight:700;line-height:1.25;text-align:left}
+.ev i{display:block;font-style:normal;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:var(--gray)}
+.ev.at{background:#dbeafe;color:var(--brand-d)}.evs{color:#9ca3af;margin:0 5px;font-weight:700}
 /* ata */
 .vazio{background:#fff;border:2px dashed var(--border);border-radius:14px;padding:38px 30px;text-align:center;color:var(--gray);line-height:1.6}
 .vazio b{display:block;font-size:17px;color:var(--text)}.vazio p{max-width:600px;margin:6px auto 16px}
@@ -683,22 +688,22 @@ function iProd(){
 // fundamentos do setor: indicadores de execução e se estão em desvio
 function fundamentosRep(){
   var r = repSel(), out = [], f = freqSetor(ST.d.ref.freq), s = sobSetor(ST.d.ref.sob), px = ST.d.pex.filter(function(x){ return x.setor_id === ST.setor; })[0];
-  function add(nome, v, meta, desvio){ out.push({ nome: nome, valor: v === null ? '—' : p1(v), meta: meta, desvio: v !== null && desvio, sem: v === null }); }
+  function add(nome, v, meta, desvio, fonte){ out.push({ nome: nome, valor: v === null ? '—' : p1(v), meta: meta, desvio: v !== null && desvio, sem: v === null, n: v, fonte: fonte || 'reps' }); }
   var p = num(r.prod); add('Produtividade (MDV)', p, '≥ 100%', p < 100);
   [['q1','Cobertura Q1'],['q2','Cobertura Q2'],['q3','Cobertura Q3'],['q4','Cobertura Q4'],['cob_painel','Cobertura de painel']].forEach(function(q){ var v = num(r[q[0]]); add(q[1], v, '≥ 90%', v < 90); });
-  add('Frequência de visitação', f ? f.cob : null, '≥ 75%', f && f.cob < 75);
-  add('Sobreposição Nexus × Vital', s ? s.pNv : null, '≤ 10%', s && s.pNv > 10);
+  add('Frequência de visitação', f ? f.cob : null, '≥ 75%', f && f.cob < 75, 'freq');
+  add('Sobreposição Nexus × Vital', s ? s.pNv : null, '≤ 10%', s && s.pNv > 10, 'sob');
   // PEX aparece sempre, com a pontuação e o quadrante (medalha); só conta como desvio em atenção ou crítico
   var sim = EXTRA.pexSim.indexOf(ST.d.ref.pex) >= 0;
-  if (px) out.push({ nome: 'PEX' + (sim ? ' (simulado)' : ''), valor: num(px.pts).toFixed(1).replace('.', ',') + ' pts', meta: 'bronze ou acima', desvio: /ATEN|CR[IÍ]T/i.test(px.medalha), sem: false, quad: px.medalha });
-  else out.push({ nome: 'PEX', valor: '—', meta: 'bronze ou acima', desvio: false, sem: true });
+  if (px) out.push({ nome: 'PEX' + (sim ? ' (simulado)' : ''), valor: num(px.pts).toFixed(1).replace('.', ',') + ' pts', meta: 'bronze ou acima', desvio: /ATEN|CR[IÍ]T/i.test(px.medalha), sem: false, quad: px.medalha, n: num(px.pts), fonte: 'pex' });
+  else out.push({ nome: 'PEX', valor: '—', meta: 'bronze ou acima', desvio: false, sem: true, n: null, fonte: 'pex' });
   return out;
 }
 function iFundamentos(){
   var inds = fundamentosRep(), desv = inds.filter(function(i){ return i.desvio; });
   var h = '<div class="fund">' + inds.map(function(i){ return '<div class="fc ' + (i.sem ? 'sem' : (i.desvio ? 'desvio' : 'ok')) + '"><div class="l">' + i.nome + '</div><div class="v">' + i.valor + (i.quad ? ' <span class="tag ' + med(i.quad) + '" style="font-size:11px;vertical-align:middle">' + esc(i.quad) + '</span>' : '') + '</div><div class="s">meta ' + i.meta + '</div><div class="t">' + (i.sem ? 'sem dado' : (i.desvio ? '● em desvio' : '✓ dentro da meta')) + '</div></div>'; }).join('') + '</div>';
   if (!desv.length) return [{ nome: 'Fundamentos', msg: 'Todos os indicadores de execução dentro da meta', html: h + '<div class="pok">✓ Nenhum indicador de execução em desvio — plano de fundamentos não é necessário.</div>' }];
-  PLANOS.push({ chave: 'fund', titulo: 'Fundamentos', kpis: desv.map(function(i){ return i.nome; }), problema: 'Indicadores de execução em desvio: ' + desv.map(function(i){ return i.nome + ' em ' + i.valor + (i.quad ? ' — ' + String(i.quad).toLowerCase() : '') + ' (meta ' + i.meta + ')'; }).join('; ') + '.' });
+  PLANOS.push({ chave: 'fund', titulo: 'Fundamentos', kpis: desv.map(function(i){ return i.nome; }), todos: inds.map(function(i){ return i.nome; }), problema: 'Indicadores de execução em desvio: ' + desv.map(function(i){ return i.nome + ' em ' + i.valor + (i.quad ? ' — ' + String(i.quad).toLowerCase() : '') + ' (meta ' + i.meta + ')'; }).join('; ') + '.' });
   return [{ nome: 'Fundamentos', msg: desv.length + ' de ' + inds.length + ' indicadores de execução em desvio', html: h + '<div class="nota" style="background:#fff;border:1px dashed var(--border);border-radius:10px;padding:10px 14px">O plano de fundamentos está no próximo slide.</div>' },
           { nome: 'Plano — Fundamentos', msg: 'Em desvio: ' + desv.map(function(i){ return i.nome + ' ' + i.valor; }).join(' · '), html: '<div class="plano" id="plano-fund"></div>', plano: 'fund' }];
 }
@@ -722,6 +727,72 @@ function iMarcasDesvio(){
 }
 
 // ── planos: 5 porquês + 5W2H ──
+// ── evolução dos planos ──────────────────────────────────────────
+// Ao salvar, o plano guarda um retrato fixo do que ele ataca (campo "base"):
+// no de Fundamentos, o valor de cada indicador de execução; no de marca-chave,
+// o realizado em R$ e o % de atingimento da cota. A cada RPS individual
+// seguinte (data da RPS posterior à do retrato), abrir o deck grava sozinho
+// uma nova medição (campo "medicoes", uma por data de RPS). O Histórico do
+// time e o próprio plano mostram base → medições → valor atual. Os indicadores
+// acompanhados no plano de Fundamentos são os marcados em "Indicador que
+// direciona este plano". Planos salvos antes deste recurso ganham a base na
+// primeira vez em que são abertos.
+function kpiKey(s){ return String(s).replace(/ \(simulado\)$/, '').replace(/^PEX — .*$/, 'PEX'); }
+function medir(ch){ // retrato atual do que o plano acompanha, para o setor em ST.setor
+  var ref = ST.d.ref, m = { data: hoje(), rps: ST.data };
+  if (ch === 'fund') m.inds = fundamentosRep().map(function(i){ return { nome: kpiKey(i.nome), n: i.n, txt: i.valor + (i.quad ? ' ' + i.quad : ''), mes: ref[i.fonte] || ST.mes }; });
+  else { var M = marcasRep(), mk = M.marcas.filter(function(x){ return 'marca-' + x.replace(/[^A-Z0-9]+/g, '_') === ch; })[0], x = mk && M.eu.m[mk];
+    m.mes = ref.prod; m.real = x ? x.real : null; m.cota = x ? x.cota : null; m.cob = x ? x.cob : null; }
+  return m;
+}
+function mesmaMedida(a, b){ function k(m){ return m.inds ? m.inds.map(function(i){ return i.nome + ':' + i.n + ':' + i.mes; }).join('|') : [m.mes, m.real, m.cota].join('|'); } return k(a) === k(b); }
+async function planoAcompanhar(ch, d, reg, dataRps){ // cria a base (planos antigos) ou registra a medição da RPS; devolve true se gravou
+  var agora = medir(ch), mudou = false;
+  if (!d.base){ agora.data = reg.data; agora.rps = reg.data; d.base = agora; d.medicoes = d.medicoes || []; mudou = true; }
+  else if (dataRps && dataRps > d.base.rps){
+    agora.rps = dataRps; d.medicoes = d.medicoes || []; var i = -1; d.medicoes.forEach(function(x, k){ if (x.rps === dataRps) i = k; });
+    if (i < 0){ d.medicoes.push(agora); mudou = true; } else if (!mesmaMedida(d.medicoes[i], agora)){ d.medicoes[i] = agora; mudou = true; }
+    d.medicoes.sort(function(a, b){ return a.rps.localeCompare(b.rps); });
+  }
+  return mudou ? await gravarLinha(reg, d) : false;
+}
+async function acompanharPlanos(){ // RPS individual: roda ao montar o deck do representante
+  if (!(CONFIG.budget_webapp_url && CONFIG.budget_token)) return;
+  for (var i = 0; i < PLANOS.length; i++){ var ch = PLANOS[i].chave, reg = planoReg(ch), d = planoDados(ch);
+    if (reg && d && await planoAcompanhar(ch, d, reg, ST.data)){ planoDesenhar(ch, false); planoFinal(); } }
+}
+// linhas da evolução de um plano: [{nome, pontos:[{rot, txt}], delta}]
+function evolDados(ch, p, atual){
+  if (!p.base) return [];
+  var serie = [p.base].concat(p.medicoes || []), out = [];
+  function rot(m, k){ return (k === 0 ? 'Base · ' : 'RPS ') + dataBr(m.rps).slice(0, 5); }
+  function seta(d, un, inv, casas){ if (d === null) return '—'; if (Math.abs(d) < 0.05) return '<b style="color:var(--gray)">= sem mudança</b>'; var bom = inv ? d < 0 : d > 0;
+    return '<b style="color:' + (bom ? '#15803d' : '#b91c1c') + '">' + (d > 0 ? '▲ +' : '▼ ') + (un === 'R$' ? brl(Math.abs(d)).replace('R$', (d < 0 ? '-' : '') + 'R$') : d.toFixed(casas === 0 ? 0 : 1).replace('.', ',') + un) + '</b>'; }
+  if (ch === 'fund'){
+    var marc = (p.kpis || []).map(kpiKey), nomes = p.base.inds.map(function(i){ return i.nome; }).filter(function(n){ return !marc.length || marc.indexOf(n) >= 0; });
+    nomes.forEach(function(nome){
+      function de(m){ return (m.inds || []).filter(function(i){ return i.nome === nome; })[0] || null; }
+      var pts = serie.map(function(m, k){ var i = de(m); return { rot: rot(m, k), txt: i ? i.txt : '—', mes: i ? i.mes : '' }; }), b = de(p.base), a = atual ? de(atual) : null;
+      if (atual) pts.push({ rot: 'Atual', txt: a ? a.txt : '—', mes: a ? a.mes : '', atual: true });
+      var d = b && a && b.n !== null && a.n !== null && b.n !== undefined && a.n !== undefined ? a.n - b.n : null;
+      out.push({ nome: nome, pontos: pts, delta: seta(d, nome === 'PEX' ? ' pts' : ' pp', /^Sobreposi/.test(nome)) });
+    });
+  } else {
+    function tx(m){ return m.real === null || m.real === undefined ? '—' : brl(m.real) + ' · ' + p1(m.cob); }
+    var pts = serie.map(function(m, k){ return { rot: rot(m, k), txt: tx(m), mes: m.mes }; });
+    if (atual) pts.push({ rot: 'Atual', txt: tx(atual), mes: atual.mes, atual: true });
+    var ok = atual && atual.real !== null && p.base.real !== null && atual.real !== undefined && p.base.real !== undefined;
+    out.push({ nome: 'Realizado e % da cota', pontos: pts, delta: ok ? seta(atual.real - p.base.real, 'R$') + ' · ' + seta(atual.cob - p.base.cob, ' pp') : '—' });
+  }
+  return out;
+}
+function evolChips(pts){ return pts.map(function(x){ return '<span class="ev' + (x.atual ? ' at' : '') + '"><i>' + x.rot + (x.mes ? ' · dado de ' + x.mes : '') + '</i>' + esc(x.txt) + '</span>'; }).join('<span class="evs">→</span>'); }
+function evolBloco(ch, p){ // dentro do plano salvo, no deck da individual
+  var ls = evolDados(ch, p, medir(ch)); if (!ls.length) return '';
+  return '<div class="evol"><b class="psub">Evolução desde o plano</b><table class="wt ver"><thead><tr><th>' + (ch === 'fund' ? 'Indicador acompanhado' : 'Métrica') + '</th><th>Linha do tempo</th><th>Variação (atual − base)</th></tr></thead><tbody>' +
+    ls.map(function(l){ return '<tr><td><b>' + esc(l.nome) + '</b></td><td>' + evolChips(l.pontos) + '</td><td>' + l.delta + '</td></tr>'; }).join('') + '</tbody></table></div>';
+}
+
 function raizDe(p){ return (p && p.raiz) || (p && p.porques && p.porques[p.porques.length - 1]) || ''; } // planos antigos não têm o campo: vale o último por quê
 function planoReg(ch){ var gd = 'N4:' + ST.gd, k = 'rpsi|' + ST.setor + '|' + ch + '|' + ST.mes; var rs = ST.lanc.filter(function(l){ return l.produto === 'RPS_PLANO' && l.gd === gd && l.crm === k; }); return rs.length ? rs[rs.length - 1] : null; }
 function planoDados(ch){ var r = planoReg(ch); if (!r) return null; try { return JSON.parse(r.acao); } catch(e){ return null; } }
@@ -745,7 +816,8 @@ function planoDesenhar(ch, editar, rasc){
   if (ed){
     var p = rasc || salvo || { problema: info.problema, kpis: info.kpis.slice(), porques: [], acoes: [{}] }; if (!p.acoes || !p.acoes.length) p.acoes = [{}];
     h += '<div class="ph">🧭 Plano — ' + info.titulo + ' <span>5 porquês + 5W2H</span></div><label class="pl">Problema</label><textarea data-f="problema" rows="2">' + esc(p.problema) + '</textarea>';
-    if (info.kpis.length) h += '<div class="pk"><span>Indicador que direciona este plano:</span>' + info.kpis.map(function(k){ return '<label><input type="checkbox" data-kpi="' + esc(k) + '"' + (p.kpis.indexOf(k) >= 0 ? ' checked' : '') + '> ' + k + '</label>'; }).join('') + '</div>';
+    var opc = info.todos || info.kpis; // em Fundamentos dá para marcar qualquer indicador, não só os em desvio
+    if (opc.length) h += '<div class="pk"><span>Indicador que direciona este plano (será acompanhado RPS a RPS):</span>' + opc.map(function(k){ return '<label><input type="checkbox" data-kpi="' + esc(k) + '"' + (p.kpis.indexOf(k) >= 0 ? ' checked' : '') + '> ' + k + '</label>'; }).join('') + '</div>';
     h += '<label class="pl">5 porquês <small>mínimo 3</small></label>';
     for (var i = 0; i < 5; i++) h += '<div class="pq"><b>' + (i + 1) + 'º por quê?</b><input type="text" data-pq="' + i + '" value="' + esc(p.porques[i] || '') + '" oninput="planoPorques(' + q + ')" placeholder="' + (i ? 'Por que isso acontece?' : 'Por que o problema acontece?') + '"></div>';
     h += '<label class="pl">Causa raiz <small>síntese dos porquês — o que o plano precisa atacar</small></label><textarea data-f="raiz" rows="2" placeholder="Escreva a causa raiz com suas palavras, a partir dos porquês acima.">' + esc(p.raiz || '') + '</textarea>' +
@@ -759,7 +831,7 @@ function planoDesenhar(ch, editar, rasc){
       salvo.porques.map(function(t, k){ var r = !salvo.raiz && k === salvo.porques.length - 1; return '<div class="pv' + (r ? ' raiz' : '') + '"><i>' + (r ? 'Causa raiz' : (k + 1) + 'º por quê') + '</i>' + esc(t) + '</div>'; }).join('') +
       (salvo.raiz ? '<div class="pv raiz"><i>Causa raiz</i>' + esc(salvo.raiz) + '</div>' : '') +
       '</div><div><b class="psub">Plano de ação — 5W2H</b><table class="wt ver"><thead><tr>' + W.map(function(w){ return '<th>' + w[1] + '</th>'; }).join('') + '</tr></thead><tbody>' +
-      salvo.acoes.map(function(a){ return '<tr>' + W.map(function(w){ return '<td>' + (esc(a[w[0]]) || '—') + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div></div><div class="pf"><span id="plano-st-' + ch + '">Salvo em ' + dataBr(reg.data) + '</span></div>';
+      salvo.acoes.map(function(a){ return '<tr>' + W.map(function(w){ return '<td>' + (esc(a[w[0]]) || '—') + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div></div>' + evolBloco(ch, salvo) + '<div class="pf"><span id="plano-st-' + ch + '">Salvo em ' + dataBr(reg.data) + '</span></div>';
   } else h += '<div class="ph">🧭 Plano — ' + info.titulo + '</div><div class="pf"><span>Plano ainda não preenchido — gravação indisponível nesta página.</span></div>';
   box.innerHTML = h; if (ed) planoPorques(ch); ajustar();
 }
@@ -775,6 +847,7 @@ async function planoSalvar(ch){ var p = planoLer(ch), st = $('plano-st-' + ch); 
   if (!p.problema) return er('Descreva o problema.'); if (p.porques.length < 3) return er('Preencha pelo menos 3 porquês.');
   if (!p.raiz) return er('Escreva a causa raiz, sintetizando os porquês.');
   if (!p.acoes.some(function(a){ return a.oque && a.quando && a.quem; })) return er('Inclua pelo menos uma ação com O quê, Quando e Quem.');
+  var ant = planoDados(ch); p.base = (ant && ant.base) || medir(ch); p.medicoes = (ant && ant.medicoes) || [];
   st.style.color = ''; if (await planoEnviar(ch, p, false)){ planoDesenhar(ch, false); planoFinal(); } }
 async function planoApagar(ch){ if (window.confirm('Apagar este plano?') && await planoEnviar(ch, null, true)){ planoDesenhar(ch, false); planoFinal(); } }
 function planoFinal(){ var box = $('plano-final'); if (!box) return; var ls = '', n = 0, feitos = 0;
@@ -798,6 +871,7 @@ function montarIndividual(){
   $('b-trocar').style.display = ''; $('b-rep').style.display = '';
   $('dots').innerHTML = ST.slides.map(function(s, k){ return '<button onclick="ir(' + k + ')" title="' + (k ? lista[k - 1].nome : 'Abertura') + '">' + (k + 1) + '</button>'; }).join('');
   desenharAta(); PLANOS.forEach(function(p){ planoDesenhar(p.chave, false); }); planoFinal(); ir(0);
+  acompanharPlanos();
 }
 
 // ── HISTÓRICO DO TIME — planos e atas salvos do distrito ─────────
@@ -841,7 +915,7 @@ function telaHistorico(){
   var h = '<div class="abas"><button class="' + (HIST.aba === 'planos' ? 'on' : '') + '" onclick="HIST.aba=\'planos\';telaHistorico()">🧭 Planos</button><button class="' + (HIST.aba === 'atas' ? 'on' : '') + '" onclick="HIST.aba=\'atas\';telaHistorico()">📎 Atas</button></div>';
 
   if (HIST.aba === 'planos'){
-    var ex = histExigidos(), planos = {}; // planos[setor][chave] = {l, p}
+    var ex = histExigidos(), planos = {}, evol = '', semBase = []; // planos[setor][chave] = {l, p}
     histLinhas('RPS_PLANO').forEach(function(l){ var x = l.crm.split('|'); if (x[0] !== 'rpsi' || x[3] !== ST.mes) return; var p = histJson(l); if (p) (planos[x[1]] = planos[x[1]] || {})[x[2]] = { l: l, p: p }; });
     var cols = ['Fundamentos'].concat(marcas(D.linha, ST.mes)), nPl = 0, nAc = 0, nConc = 0, nPend = 0, repsCom = 0, linhas = '', acoes = '', completos = '';
     ST.d.reps.forEach(function(r){
@@ -850,6 +924,10 @@ function telaHistorico(){
       linhas += '<tr><td class="n">' + esc(r.nome) + '</td>' + cols.map(function(c){ var ch = c === 'Fundamentos' ? 'fund' : 'marca-' + c.replace(/[^A-Z0-9]+/g, '_');
         if (meus[ch]) return '<td><span class="p ok">✓ feito</span></td>'; if (exig[c]){ nPend++; return '<td><span class="p crit">pendente</span></td>'; } return '<td style="color:#d1d5db">—</td>'; }).join('') + '</tr>';
       Object.keys(meus).forEach(function(ch){ var o = meus[ch], p = o.p, tit = ch === 'fund' ? 'Fundamentos' : ch.replace(/^marca-/, '').replace(/_/g, ' '); nPl++;
+        var gSet = ST.setor; ST.setor = r.setor_id; var atual = medir(ch); ST.setor = gSet;
+        if (!p.base) semBase.push({ ch: ch, p: p, l: o.l, setor: r.setor_id });
+        var evs = evolDados(ch, p, atual); evs.forEach(function(e, k){ evol += '<tr>' + (k === 0 ? '<td class="n" rowspan="' + evs.length + '">' + esc(r.nome) + '</td><td rowspan="' + evs.length + '">' + esc(tit) + '</td>' : '') +
+          '<td style="text-align:left"><b>' + esc(e.nome) + '</b></td><td style="text-align:left">' + evolChips(e.pontos) + '</td><td>' + e.delta + '</td></tr>'; });
         p.acoes.forEach(function(a, k){ nAc++; var st = ACAO_ST.indexOf(a.status) >= 0 ? a.status : 'Pendente'; if (st === 'Concluída') nConc++;
           acoes += '<tr>' + (k === 0 ? '<td class="n" rowspan="' + p.acoes.length + '">' + esc(r.nome) + '</td><td rowspan="' + p.acoes.length + '">' + esc(tit) + '</td><td rowspan="' + p.acoes.length + '" style="text-align:left">' + esc(raizDe(p) || '—') + '</td>' : '') +
             '<td style="text-align:left">' + (esc(a.oque) || '—') + '</td><td>' + (esc(a.quem) || '—') + '</td><td>' + (esc(a.quando) || '—') + '</td><td>' +
@@ -864,6 +942,9 @@ function telaHistorico(){
       '<div class="kpi"><div class="l">Ações</div><div class="v">' + nAc + '</div><div class="s">somando todos os planos</div></div>' +
       '<div class="kpi ' + (nAc && nConc === nAc ? 'ok' : '') + '"><div class="l">Execução</div><div class="v">' + (nAc ? Math.round(nConc / nAc * 100) : 0) + '%</div><div class="s">' + nConc + ' de ' + nAc + ' ações concluídas</div></div></div>';
     h += '<div class="card"><h3>Planos por representante <small>' + ST.mes + '/2026 · "pendente" = há desvio e o plano não foi preenchido</small></h3><table><thead><tr><th>Representante</th>' + cols.map(function(c){ return '<th>' + c + '</th>'; }).join('') + '</tr></thead><tbody>' + linhas + '</tbody></table></div>';
+    if (evol) h += '<div class="card"><h3>Evolução dos planos <small>base gravada quando o plano foi salvo · uma medição a cada RPS individual seguinte · atual = dado mais recente</small></h3><table><thead><tr><th>Representante</th><th>Plano</th><th style="text-align:left">Acompanha</th><th style="text-align:left">Linha do tempo</th><th>Variação (atual − base)</th></tr></thead><tbody>' + evol + '</tbody></table></div>';
+    if (semBase.length && pode){ HIST.tentou = HIST.tentou || {}; var novos = semBase.filter(function(x){ return !HIST.tentou[x.l.id]; });
+      if (novos.length){ novos.forEach(function(x){ HIST.tentou[x.l.id] = 1; }); setTimeout(async function(){ var g = ST.setor, gravou = false; for (var i = 0; i < novos.length; i++){ ST.setor = novos[i].setor; if (await planoAcompanhar(novos[i].ch, novos[i].p, novos[i].l, null)) gravou = true; } ST.setor = g; if (gravou && ST.modelo === 'historico') telaHistorico(); }, 0); } }
     h += nAc ? '<div class="card"><h3>Ações <small>marque o status conforme a execução</small></h3><table><thead><tr><th>Representante</th><th>Plano</th><th style="text-align:left">Causa raiz</th><th style="text-align:left">O quê</th><th>Quem</th><th>Quando</th><th>Status</th></tr></thead><tbody>' + acoes + '</tbody></table></div>' +
       '<div class="card"><h3>Planos completos <small>clique para abrir</small></h3>' + completos + '</div>'
       : '<div class="vazio"><b>Nenhum plano salvo em ' + ST.mes + '/2026</b>Os planos aparecem aqui quando são preenchidos na RPS individual de cada representante.</div>';
