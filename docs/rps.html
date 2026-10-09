@@ -196,7 +196,7 @@ async function fetchAba(aba, semCache, tent){
   tent = tent || 0;
   var res = await fetch('https://sheets.googleapis.com/v4/spreadsheets/' + CONFIG.spreadsheet_id + '/values/' + encodeURIComponent(aba) + '?key=' + CONFIG.api_key, {cache:'no-store'});
   if (res.status === 429 && tent < 6){ await new Promise(function(r){ setTimeout(r, 600 * Math.pow(1.8, tent)); }); return fetchAba(aba, semCache, tent + 1); }
-  if (!res.ok) return (CACHE[aba] = []);
+  if (!res.ok){ if (res.status === 400) CACHE[aba] = []; return []; }
   var rows = (await res.json()).values || [];
   if (rows.length < 2) return (CACHE[aba] = []);
   var h = rows[0];
@@ -236,7 +236,7 @@ function telaEntrada(){
       '<div><label>Data da RPS</label><input type="date" id="e-data" value="' + ST.data + '"></div>' +
       '<button class="ir" onclick="abrir()">' + (ST.modelo === 'historico' ? 'Abrir histórico →' : 'Abrir apresentação →') + '</button>' +
     '</div></div></div>';
-  $('e-mes').onchange = async function(){ ST.mes = this.value; ST.distritos = await fetchAba('distritos_' + ST.mes); telaEntrada(); };
+  $('e-mes').onchange = async function(){ ST.mes = this.value; ST.distritos = await distritosDe(ST.mes); telaEntrada(); };
 }
 
 async function abrir(){
@@ -244,22 +244,59 @@ async function abrir(){
   $('stage').innerHTML = '<div class="slide on"><div class="capa"><h2>Montando…</h2></div></div>';
   var d = ST.distritos.filter(function(x){ return x.distrito_id === ST.gd; })[0];
   if (!d) return telaEntrada();
-  var L = d.linha, m = ST.mes, a = mesAnt(m);
-  var nomes = { reps: 'reps_' + m, pd: 'produtos_dist_' + L + '_' + m, pr: 'produtos_rep_' + L + '_' + m, pex: 'pex_' + m, jor: 'jornada' };
-  if (a){ nomes.pexAnt = 'pex_' + a; nomes.dAnt = 'distritos_' + a; nomes.pdAnt = 'produtos_dist_' + L + '_' + a; }
-  var a2 = a ? mesAnt(a) : null; if (a2){ nomes.dAnt2 = 'distritos_' + a2; nomes.pdAnt2 = 'produtos_dist_' + L + '_' + a2; }
-  var r = {}, ks = Object.keys(nomes);
-  for (var i = 0; i < ks.length; i++) r[ks[i]] = await fetchAba(nomes[ks[i]]); // em série, por causa da cota do Sheets
+  var L = d.linha, m = ST.mes;
+  function doD(arr){ return (arr || []).filter(function(x){ return x.distrito_id === d.distrito_id; }); }
+  function temD(rows){ return doD(rows).length > 0; }
+  // em série, por causa da cota do Sheets
+  var uR = await ultimaAba(function(x){ return 'reps_' + x; }, m, function(rows){ return doD(rows).some(function(x){ return num(x.prod) !== null; }); });
+  var uP = await ultimaAba(function(x){ return 'produtos_rep_' + L + '_' + x; }, m, temD);
+  var uX = await ultimaAba(function(x){ return 'pex_' + x; }, m, temD);
+  var ref = { reps: uR.mes, prod: uP.mes, pex: uX.mes, freq: m, sob: m }, aR = mesAnt(ref.reps), aX = mesAnt(ref.pex);
+  var pd = await fetchAba('produtos_dist_' + L + '_' + ref.prod), jor = await fetchAba('jornada');
+  var dRef = ref.reps === m ? d : (doD(await fetchAba('distritos_' + ref.reps))[0] || d);
+  var distAnt = aR ? doD(await fetchAba('distritos_' + aR))[0] || null : null, pexAnt = aX ? doD(await fetchAba('pex_' + aX)) : [];
   ST.lanc = await fetchAba('budget_lancamentos', true);
   await carregarExtra();
-  function doD(arr){ return (arr || []).filter(function(x){ return x.distrito_id === d.distrito_id; }); }
-  ST.d = { dist: d, ant: a, reps: doD(r.reps).filter(function(x){ return x.vago !== 'True'; }), pd: doD(r.pd), pr: doD(r.pr), pex: doD(r.pex), pexAnt: doD(r.pexAnt), jor: r.jor,
-           distAnt: doD(r.dAnt)[0] || null, histD: [] };
-  if (a2) ST.d.histD.push({ mes: a2, dist: doD(r.dAnt2)[0] || null, pd: doD(r.pdAnt2) });
-  if (a) ST.d.histD.push({ mes: a, dist: doD(r.dAnt)[0] || null, pd: doD(r.pdAnt) });
+  var pref = d.distrito_id.substring(0, 6);
+  [['freq', EXTRA.freq], ['sob', EXTRA.sobrep]].forEach(function(par){ // frequência e sobreposição têm snapshots em meses diferentes
+    for (var mf = m, nf = 0; mf && nf < 6; mf = mesAnt(mf), nf++){ if ((par[1][mf] || []).some(function(l){ return l.substring(0, 6) === pref; })){ ref[par[0]] = mf; break; } } });
+  var dist = {}; Object.keys(d).forEach(function(k){ dist[k] = d[k]; }); dist.prod = dRef.prod;
+  ST.d = { dist: dist, ref: ref, antReps: aR, antPex: aX, reps: doD(uR.rows).filter(function(x){ return x.vago !== 'True'; }), pd: doD(pd), pr: doD(uP.rows), pex: doD(uX.rows), pexAnt: pexAnt, jor: jor,
+           distAnt: distAnt, histD: [] };
+  // evolução do distrito: os três meses até o escolhido, cada um com o dado do próprio mês
+  var ms = [mesAnt(mesAnt(m) || ''), mesAnt(m), m].filter(Boolean);
+  for (var i = 0; i < ms.length; i++) ST.d.histD.push({ mes: ms[i], dist: doD(await fetchAba('distritos_' + ms[i]))[0] || null, pd: doD(await fetchAba('produtos_dist_' + L + '_' + ms[i])) });
   ST.previa = null; ST.edit = null;
   if (ST.modelo === 'individual') telaReps(); else if (ST.modelo === 'historico') telaHistorico(); else montar();
 }
+
+// ── último resultado disponível ──
+// Os resultados não chegam junto com o mês (produto atrasa pelo menos 10 dias).
+// Quando o mês escolhido ainda não tem um indicador, o deck mostra o último mês
+// que tem e avisa de qual mês é o dado. ST.d.ref guarda o mês efetivo de cada
+// fonte: reps (MDV, Q1–Q4, painel), prod (cota/realizado), pex e freq (snapshots).
+async function ultimaAba(nomeDe, mes, tem){
+  for (var m = mes, n = 0; m && n < 6; m = mesAnt(m), n++){ var rows = await fetchAba(nomeDe(m)); if (tem(rows)) return { mes: m, rows: rows }; }
+  return { mes: mes, rows: [] };
+}
+async function distritosDe(mes){ return (await ultimaAba(function(m){ return 'distritos_' + m; }, mes, function(r){ return r.length > 0; })).rows; }
+var FONTE_NOME = { reps: 'Produtividade e coberturas (MDV, Q1 a Q4 e painel)', prod: 'Produtos (cota e realizado)', pex: 'PEX', freq: 'Frequência de visitação', sob: 'Sobreposição' };
+function fontesDe(nome){
+  if (nome === 'Fechamento do mês') return ST.modelo === 'individual' ? ['reps', 'prod', 'pex', 'freq', 'sob'] : ['reps', 'prod', 'pex'];
+  if (nome === 'Marcas-chave' || nome === 'Demais produtos' || nome === 'Prioridades do mês' || /^Marca-chave — /.test(nome)) return ['prod'];
+  if (nome === 'Produtividade') return ['reps'];
+  if (nome === 'Frequência e sobreposição') return ['freq', 'sob'];
+  if (nome === 'Jornada e PEX') return ['pex', 'reps'];
+  if (nome === 'Fundamentos') return ['reps', 'freq', 'sob', 'pex'];
+  return [];
+}
+function defasadas(fs){ var ref = (ST.d && ST.d.ref) || {}; return fs.filter(function(f){ return ref[f] && ref[f] !== ST.mes; }); }
+function avisoRef(nome){
+  var ref = ST.d.ref, d = defasadas(fontesDe(nome)); if (!d.length) return '';
+  return '<div class="aviso">⚠️ Ainda sem resultado de ' + ST.mes + '/2026 — exibindo o último disponível: ' + d.map(function(f){ return '<b>' + FONTE_NOME[f] + ': ' + ref[f] + '/2026</b>'; }).join(' · ') + '.</div>';
+}
+function resumoRef(){ var ref = ST.d.ref, d = defasadas(['reps', 'prod', 'pex', 'freq', 'sob']); return d.length ? ' · último resultado disponível — ' + d.map(function(f){ return (f === 'reps' ? 'produtividade' : (f === 'prod' ? 'produtos' : (f === 'pex' ? 'PEX' : (f === 'freq' ? 'frequência' : 'sobreposição')))) + ': ' + ref[f]; }).join(', ') : ''; }
+function slideHtml(s){ return '<div class="slide"><div class="hdr"><h2>' + s.nome + '</h2><span>' + esc(s.msg) + '</span></div><div class="body"><div class="fit">' + avisoRef(s.nome) + s.html + '</div></div></div>'; }
 
 // ── números derivados ──
 function prodDist(d){ var p = num(d.prod); return p !== null && p < 5 ? p * 100 : p; }
@@ -280,7 +317,7 @@ function coberturaMarcas(){ // por rep: cobertura em cada marca-chave e gap em R
 function sCapa(lista){
   var D = ST.d.dist;
   return '<div class="capa"><div class="k">RPS coletiva · Regional SPI Oeste</div><h2>' + esc(D.nm) + '</h2>' +
-    '<div class="m">Linha ' + D.linha + ' · distrito ' + D.distrito_id.substring(0, 6) + ' · dados de ' + ST.mes + '/2026 · reunião de ' + dataBr(ST.data) + ' · ' + ST.d.reps.length + ' representantes</div>' +
+    '<div class="m">Linha ' + D.linha + ' · distrito ' + D.distrito_id.substring(0, 6) + ' · dados de ' + ST.mes + '/2026 · reunião de ' + dataBr(ST.data) + ' · ' + ST.d.reps.length + ' representantes' + resumoRef() + '</div>' +
     '<div class="grade">' + lista.map(function(s, k){ return '<button onclick="ir(' + (k + 1) + ')"><b>' + (k + 2) + '</b>' + s.nome + '</button>'; }).join('') + '</div></div>';
 }
 function sFechamento(){
@@ -294,9 +331,9 @@ function sFechamento(){
   });
   var cm = tc ? tr / tc * 100 : null;
   var pts = D.pex.map(function(x){ return num(x.pts); }).filter(function(x){ return x !== null; }), pm = pts.length ? pts.reduce(function(a, b){ return a + b; }, 0) / pts.length : null;
-  var sim = EXTRA.pexSim.indexOf(ST.mes) >= 0;
+  var sim = EXTRA.pexSim.indexOf(D.ref.pex) >= 0;
   var h = '<div class="kpis">' +
-    '<div class="kpi ' + cls(pd) + '"><div class="l">Produtividade (MDV)</div><div class="v">' + p1(pd) + '</div><div class="s">' + (pa !== null && pd !== null ? ((pd - pa >= 0 ? '▲ +' : '▼ ') + (pd - pa).toFixed(1).replace('.', ',') + ' pp vs ' + D.ant) : 'do distrito') + '</div></div>' +
+    '<div class="kpi ' + cls(pd) + '"><div class="l">Produtividade (MDV)</div><div class="v">' + p1(pd) + '</div><div class="s">' + (pa !== null && pd !== null ? ((pd - pa >= 0 ? '▲ +' : '▼ ') + (pd - pa).toFixed(1).replace('.', ',') + ' pp vs ' + D.antReps) : 'do distrito') + '</div></div>' +
     '<div class="kpi ' + (abaixo ? 'warn' : 'ok') + '"><div class="l">Reps em 100% ou mais</div><div class="v">' + (D.reps.length - abaixo) + ' de ' + D.reps.length + '</div><div class="s">' + abaixo + ' abaixo do objetivo</div></div>' +
     '<div class="kpi ' + cls(cm) + '"><div class="l">Marcas-chave</div><div class="v">' + p1(cm) + '</div><div class="s">' + brl(tr) + ' de ' + brl(tc) + '</div></div>' +
     '<div class="kpi"><div class="l">PEX médio' + (sim ? ' (simulado)' : '') + '</div><div class="v">' + (pm === null ? '—' : pm.toFixed(1).replace('.', ',')) + '</div><div class="s">' + D.pex.length + ' reps avaliados</div></div>' +
@@ -330,10 +367,10 @@ function sProd(){
   return { nome: 'Produtividade', msg: ab ? ab + ' de ' + reps.length + ' representantes abaixo de 100% de MDV' : 'Todos os representantes em 100% ou mais de MDV', html: h };
 }
 function sFreqSobrep(){
-  var D = ST.d, pref = D.dist.distrito_id.substring(0, 6), a = D.ant;
+  var D = ST.d, pref = D.dist.distrito_id.substring(0, 6), rf = D.ref.freq, a = mesAnt(rf);
   function freq(mes){ var o = {}; (EXTRA.freq[mes] || []).forEach(function(l){ var x = l.split('|'); if (x[0].substring(0, 6) === pref) o[x[0]] = { nome: x[1], painel: +x[4], cob: +x[4] ? (+x[9] + +x[10]) / +x[4] * 100 : null }; }); return o; }
   function sob(mes){ var o = {}; (EXTRA.sobrep[mes] || []).forEach(function(l){ var x = l.split('|'); if (x[0].substring(0, 6) === pref) o[x[0]] = { nome: x[1], painel: +x[4], todas: +x[5], nv: +x[6] }; }); return o; }
-  var f = freq(ST.mes), fa = a ? freq(a) : {}, s = sob(ST.mes), ids = {};
+  var f = freq(rf), fa = a ? freq(a) : {}, s = sob(D.ref.sob), ids = {};
   Object.keys(f).concat(Object.keys(s)).forEach(function(k){ ids[k] = 1; });
   var lista = Object.keys(ids).sort();
   if (!lista.length) return { nome: 'Frequência e sobreposição', msg: 'Sem snapshot para ' + ST.mes, html: '<div class="vazio"><b>Sem dados de frequência e sobreposição para ' + ST.mes + '/2026</b>Esses dois indicadores são snapshots do Power BI e só existem nos meses em que foram extraídos.</div>' };
@@ -353,17 +390,17 @@ function sFreqSobrep(){
 function sJornadaPex(setor){
   var D = ST.d, jor = {}, pex = {}, ant = {};
   D.jor.forEach(function(j){ jor[j.setor_id] = j.classificacao; }); D.pex.forEach(function(x){ pex[x.setor_id] = x; }); D.pexAnt.forEach(function(x){ ant[x.setor_id] = x; });
-  var sim = EXTRA.pexSim.indexOf(ST.mes) >= 0, ordem = { Destaque: 0, Performance: 1, Start: 2 };
+  var sim = EXTRA.pexSim.indexOf(D.ref.pex) >= 0, ordem = { Destaque: 0, Performance: 1, Start: 2 };
   var reps = D.reps.filter(function(r){ return !setor || r.setor_id === setor; }).sort(function(a, b){ var x = ordem[jor[a.setor_id]], y = ordem[jor[b.setor_id]]; return (x === undefined ? 9 : x) - (y === undefined ? 9 : y) || a.nome.localeCompare(b.nome); });
-  var h = (sim ? '<div class="aviso">⚠️ PEX de ' + ST.mes + ' é simulado — estimativa, não o resultado oficial.</div>' : '') +
-    '<div class="card"><h3>' + (setor ? 'Estágio na Jornada e PEX do setor' : 'Estágio na Jornada e PEX por representante') + '</h3><table><thead><tr><th>Representante</th><th>Jornada</th><th>Produtividade (MDV)</th><th>PEX ' + ST.mes + '</th><th>Medalha</th>' + (D.ant ? '<th>Medalha ' + D.ant + '</th><th>Δ pts</th>' : '') + '</tr></thead><tbody>';
+  var h = (sim ? '<div class="aviso">⚠️ PEX de ' + D.ref.pex + ' é simulado — estimativa, não o resultado oficial.</div>' : '') +
+    '<div class="card"><h3>' + (setor ? 'Estágio na Jornada e PEX do setor' : 'Estágio na Jornada e PEX por representante') + '</h3><table><thead><tr><th>Representante</th><th>Jornada</th><th>Produtividade (MDV)</th><th>PEX ' + D.ref.pex + '</th><th>Medalha</th>' + (D.antPex ? '<th>Medalha ' + D.antPex + '</th><th>Δ pts</th>' : '') + '</tr></thead><tbody>';
   var risco = 0;
   reps.forEach(function(r){
     var j = jor[r.setor_id], p = pex[r.setor_id], pa = ant[r.setor_id], pr = num(r.prod);
     if (p && /ATEN|CR[IÍ]T/i.test(p.medalha)) risco++;
     h += '<tr><td class="n">' + esc(r.nome) + '</td><td>' + (j ? '<span class="tag ' + j + '">' + j + '</span>' : '—') + '</td><td>' + barra(pr, cls(pr)) + '</td><td><b>' + (p ? num(p.pts).toFixed(1).replace('.', ',') : '—') + '</b></td>' +
       '<td>' + (p ? '<span class="tag ' + med(p.medalha) + '">' + esc(p.medalha) + '</span>' : '—') + '</td>' +
-      (D.ant ? '<td>' + (pa ? '<span class="tag ' + med(pa.medalha) + '">' + esc(pa.medalha) + '</span>' : '—') + '</td><td>' + (p && pa ? ((num(p.pts) - num(pa.pts) >= 0 ? '+' : '') + (num(p.pts) - num(pa.pts)).toFixed(1).replace('.', ',')) : '—') + '</td>' : '') + '</tr>';
+      (D.antPex ? '<td>' + (pa ? '<span class="tag ' + med(pa.medalha) + '">' + esc(pa.medalha) + '</span>' : '—') + '</td><td>' + (p && pa ? ((num(p.pts) - num(pa.pts) >= 0 ? '+' : '') + (num(p.pts) - num(pa.pts)).toFixed(1).replace('.', ',')) : '—') + '</td>' : '') + '</tr>';
   });
   h += '</tbody></table><div class="nota">Jornada = posição atual na Jornada da Evolução (último arquivo carregado, não é mensal).</div></div>';
   if (setor){ var eu = pex[setor], je = jor[setor]; return { nome: 'Jornada e PEX', msg: (je ? je + ' na Jornada' : 'Sem estágio na Jornada') + ' · ' + (eu ? 'PEX ' + num(eu.pts).toFixed(1).replace('.', ',') + ' pts — ' + eu.medalha : 'sem PEX no mês'), html: h }; }
@@ -373,10 +410,10 @@ function sTitulo(t){ return { nome: t, msg: '', html: '<div class="constr"><span
 var TEMAS = ['PX Share Base Zero', 'Consultório Virtual', 'Trilha de capacitação'];
 // Evolução e Demais produtos do distrito — os mesmos blocos que a individual traz por setor
 function sEvolucao(){
-  var D = ST.d, ch = marcas(D.dist.linha, ST.mes), serie = D.histD.concat([{ mes: ST.mes, dist: D.dist, pd: D.pd }]);
+  var D = ST.d, ch = marcas(D.dist.linha, ST.mes), serie = D.histD;
   function cob(pd, mk){ var r = pd.filter(function(x){ return norm(x.produto) === mk; })[0]; return r && num(r.cota) ? num(r.realizado) / num(r.cota) * 100 : null; }
   var h = '<div class="card"><h3>Últimos meses do distrito</h3><table><thead><tr><th>Indicador</th>' + serie.map(function(s){ return '<th>' + s.mes + '</th>'; }).join('') + '<th>Variação</th></tr></thead><tbody>';
-  function linha(nome, vals){ var a = vals[0], b = vals[vals.length - 1];
+  function linha(nome, vals){ var com = vals.filter(function(v){ return v !== null; }), a = com.length > 1 ? com[0] : null, b = com.length > 1 ? com[com.length - 1] : null;
     h += '<tr><td class="n">' + nome + '</td>' + vals.map(function(v){ return '<td><span class="cel ' + cls(v) + '">' + p1(v) + '</span></td>'; }).join('') + '<td>' + (vals.length < 2 || a === null || b === null ? '—' : ((b - a >= 0 ? '▲ +' : '▼ ') + (b - a).toFixed(1).replace('.', ',') + ' pp')) + '</td></tr>'; }
   linha('Produtividade (MDV)', serie.map(function(s){ return s.dist ? prodDist(s.dist) : null; }));
   ch.forEach(function(mk){ linha(mk, serie.map(function(s){ return cob(s.pd, mk); })); });
@@ -554,8 +591,8 @@ function telaReps(){
 async function abrirRep(setor){
   ST.setor = setor; ST.previa = null; ST.edit = null;
   $('stage').innerHTML = '<div class="slide on"><div class="capa"><h2>Montando…</h2></div></div>';
-  // dois meses anteriores, para o slide de evolução
-  var L = ST.d.dist.linha, ms = [mesAnt(mesAnt(ST.mes) || ''), mesAnt(ST.mes)].filter(Boolean); ST.d.hist = [];
+  // os três meses até o escolhido, para o slide de evolução
+  var L = ST.d.dist.linha, ms = [mesAnt(mesAnt(ST.mes) || ''), mesAnt(ST.mes), ST.mes].filter(Boolean); ST.d.hist = [];
   for (var i = 0; i < ms.length; i++) ST.d.hist.push({ mes: ms[i], reps: await fetchAba('reps_' + ms[i]), pr: await fetchAba('produtos_rep_' + L + '_' + ms[i]), pex: await fetchAba('pex_' + ms[i]) });
   montarIndividual();
 }
@@ -563,10 +600,10 @@ async function abrirRep(setor){
 // ── slides da individual ──
 function iCapa(lista){ var r = repSel(), j = (ST.d.jor.filter(function(x){ return x.setor_id === ST.setor; })[0] || {}).classificacao;
   return '<div class="capa"><div class="k">RPS individual · ' + esc(ST.d.dist.nm) + '</div><h2>' + esc(r.nome) + '</h2>' +
-    '<div class="m">Setor ' + ST.setor + ' · linha ' + ST.d.dist.linha + (j ? ' · ' + j + ' na Jornada' : '') + ' · dados de ' + ST.mes + '/2026 · reunião de ' + dataBr(ST.data) + '</div>' +
+    '<div class="m">Setor ' + ST.setor + ' · linha ' + ST.d.dist.linha + (j ? ' · ' + j + ' na Jornada' : '') + ' · dados de ' + ST.mes + '/2026 · reunião de ' + dataBr(ST.data) + resumoRef() + '</div>' +
     '<div class="grade">' + lista.map(function(s, k){ return '<button onclick="ir(' + (k + 1) + ')"><b>' + (k + 2) + '</b>' + s.nome + '</button>'; }).join('') + '</div></div>'; }
 function iRetrato(){
-  var r = repSel(), px = ST.d.pex.filter(function(x){ return x.setor_id === ST.setor; })[0], f = freqSetor(ST.mes), s = sobSetor(ST.mes), sim = EXTRA.pexSim.indexOf(ST.mes) >= 0;
+  var r = repSel(), px = ST.d.pex.filter(function(x){ return x.setor_id === ST.setor; })[0], f = freqSetor(ST.d.ref.freq), s = sobSetor(ST.d.ref.sob), sim = EXTRA.pexSim.indexOf(ST.d.ref.pex) >= 0;
   function k(l, v, c, sub){ return '<div class="kpi ' + c + '"><div class="l">' + l + '</div><div class="v">' + v + '</div><div class="s">' + sub + '</div></div>'; }
   function comp(campo, ok, warn){ var v = num(r[campo]), m = mediaDist(campo); return [p1(v), cls(v, ok, warn), 'distrito ' + p1(m) + (v !== null && m !== null ? ' · ' + (v - m >= 0 ? '+' : '') + (v - m).toFixed(1).replace('.', ',') + ' pp' : '')]; }
   var a = comp('prod'), q1 = comp('q1', 90, 80), q2 = comp('q2', 90, 80), q3 = comp('q3', 90, 80), q4 = comp('q4', 90, 80), cp = comp('cob_painel', 90, 80);
@@ -593,8 +630,8 @@ function iMarcas(){
   return { nome: 'Marcas-chave', msg: M.eu.abaixo.length ? M.eu.abaixo.length + ' marca(s)-chave abaixo de 100% — faltam ' + brl(M.eu.gap) : 'Todas as marcas-chave em 100% ou mais', html: h };
 }
 function iEvolucao(){ // últimos 3 meses do setor: fundamentos (execução) e produtos (marcas-chave + demais)
-  var L = ST.d.dist.linha, serie = ST.d.hist.concat([{ mes: ST.mes, reps: ST.d.reps, pr: ST.d.pr, pex: ST.d.pex }]), ch = marcas(L, ST.mes);
-  function seta(vals, un, inv){ var com = vals.filter(function(v){ return v !== null; }), b = vals[vals.length - 1]; if (com.length < 2 || b === null) return '—'; var d = b - com[0]; if (Math.abs(d) < 0.05) d = 0; var bom = inv ? d <= 0 : d >= 0;
+  var L = ST.d.dist.linha, serie = ST.d.hist, ch = marcas(L, ST.mes);
+  function seta(vals, un, inv){ var com = vals.filter(function(v){ return v !== null; }); if (com.length < 2) return '—'; var d = com[com.length - 1] - com[0]; if (Math.abs(d) < 0.05) d = 0; var bom = inv ? d <= 0 : d >= 0;
     return '<b style="color:' + (Math.abs(d) < 0.05 ? 'var(--gray)' : (bom ? '#15803d' : '#b91c1c')) + '">' + (d >= 0 ? '▲ +' : '▼ ') + d.toFixed(1).replace('.', ',') + un + '</b>'; }
   function tabela(tit, sub){ return '<div class="card" style="margin:0"><h3>' + tit + ' <small>' + sub + '</small></h3><table><thead><tr><th>Indicador</th>' + serie.map(function(s){ return '<th>' + s.mes + '</th>'; }).join('') + '<th>Variação</th></tr></thead><tbody>'; }
   function linha(nome, vals, cor, fmt, un, inv){ return '<tr><td class="n">' + nome + '</td>' + vals.map(function(v){ return '<td><span class="cel ' + (v === null ? 'na' : cor(v)) + '">' + (v === null ? '—' : fmt(v)) + '</span></td>'; }).join('') + '<td>' + seta(vals, un, inv) + '</td></tr>'; }
@@ -615,15 +652,15 @@ function iEvolucao(){ // últimos 3 meses do setor: fundamentos (execução) e p
   Object.keys(outros).sort().forEach(function(mk){ pt += linha(mk, serie.map(function(s){ return cob(s.pr, mk); }), c100, p1, ' pp'); });
   pt += '</tbody></table></div>';
   var h = '<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start">' + f + pt + '</div>' +
-    '<div class="nota">Variação = último mês − primeiro mês com dado na série (verde = melhorou, vermelho = piorou; na sobreposição, cair é melhorar). "—" = sem dado do setor naquele mês; frequência e sobreposição só existem nos meses com snapshot.</div>';
+    '<div class="nota">Variação = último mês com dado − primeiro mês com dado na série (verde = melhorou, vermelho = piorou; na sobreposição, cair é melhorar). "—" = sem dado do setor naquele mês; frequência e sobreposição só existem nos meses com snapshot.</div>';
   return { nome: 'Evolução', msg: serie.map(function(s){ return s.mes; }).join(' → ') + ' · fundamentos e produtos do setor', html: h };
 }
 function iFreq(){
-  var f = freqSetor(ST.mes), fa = mesAnt(ST.mes) ? freqSetor(mesAnt(ST.mes)) : null, s = sobSetor(ST.mes);
+  var rf = ST.d.ref.freq, f = freqSetor(rf), fa = mesAnt(rf) ? freqSetor(mesAnt(rf)) : null, s = sobSetor(ST.d.ref.sob);
   if (!f && !s) return { nome: 'Frequência e sobreposição', msg: 'Sem snapshot para ' + ST.mes, html: '<div class="vazio"><b>Sem dados de frequência e sobreposição para ' + ST.mes + '/2026</b>Esses indicadores são snapshots do Power BI e só existem nos meses em que foram extraídos.</div>' };
   var h = '';
   if (f){ var rot = ['Freq 0', 'Freq 20', 'Freq 40', 'Freq 60', 'Freq 80', 'Freq 100'];
-    h += '<div class="card"><h3>Frequência de visitação <small>painel de ' + f.painel + ' médicos · cobertura ' + p1(f.cob) + (fa ? ' · ' + (f.cob - fa.cob >= 0 ? '▲ +' : '▼ ') + (f.cob - fa.cob).toFixed(1).replace('.', ',') + ' pp vs ' + mesAnt(ST.mes) : '') + '</small></h3><table><thead><tr>' + rot.map(function(x){ return '<th>' + x + '</th>'; }).join('') + '</tr></thead><tbody><tr>' +
+    h += '<div class="card"><h3>Frequência de visitação <small>painel de ' + f.painel + ' médicos · cobertura ' + p1(f.cob) + (fa ? ' · ' + (f.cob - fa.cob >= 0 ? '▲ +' : '▼ ') + (f.cob - fa.cob).toFixed(1).replace('.', ',') + ' pp vs ' + mesAnt(rf) : '') + '</small></h3><table><thead><tr>' + rot.map(function(x){ return '<th>' + x + '</th>'; }).join('') + '</tr></thead><tbody><tr>' +
       f.f.map(function(v, k){ var pc = f.painel ? v / f.painel * 100 : 0; return '<td><b style="font-size:20px">' + v + '</b><div class="nota" style="margin:0">' + p1(pc) + ' do painel</div><span class="bar" style="width:90%;margin:4px 0 0"><i class="' + (k >= 4 ? 'ok' : (k >= 2 ? 'warn' : 'crit')) + '" style="width:' + Math.min(100, pc) + '%"></i></span></td>'; }).join('') +
       '</tr></tbody></table><div class="nota">Cobertura = (Freq 80 + Freq 100) ÷ painel; meta 75%. Médicos em Freq 0 a 60 são os que puxam o indicador para baixo.</div></div>'; }
   if (s) h += '<div class="card"><h3>Sobreposição de visitas</h3><table><thead><tr><th>Recorte</th><th>Médicos em sobreposição</th><th>% do painel</th></tr></thead><tbody>' +
@@ -645,14 +682,14 @@ function iProd(){
 }
 // fundamentos do setor: indicadores de execução e se estão em desvio
 function fundamentosRep(){
-  var r = repSel(), out = [], f = freqSetor(ST.mes), s = sobSetor(ST.mes), px = ST.d.pex.filter(function(x){ return x.setor_id === ST.setor; })[0];
+  var r = repSel(), out = [], f = freqSetor(ST.d.ref.freq), s = sobSetor(ST.d.ref.sob), px = ST.d.pex.filter(function(x){ return x.setor_id === ST.setor; })[0];
   function add(nome, v, meta, desvio){ out.push({ nome: nome, valor: v === null ? '—' : p1(v), meta: meta, desvio: v !== null && desvio, sem: v === null }); }
   var p = num(r.prod); add('Produtividade (MDV)', p, '≥ 100%', p < 100);
   [['q1','Cobertura Q1'],['q2','Cobertura Q2'],['q3','Cobertura Q3'],['q4','Cobertura Q4'],['cob_painel','Cobertura de painel']].forEach(function(q){ var v = num(r[q[0]]); add(q[1], v, '≥ 90%', v < 90); });
   add('Frequência de visitação', f ? f.cob : null, '≥ 75%', f && f.cob < 75);
   add('Sobreposição Nexus × Vital', s ? s.pNv : null, '≤ 10%', s && s.pNv > 10);
   // PEX aparece sempre, com a pontuação e o quadrante (medalha); só conta como desvio em atenção ou crítico
-  var sim = EXTRA.pexSim.indexOf(ST.mes) >= 0;
+  var sim = EXTRA.pexSim.indexOf(ST.d.ref.pex) >= 0;
   if (px) out.push({ nome: 'PEX' + (sim ? ' (simulado)' : ''), valor: num(px.pts).toFixed(1).replace('.', ',') + ' pts', meta: 'bronze ou acima', desvio: /ATEN|CR[IÍ]T/i.test(px.medalha), sem: false, quad: px.medalha });
   else out.push({ nome: 'PEX', valor: '—', meta: 'bronze ou acima', desvio: false, sem: true });
   return out;
@@ -755,7 +792,7 @@ function montarIndividual(){
     .concat(TEMAS.map(sTitulo), iFundamentos(), iMarcasDesvio()); // mesma sequência da coletiva; só o bloco final muda
   lista.push({ nome: 'Plano de ação do setor', msg: ' ', html: '<div id="plano-final"></div>' });
   var h = '<div class="slide">' + iCapa(lista) + '</div>';
-  lista.forEach(function(s){ h += '<div class="slide"><div class="hdr"><h2>' + s.nome + '</h2><span>' + esc(s.msg) + '</span></div><div class="body"><div class="fit">' + s.html + '</div></div></div>'; });
+  lista.forEach(function(s){ h += slideHtml(s); });
   $('stage').innerHTML = h; ST.slides = [].slice.call(document.querySelectorAll('.slide'));
   $('ctx').textContent = 'RPS individual · ' + r.nome + ' · ' + ST.mes + '/2026 · ' + dataBr(ST.data);
   $('b-trocar').style.display = ''; $('b-rep').style.display = '';
@@ -855,7 +892,7 @@ function montar(){
   var lista = [{ nome: 'Combinados anteriores', msg: ' ', html: '<div id="ata"></div>' }, sFechamento(), sMarcas(), sProd(), sEvolucao(), sFreqSobrep(), sJornadaPex(), demaisSlide(ST.d.pd, 'distrito')]
     .concat(TEMAS.map(sTitulo), [sPrioridades()]); // mesma sequência da individual; só o bloco final muda
   var h = '<div class="slide">' + sCapa(lista) + '</div>';
-  lista.forEach(function(s){ h += '<div class="slide"><div class="hdr"><h2>' + s.nome + '</h2><span>' + esc(s.msg) + '</span></div><div class="body"><div class="fit">' + s.html + '</div></div></div>'; });
+  lista.forEach(function(s){ h += slideHtml(s); });
   $('stage').innerHTML = h;
   ST.slides = [].slice.call(document.querySelectorAll('.slide'));
   $('ctx').textContent = 'RPS coletiva · ' + D.nm + ' · ' + ST.mes + '/2026 · ' + dataBr(ST.data);
@@ -899,7 +936,7 @@ window.addEventListener('resize', function(){ if (ST.slides.length) ajustar(); }
     cfg.forEach(function(r){ if (r.chave === 'meses_disponiveis') ST.meses = r.valor.split(',').map(function(s){ return s.trim(); }); if (r.chave === 'mes_padrao') padrao = r.valor; });
     if (!ST.meses.length) ST.meses = MESES.slice(0, 9);
     ST.mes = padrao && ST.meses.indexOf(padrao) >= 0 ? padrao : ST.meses[ST.meses.length - 1];
-    ST.distritos = await fetchAba('distritos_' + ST.mes);
+    ST.distritos = await distritosDe(ST.mes);
     ST.gd = ST.distritos.length ? ST.distritos[0].distrito_id : null;
     telaEntrada();
   } catch(e){ $('stage').innerHTML = '<div class="slide on"><div class="capa"><h2>Erro ao carregar</h2><div class="m">' + esc(e.message) + '</div></div></div>'; }
