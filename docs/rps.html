@@ -36,7 +36,7 @@ button,select,input,textarea{font-family:inherit}
 .grade button{display:flex;align-items:center;gap:10px;text-align:left;background:rgba(255,255,255,.12);border:none;color:#fff;border-radius:9px;padding:10px 14px;font-size:14px;font-weight:600;cursor:pointer}
 .grade button:hover{background:rgba(255,255,255,.24)}
 .grade b{background:#fff;color:var(--brand-d);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:900}
-.modelos{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:22px 0 18px;max-width:760px}
+.modelos{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin:22px 0 18px;max-width:1080px}
 .modelo{background:rgba(255,255,255,.1);border:2px solid transparent;border-radius:14px;padding:18px 20px;color:#fff;text-align:left;cursor:pointer}
 .modelo.on{border-color:#fff;background:rgba(255,255,255,.2)}
 .modelo:disabled{opacity:.45;cursor:default}
@@ -97,6 +97,16 @@ tr.tot td{background:#f3f4f6;font-weight:800}
 .pcols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:16px}
 .pv{border-left:3px solid #cbd5e1;padding:3px 0 3px 10px;margin:0 0 6px;font-size:13px;line-height:1.4}.pv i{display:block;font-style:normal;font-size:10px;font-weight:800;text-transform:uppercase;color:var(--gray)}
 .pv.raiz{border-left-color:#ef4444;background:#fef2f2;border-radius:0 8px 8px 0;padding:6px 10px;font-weight:700}.pv.raiz i{color:#b91c1c}
+/* histórico do time */
+.body.rol{overflow:auto}
+.abas{display:flex;gap:8px;margin-bottom:14px}
+.abas button{background:#fff;border:1.5px solid var(--border);border-radius:9px;padding:8px 18px;font-size:13px;font-weight:800;color:var(--gray);cursor:pointer}
+.abas button.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.det{border:1px solid var(--border);border-left:5px solid var(--brand);border-radius:10px;margin-bottom:10px;overflow:hidden}
+.det summary{list-style:none;cursor:pointer;padding:10px 14px;background:#fafbfc;font-size:13px}
+.det summary::-webkit-details-marker{display:none}
+.det summary span{display:block;font-size:11.5px;color:var(--gray);margin-top:2px}
+.detc{padding:12px 14px}
 /* ata */
 .vazio{background:#fff;border:2px dashed var(--border);border-radius:14px;padding:38px 30px;text-align:center;color:var(--gray);line-height:1.6}
 .vazio b{display:block;font-size:17px;color:var(--text)}.vazio p{max-width:600px;margin:6px auto 16px}
@@ -189,11 +199,12 @@ function telaEntrada(){
     '<div class="modelos">' +
       '<button class="modelo' + (ST.modelo === 'coletiva' ? ' on' : '') + '" onclick="ST.modelo=\'coletiva\';telaEntrada()"><b>Coletiva</b><span>1ª reunião do mês, com todo o time do distrito: fechamento, marcas-chave, produtividade e os setores prioritários.</span></button>' +
       '<button class="modelo' + (ST.modelo === 'individual' ? ' on' : '') + '" onclick="ST.modelo=\'individual\';telaEntrada()"><b>Individual</b><span>Demais reuniões, 30 min por representante: retrato do setor, marcas-chave em desvio e planos com 5 porquês + 5W2H.</span></button>' +
+      '<button class="modelo' + (ST.modelo === 'historico' ? ' on' : '') + '" onclick="ST.modelo=\'historico\';telaEntrada()"><b>Histórico do time</b><span>Consulta: planos dos representantes no mês e todas as atas anexadas, com o status de cada ação e combinado.</span></button>' +
     '</div><div class="form">' +
       '<div><label>GD</label><select id="e-gd">' + ST.distritos.map(function(d){ return '<option value="' + d.distrito_id + '"' + (d.distrito_id === ST.gd ? ' selected' : '') + '>' + esc(d.nm) + ' (' + d.linha + ')</option>'; }).join('') + '</select></div>' +
       '<div><label>Mês dos dados</label><select id="e-mes">' + ST.meses.map(function(m){ return '<option' + (m === ST.mes ? ' selected' : '') + '>' + m + '</option>'; }).join('') + '</select></div>' +
       '<div><label>Data da RPS</label><input type="date" id="e-data" value="' + ST.data + '"></div>' +
-      '<button class="ir" onclick="abrir()">Abrir apresentação →</button>' +
+      '<button class="ir" onclick="abrir()">' + (ST.modelo === 'historico' ? 'Abrir histórico →' : 'Abrir apresentação →') + '</button>' +
     '</div></div></div>';
   $('e-mes').onchange = async function(){ ST.mes = this.value; ST.distritos = await fetchAba('distritos_' + ST.mes); telaEntrada(); };
 }
@@ -214,7 +225,7 @@ async function abrir(){
   ST.d = { dist: d, ant: a, reps: doD(r.reps).filter(function(x){ return x.vago !== 'True'; }), pd: doD(r.pd), pr: doD(r.pr), pex: doD(r.pex), pexAnt: doD(r.pexAnt), jor: r.jor,
            distAnt: doD(r.dAnt)[0] || null };
   ST.previa = null; ST.edit = null;
-  if (ST.modelo === 'individual') telaReps(); else montar();
+  if (ST.modelo === 'individual') telaReps(); else if (ST.modelo === 'historico') telaHistorico(); else montar();
 }
 
 // ── números derivados ──
@@ -395,7 +406,9 @@ async function ataArquivo(input){
   try {
     var ata = await lerAta(await f.arrayBuffer());
     if (!ata){ ata = { titulo: f.name.replace(/\.pdf$/i, ''), data: '', itens: [] }; ST.previa = null; ST.edit = ata; ata.arquivo = f.name; ata.naoLida = true; desenharAta(); return; }
-    ata.arquivo = f.name; ST.previa = ata; ST.edit = null; desenharAta();
+    ata.arquivo = f.name; ST.previa = null; ST.edit = null;
+    if (await ataGravar(ata, false)) desenharAta(); // o upload já salva a ata; ajustes depois pelo botão Editar
+    else { ST.previa = ata; desenharAta(); }
   } catch(e){ st.textContent = 'Não foi possível ler o PDF: ' + e.message; }
 }
 async function ataGravar(ata, apagar){
@@ -428,7 +441,7 @@ function desenharAta(){
   var pode = !!(CONFIG.budget_webapp_url && CONFIG.budget_token), salva = ataDados(), ed = !!ST.edit, ata = ST.edit || ST.previa || salva, previa = !ed && !!ST.previa, h = '';
   var up = '<input type="file" accept="application/pdf,.pdf" style="display:none" onchange="ataArquivo(this)">';
   if (!ata){
-    h = '<div class="vazio"><div style="font-size:34px">📎</div><b>Anexe a ata da RPS anterior' + (ST.modelo === 'individual' ? ' deste representante' : '') + '</b><p>PDF da ata no modelo padrão da RPS. A página lê a tabela "Plano de ação consolidado" e mostra os combinados para conferência item a item. Se a ata estiver em outro formato, dá para digitar os combinados.</p>' +
+    h = '<div class="vazio"><div style="font-size:34px">📎</div><b>Anexe a ata da RPS anterior' + (ST.modelo === 'individual' ? ' deste representante' : '') + '</b><p>PDF da ata no modelo padrão da RPS. A página lê a tabela "Plano de ação consolidado" e a ata já fica salva no histórico do time; depois dá para editar os combinados e marcar o status. Se a ata estiver em outro formato, dá para digitar os combinados.</p>' +
       (pode ? '<label class="b1">Escolher PDF da ata' + up + '</label> <button class="b2" style="padding:8px 14px" onclick="ST.edit={titulo:\'Combinados da RPS anterior\',data:\'\',itens:[{n:1,texto:\'\',resp:\'\',prazo:\'\',status:\'Pendente\'}]};desenharAta()">Digitar os combinados</button>' : '<p>Gravação indisponível nesta página.</p>') + '<div id="ata-st"></div></div>';
   } else {
     h = '<div class="card"><div class="ata-top"><div><h3 style="margin:0">' + esc(ata.titulo) + '</h3><div class="nota" style="margin:2px 0 0">' + (ata.data ? 'Reunião de ' + esc(ata.data) + ' · ' : '') + ata.itens.length + ' combinados' + (ata.arquivo ? ' · lido de ' + esc(ata.arquivo) : '') + '</div></div><span class="ac">';
@@ -668,6 +681,92 @@ function montarIndividual(){
   $('b-trocar').style.display = ''; $('b-rep').style.display = '';
   $('dots').innerHTML = ST.slides.map(function(s, k){ return '<button onclick="ir(' + k + ')" title="' + (k ? lista[k - 1].nome : 'Abertura') + '">' + (k + 1) + '</button>'; }).join('');
   desenharAta(); PLANOS.forEach(function(p){ planoDesenhar(p.chave, false); }); planoFinal(); ir(0);
+}
+
+// ── HISTÓRICO DO TIME — planos e atas salvos do distrito ─────────
+// Terceira opção da entrada. Não é apresentação: é a consulta do GD ao que
+// ficou registrado nas RPS. Aba Planos: planos dos representantes no mês
+// escolhido (RPS_PLANO), com o que era exigido e ainda não foi preenchido e o
+// status de execução de cada ação. Aba Atas: todas as atas anexadas
+// (RPS_ATA), coletivas e individuais, com os combinados e o status.
+var ACAO_ST = ['Pendente', 'Em andamento', 'Concluída', 'Não realizada'], ACAO_COR = { 'Pendente': 'warn', 'Em andamento': 'warn', 'Concluída': 'ok', 'Não realizada': 'crit' };
+var HIST = { aba: 'planos' };
+
+async function gravarLinha(reg, obj){ // regrava o JSON de uma linha existente (status de ação ou de combinado)
+  try {
+    var r = await fetch(CONFIG.budget_webapp_url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ token: CONFIG.budget_token, acao: 'edit', id: reg.id, gd: reg.gd, linha: reg.linha,
+      produto: reg.produto, crm: reg.crm, medico: reg.medico, valor: 0, acao_lancamento: JSON.stringify(obj), data: reg.data, criadoEm: reg.criadoEm }) });
+    var resp = JSON.parse(await r.text()); if (!resp.ok) throw new Error(resp.erro || 'falha desconhecida');
+    reg.acao = JSON.stringify(obj); return true;
+  } catch(e){ alert('Não foi possível gravar: ' + e.message); return false; }
+}
+function histLinhas(prod){ var gd = 'N4:' + ST.gd; return ST.lanc.filter(function(l){ return l.produto === prod && l.gd === gd; }); }
+function histJson(l){ try { return JSON.parse(l.acao); } catch(e){ return null; } }
+async function histAcaoStatus(id, k, sel){ var l = ST.lanc.filter(function(x){ return x.id === id; })[0], p = l && histJson(l); if (!p) return; p.acoes[k].status = sel.value; sel.disabled = true; await gravarLinha(l, p); telaHistorico(); }
+async function histAtaStatus(id, n, sel){ var l = ST.lanc.filter(function(x){ return x.id === id; })[0], a = l && histJson(l); if (!a) return; a.itens.forEach(function(i){ if (i.n === n) i.status = sel.value; }); sel.disabled = true; await gravarLinha(l, a); telaHistorico(); }
+
+// planos exigidos de cada representante no mês (mesma regra da individual)
+function histExigidos(){
+  var out = {}, guarda = ST.setor;
+  ST.d.reps.forEach(function(r){ ST.setor = r.setor_id; var ex = [];
+    if (fundamentosRep().some(function(i){ return i.desvio; })) ex.push(['fund', 'Fundamentos']);
+    marcasRep().eu.abaixo.forEach(function(d){ ex.push(['marca-' + d.m.replace(/[^A-Z0-9]+/g, '_'), d.m]); });
+    out[r.setor_id] = ex; });
+  ST.setor = guarda; return out;
+}
+
+function telaHistorico(){
+  ST.slides = [];
+  var D = ST.d.dist, pode = !!(CONFIG.budget_webapp_url && CONFIG.budget_token);
+  $('ctx').textContent = 'Histórico do time · ' + D.nm + ' · ' + ST.mes + '/2026';
+  $('b-trocar').style.display = ''; $('b-rep').style.display = 'none'; $('dots').innerHTML = ''; $('cnt').textContent = ''; $('b-prev').disabled = $('b-next').disabled = true;
+  var nomeRep = {}; ST.d.reps.forEach(function(r){ nomeRep[r.setor_id] = r.nome; });
+  var h = '<div class="abas"><button class="' + (HIST.aba === 'planos' ? 'on' : '') + '" onclick="HIST.aba=\'planos\';telaHistorico()">🧭 Planos</button><button class="' + (HIST.aba === 'atas' ? 'on' : '') + '" onclick="HIST.aba=\'atas\';telaHistorico()">📎 Atas</button></div>';
+
+  if (HIST.aba === 'planos'){
+    var ex = histExigidos(), planos = {}; // planos[setor][chave] = {l, p}
+    histLinhas('RPS_PLANO').forEach(function(l){ var x = l.crm.split('|'); if (x[0] !== 'rpsi' || x[3] !== ST.mes) return; var p = histJson(l); if (p) (planos[x[1]] = planos[x[1]] || {})[x[2]] = { l: l, p: p }; });
+    var cols = ['Fundamentos'].concat(marcas(D.linha, ST.mes)), nPl = 0, nAc = 0, nConc = 0, nPend = 0, repsCom = 0, linhas = '', acoes = '', completos = '';
+    ST.d.reps.forEach(function(r){
+      var meus = planos[r.setor_id] || {}, exig = {}; (ex[r.setor_id] || []).forEach(function(e){ exig[e[1]] = e[0]; });
+      if (Object.keys(meus).length) repsCom++;
+      linhas += '<tr><td class="n">' + esc(r.nome) + '</td>' + cols.map(function(c){ var ch = c === 'Fundamentos' ? 'fund' : 'marca-' + c.replace(/[^A-Z0-9]+/g, '_');
+        if (meus[ch]) return '<td><span class="p ok">✓ feito</span></td>'; if (exig[c]){ nPend++; return '<td><span class="p crit">pendente</span></td>'; } return '<td style="color:#d1d5db">—</td>'; }).join('') + '</tr>';
+      Object.keys(meus).forEach(function(ch){ var o = meus[ch], p = o.p, tit = ch === 'fund' ? 'Fundamentos' : ch.replace(/^marca-/, '').replace(/_/g, ' '); nPl++;
+        p.acoes.forEach(function(a, k){ nAc++; var st = ACAO_ST.indexOf(a.status) >= 0 ? a.status : 'Pendente'; if (st === 'Concluída') nConc++;
+          acoes += '<tr>' + (k === 0 ? '<td class="n" rowspan="' + p.acoes.length + '">' + esc(r.nome) + '</td><td rowspan="' + p.acoes.length + '">' + esc(tit) + '</td><td rowspan="' + p.acoes.length + '" style="text-align:left">' + esc(p.porques[p.porques.length - 1] || '—') + '</td>' : '') +
+            '<td style="text-align:left">' + (esc(a.oque) || '—') + '</td><td>' + (esc(a.quem) || '—') + '</td><td>' + (esc(a.quando) || '—') + '</td><td>' +
+            (pode ? '<select class="st ' + ACAO_COR[st] + '" onchange="histAcaoStatus(\'' + o.l.id + '\',' + k + ',this)">' + ACAO_ST.map(function(s){ return '<option' + (s === st ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' : st) + '</td></tr>'; });
+        completos += '<details class="det"><summary><b>' + esc(r.nome) + '</b> · ' + esc(tit) + '<span>causa raiz: ' + esc(p.porques[p.porques.length - 1] || '—') + ' · salvo em ' + dataBr(o.l.data) + '</span></summary><div class="detc">' +
+          '<div class="pp"><b>Problema</b>' + esc(p.problema) + '</div><div class="pcols"><div><b class="psub">5 porquês</b>' + p.porques.map(function(t, k){ var rz = k === p.porques.length - 1; return '<div class="pv' + (rz ? ' raiz' : '') + '"><i>' + (rz ? 'Causa raiz' : (k + 1) + 'º por quê') + '</i>' + esc(t) + '</div>'; }).join('') +
+          '</div><div><b class="psub">Plano de ação — 5W2H</b><table class="wt ver"><thead><tr>' + W.map(function(w){ return '<th>' + w[1] + '</th>'; }).join('') + '</tr></thead><tbody>' + p.acoes.map(function(a){ return '<tr>' + W.map(function(w){ return '<td>' + (esc(a[w[0]]) || '—') + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div></div></div></details>'; });
+    });
+    h += '<div class="kpis"><div class="kpi"><div class="l">Representantes com plano</div><div class="v">' + repsCom + ' de ' + ST.d.reps.length + '</div><div class="s">em ' + ST.mes + '/2026</div></div>' +
+      '<div class="kpi"><div class="l">Planos preenchidos</div><div class="v">' + nPl + '</div><div class="s">fundamentos e marcas-chave</div></div>' +
+      '<div class="kpi ' + (nPend ? 'crit' : 'ok') + '"><div class="l">Planos pendentes</div><div class="v">' + nPend + '</div><div class="s">exigidos pelo desvio e não preenchidos</div></div>' +
+      '<div class="kpi"><div class="l">Ações</div><div class="v">' + nAc + '</div><div class="s">somando todos os planos</div></div>' +
+      '<div class="kpi ' + (nAc && nConc === nAc ? 'ok' : '') + '"><div class="l">Execução</div><div class="v">' + (nAc ? Math.round(nConc / nAc * 100) : 0) + '%</div><div class="s">' + nConc + ' de ' + nAc + ' ações concluídas</div></div></div>';
+    h += '<div class="card"><h3>Planos por representante <small>' + ST.mes + '/2026 · "pendente" = há desvio e o plano não foi preenchido</small></h3><table><thead><tr><th>Representante</th>' + cols.map(function(c){ return '<th>' + c + '</th>'; }).join('') + '</tr></thead><tbody>' + linhas + '</tbody></table></div>';
+    h += nAc ? '<div class="card"><h3>Ações <small>marque o status conforme a execução</small></h3><table><thead><tr><th>Representante</th><th>Plano</th><th style="text-align:left">Causa raiz</th><th style="text-align:left">O quê</th><th>Quem</th><th>Quando</th><th>Status</th></tr></thead><tbody>' + acoes + '</tbody></table></div>' +
+      '<div class="card"><h3>Planos completos <small>clique para abrir</small></h3>' + completos + '</div>'
+      : '<div class="vazio"><b>Nenhum plano salvo em ' + ST.mes + '/2026</b>Os planos aparecem aqui quando são preenchidos na RPS individual de cada representante.</div>';
+  } else {
+    var atas = histLinhas('RPS_ATA').map(function(l){ var x = l.crm.split('|'), a = histJson(l); return a ? { l: l, a: a, ind: x[0] === 'rpsi', setor: x[0] === 'rpsi' ? x[1] : '', data: x[x.length - 1] } : null; }).filter(Boolean)
+      .sort(function(p, q){ return q.data.localeCompare(p.data); });
+    var ab = 0, tot = 0; atas.forEach(function(t){ t.a.itens.forEach(function(i){ tot++; if (i.status !== 'Resolvido') ab++; }); });
+    h += '<div class="kpis" style="grid-template-columns:repeat(4,minmax(0,1fr))"><div class="kpi"><div class="l">Atas salvas</div><div class="v">' + atas.length + '</div><div class="s">' + atas.filter(function(t){ return !t.ind; }).length + ' coletivas · ' + atas.filter(function(t){ return t.ind; }).length + ' individuais</div></div>' +
+      '<div class="kpi"><div class="l">Combinados</div><div class="v">' + tot + '</div><div class="s">somando todas as atas</div></div><div class="kpi ' + (ab ? 'warn' : 'ok') + '"><div class="l">Em aberto</div><div class="v">' + ab + '</div><div class="s">ainda não marcados como resolvidos</div></div>' +
+      '<div class="kpi"><div class="l">Resolvidos</div><div class="v">' + (tot ? Math.round((tot - ab) / tot * 100) : 0) + '%</div><div class="s">' + (tot - ab) + ' de ' + tot + '</div></div></div>';
+    h += atas.length ? '<div class="card"><h3>Atas <small>da mais recente para a mais antiga · clique para abrir os combinados</small></h3>' + atas.map(function(t){
+        var res = t.a.itens.filter(function(i){ return i.status === 'Resolvido'; }).length;
+        return '<details class="det"><summary><b>RPS de ' + dataBr(t.data) + '</b> · ' + (t.ind ? 'Individual — ' + esc(nomeRep[t.setor] || t.l.medico || t.setor) : 'Coletiva') + '<span>' + t.a.itens.length + ' combinados · ' + res + ' resolvidos' + (t.a.arquivo ? ' · ' + esc(t.a.arquivo) : '') + ' · anexada em ' + dataBr(t.l.data) + '</span></summary><div class="detc">' +
+          '<table class="ata-tb"><thead><tr><th style="width:40px">#</th><th style="text-align:left">Combinado</th><th style="width:190px">Responsável</th><th style="width:190px">Prazo</th><th style="width:160px">Status</th></tr></thead><tbody>' + t.a.itens.map(function(i){
+            return '<tr><td>' + i.n + '</td><td class="n">' + esc(i.texto) + '</td><td>' + esc(i.resp) + '</td><td>' + esc(i.prazo) + '</td><td>' + (pode ? '<select class="st ' + COR[i.status] + '" onchange="histAtaStatus(\'' + t.l.id + '\',' + i.n + ',this)">' + STATUS.map(function(s){ return '<option' + (s === i.status ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' : esc(i.status)) + '</td></tr>'; }).join('') + '</tbody></table></div></details>'; }).join('') + '</div>'
+      : '<div class="vazio"><b>Nenhuma ata salva para este distrito</b>As atas ficam guardadas aqui a partir do momento em que são anexadas no slide "Combinados anteriores" da RPS coletiva ou individual.</div>';
+  }
+  var abertos = [].map.call(document.querySelectorAll('details.det[open] summary b'), function(b){ return b.parentNode.textContent; });
+  $('stage').innerHTML = '<div class="slide on"><div class="hdr"><h2>Histórico do time</h2><span>' + esc(D.nm) + ' · planos de ' + ST.mes + '/2026 e todas as atas anexadas</span></div><div class="body rol">' + h + '</div></div>';
+  [].forEach.call(document.querySelectorAll('details.det'), function(d){ if (abertos.indexOf(d.querySelector('summary').textContent) >= 0) d.open = true; });
 }
 
 // ── montagem e navegação ──
