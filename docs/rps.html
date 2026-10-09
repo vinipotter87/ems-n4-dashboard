@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EMS | RPS</title>
+<title>EMS | Copiloto de RPS</title>
 <style>
 :root{--red:#C8102E;--orange:#E87722;--gray:#6B7280;--light:#F3F4F6;--border:#E5E7EB;--brand:#0057B8;--brand-d:#003D82;--text:#111827}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -121,7 +121,7 @@ tr.tot td{background:#f3f4f6;font-weight:800}
 </style>
 </head>
 <body>
-<div class="top"><div class="logo">EMS</div><span id="ctx">RPS — Reunião de Performance Semanal</span><span class="sp"></span>
+<div class="top"><div class="logo">EMS</div><span id="ctx">Copiloto de RPS — Reunião de Performance Semanal</span><span class="sp"></span>
   <button class="btn" id="b-rep" style="display:none" onclick="telaReps()">⇄ Trocar representante</button><button class="btn" id="b-trocar" style="display:none">⇄ Trocar reunião</button><a class="btn" href="index.html">← Dashboard</a></div>
 <div class="stage" id="stage"></div>
 <div class="nav"><button class="btn" id="b-prev">← Anterior</button><div class="dots" id="dots"></div><span id="cnt"></span><button class="btn" id="b-next">Próximo →</button></div>
@@ -191,10 +191,10 @@ async function carregarExtra(){
 // ── entrada: modelo, GD, mês e data ──
 function telaEntrada(){
   ST.slides = []; ST.d = null;
-  $('ctx').textContent = 'RPS — Reunião de Performance Semanal';
+  $('ctx').textContent = 'Copiloto de RPS — Reunião de Performance Semanal';
   $('b-trocar').style.display = 'none'; $('b-rep').style.display = 'none'; $('dots').innerHTML = ''; $('cnt').textContent = '';
   $('b-prev').disabled = $('b-next').disabled = true;
-  $('stage').innerHTML = '<div class="slide on"><div class="capa"><div class="k">Regional SPI Oeste</div><h2>RPS</h2>' +
+  $('stage').innerHTML = '<div class="slide on"><div class="capa"><div class="k">Regional SPI Oeste</div><h2>Copiloto de RPS</h2>' +
     '<div class="m">Escolha o modelo da reunião, o GD, o mês de referência dos dados e a data da RPS.</div>' +
     '<div class="modelos">' +
       '<button class="modelo' + (ST.modelo === 'coletiva' ? ' on' : '') + '" onclick="ST.modelo=\'coletiva\';telaEntrada()"><b>Coletiva</b><span>1ª reunião do mês, com todo o time do distrito: fechamento, marcas-chave, produtividade e os setores prioritários.</span></button>' +
