@@ -1429,6 +1429,80 @@ function renderBudgetPorGd() {
   return html;
 }
 
+// Seção "Panorama — RPS por distrito": mostra, semana a semana, se cada GD
+// registrou RPS. A fonte são as atas anexadas no Copiloto de RPS (rps.html),
+// gravadas em budget_lancamentos com produto RPS_ATA, gd "N4:<distrito_id>" e
+// crm "rps|<data>" (coletiva) ou "rpsi|<setor>|<data>" (individual). A semana
+// vai de segunda a domingo e usa a data da reunião informada pelo GD. Não
+// depende do mês selecionado. A contagem começa na semana de lançamento do
+// Copiloto (RPS_INICIO) — antes disso não havia como registrar ata.
+var RPS_INICIO = '2026-10-05', RPS_MAX_SEMANAS = 8;
+function renderRpsPorDistrito() {
+  var prefixo = DISTRITO_FILTRO ? DISTRITO_FILTRO.substring(0, 6) : null;
+  var chaves = Object.keys(BUDGET_VERBA_GD).filter(function(k){ return !prefixo || k === prefixo; });
+  if (!chaves.length) return '';
+  var semLanc = BUDGET_LANC === null;
+  function dia(s) { var x = String(s).split('-'); return new Date(+x[0], +x[1] - 1, +x[2]); }
+  function seg(d) { var r = new Date(d.getFullYear(), d.getMonth(), d.getDate()); r.setDate(r.getDate() - (r.getDay() + 6) % 7); return r; }
+  function ddmm(d) { return ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2); }
+  var atual = seg(new Date()), semanas = [];
+  for (var s = seg(dia(RPS_INICIO)); s <= atual; s = new Date(s.getFullYear(), s.getMonth(), s.getDate() + 7)) semanas.push(s);
+  semanas = semanas.slice(-RPS_MAX_SEMANAS);
+
+  // atas por distrito (prefixo de 6 dígitos) e por semana
+  var mapa = {};
+  (BUDGET_LANC || []).forEach(function(l) {
+    if (l.produto !== 'RPS_ATA' || String(l.gd).indexOf('N4:') !== 0) return;
+    var x = String(l.crm).split('|'), dt = x[x.length - 1];
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dt)) return;
+    var k = String(l.gd).slice(3, 9), sm = seg(dia(dt)).getTime(), o = (mapa[k] = mapa[k] || { sem: {}, ult: '' });
+    var c = (o.sem[sm] = o.sem[sm] || { col: 0, ind: 0 });
+    if (x[0] === 'rpsi') c.ind++; else c.col++;
+    if (dt > o.ult) o.ult = dt;
+  });
+
+  function celula(k, s) {
+    var c = mapa[k] && mapa[k].sem[s.getTime()];
+    if (c) {
+      var t = []; if (c.col) t.push('Coletiva'); if (c.ind) t.push(c.ind + ' individua' + (c.ind > 1 ? 'is' : 'l'));
+      return '<td><span style="display:inline-block;background:#dcfce7;color:#166534;font-weight:700;border-radius:6px;padding:3px 9px;font-size:11.5px">✓ ' + t.join(' + ') + '</span></td>';
+    }
+    if (semLanc) return '<td>—</td>';
+    return s.getTime() === atual.getTime()
+      ? '<td><span style="display:inline-block;background:#fef3c7;color:#92400e;font-weight:700;border-radius:6px;padding:3px 9px;font-size:11.5px">pendente</span></td>'
+      : '<td><span style="display:inline-block;background:#fee2e2;color:#991b1b;font-weight:700;border-radius:6px;padding:3px 9px;font-size:11.5px">sem ata</span></td>';
+  }
+
+  var naSemana = chaves.filter(function(k){ return mapa[k] && mapa[k].sem[atual.getTime()]; }).length;
+  var html = '<div id="sec-rps" style="margin:0 0 28px">';
+  html += '<div class="sec-hdr"><div class="sec-title">PANORAMA — RPS POR DISTRITO</div><div class="sec-line"></div>';
+  html += '<span style="font-size:11px;color:var(--gray)">' + (semLanc ? 'atas indisponíveis no momento' : naSemana + ' de ' + chaves.length + ' distrito' + (chaves.length > 1 ? 's' : '') + ' com RPS registrada nesta semana') + '</span></div>';
+  html += '<div class="visitas-chart-wrap" style="margin-top:8px">';
+  html += '<div class="visitas-table-wrap"><table class="visitas-table"><thead><tr><th class="th-gd">GD</th>';
+  semanas.forEach(function(s) {
+    var fim = new Date(s.getFullYear(), s.getMonth(), s.getDate() + 6);
+    html += '<th>' + ddmm(s) + ' a ' + ddmm(fim) + (s.getTime() === atual.getTime() ? '<br><span style="font-weight:600;text-transform:none;letter-spacing:0">semana atual</span>' : '') + '</th>';
+  });
+  html += '<th>Semanas com RPS</th><th>Última RPS</th></tr></thead><tbody>';
+  [['NEXUS', '1103'], ['VITAL', '1163']].forEach(function(par) {
+    var ks = chaves.filter(function(k){ return k.substring(0, 4) === par[1]; });
+    if (!ks.length) return;
+    html += '<tr class="row-sep"><td colspan="' + (semanas.length + 3) + '">' + (par[0] === 'NEXUS' ? '🔵 NEXUS' : '🔴 VITAL') + '</td></tr>';
+    ks.forEach(function(k) {
+      var com = semanas.filter(function(s){ return mapa[k] && mapa[k].sem[s.getTime()]; }).length, ult = mapa[k] && mapa[k].ult;
+      html += '<tr class="' + (par[0] === 'NEXUS' ? 'row-nexus' : 'row-vital') + '"><td class="td-gd">' + BUDGET_VERBA_GD[k].gd + '</td>' +
+        semanas.map(function(s){ return celula(k, s); }).join('') +
+        '<td><b>' + (semLanc ? '—' : com + ' de ' + semanas.length) + '</b></td><td>' + (ult ? ult.split('-').reverse().join('/') : '—') + '</td></tr>';
+    });
+  });
+  html += '</tbody></table></div>';
+  html += '<p style="font-size:11px;color:var(--gray);margin:12px 0 0;line-height:1.5">Conta como RPS realizada a semana (segunda a domingo) em que o GD anexou a ata no ' +
+    '<a href="rps.html" style="color:var(--brand);font-weight:700">📅 Copiloto de RPS</a>, pela data da reunião informada. Atualiza sozinho a cada ata salva; não muda com o mês selecionado. ' +
+    'Acompanhamento a partir da semana de ' + ddmm(dia(RPS_INICIO)) + ', quando o Copiloto entrou no ar; mostra as últimas ' + RPS_MAX_SEMANAS + ' semanas.</p>';
+  html += '</div></div>';
+  return html;
+}
+
 function kpiCard(cls, lbl, val, sub) {
   return '<div class="kpi ' + cls + '"><div class="kpi-lbl">' + lbl + '</div>' +
     '<div class="kpi-val">' + val + '</div><div class="kpi-sub">' + sub + '</div></div>';
@@ -2850,6 +2924,7 @@ function apresGrupos(limite) {
     }
     if (!el.offsetHeight) continue;
     if (el.classList.contains('chart-card')) continue; // gráfico por distrito não diz nada com um distrito só
+    if (el.id === 'sec-rps') continue; // acompanhamento de RPS é do regional, não entra na N4
     var nm = apresNome(el);
     // Análise & Alertas e Achados Estratégicos ficam fora da apresentação
     if (nm[0] === 'analise' || nm[0] === 'achados') continue;
@@ -6991,6 +7066,9 @@ function renderTudo(dados, mes) {
 
   // 4.7 BUDGET POR GD (total × utilizado)
   html += renderBudgetPorGd();
+
+  // 4.8 RPS POR DISTRITO (semanas com ata registrada no Copiloto de RPS)
+  html += renderRpsPorDistrito();
 
   // 5. ANÁLISE & ALERTAS — com distrito filtrado, mostra o conteúdo completo
   // aqui mesmo na página; sem filtro, fica o preview que abre a página dedicada.
