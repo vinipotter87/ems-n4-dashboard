@@ -46,6 +46,33 @@ button,select,input,textarea{font-family:inherit}
 .form label{display:block;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;opacity:.8;margin-bottom:4px}
 .form select,.form input{border:none;border-radius:8px;padding:9px 12px;font-size:14px;min-width:150px}
 .form .ir{background:#fff;color:var(--brand-d);border:none;border-radius:8px;padding:10px 22px;font-size:14px;font-weight:800;cursor:pointer}
+/* tela de entrada (Copiloto de RPS) */
+.capa.ent{position:relative;padding:40px 64px;background:radial-gradient(900px 520px at 78% 8%,#1f6fe0 0%,rgba(31,111,224,0) 62%),radial-gradient(700px 480px at 4% 100%,#0b5bd6 0%,rgba(11,91,214,0) 60%),linear-gradient(135deg,#031a52 0%,#062a7a 45%,#0a3fb0 100%)}
+.capa.ent>*{position:relative;z-index:1}
+.capa.ent .deco{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.capa.ent .k{font-size:15px;font-weight:600;letter-spacing:5px;opacity:.9}
+.capa.ent .k:after{content:'';display:block;width:128px;height:3px;border-radius:3px;margin-top:12px;background:linear-gradient(90deg,#22b8ff,rgba(34,184,255,.15))}
+.capa.ent h2{font-size:clamp(40px,5.4vw,74px);font-weight:900;letter-spacing:.5px;text-transform:uppercase;margin:16px 0 12px;text-shadow:0 6px 24px rgba(0,10,60,.45)}
+.capa.ent h2 span{background:linear-gradient(90deg,#1f8fff,#38c6ff);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none}
+.capa.ent .m{font-size:clamp(14px,1.45vw,19px);opacity:.95}
+.capa.ent .modelos{gap:22px;margin:30px 0 34px;max-width:1200px}
+.capa.ent .modelo{display:grid;grid-template-columns:66px 1fr;column-gap:18px;row-gap:14px;align-items:center;align-content:start;background:rgba(18,72,170,.42);border:1.5px solid rgba(120,180,255,.28);border-radius:20px;padding:24px 26px;min-height:190px;backdrop-filter:blur(6px);transition:background .15s,border-color .15s,box-shadow .15s}
+.capa.ent .modelo:hover{background:rgba(30,100,215,.5);border-color:rgba(120,200,255,.6)}
+.capa.ent .modelo.on{background:linear-gradient(160deg,rgba(30,110,235,.85),rgba(12,70,190,.8));border-color:#5cc8ff;box-shadow:0 0 0 1px rgba(92,200,255,.6),0 0 28px rgba(60,170,255,.55)}
+.capa.ent .modelo i{width:66px;height:66px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#2b8cff,#0f5fe0);box-shadow:0 6px 18px rgba(0,30,110,.4)}
+.capa.ent .modelo i svg{width:32px;height:32px;stroke:#fff;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.capa.ent .modelo b{font-size:clamp(19px,1.9vw,25px);margin:0}
+.capa.ent .modelo span{grid-column:1/-1;font-size:clamp(12.5px,1.15vw,15.5px);line-height:1.5;opacity:.95}
+.capa.ent .form{gap:20px;max-width:1200px;flex-wrap:nowrap}
+.capa.ent .form>div:first-child{flex:2.3;min-width:0}.capa.ent .form>div{flex:1;min-width:0}
+.capa.ent .form label{font-size:12px;letter-spacing:.8px;opacity:.9;margin-bottom:7px}
+.capa.ent .form select,.capa.ent .form input{width:100%;min-width:0;height:52px;border-radius:10px;padding:0 16px;font-size:16px;color:#0b1f3f;background:#fff;box-shadow:0 6px 18px rgba(0,20,90,.3)}
+.capa.ent .form .ir{flex:1.55;height:60px;border-radius:14px;padding:0 20px;font-size:clamp(15px,1.45vw,19px);font-weight:800;color:#04246b;white-space:nowrap;background:linear-gradient(180deg,#5fd0ff,#2aa5ff);border:1.5px solid #9be2ff;box-shadow:0 0 26px rgba(60,180,255,.6)}
+.capa.ent .form .ir:hover{filter:brightness(1.07)}
+@media(max-height:760px){.capa.ent{padding:3.5vh 48px}.capa.ent h2{font-size:clamp(30px,8.5vh,60px);margin:1.6vh 0 1.2vh}.capa.ent .k{font-size:12px}.capa.ent .k:after{margin-top:7px}.capa.ent .modelos{margin:3vh 0 3.2vh;gap:16px}
+  .capa.ent .modelo{min-height:0;padding:2.4vh 20px;grid-template-columns:48px 1fr;column-gap:14px;row-gap:1.4vh}.capa.ent .modelo i{width:48px;height:48px}.capa.ent .modelo i svg{width:24px;height:24px}
+  .capa.ent .form select,.capa.ent .form input{height:44px;font-size:14.5px}.capa.ent .form .ir{height:48px}.capa.ent .form label{margin-bottom:4px}}
+@media(max-width:900px){.capa.ent{padding:26px 22px;justify-content:flex-start}.capa.ent .modelos{grid-template-columns:1fr}.capa.ent .modelo{min-height:0}.capa.ent .form{flex-wrap:wrap}.capa.ent .form>div,.capa.ent .form .ir{flex:1 1 100%}}
 /* peças */
 .kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:14px}
 .kpi{background:#fff;border-radius:12px;border-top:4px solid var(--brand);padding:10px 14px}
@@ -194,12 +221,12 @@ function telaEntrada(){
   $('ctx').textContent = 'Copiloto de RPS — Reunião de Performance Semanal';
   $('b-trocar').style.display = 'none'; $('b-rep').style.display = 'none'; $('dots').innerHTML = ''; $('cnt').textContent = '';
   $('b-prev').disabled = $('b-next').disabled = true;
-  $('stage').innerHTML = '<div class="slide on"><div class="capa"><div class="k">Regional SPI Oeste</div><h2>Copiloto de RPS</h2>' +
+  $('stage').innerHTML = '<div class="slide on"><div class="capa ent"><svg class="deco" viewBox="0 0 1330 750" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs><linearGradient id="dg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2f9bff" stop-opacity="0"/><stop offset="1" stop-color="#4fc3ff" stop-opacity=".9"/></linearGradient><pattern id="dp" width="9" height="9" patternUnits="userSpaceOnUse"><circle cx="1.5" cy="1.5" r="1.1" fill="#6fb6ff" opacity=".35"/></pattern></defs><path d="M0 60 C120 10 240 -10 360 0 L0 0Z" fill="#0d4fc4" opacity=".35"/><path d="M-20 250 C40 120 180 30 420 -10" fill="none" stroke="#3aa0ff" stroke-opacity=".35" stroke-width="1.5"/><path d="M1330 0 C1160 90 1050 240 1040 470 C1034 600 1120 700 1330 750Z" fill="#0a3aa6" opacity=".4"/><path d="M1010 -10 C760 120 620 300 560 520" fill="none" stroke="#3aa0ff" stroke-opacity=".28" stroke-width="1.5"/><path d="M0 600 C200 520 380 640 600 690 C820 740 1080 640 1330 700 L1330 750 L0 750Z" fill="#0b55d2" opacity=".35"/><path d="M0 640 C220 580 420 700 640 720 C860 740 1100 690 1330 730" fill="none" stroke="#2f9bff" stroke-opacity=".5" stroke-width="2"/><g fill="#3d8bff" opacity=".2"><rect x="1018" y="216" width="28" height="24"/><rect x="1068" y="188" width="28" height="52"/><rect x="1118" y="158" width="28" height="82"/><rect x="1168" y="126" width="30" height="114"/><rect x="1228" y="142" width="30" height="98"/></g><path d="M1010 236 C1100 232 1200 180 1285 68" fill="none" stroke="url(#dg)" stroke-width="2.5"/><circle cx="1285" cy="67" r="13" fill="#2f9bff" opacity=".3"/><circle cx="1285" cy="67" r="7" fill="#35a8ff"/><rect x="930" y="170" width="150" height="110" fill="url(#dp)"/><rect x="0" y="640" width="150" height="100" fill="url(#dp)"/></svg><div class="k">Regional SPI Oeste</div><h2>Copiloto <span>de RPS</span></h2>' +
     '<div class="m">Escolha o modelo da reunião, o GD, o mês de referência dos dados e a data da RPS.</div>' +
     '<div class="modelos">' +
-      '<button class="modelo' + (ST.modelo === 'coletiva' ? ' on' : '') + '" onclick="ST.modelo=\'coletiva\';telaEntrada()"><b>Coletiva</b><span>1ª reunião do mês, com todo o time do distrito: fechamento, marcas-chave, produtividade e os setores prioritários.</span></button>' +
-      '<button class="modelo' + (ST.modelo === 'individual' ? ' on' : '') + '" onclick="ST.modelo=\'individual\';telaEntrada()"><b>Individual</b><span>Demais reuniões, 30 min por representante: retrato do setor, marcas-chave em desvio e planos com 5 porquês + 5W2H.</span></button>' +
-      '<button class="modelo' + (ST.modelo === 'historico' ? ' on' : '') + '" onclick="ST.modelo=\'historico\';telaEntrada()"><b>Histórico do time</b><span>Consulta: planos dos representantes no mês e todas as atas anexadas, com o status de cada ação e combinado.</span></button>' +
+      '<button class="modelo' + (ST.modelo === 'coletiva' ? ' on' : '') + '" onclick="ST.modelo=\'coletiva\';telaEntrada()"><i><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="2.6"/><path d="M7.4 17.5c0-2.6 2-4.4 4.6-4.4s4.6 1.8 4.6 4.4"/><circle cx="5.2" cy="9.6" r="1.9"/><path d="M2 16.4c0-1.9 1.3-3.2 3.2-3.2"/><circle cx="18.8" cy="9.6" r="1.9"/><path d="M22 16.4c0-1.9-1.3-3.2-3.2-3.2"/></svg></i><b>Coletiva</b><span>1ª reunião do mês, com todo o time do distrito: fechamento, marcas-chave, produtividade e os setores prioritários.</span></button>' +
+      '<button class="modelo' + (ST.modelo === 'individual' ? ' on' : '') + '" onclick="ST.modelo=\'individual\';telaEntrada()"><i><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.6"/><path d="M5 20c0-3.9 3.1-6.4 7-6.4s7 2.5 7 6.4"/></svg></i><b>Individual</b><span>Demais reuniões, 30 min por representante: retrato do setor, marcas-chave em desvio e planos com 5 porquês + 5W2H.</span></button>' +
+      '<button class="modelo' + (ST.modelo === 'historico' ? ' on' : '') + '" onclick="ST.modelo=\'historico\';telaEntrada()"><i><svg viewBox="0 0 24 24"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/><path d="M10 12h5M10 16h5"/></svg></i><b>Histórico do time</b><span>Consulta: planos dos representantes no mês e todas as atas anexadas, com o status de cada ação e combinado.</span></button>' +
     '</div><div class="form">' +
       '<div><label>GD</label><select id="e-gd">' + ST.distritos.map(function(d){ return '<option value="' + d.distrito_id + '"' + (d.distrito_id === ST.gd ? ' selected' : '') + '>' + esc(d.nm) + ' (' + d.linha + ')</option>'; }).join('') + '</select></div>' +
       '<div><label>Mês dos dados</label><select id="e-mes">' + ST.meses.map(function(m){ return '<option' + (m === ST.mes ? ' selected' : '') + '>' + m + '</option>'; }).join('') + '</select></div>' +
