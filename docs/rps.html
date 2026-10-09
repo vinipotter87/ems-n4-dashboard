@@ -106,7 +106,7 @@ tr.tot td{background:#f3f4f6;font-weight:800}
 .titulo-so h2{font-size:46px;font-weight:900;color:var(--brand-d)}
 .titulo-so p{font-size:14px;color:var(--gray);margin-top:10px}
 /* fundamentos e planos (individual) */
-.fund{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.fund{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:14px}
 .fc{background:#fff;border:1px solid var(--border);border-top:4px solid #22c55e;border-radius:10px;padding:9px 12px}
 .fc.desvio{border-top-color:#ef4444;background:#fff7f7}.fc.sem{border-top-color:#d1d5db}
 .fc .l{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)}.fc .v{font-size:20px;font-weight:800;line-height:1.2}.fc .s{font-size:10.5px;color:var(--gray)}
@@ -651,14 +651,17 @@ function fundamentosRep(){
   [['q1','Cobertura Q1'],['q2','Cobertura Q2'],['q3','Cobertura Q3'],['q4','Cobertura Q4'],['cob_painel','Cobertura de painel']].forEach(function(q){ var v = num(r[q[0]]); add(q[1], v, '≥ 90%', v < 90); });
   add('Frequência de visitação', f ? f.cob : null, '≥ 75%', f && f.cob < 75);
   add('Sobreposição Nexus × Vital', s ? s.pNv : null, '≤ 10%', s && s.pNv > 10);
-  if (px && /ATEN|CR[IÍ]T/i.test(px.medalha)) out.push({ nome: 'PEX — ' + String(px.medalha).toLowerCase(), valor: num(px.pts).toFixed(1).replace('.', ',') + ' pts', meta: 'bronze ou acima', desvio: true, sem: false });
+  // PEX aparece sempre, com a pontuação e o quadrante (medalha); só conta como desvio em atenção ou crítico
+  var sim = EXTRA.pexSim.indexOf(ST.mes) >= 0;
+  if (px) out.push({ nome: 'PEX' + (sim ? ' (simulado)' : ''), valor: num(px.pts).toFixed(1).replace('.', ',') + ' pts', meta: 'bronze ou acima', desvio: /ATEN|CR[IÍ]T/i.test(px.medalha), sem: false, quad: px.medalha });
+  else out.push({ nome: 'PEX', valor: '—', meta: 'bronze ou acima', desvio: false, sem: true });
   return out;
 }
 function iFundamentos(){
   var inds = fundamentosRep(), desv = inds.filter(function(i){ return i.desvio; });
-  var h = '<div class="fund">' + inds.map(function(i){ return '<div class="fc ' + (i.sem ? 'sem' : (i.desvio ? 'desvio' : 'ok')) + '"><div class="l">' + i.nome + '</div><div class="v">' + i.valor + '</div><div class="s">meta ' + i.meta + '</div><div class="t">' + (i.sem ? 'sem dado' : (i.desvio ? '● em desvio' : '✓ dentro da meta')) + '</div></div>'; }).join('') + '</div>';
+  var h = '<div class="fund">' + inds.map(function(i){ return '<div class="fc ' + (i.sem ? 'sem' : (i.desvio ? 'desvio' : 'ok')) + '"><div class="l">' + i.nome + '</div><div class="v">' + i.valor + (i.quad ? ' <span class="tag ' + med(i.quad) + '" style="font-size:11px;vertical-align:middle">' + esc(i.quad) + '</span>' : '') + '</div><div class="s">meta ' + i.meta + '</div><div class="t">' + (i.sem ? 'sem dado' : (i.desvio ? '● em desvio' : '✓ dentro da meta')) + '</div></div>'; }).join('') + '</div>';
   if (!desv.length) return [{ nome: 'Fundamentos', msg: 'Todos os indicadores de execução dentro da meta', html: h + '<div class="pok">✓ Nenhum indicador de execução em desvio — plano de fundamentos não é necessário.</div>' }];
-  PLANOS.push({ chave: 'fund', titulo: 'Fundamentos', kpis: desv.map(function(i){ return i.nome; }), problema: 'Indicadores de execução em desvio: ' + desv.map(function(i){ return i.nome + ' em ' + i.valor + ' (meta ' + i.meta + ')'; }).join('; ') + '.' });
+  PLANOS.push({ chave: 'fund', titulo: 'Fundamentos', kpis: desv.map(function(i){ return i.nome; }), problema: 'Indicadores de execução em desvio: ' + desv.map(function(i){ return i.nome + ' em ' + i.valor + (i.quad ? ' — ' + String(i.quad).toLowerCase() : '') + ' (meta ' + i.meta + ')'; }).join('; ') + '.' });
   return [{ nome: 'Fundamentos', msg: desv.length + ' de ' + inds.length + ' indicadores de execução em desvio', html: h + '<div class="nota" style="background:#fff;border:1px dashed var(--border);border-radius:10px;padding:10px 14px">O plano de fundamentos está no próximo slide.</div>' },
           { nome: 'Plano — Fundamentos', msg: 'Em desvio: ' + desv.map(function(i){ return i.nome + ' ' + i.valor; }).join(' · '), html: '<div class="plano" id="plano-fund"></div>', plano: 'fund' }];
 }
