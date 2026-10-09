@@ -271,7 +271,7 @@ async function abrir(){
   // evolução do distrito: os três meses até o escolhido, cada um com o dado do próprio mês
   var ms = [mesAnt(mesAnt(m) || ''), mesAnt(m), m].filter(Boolean);
   for (var i = 0; i < ms.length; i++) ST.d.histD.push({ mes: ms[i], dist: doD(await fetchAba('distritos_' + ms[i]))[0] || null, pd: doD(await fetchAba('produtos_dist_' + L + '_' + ms[i])) });
-  ST.previa = null; ST.edit = null;
+  ST.previa = null; ST.edit = null; ST.alvo = 'ant';
   if (ST.modelo === 'individual') telaReps(); else if (ST.modelo === 'historico') telaHistorico(); else montar();
 }
 
@@ -448,7 +448,28 @@ function sPrioridades(){
 
 // ── combinados anteriores: ata da RPS em PDF ──
 function ataChave(){ return ST.modelo === 'individual' ? 'rpsi|' + ST.setor + '|' + ST.data : 'rps|' + ST.data; }
-function ataReg(){ var gd = 'N4:' + ST.gd, k = ataChave(); var rs = ST.lanc.filter(function(l){ return l.produto === 'RPS_ATA' && l.gd === gd && l.crm === k; }); return rs.length ? rs[rs.length - 1] : null; }
+// Fluxo: ao terminar a reunião, o GD anexa a ata no último slide ("Ata desta reunião"); ela é
+// gravada com a data daquela RPS. Na reunião seguinte, o slide 2 ("Combinados anteriores")
+// mostra sozinho a ata mais recente anterior à data da RPS — do distrito, na coletiva, ou do
+// representante, na individual. ST.alvo diz em qual das duas caixas a ação acontece:
+// 'ant' (combinados anteriores, #ata) ou 'atual' (ata desta reunião, #ata-nova).
+function ataAlvo(a){ ST.alvo = a; }
+function ataBox(alvo){ return $((alvo || ST.alvo) === 'atual' ? 'ata-nova' : 'ata'); }
+function ataSt(){ return $('ata-st-' + (ST.alvo || 'ant')); }
+function ataEscopo(){ return ST.modelo === 'individual' ? 'rpsi|' + ST.setor + '|' : 'rps|'; }
+function ataRegDe(alvo){
+  var gd = 'N4:' + ST.gd, e = ataEscopo();
+  var rs = ST.lanc.filter(function(l){ var c = String(l.crm); return l.produto === 'RPS_ATA' && l.gd === gd && c.indexOf(e) === 0 && /^\d{4}-\d{2}-\d{2}$/.test(c.slice(e.length)); });
+  if (alvo === 'atual'){ rs = rs.filter(function(l){ return l.crm === e + ST.data; }); return rs.length ? rs[rs.length - 1] : null; }
+  rs = rs.filter(function(l){ return l.crm.slice(e.length) < ST.data; }).sort(function(a, b){ return a.crm.localeCompare(b.crm); });
+  return rs.length ? rs[rs.length - 1] : null;
+}
+function ataReg(){ return ataRegDe(ST.alvo || 'ant'); }
+function ataDataDe(reg){ return reg ? String(reg.crm).slice(-10) : ''; }
+function ataDataAnt(ata){ // ata antiga anexada direto no slide 2: usa a data escrita na ata, se for anterior à RPS de hoje
+  var m = ata && String(ata.data || '').match(/(\d{2})[\/-](\d{2})[\/-](\d{4})/), iso = m ? m[3] + '-' + m[2] + '-' + m[1] : '';
+  return iso && iso < ST.data ? iso : maisDias(ST.data, -1);
+}
 function ataDados(){ var r = ataReg(); if (!r) return null; try { return JSON.parse(r.acao); } catch(e){ return null; } }
 function pdfjs(){ return new Promise(function(ok, er){ if (window.pdfjsLib) return ok(); var s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
   s.onload = function(){ window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; ok(); }; s.onerror = function(){ er(new Error('não foi possível carregar o leitor de PDF')); }; document.head.appendChild(s); }); }
@@ -497,7 +518,7 @@ async function lerAta(buffer){
   return itens.length ? { titulo: titulo || 'Ata da RPS anterior', data: dataAta, itens: itens } : null;
 }
 async function ataArquivo(input){
-  var f = input.files && input.files[0], st = $('ata-st'); if (!f) return;
+  var f = input.files && input.files[0], st = ataSt(); if (!f) return;
   if (!/\.pdf$/i.test(f.name)){ st.textContent = 'Escolha um arquivo PDF.'; return; }
   st.textContent = 'Lendo ' + f.name + '…';
   try {
@@ -509,57 +530,77 @@ async function ataArquivo(input){
   } catch(e){ st.textContent = 'Não foi possível ler o PDF: ' + e.message; }
 }
 async function ataGravar(ata, apagar){
-  var reg = ataReg(), st = $('ata-st'), d = ST.d.dist;
+  var reg = ataReg(), st = ataSt(), d = ST.d.dist;
   if (!(CONFIG.budget_webapp_url && CONFIG.budget_token)){ if (st) st.textContent = 'Gravação indisponível nesta página.'; return false; }
   if (st) st.textContent = 'Salvando…';
+  var env = null;
   try {
-    var r = await fetch(CONFIG.budget_webapp_url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({
+    var r = await fetch(CONFIG.budget_webapp_url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(env = {
       token: CONFIG.budget_token, acao: apagar ? 'delete' : (reg ? 'edit' : 'add'), id: reg ? reg.id : 'rps' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-      gd: 'N4:' + ST.gd, linha: d.linha, produto: 'RPS_ATA', crm: ataChave(), medico: ST.modelo === 'individual' ? repSel().nome : d.nm, valor: 0, acao_lancamento: ata ? JSON.stringify(ata) : '', data: hoje(), criadoEm: reg ? reg.criadoEm : Date.now().toString() }) });
+      gd: 'N4:' + ST.gd, linha: d.linha, produto: 'RPS_ATA', crm: reg ? reg.crm : (ST.alvo === 'atual' ? ataChave() : ataEscopo() + ataDataAnt(ata)), medico: ST.modelo === 'individual' ? repSel().nome : d.nm, valor: 0, acao_lancamento: ata ? JSON.stringify(ata) : '', data: hoje(), criadoEm: reg ? reg.criadoEm : Date.now().toString() }) });
     var resp = JSON.parse(await r.text()); if (!resp.ok) throw new Error(resp.erro || 'falha desconhecida');
   } catch(e){ if (st) st.textContent = 'Não foi possível salvar: ' + e.message; return false; }
-  ST.lanc = await fetchAba('budget_lancamentos', true);
+  ST.lanc = await fetchAba('budget_lancamentos', true); espelhar(env);
   return true;
 }
-function ataLerEdicao(){ var o = []; [].forEach.call(document.querySelectorAll('#ata [data-item]'), function(tr){ function v(c){ return tr.querySelector('[data-c="' + c + '"]').value.trim(); }
+// A leitura do Sheets logo após gravar pode vir sem a alteração. Sem a linha na cópia local, o
+// próximo salvamento criaria uma linha duplicada; então a cópia local é ajustada ao que foi enviado.
+function espelhar(env){
+  var i = -1; ST.lanc.forEach(function(l, k){ if (l.id === env.id) i = k; });
+  if (env.acao === 'delete'){ if (i >= 0) ST.lanc.splice(i, 1); return; }
+  var l = { id: env.id, gd: env.gd, linha: env.linha, produto: env.produto, crm: env.crm, medico: env.medico, valor: '0', acao: env.acao_lancamento, data: env.data, criadoEm: env.criadoEm };
+  if (i >= 0) ST.lanc[i] = l; else ST.lanc.push(l);
+}
+function ataLerEdicao(){ var o = []; [].forEach.call(ataBox().querySelectorAll('[data-item]'), function(tr){ function v(c){ return tr.querySelector('[data-c="' + c + '"]').value.trim(); }
   o.push({ n: o.length + 1, texto: v('texto'), resp: v('resp'), prazo: v('prazo'), status: tr.getAttribute('data-status') || 'Pendente' }); }); return o; }
 function ataEditar(){ var b = ST.previa || ataDados(); if (!b) return; ST.edit = JSON.parse(JSON.stringify(b)); desenharAta(); }
 function ataLinha(delta, idx){ var it = ataLerEdicao(); if (delta > 0) it.push({ texto: '', resp: '', prazo: '', status: 'Pendente' }); else it.splice(idx, 1); it.forEach(function(i, k){ i.n = k + 1; }); ST.edit.itens = it; desenharAta(); }
-async function ataSalvarEdicao(){ var it = ataLerEdicao().filter(function(i){ return i.texto; }); if (!it.length){ $('ata-st').textContent = 'Inclua pelo menos um combinado.'; return; }
+async function ataSalvarEdicao(){ var it = ataLerEdicao().filter(function(i){ return i.texto; }); if (!it.length){ ataSt().textContent = 'Inclua pelo menos um combinado.'; return; }
   it.forEach(function(i, k){ i.n = k + 1; }); ST.edit.itens = it; delete ST.edit.naoLida; if (await ataGravar(ST.edit, false)){ ST.edit = null; ST.previa = null; desenharAta(); } }
 async function ataConfirmar(){ if (ST.previa && await ataGravar(ST.previa, false)){ ST.previa = null; desenharAta(); } }
-async function ataRemover(){ if (window.confirm('Remover os combinados desta ata? Os status marcados serão perdidos.') && await ataGravar(null, true)) desenharAta(); }
+async function ataRemover(){ if (window.confirm('Remover esta ata? Os combinados e os status marcados serão perdidos.') && await ataGravar(null, true)) desenharAta(); }
 async function ataStatus(n, s){
   if (ST.previa){ ST.previa.itens.forEach(function(i){ if (i.n === n) i.status = s; }); return desenharAta(); }
   var a = ataDados(); if (!a) return; a.itens.forEach(function(i){ if (i.n === n) i.status = s; }); if (await ataGravar(a, false)) desenharAta();
 }
-function desenharAta(){
-  var box = $('ata'); if (!box) return;
-  var pode = !!(CONFIG.budget_webapp_url && CONFIG.budget_token), salva = ataDados(), ed = !!ST.edit, ata = ST.edit || ST.previa || salva, previa = !ed && !!ST.previa, h = '';
-  var up = '<input type="file" accept="application/pdf,.pdf" style="display:none" onchange="ataArquivo(this)">';
+function desenharAta(){ desenharAtaDe('ant'); desenharAtaDe('atual'); ajustar(); }
+function desenharAtaDe(alvo){
+  var box = ataBox(alvo); if (!box) return;
+  var pode = !!(CONFIG.budget_webapp_url && CONFIG.budget_token), reg = ataRegDe(alvo), salva = null; if (reg) try { salva = JSON.parse(reg.acao); } catch(e){}
+  var meu = (ST.alvo || 'ant') === alvo, ed = meu && !!ST.edit, previa = meu && !ed && !!ST.previa, ata = ed ? ST.edit : (previa ? ST.previa : salva), h = '', A = "ataAlvo('" + alvo + "');";
+  var up = '<input type="file" accept="application/pdf,.pdf" style="display:none" onchange="' + A + 'ataArquivo(this)">';
+  var digitar = '<button class="b2" style="padding:8px 14px" onclick="' + A + 'ST.edit={titulo:\'' + (alvo === 'atual' ? 'Combinados da RPS de ' + dataBr(ST.data) : 'Combinados da RPS anterior') + '\',data:\'\',itens:[{n:1,texto:\'\',resp:\'\',prazo:\'\',status:\'Pendente\'}]};desenharAta()">Digitar os combinados</button>';
+  var quem = ST.modelo === 'individual' ? ' deste representante' : ' do distrito';
   if (!ata){
-    h = '<div class="vazio"><div style="font-size:34px">📎</div><b>Anexe a ata da RPS anterior' + (ST.modelo === 'individual' ? ' deste representante' : '') + '</b><p>PDF da ata no modelo padrão da RPS. A página lê a tabela "Plano de ação consolidado" e a ata já fica salva no histórico do time; depois dá para editar os combinados e marcar o status. Se a ata estiver em outro formato, dá para digitar os combinados.</p>' +
-      (pode ? '<label class="b1">Escolher PDF da ata' + up + '</label> <button class="b2" style="padding:8px 14px" onclick="ST.edit={titulo:\'Combinados da RPS anterior\',data:\'\',itens:[{n:1,texto:\'\',resp:\'\',prazo:\'\',status:\'Pendente\'}]};desenharAta()">Digitar os combinados</button>' : '<p>Gravação indisponível nesta página.</p>') + '<div id="ata-st"></div></div>';
+    h = alvo === 'atual'
+      ? '<div class="vazio"><div style="font-size:34px">📎</div><b>Anexe a ata desta reunião — RPS de ' + dataBr(ST.data) + '</b><p>Terminou a reunião e a ata está pronta? Anexe o PDF aqui. A página lê a tabela "Plano de ação consolidado", salva a ata no histórico do time e, na próxima RPS' + quem + ', os combinados já aparecem no slide 2 ("Combinados anteriores"), prontos para a cobrança.</p>' +
+        (pode ? '<label class="b1">Escolher PDF da ata' + up + '</label> ' + digitar : '<p>Gravação indisponível nesta página.</p>') + '<div id="ata-st-atual"></div></div>'
+      : '<div class="vazio"><div style="font-size:34px">📋</div><b>Nenhuma ata de RPS anterior' + quem + '</b><p>Os combinados aparecem aqui sozinhos quando a ata da reunião anterior foi anexada no último slide ("Ata desta reunião"). Se a ata anterior ainda não foi anexada, dá para anexar agora.</p>' +
+        (pode ? '<label class="b2" style="padding:8px 14px">Anexar a ata da reunião anterior' + up + '</label> ' + digitar : '') + '<div id="ata-st-ant"></div></div>';
   } else {
-    h = '<div class="card"><div class="ata-top"><div><h3 style="margin:0">' + esc(ata.titulo) + '</h3><div class="nota" style="margin:2px 0 0">' + (ata.data ? 'Reunião de ' + esc(ata.data) + ' · ' : '') + ata.itens.length + ' combinados' + (ata.arquivo ? ' · lido de ' + esc(ata.arquivo) : '') + '</div></div><span class="ac">';
-    if (ed) h += '<button class="b1" onclick="ataSalvarEdicao()">Salvar alterações</button><button class="b2" onclick="ST.edit=null;desenharAta()">Cancelar</button>';
-    else if (previa) h += '<button class="b1" onclick="ataConfirmar()">Salvar combinados</button><button class="b2" onclick="ataEditar()">✏️ Editar</button><button class="b2" onclick="ST.previa=null;desenharAta()">Cancelar</button>';
-    else if (pode) h += '<button class="b2" onclick="ataEditar()">✏️ Editar</button><label class="b2">Trocar ata' + up + '</label><button class="b2" onclick="ataRemover()">Remover</button>';
+    var dr = reg ? dataBr(ataDataDe(reg)) : (alvo === 'atual' ? dataBr(ST.data) : '');
+    h = '<div class="card"><div class="ata-top"><div><h3 style="margin:0">' + esc(ata.titulo) + '</h3><div class="nota" style="margin:2px 0 0">' + (dr ? 'RPS de ' + dr + ' · ' : '') + ata.itens.length + ' combinados' + (ata.arquivo ? ' · lido de ' + esc(ata.arquivo) : '') + '</div></div><span class="ac">';
+    if (ed) h += '<button class="b1" onclick="' + A + 'ataSalvarEdicao()">Salvar alterações</button><button class="b2" onclick="ST.edit=null;desenharAta()">Cancelar</button>';
+    else if (previa) h += '<button class="b1" onclick="' + A + 'ataConfirmar()">Salvar combinados</button><button class="b2" onclick="' + A + 'ataEditar()">✏️ Editar</button><button class="b2" onclick="ST.previa=null;desenharAta()">Cancelar</button>';
+    else if (pode) h += '<button class="b2" onclick="' + A + 'ataEditar()">✏️ Editar</button><label class="b2">Trocar ata' + up + '</label><button class="b2" onclick="' + A + 'ataRemover()">Remover</button>';
     h += '</span></div>';
     if (ed && ata.naoLida) h += '<div class="aviso">Não encontrei a tabela "Plano de ação consolidado" neste PDF. Digite os combinados abaixo.</div>';
-    else if (previa) h += '<div class="aviso">Confira se os combinados foram lidos corretamente. Marque o status de cada um, use "Editar" para ajustar ou excluir, e depois "Salvar combinados".</div>';
-    h += '<table class="ata-tb"><thead><tr><th style="width:40px">#</th><th style="text-align:left">Combinado</th><th style="width:' + (ed ? 200 : 190) + 'px">Responsável</th><th style="width:' + (ed ? 200 : 190) + 'px">Prazo</th><th style="width:' + (ed ? 50 : 160) + 'px">' + (ed ? '' : 'Status') + '</th></tr></thead><tbody>';
+    else if (previa) h += '<div class="aviso">Confira se os combinados foram lidos corretamente, use "Editar" para ajustar ou excluir, e depois "Salvar combinados".</div>';
+    else if (alvo === 'atual') h += '<div class="pok" style="font-size:12.5px;padding:9px 14px;margin-bottom:10px">✓ Ata salva. Na próxima RPS' + quem + ' estes combinados aparecem no slide 2 ("Combinados anteriores").</div>';
+    var comStatus = alvo === 'ant'; // o status é cobrado na reunião seguinte
+    h += '<table class="ata-tb"><thead><tr><th style="width:40px">#</th><th style="text-align:left">Combinado</th><th style="width:' + (ed ? 200 : 190) + 'px">Responsável</th><th style="width:' + (ed ? 200 : 190) + 'px">Prazo</th>' + (ed ? '<th style="width:50px"></th>' : (comStatus ? '<th style="width:160px">Status</th>' : '')) + '</tr></thead><tbody>';
     ata.itens.forEach(function(i, k){
-      if (ed){ h += '<tr data-item="' + k + '" data-status="' + esc(i.status) + '"><td>' + (k + 1) + '</td><td class="n"><textarea rows="2" data-c="texto">' + esc(i.texto) + '</textarea></td><td><input data-c="resp" value="' + esc(i.resp) + '"></td><td><input data-c="prazo" value="' + esc(i.prazo) + '"></td><td><button class="b2" onclick="ataLinha(-1,' + k + ')">✕</button></td></tr>'; return; }
-      h += '<tr><td>' + i.n + '</td><td class="n">' + esc(i.texto) + '</td><td>' + esc(i.resp) + '</td><td>' + esc(i.prazo) + '</td><td>' + (pode ? '<select class="st ' + COR[i.status] + '" onchange="ataStatus(' + i.n + ',this.value)">' + STATUS.map(function(s){ return '<option' + (s === i.status ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' : esc(i.status)) + '</td></tr>';
+      if (ed){ h += '<tr data-item="' + k + '" data-status="' + esc(i.status) + '"><td>' + (k + 1) + '</td><td class="n"><textarea rows="2" data-c="texto">' + esc(i.texto) + '</textarea></td><td><input data-c="resp" value="' + esc(i.resp) + '"></td><td><input data-c="prazo" value="' + esc(i.prazo) + '"></td><td><button class="b2" onclick="' + A + 'ataLinha(-1,' + k + ')">✕</button></td></tr>'; return; }
+      h += '<tr><td>' + i.n + '</td><td class="n">' + esc(i.texto) + '</td><td>' + esc(i.resp) + '</td><td>' + esc(i.prazo) + '</td>' + (comStatus ? '<td>' + (pode ? '<select class="st ' + COR[i.status] + '" onchange="' + A + 'ataStatus(' + i.n + ',this.value)">' + STATUS.map(function(s){ return '<option' + (s === i.status ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' : esc(i.status)) + '</td>' : '') + '</tr>';
     });
-    h += '</tbody></table>' + (ed ? '<div style="margin-top:8px"><button class="b2" onclick="ataLinha(1)">+ Adicionar combinado</button></div>' : '') + '<div id="ata-st"></div></div>';
+    h += '</tbody></table>' + (ed ? '<div style="margin-top:8px"><button class="b2" onclick="' + A + 'ataLinha(1)">+ Adicionar combinado</button></div>' : '') + '<div id="ata-st-' + alvo + '"></div></div>';
   }
   box.innerHTML = h;
   var c = {}; (salva ? salva.itens : []).forEach(function(i){ c[i.status] = (c[i.status] || 0) + 1; });
   var msg = box.closest('.slide').querySelector('.hdr span');
-  msg.textContent = ed ? 'Editando os combinados' : (previa ? 'Ata lida — aguardando confirmação' : (salva ? salva.itens.length + ' combinados: ' + STATUS.filter(function(s){ return c[s]; }).map(function(s){ return c[s] + ' ' + s.toLowerCase(); }).join(', ') : 'Nenhuma ata anexada para a RPS de ' + dataBr(ST.data)));
-  ajustar();
+  msg.textContent = ed ? 'Editando os combinados' : (previa ? 'Ata lida — aguardando confirmação'
+    : (alvo === 'atual' ? (salva ? 'Ata da RPS de ' + dataBr(ST.data) + ' salva — ' + salva.itens.length + ' combinados' : 'Anexe a ata ao terminar a reunião')
+      : (salva ? 'RPS de ' + dataBr(ataDataDe(reg)) + ' · ' + salva.itens.length + ' combinados: ' + STATUS.filter(function(s){ return c[s]; }).map(function(s){ return c[s] + ' ' + s.toLowerCase(); }).join(', ') : 'Nenhuma ata de RPS anterior')));
 }
 
 // ── RPS INDIVIDUAL — um representante por vez ────────────────────
@@ -595,7 +636,7 @@ function telaReps(){
       '<span style="font-size:12px;opacity:.85">' + (g && g.gap > 0 ? 'faltam ' + brl(g.gap) : 'marcas-chave entregues') + '</span></button>'; }).join('') + '</div></div></div>';
 }
 async function abrirRep(setor){
-  ST.setor = setor; ST.previa = null; ST.edit = null;
+  ST.setor = setor; ST.previa = null; ST.edit = null; ST.alvo = 'ant';
   $('stage').innerHTML = '<div class="slide on"><div class="capa"><h2>Montando…</h2></div></div>';
   // os três meses até o escolhido, para o slide de evolução
   var L = ST.d.dist.linha, ms = [mesAnt(mesAnt(ST.mes) || ''), mesAnt(ST.mes), ST.mes].filter(Boolean); ST.d.hist = [];
@@ -898,12 +939,13 @@ function planoDesenhar(ch, editar, rasc){
 }
 async function planoEnviar(ch, plano, apagar){ var reg = planoReg(ch), st = $('plano-st-' + ch), r0 = repSel();
   if (st) st.textContent = 'Salvando…';
-  try { var r = await fetch(CONFIG.budget_webapp_url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ token: CONFIG.budget_token, acao: apagar ? 'delete' : (reg ? 'edit' : 'add'),
+  var env = null;
+  try { var r = await fetch(CONFIG.budget_webapp_url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(env = { token: CONFIG.budget_token, acao: apagar ? 'delete' : (reg ? 'edit' : 'add'),
       id: reg ? reg.id : 'rpp' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), gd: 'N4:' + ST.gd, linha: ST.d.dist.linha, produto: 'RPS_PLANO', crm: reg ? reg.crm : 'rpsi|' + ST.setor + '|' + ch + '|' + ST.mes,
       medico: r0.nome, valor: 0, acao_lancamento: plano ? JSON.stringify(plano) : '', data: hoje(), criadoEm: reg ? reg.criadoEm : Date.now().toString() }) });
     var resp = JSON.parse(await r.text()); if (!resp.ok) throw new Error(resp.erro || 'falha desconhecida');
   } catch(e){ if (st) st.textContent = 'Não foi possível salvar: ' + e.message; return false; }
-  ST.lanc = await fetchAba('budget_lancamentos', true); return true; }
+  ST.lanc = await fetchAba('budget_lancamentos', true); espelhar(env); return true; }
 async function planoSalvar(ch){ var p = planoLer(ch), st = $('plano-st-' + ch); function er(m){ st.textContent = m; st.style.color = 'var(--red)'; }
   if (!p.problema) return er('Descreva o problema.'); if (p.porques.length < 3) return er('Preencha pelo menos 3 porquês.');
   if (!p.raiz) return er('Escreva a causa raiz, sintetizando os porquês.');
@@ -926,6 +968,7 @@ function montarIndividual(){
   var r = repSel(), lista = [{ nome: 'Combinados anteriores', msg: ' ', html: '<div id="ata"></div>' }, { nome: 'Planos em andamento', msg: ' ', html: '<div id="andamento"></div>' }, iRetrato(), iMarcas(), iProd(), iEvolucao(), iFreq(), sJornadaPex(ST.setor), iDemais()]
     .concat(TEMAS.map(sTitulo), iFundamentos(), iMarcasDesvio()); // mesma sequência da coletiva; só o bloco final muda
   lista.push({ nome: 'Plano de ação do setor', msg: ' ', html: '<div id="plano-final"></div>' });
+  lista.push({ nome: 'Ata desta reunião', msg: ' ', html: '<div id="ata-nova"></div>' });
   var h = '<div class="slide">' + iCapa(lista) + '</div>';
   lista.forEach(function(s){ h += slideHtml(s); });
   $('stage').innerHTML = h; ST.slides = [].slice.call(document.querySelectorAll('.slide'));
@@ -1023,7 +1066,7 @@ function telaHistorico(){
         return '<details class="det"><summary><b>RPS de ' + dataBr(t.data) + '</b> · ' + (t.ind ? 'Individual — ' + esc(nomeRep[t.setor] || t.l.medico || t.setor) : 'Coletiva') + '<span>' + t.a.itens.length + ' combinados · ' + res + ' resolvidos' + (t.a.arquivo ? ' · ' + esc(t.a.arquivo) : '') + ' · anexada em ' + dataBr(t.l.data) + '</span></summary><div class="detc">' +
           '<table class="ata-tb"><thead><tr><th style="width:40px">#</th><th style="text-align:left">Combinado</th><th style="width:190px">Responsável</th><th style="width:190px">Prazo</th><th style="width:160px">Status</th></tr></thead><tbody>' + t.a.itens.map(function(i){
             return '<tr><td>' + i.n + '</td><td class="n">' + esc(i.texto) + '</td><td>' + esc(i.resp) + '</td><td>' + esc(i.prazo) + '</td><td>' + (pode ? '<select class="st ' + COR[i.status] + '" onchange="histAtaStatus(\'' + t.l.id + '\',' + i.n + ',this)">' + STATUS.map(function(s){ return '<option' + (s === i.status ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' : esc(i.status)) + '</td></tr>'; }).join('') + '</tbody></table></div></details>'; }).join('') + '</div>'
-      : '<div class="vazio"><b>Nenhuma ata salva para este distrito</b>As atas ficam guardadas aqui a partir do momento em que são anexadas no slide "Combinados anteriores" da RPS coletiva ou individual.</div>';
+      : '<div class="vazio"><b>Nenhuma ata salva para este distrito</b>As atas ficam guardadas aqui a partir do momento em que são anexadas no último slide ("Ata desta reunião") da RPS coletiva ou individual.</div>';
   }
   var abertos = [].map.call(document.querySelectorAll('details.det[open] summary b'), function(b){ return b.parentNode.textContent; });
   $('stage').innerHTML = '<div class="slide on"><div class="hdr"><h2>Histórico do time</h2><span>' + esc(D.nm) + ' · planos de ' + ST.mes + '/2026 e todas as atas anexadas</span></div><div class="body rol">' + h + '</div></div>';
@@ -1034,7 +1077,7 @@ function telaHistorico(){
 function montar(){
   var D = ST.d.dist;
   var lista = [{ nome: 'Combinados anteriores', msg: ' ', html: '<div id="ata"></div>' }, sFechamento(), sMarcas(), sProd(), sEvolucao(), sFreqSobrep(), sJornadaPex(), demaisSlide(ST.d.pd, 'distrito')]
-    .concat(TEMAS.map(sTitulo), [sPrioridades()]); // mesma sequência da individual; só o bloco final muda
+    .concat(TEMAS.map(sTitulo), [sPrioridades(), { nome: 'Ata desta reunião', msg: ' ', html: '<div id="ata-nova"></div>' }]); // mesma sequência da individual; só o bloco final muda
   var h = '<div class="slide">' + sCapa(lista) + '</div>';
   lista.forEach(function(s){ h += slideHtml(s); });
   $('stage').innerHTML = h;
