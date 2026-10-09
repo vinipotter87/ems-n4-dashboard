@@ -3036,6 +3036,7 @@ function apresPlanoLer(chave) {
   [].forEach.call(box.querySelectorAll('[data-acao]'), function(tr) {
     var a = {}, tem = false;
     APRES_W.forEach(function(w) { a[w[0]] = tr.querySelector('[data-w="' + w[0] + '"]').value.trim(); if (a[w[0]]) tem = true; });
+    a.status = tr.getAttribute('data-st') || 'Pendente'; // status de execução, marcado na página Planos SPI
     if (tem) plano.acoes.push(a);
   });
   return plano;
@@ -3053,7 +3054,7 @@ function apresPlanoPorques(chave) {
 function apresPlanoAcao(chave, delta, idx) {
   var plano = apresPlanoLer(chave), box = document.getElementById('ap-plano-' + chave);
   // mantém as linhas em branco já abertas
-  var linhas = [].map.call(box.querySelectorAll('[data-acao]'), function(tr) { var a = {}; APRES_W.forEach(function(w) { a[w[0]] = tr.querySelector('[data-w="' + w[0] + '"]').value; }); return a; });
+  var linhas = [].map.call(box.querySelectorAll('[data-acao]'), function(tr) { var a = { status: tr.getAttribute('data-st') || 'Pendente' }; APRES_W.forEach(function(w) { a[w[0]] = tr.querySelector('[data-w="' + w[0] + '"]').value; }); return a; });
   if (delta > 0) linhas.push({}); else linhas.splice(idx, 1);
   plano.acoes = linhas.length ? linhas : [{}];
   apresPlanoDesenhar(chave, true, plano);
@@ -3080,7 +3081,7 @@ function apresPlanoDesenhar(chave, editar, rascunho) {
     h += '<label class="ap-plano-l">Plano de ação — 5W2H <small>pelo menos uma ação com O quê, Quando e Quem</small></label>' +
       '<div class="visitas-table-wrap"><table class="visitas-table ap-w-tb"><thead><tr>' + APRES_W.map(function(w) { return '<th>' + w[1] + '</th>'; }).join('') + '<th></th></tr></thead><tbody>';
     p.acoes.forEach(function(a, k) {
-      h += '<tr data-acao="' + k + '">' + APRES_W.map(function(w) { return '<td><textarea rows="2" data-w="' + w[0] + '">' + apresEsc(a[w[0]] || '') + '</textarea></td>'; }).join('') +
+      h += '<tr data-acao="' + k + '" data-st="' + apresEsc(a.status || 'Pendente') + '">' + APRES_W.map(function(w) { return '<td><textarea rows="2" data-w="' + w[0] + '">' + apresEsc(a[w[0]] || '') + '</textarea></td>'; }).join('') +
         '<td><button class="ap-diag-mini" title="Remover esta ação" onclick="apresPlanoAcao(' + q + ',-1,' + k + ')">✕</button></td></tr>';
     });
     h += '</tbody></table></div><div class="ap-diag-f"><button class="ap-diag-mini" onclick="apresPlanoAcao(' + q + ',1)">+ Adicionar ação</button>' +
@@ -3146,16 +3147,17 @@ function apresPlanoFinalDesenhar() {
   var linhas = '', nAcoes = 0, feitos = 0;
   APRES_PLANOS.forEach(function(p) {
     var d = apresPlanoDados(p.chave);
-    if (!d) { linhas += '<tr><td class="td-gd">' + p.titulo + '</td><td colspan="6" style="text-align:left;color:#b45309;font-weight:700">Plano ainda não preenchido</td></tr>'; return; }
+    if (!d) { linhas += '<tr><td class="td-gd">' + p.titulo + '</td><td colspan="7" style="text-align:left;color:#b45309;font-weight:700">Plano ainda não preenchido</td></tr>'; return; }
     feitos++;
     d.acoes.forEach(function(a, k) {
       nAcoes++;
       linhas += '<tr>' + (k === 0 ? '<td class="td-gd" rowspan="' + d.acoes.length + '">' + p.titulo + '</td><td rowspan="' + d.acoes.length + '">' + apresEsc(d.porques[d.porques.length - 1]) + '</td>' : '') +
-        '<td>' + (apresEsc(a.oque) || '—') + '</td><td>' + (apresEsc(a.quem) || '—') + '</td><td>' + (apresEsc(a.quando) || '—') + '</td><td>' + (apresEsc(a.como) || '—') + '</td><td>' + (apresEsc(a.quanto) || '—') + '</td></tr>';
+        '<td>' + (apresEsc(a.oque) || '—') + '</td><td>' + (apresEsc(a.quem) || '—') + '</td><td>' + (apresEsc(a.quando) || '—') + '</td><td>' + (apresEsc(a.como) || '—') + '</td><td>' + (apresEsc(a.quanto) || '—') + '</td>' +
+        '<td><span class="crm-pct ' + ({ 'Concluída': 'ok', 'Não realizada': 'crit' }[a.status] || 'warn') + '">' + apresEsc(a.status || 'Pendente') + '</span></td></tr>';
     });
   });
   box.innerHTML = APRES_PLANOS.length
-    ? '<div class="visitas-chart-wrap"><div class="visitas-table-wrap"><table class="visitas-table ap-w-tb ver final"><thead><tr><th class="th-gd">Plano</th><th>Causa raiz</th><th>O quê</th><th>Quem</th><th>Quando</th><th>Como</th><th>Quanto custa</th></tr></thead><tbody>' + linhas + '</tbody></table></div></div>'
+    ? '<div class="visitas-chart-wrap"><div class="visitas-table-wrap"><table class="visitas-table ap-w-tb ver final"><thead><tr><th class="th-gd">Plano</th><th>Causa raiz</th><th>O quê</th><th>Quem</th><th>Quando</th><th>Como</th><th>Quanto custa</th><th>Status</th></tr></thead><tbody>' + linhas + '</tbody></table></div></div>'
     : '<div class="ap-plano-ok">✓ Nenhum desvio em fundamentos nem marca-chave abaixo de 100% — não há plano de ação exigido neste mês.</div>';
   var msg = box.closest('.ap-slide').querySelector('.ap-msg');
   if (msg) msg.textContent = APRES_PLANOS.length ? feitos + ' de ' + APRES_PLANOS.length + ' planos preenchidos · ' + nAcoes + ' ações' : 'Sem plano exigido';

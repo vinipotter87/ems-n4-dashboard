@@ -20,7 +20,7 @@ button,select,input{font-family:inherit}
 .bar input{min-width:220px}
 .bar button{margin-left:auto;background:#fff;border:1.5px solid var(--border);border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;color:var(--brand);cursor:pointer}
 .main{padding:20px 28px 40px}
-.kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:18px}
+.kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-bottom:18px}
 .kpi{background:#fff;border-radius:12px;border-top:4px solid var(--brand);padding:12px 16px;box-shadow:0 1px 6px rgba(0,0,0,.06)}
 .kpi .l{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)}
 .kpi .v{font-size:26px;font-weight:800;line-height:1.2}
@@ -36,6 +36,12 @@ td.c,th.c{text-align:center}
 .tag{display:inline-block;font-size:10px;font-weight:800;border-radius:20px;padding:2px 9px;white-space:nowrap}
 .tag.fund{background:#e0f2fe;color:#075985}.tag.marca{background:#fef3c7;color:#92400e}
 .tag.NEXUS{background:#e0e7ff;color:#3730a3}.tag.VITAL{background:#fce7f3;color:#9d174d}
+.st{display:inline-block;font-family:inherit;font-size:11.5px;font-weight:800;border-radius:8px;padding:4px 9px;border:1.5px solid;white-space:nowrap}
+select.st{cursor:pointer}
+.st.pend{color:#b45309;border-color:#fcd34d;background:#fffbeb}
+.st.and{color:#1d4ed8;border-color:#93c5fd;background:#eff6ff}
+.st.ok{color:#15803d;border-color:#86efac;background:#f0fdf4}
+.st.nao{color:#b91c1c;border-color:#fca5a5;background:#fef2f2}
 .sim{color:#15803d;font-weight:800}.nao{color:#d1d5db}
 .plano{border:1px solid var(--border);border-left:5px solid var(--brand);border-radius:10px;margin-bottom:12px;overflow:hidden}
 .plano summary{list-style:none;cursor:pointer;padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fafbfc}
@@ -55,6 +61,7 @@ td.c,th.c{text-align:center}
 .vazio{text-align:center;color:var(--gray);padding:40px 20px;line-height:1.7}
 .vazio b{display:block;font-size:16px;color:var(--text)}
 .nota{font-size:11px;color:var(--gray);line-height:1.5;margin-top:4px}
+@media(max-width:1200px){.kpis{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:1000px){.kpis{grid-template-columns:repeat(2,1fr)}.plano .corpo{grid-template-columns:1fr}}
 @media print{.bar{position:static}.bar button,.hdr a{display:none}details.plano{break-inside:avoid}}
 </style>
@@ -72,6 +79,8 @@ td.c,th.c{text-align:center}
   <label for="f-gd">GD</label><select id="f-gd"></select>
   <label for="f-tipo">Plano</label>
   <select id="f-tipo"><option value="">Todos</option><option value="fund">Fundamentos</option><option value="marca">Marca-chave</option></select>
+  <label for="f-status">Status</label>
+  <select id="f-status"><option value="">Todos</option><option>Pendente</option><option>Em andamento</option><option>Concluída</option><option>Não realizada</option></select>
   <input id="f-busca" type="search" placeholder="Buscar em problema, causa ou ação">
   <button id="btn-atualizar">🔄 Atualizar</button>
 </div>
@@ -83,11 +92,15 @@ td.c,th.c{text-align:center}
 // Consolida os planos que os GDs preenchem no modo apresentação do
 // dashboard (index.html → ▶ Apresentação). Cada plano é 1 linha da aba
 // budget_lancamentos com produto = N4_PLANO, gd = "N4:<distrito_id>",
-// crm = "<plano>|<mês>" e o conteúdo em JSON no campo "acao". Aqui só se lê.
+// crm = "<plano>|<mês>" e o conteúdo em JSON no campo "acao". O conteúdo do
+// plano só se edita na apresentação; aqui se acompanha a execução: cada ação
+// tem um status, gravado de volta no mesmo JSON (campo "status" da ação).
 var TAB = 'budget_lancamentos', PROD = 'N4_PLANO';
 var MESES = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
 var W = [['oque','O quê'],['porque','Por quê'],['onde','Onde'],['quando','Quando'],['quem','Quem'],['como','Como'],['quanto','Quanto custa']];
-var CONFIG = {}, PLANOS = [];
+var STATUS = ['Pendente', 'Em andamento', 'Concluída', 'Não realizada'];
+var COR = { 'Pendente': 'pend', 'Em andamento': 'and', 'Concluída': 'ok', 'Não realizada': 'nao' };
+var CONFIG = {}, PLANOS = [], PODE_GRAVAR = false;
 
 function $(id){ return document.getElementById(id); }
 function esc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -118,8 +131,10 @@ function lerPlanos(linhas){
     out.push({
       distrito: distrito, gd: l.medico || distrito, linha: (l.linha || '').toUpperCase(), mes: mes, tipo: fund ? 'fund' : 'marca',
       titulo: fund ? 'Fundamentos' : chave.replace(/^marca-/, '').replace(/_/g, ' '),
-      problema: p.problema || '', kpis: p.kpis || [], porques: p.porques || [], acoes: p.acoes || [], data: l.data
+      problema: p.problema || '', kpis: p.kpis || [], porques: p.porques || [], acoes: p.acoes || [], data: l.data,
+      reg: l, bruto: p // linha original e JSON completo, para regravar o status
     });
+    out[out.length - 1].acoes.forEach(function(a){ if (STATUS.indexOf(a.status) < 0) a.status = 'Pendente'; });
   });
   return out.sort(function(a, b){
     return (MESES.indexOf(b.mes) - MESES.indexOf(a.mes)) || a.linha.localeCompare(b.linha) || a.gd.localeCompare(b.gd) || (a.tipo === b.tipo ? a.titulo.localeCompare(b.titulo) : (a.tipo === 'fund' ? -1 : 1));
@@ -127,11 +142,12 @@ function lerPlanos(linhas){
 }
 
 function filtrados(){
-  var mes = $('f-mes').value, gd = $('f-gd').value, tipo = $('f-tipo').value, q = $('f-busca').value.trim().toLowerCase();
+  var mes = $('f-mes').value, gd = $('f-gd').value, tipo = $('f-tipo').value, st = $('f-status').value, q = $('f-busca').value.trim().toLowerCase();
   return PLANOS.filter(function(p){
     if (mes && p.mes !== mes) return false;
     if (gd && p.distrito !== gd) return false;
     if (tipo && p.tipo !== tipo) return false;
+    if (st && !p.acoes.some(function(a){ return a.status === st; })) return false;
     if (q){
       var txt = [p.gd, p.titulo, p.problema].concat(p.porques, p.kpis, p.acoes.map(function(a){ return W.map(function(w){ return a[w[0]] || ''; }).join(' '); })).join(' ').toLowerCase();
       if (txt.indexOf(q) < 0) return false;
@@ -152,6 +168,33 @@ function montarFiltros(){
   $('f-gd').value = gds[gAtual] ? gAtual : '';
 }
 
+// seletor de status de uma ação (ou só o rótulo, se a gravação não estiver configurada)
+function seletor(p, k){
+  var a = p.acoes[k];
+  if (!PODE_GRAVAR) return '<span class="st ' + COR[a.status] + '">' + a.status + '</span>';
+  return '<select class="st ' + COR[a.status] + '" onchange="mudarStatus(\'' + p.reg.id + '\',' + k + ',this)">' +
+    STATUS.map(function(s){ return '<option' + (s === a.status ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>';
+}
+async function mudarStatus(id, k, sel){
+  var p = PLANOS.filter(function(x){ return x.reg.id === id; })[0];
+  if (!p) return;
+  var antes = p.acoes[k].status, novo = sel.value;
+  p.acoes[k].status = novo; p.bruto.acoes = p.acoes;
+  sel.disabled = true;
+  try {
+    var r = await fetch(CONFIG.budget_webapp_url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({
+      token: CONFIG.budget_token, acao: 'edit', id: p.reg.id, gd: p.reg.gd, linha: p.reg.linha, produto: p.reg.produto, crm: p.reg.crm,
+      medico: p.reg.medico, valor: 0, acao_lancamento: JSON.stringify(p.bruto), data: p.reg.data, criadoEm: p.reg.criadoEm }) });
+    var resp = JSON.parse(await r.text());
+    if (!resp.ok) throw new Error(resp.erro || 'falha desconhecida');
+    p.reg.acao = JSON.stringify(p.bruto);
+  } catch(e){
+    p.acoes[k].status = antes;
+    alert('Não foi possível gravar o status: ' + e.message);
+  }
+  render();
+}
+
 function kpi(l, v, s){ return '<div class="kpi"><div class="l">' + l + '</div><div class="v">' + v + '</div><div class="s">' + s + '</div></div>'; }
 
 function render(){
@@ -161,7 +204,11 @@ function render(){
     return;
   }
   var ps = filtrados();
-  var nAcoes = ps.reduce(function(t, p){ return t + p.acoes.length; }, 0);
+  var stF = $('f-status').value;
+  function acoesDe(p){ return p.acoes.map(function(a, k){ return {a: a, k: k}; }).filter(function(x){ return !stF || x.a.status === stF; }); }
+  var nAcoes = ps.reduce(function(t, p){ return t + acoesDe(p).length; }, 0);
+  var cont = {}; ps.forEach(function(p){ p.acoes.forEach(function(a){ cont[a.status] = (cont[a.status] || 0) + 1; }); });
+  var totAc = ps.reduce(function(t, p){ return t + p.acoes.length; }, 0), conc = cont['Concluída'] || 0;
   var gds = {}; ps.forEach(function(p){ gds[p.distrito] = p; });
   var nFund = ps.filter(function(p){ return p.tipo === 'fund'; }).length;
   var marcas = {}; ps.forEach(function(p){ if (p.tipo === 'marca') marcas[p.titulo] = (marcas[p.titulo] || 0) + 1; });
@@ -169,7 +216,8 @@ function render(){
 
   var h = '<div class="kpis">' +
     kpi('Planos', ps.length, 'no filtro atual') +
-    kpi('Ações (5W2H)', nAcoes, 'somando todos os planos') +
+    kpi('Ações (5W2H)', totAc, (cont['Pendente'] || 0) + ' pendentes · ' + (cont['Em andamento'] || 0) + ' em andamento') +
+    kpi('Execução', (totAc ? Math.round(conc / totAc * 100) : 0) + '%', conc + ' de ' + totAc + ' ações concluídas' + (cont['Não realizada'] ? ' · ' + cont['Não realizada'] + ' não realizadas' : '')) +
     kpi('GDs com plano', Object.keys(gds).length, 'de 8 distritos da SPI') +
     kpi('Fundamentos', nFund, 'planos de execução') +
     kpi('Marca-chave', ps.length - nFund, topMarca.length ? topMarca.map(function(m){ return m + ' ' + marcas[m]; }).join(' · ') : 'nenhum') + '</div>';
@@ -190,12 +238,15 @@ function render(){
   h += '</tbody></table><div class="nota">"—" significa que não há plano salvo: ou o GD não tinha desvio naquele item, ou ainda não preencheu. Esta página não sabe distinguir os dois casos.</div></div>';
 
   // 2. todas as ações
-  h += '<div class="card"><h2>Ações <small>' + nAcoes + ' no filtro atual</small></h2><table><thead><tr><th>GD</th><th>Plano</th><th>Causa raiz</th><th>O quê</th><th>Quem</th><th>Quando</th><th>Como</th><th>Quanto custa</th></tr></thead><tbody>';
+  h += '<div class="card"><h2>Ações <small>' + nAcoes + ' no filtro atual</small></h2><table><thead><tr><th>GD</th><th>Plano</th><th>Causa raiz</th><th>O quê</th><th>Quem</th><th>Quando</th><th>Como</th><th>Quanto custa</th><th>Status</th></tr></thead><tbody>';
   ps.forEach(function(p){
-    p.acoes.forEach(function(a, k){
-      h += '<tr>' + (k === 0 ? '<td class="gd" rowspan="' + p.acoes.length + '">' + esc(p.gd) + '<div class="nota">' + p.mes + '/2026</div></td>' +
-        '<td rowspan="' + p.acoes.length + '"><span class="tag ' + p.tipo + '">' + esc(p.titulo) + '</span></td><td rowspan="' + p.acoes.length + '">' + esc(p.porques[p.porques.length - 1] || '—') + '</td>' : '') +
-        '<td>' + (esc(a.oque) || '—') + '</td><td>' + (esc(a.quem) || '—') + '</td><td>' + (esc(a.quando) || '—') + '</td><td>' + (esc(a.como) || '—') + '</td><td>' + (esc(a.quanto) || '—') + '</td></tr>';
+    var as = acoesDe(p);
+    as.forEach(function(x, i){
+      var a = x.a;
+      h += '<tr>' + (i === 0 ? '<td class="gd" rowspan="' + as.length + '">' + esc(p.gd) + '<div class="nota">' + p.mes + '/2026</div></td>' +
+        '<td rowspan="' + as.length + '"><span class="tag ' + p.tipo + '">' + esc(p.titulo) + '</span></td><td rowspan="' + as.length + '">' + esc(p.porques[p.porques.length - 1] || '—') + '</td>' : '') +
+        '<td>' + (esc(a.oque) || '—') + '</td><td>' + (esc(a.quem) || '—') + '</td><td>' + (esc(a.quando) || '—') + '</td><td>' + (esc(a.como) || '—') + '</td><td>' + (esc(a.quanto) || '—') + '</td>' +
+        '<td>' + seletor(p, x.k) + '</td></tr>';
     });
   });
   h += '</tbody></table></div>';
@@ -207,8 +258,8 @@ function render(){
       '<span class="raiz"><i>Causa raiz:</i> ' + esc(p.porques[p.porques.length - 1] || '—') + '</span><span class="nota">' + p.mes + '/2026 · salvo em ' + dataBr(p.data) + ' · ' + p.acoes.length + ' ação(ões)</span></summary>' +
       '<div class="corpo"><div class="prob"><span class="sub">Problema</span>' + esc(p.problema) + (p.kpis.length ? '<div class="kp">' + p.kpis.map(function(k){ return '<span>' + esc(k) + '</span>'; }).join('') + '</div>' : '') + '</div>' +
       '<div><span class="sub">5 porquês</span>' + p.porques.map(function(t, k){ var r = k === p.porques.length - 1; return '<div class="pq' + (r ? ' raiz' : '') + '"><i>' + (r ? 'Causa raiz' : (k + 1) + 'º por quê') + '</i>' + esc(t) + '</div>'; }).join('') + '</div>' +
-      '<div><span class="sub">Plano de ação — 5W2H</span><table><thead><tr>' + W.map(function(w){ return '<th>' + w[1] + '</th>'; }).join('') + '</tr></thead><tbody>' +
-      p.acoes.map(function(a){ return '<tr>' + W.map(function(w){ return '<td>' + (esc(a[w[0]]) || '—') + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div></div></details>';
+      '<div><span class="sub">Plano de ação — 5W2H</span><table><thead><tr>' + W.map(function(w){ return '<th>' + w[1] + '</th>'; }).join('') + '<th>Status</th></tr></thead><tbody>' +
+      p.acoes.map(function(a){ return '<tr>' + W.map(function(w){ return '<td>' + (esc(a[w[0]]) || '—') + '</td>'; }).join('') + '<td><span class="st ' + COR[a.status] + '">' + a.status + '</span></td></tr>'; }).join('') + '</tbody></table></div></div></details>';
   });
   h += '</div>';
   main.innerHTML = h;
@@ -222,6 +273,7 @@ async function carregar(){
       if (!res.ok) throw new Error('config.json não encontrado.');
       CONFIG = await res.json();
     }
+    PODE_GRAVAR = !!(CONFIG.budget_webapp_url && CONFIG.budget_token);
     PLANOS = lerPlanos(await fetchAba(TAB));
     montarFiltros();
     render();
@@ -230,7 +282,7 @@ async function carregar(){
   }
 }
 
-['f-mes','f-gd','f-tipo'].forEach(function(id){ $(id).onchange = render; });
+['f-mes','f-gd','f-tipo','f-status'].forEach(function(id){ $(id).onchange = render; });
 $('f-busca').oninput = render;
 $('btn-atualizar').onclick = carregar;
 carregar();
