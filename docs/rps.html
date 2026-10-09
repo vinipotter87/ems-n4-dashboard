@@ -751,8 +751,12 @@ function iFundamentos(){
   var h = '<div class="fund">' + inds.map(function(i){ return '<div class="fc ' + (i.sem ? 'sem' : (i.desvio ? 'desvio' : 'ok')) + '"><div class="l">' + i.nome + '</div><div class="v">' + i.valor + (i.quad ? ' <span class="tag ' + med(i.quad) + '" style="font-size:11px;vertical-align:middle">' + esc(i.quad) + '</span>' : '') + '</div><div class="s">meta ' + i.meta + '</div><div class="t">' + (i.sem ? 'sem dado' : (i.desvio ? '● em desvio' : '✓ dentro da meta')) + '</div></div>'; }).join('') + '</div>';
   if (!desv.length) return [{ nome: 'Fundamentos', msg: 'Todos os indicadores de execução dentro da meta', html: h + '<div class="pok">✓ Nenhum indicador de execução em desvio — plano de fundamentos não é necessário.</div>' }];
   PLANOS.push({ chave: 'fund', titulo: 'Fundamentos', kpis: desv.map(function(i){ return i.nome; }), todos: inds.map(function(i){ return i.nome; }), problema: 'Indicadores de execução em desvio: ' + desv.map(function(i){ return i.nome + ' em ' + i.valor + (i.quad ? ' — ' + String(i.quad).toLowerCase() : '') + ' (meta ' + i.meta + ')'; }).join('; ') + '.' });
-  return [{ nome: 'Fundamentos', msg: desv.length + ' de ' + inds.length + ' indicadores de execução em desvio', html: h + '<div class="nota" style="background:#fff;border:1px dashed var(--border);border-radius:10px;padding:10px 14px">O plano de fundamentos está no próximo slide.</div>' },
-          { nome: 'Plano — Fundamentos', msg: 'Em desvio: ' + desv.map(function(i){ return i.nome + ' ' + i.valor; }).join(' · '), html: '<div class="plano" id="plano-fund"></div>', plano: 'fund' }];
+  // Fundamentos aceita no máximo 2 planos em andamento por representante: "fund" e "fund2".
+  // Um plano novo só abre em uma vaga depois que o plano anterior dela foi encerrado.
+  PLANOS.push({ chave: 'fund2', titulo: 'Fundamentos — 2º plano', kpis: [], todos: inds.map(function(i){ return i.nome; }), problema: '', opcional: true });
+  return [{ nome: 'Fundamentos', msg: desv.length + ' de ' + inds.length + ' indicadores de execução em desvio', html: h + '<div class="nota" style="background:#fff;border:1px dashed var(--border);border-radius:10px;padding:10px 14px">Os planos de fundamentos estão nos próximos slides (máximo de 2 em andamento por representante).</div>' },
+          { nome: 'Plano — Fundamentos', msg: 'Em desvio: ' + desv.map(function(i){ return i.nome + ' ' + i.valor; }).join(' · '), html: '<div class="plano" id="plano-fund"></div>', plano: 'fund' },
+          { nome: 'Plano — Fundamentos (2º plano)', msg: 'Opcional · máximo de 2 planos de fundamentos em andamento', html: '<div class="plano" id="plano-fund2"></div>', plano: 'fund2' }];
 }
 function iMarcasDesvio(){
   var M = marcasRep(), out = [], serie = ST.d.hist.concat([{ mes: ST.mes, pr: ST.d.pr }]);
@@ -787,7 +791,7 @@ function iMarcasDesvio(){
 function kpiKey(s){ return String(s).replace(/ \(simulado\)$/, '').replace(/^PEX — .*$/, 'PEX'); }
 function medir(ch){ // retrato atual do que o plano acompanha, para o setor em ST.setor
   var ref = ST.d.ref, m = { data: hoje(), rps: ST.data };
-  if (ch === 'fund') m.inds = fundamentosRep().map(function(i){ return { nome: kpiKey(i.nome), n: i.n, txt: i.valor + (i.quad ? ' ' + i.quad : ''), mes: ref[i.fonte] || ST.mes }; });
+  if (/^fund/.test(ch)) m.inds = fundamentosRep().map(function(i){ return { nome: kpiKey(i.nome), n: i.n, txt: i.valor + (i.quad ? ' ' + i.quad : ''), mes: ref[i.fonte] || ST.mes }; });
   else { var M = marcasRep(), mk = M.marcas.filter(function(x){ return 'marca-' + x.replace(/[^A-Z0-9]+/g, '_') === ch; })[0], x = mk && M.eu.m[mk];
     m.mes = ref.prod; m.real = x ? x.real : null; m.cota = x ? x.cota : null; m.cob = x ? x.cob : null; }
   return m;
@@ -816,7 +820,7 @@ function evolDados(ch, p, atual){
   function rot(m, k){ return (k === 0 ? 'Base · ' : 'RPS ') + dataBr(m.rps).slice(0, 5); }
   function seta(d, un, inv, casas){ if (d === null) return '—'; if (Math.abs(d) < 0.05) return '<b style="color:var(--gray)">= sem mudança</b>'; var bom = inv ? d < 0 : d > 0;
     return '<b style="color:' + (bom ? '#15803d' : '#b91c1c') + '">' + (d > 0 ? '▲ +' : '▼ ') + (un === 'R$' ? brl(Math.abs(d)).replace('R$', (d < 0 ? '-' : '') + 'R$') : d.toFixed(casas === 0 ? 0 : 1).replace('.', ',') + un) + '</b>'; }
-  if (ch === 'fund'){
+  if (/^fund/.test(ch)){
     var marc = (p.kpis || []).map(kpiKey), nomes = p.base.inds.map(function(i){ return i.nome; }).filter(function(n){ return !marc.length || marc.indexOf(n) >= 0; });
     nomes.forEach(function(nome){
       function de(m){ return (m.inds || []).filter(function(i){ return i.nome === nome; })[0] || null; }
@@ -837,7 +841,7 @@ function evolDados(ch, p, atual){
 function evolChips(pts){ return pts.map(function(x){ return '<span class="ev' + (x.atual ? ' at' : '') + '"><i>' + x.rot + (x.mes ? ' · dado de ' + x.mes : '') + '</i>' + esc(x.txt) + '</span>'; }).join('<span class="evs">→</span>'); }
 function evolBloco(ch, p){ // dentro do plano salvo, no deck da individual
   var ls = evolDados(ch, p, medir(ch)); if (!ls.length) return '';
-  return '<div class="evol"><b class="psub">Evolução desde o plano</b><table class="wt ver"><thead><tr><th>' + (ch === 'fund' ? 'Indicador acompanhado' : 'Métrica') + '</th><th>Linha do tempo</th><th>Variação (atual − base)</th></tr></thead><tbody>' +
+  return '<div class="evol"><b class="psub">Evolução desde o plano</b><table class="wt ver"><thead><tr><th>' + (/^fund/.test(ch) ? 'Indicador acompanhado' : 'Métrica') + '</th><th>Linha do tempo</th><th>Variação (atual − base)</th></tr></thead><tbody>' +
     ls.map(function(l){ return '<tr><td><b>' + esc(l.nome) + '</b></td><td>' + evolChips(l.pontos) + '</td><td>' + l.delta + '</td></tr>'; }).join('') + '</tbody></table></div>';
 }
 
@@ -857,7 +861,7 @@ function planosDoSetor(setor){ // todos os planos do representante, do mais anti
     var p; try { p = JSON.parse(l.acao); } catch(e){ return null; } return { reg: l, p: p, ch: x[2], mes: x[3] }; }).filter(Boolean);
 }
 function planosAbertos(setor){ return planosDoSetor(setor).filter(function(o){ return !o.p.encerrado; }); }
-function planoTitulo(ch){ return ch === 'fund' ? 'Fundamentos' : ch.replace(/^marca-/, '').replace(/_/g, ' '); }
+function planoTitulo(ch){ return ch === 'fund' ? 'Fundamentos' : ch === 'fund2' ? 'Fundamentos — 2º plano' : ch.replace(/^marca-/, '').replace(/_/g, ' '); }
 function revisaoTag(p, ref){ // etiqueta da próxima revisão em relação a uma data (a da RPS ou hoje)
   if (p.encerrado) return '<span class="p ' + (p.encerrado.resultado === 'atingido' ? 'ok' : 'crit') + '">encerrado em ' + dataBr(p.encerrado.data) + ' — ' + (p.encerrado.resultado === 'atingido' ? 'objetivo atingido' : 'não atingido') + '</span>';
   if (!p.revisao) return '<span class="p warn">sem data de revisão</span>';
@@ -882,7 +886,7 @@ function desenharAndamento(){
   ab.forEach(function(o){ var p = o.p, id = o.reg.id, evs = evolDados(o.ch, p, medir(o.ch)), feitas = (p.acoes || []).filter(function(a){ return a.status === 'Concluída'; }).length;
     h += '<div class="plano" style="margin-bottom:12px"><div class="ph">🧭 ' + esc(planoTitulo(o.ch)) + ' <span>criado em ' + dataBr(criadoDe(o.reg)) + ' · dados de ' + o.mes + '/2026' + (p.revisoes && p.revisoes.length ? ' · revisado em ' + p.revisoes.map(function(d){ return dataBr(d).slice(0, 5); }).join(', ') : '') + '</span><span style="margin-left:auto">' + revisaoTag(p, ST.data) + '</span></div>' +
       '<div class="pcols" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)"><div class="pp" style="margin:0"><b>Problema</b>' + esc(p.problema) + '</div><div class="pv raiz" style="margin:0"><i>Causa raiz</i>' + esc(raizDe(p) || '—') + '</div></div>' +
-      (evs.length ? '<b class="psub" style="margin-top:10px">Evolução desde o plano</b><table class="wt ver"><thead><tr><th>' + (o.ch === 'fund' ? 'Indicador acompanhado' : 'Métrica') + '</th><th>Linha do tempo</th><th>Variação (atual − base)</th></tr></thead><tbody>' +
+      (evs.length ? '<b class="psub" style="margin-top:10px">Evolução desde o plano</b><table class="wt ver"><thead><tr><th>' + (/^fund/.test(o.ch) ? 'Indicador acompanhado' : 'Métrica') + '</th><th>Linha do tempo</th><th>Variação (atual − base)</th></tr></thead><tbody>' +
         evs.map(function(l){ return '<tr><td><b>' + esc(l.nome) + '</b></td><td>' + evolChips(l.pontos) + '</td><td>' + l.delta + '</td></tr>'; }).join('') + '</tbody></table>' : '') +
       '<b class="psub" style="margin-top:10px">Ações <small style="font-weight:600;text-transform:none;letter-spacing:0">' + feitas + ' de ' + (p.acoes || []).length + ' concluídas</small></b><table class="wt ver"><thead><tr><th>O quê</th><th>Quem</th><th>Quando</th><th>Como</th><th style="width:170px">Status</th></tr></thead><tbody>' +
       (p.acoes || []).map(function(a, k){ var st = ACAO_ST.indexOf(a.status) >= 0 ? a.status : 'Pendente';
@@ -917,7 +921,7 @@ function planoAcao(ch, delta, idx){ var p = planoLer(ch), box = $('plano-' + ch)
   if (delta > 0) ls.push({}); else ls.splice(idx, 1); p.acoes = ls.length ? ls : [{}]; planoDesenhar(ch, true, p); }
 function planoDesenhar(ch, editar, rasc){
   var box = $('plano-' + ch), info = planoInfo(ch); if (!box || !info) return;
-  var pode = !!(CONFIG.budget_webapp_url && CONFIG.budget_token), reg = planoReg(ch), salvo = planoDados(ch), ed = pode && (editar === true || !salvo), q = "'" + ch + "'", h = '';
+  var pode = !!(CONFIG.budget_webapp_url && CONFIG.budget_token), reg = planoReg(ch), salvo = planoDados(ch), ed = pode && (editar === true || (!salvo && !info.opcional)), q = "'" + ch + "'", h = '';
   if (ed){
     var p = rasc || salvo || { problema: info.problema, kpis: info.kpis.slice(), porques: [], acoes: [{}] }; if (!p.acoes || !p.acoes.length) p.acoes = [{}];
     h += '<div class="ph">🧭 Plano — ' + info.titulo + ' <span>5 porquês + 5W2H</span></div><label class="pl">Problema</label><textarea data-f="problema" rows="2">' + esc(p.problema) + '</textarea>';
@@ -931,7 +935,7 @@ function planoDesenhar(ch, editar, rasc){
     h += '</tbody></table><div class="pf" style="margin-top:6px"><span style="font-weight:700;color:var(--text)">Próxima revisão:</span><input type="date" data-f="revisao" value="' + esc(p.revisao || maisDias(ST.data, 7)) + '" style="border:1.5px solid var(--border);border-radius:7px;padding:5px 8px;font-size:12.5px;background:#fffef7">' +
       '<span>data em que este plano volta à pauta da RPS</span>' + (reg ? '<span style="margin-left:auto">Plano criado em <b>' + dataBr(criadoDe(reg)) + '</b></span>' : '<span style="margin-left:auto">Data de criação: <b>' + dataBr(hoje()) + '</b></span>') + '</div>' +
       '<div class="pf"><button class="b2" onclick="planoAcao(' + q + ',1)">+ Adicionar ação</button><button class="b1" onclick="planoSalvar(' + q + ')">Salvar plano</button>' +
-      (salvo ? '<button class="b2" onclick="planoDesenhar(' + q + ',false)">Cancelar</button><button class="b2" onclick="planoApagar(' + q + ')">Apagar plano</button>' : '') + '<span id="plano-st-' + ch + '">' + (reg ? 'Salvo em ' + dataBr(reg.data) : 'Ainda não preenchido') + '</span></div>';
+      (salvo ? '<button class="b2" onclick="planoDesenhar(' + q + ',false)">Cancelar</button><button class="b2" onclick="planoApagar(' + q + ')">Apagar plano</button>' : (info.opcional ? '<button class="b2" onclick="planoDesenhar(' + q + ',false)">Cancelar</button>' : '')) + '<span id="plano-st-' + ch + '">' + (reg ? 'Salvo em ' + dataBr(reg.data) : 'Ainda não preenchido') + '</span></div>';
   } else if (salvo){
     h += '<div class="ph">🧭 Plano — ' + info.titulo + '<span style="margin-left:auto">' + (pode ? '<button class="b2" onclick="planoDesenhar(' + q + ',true)">✏️ Editar</button>' : '') + '</span></div>' +
       '<div class="pp"><b>Problema</b>' + esc(salvo.problema) + (salvo.kpis && salvo.kpis.length ? '<div class="ptags">' + salvo.kpis.map(function(k){ return '<span>' + esc(k) + '</span>'; }).join('') + '</div>' : '') + '</div><div class="pcols"><div><b class="psub">5 porquês</b>' +
@@ -939,6 +943,12 @@ function planoDesenhar(ch, editar, rasc){
       (salvo.raiz ? '<div class="pv raiz"><i>Causa raiz</i>' + esc(salvo.raiz) + '</div>' : '') +
       '</div><div><b class="psub">Plano de ação — 5W2H</b><table class="wt ver"><thead><tr>' + W.map(function(w){ return '<th>' + w[1] + '</th>'; }).join('') + '</tr></thead><tbody>' +
       salvo.acoes.map(function(a){ return '<tr>' + W.map(function(w){ return '<td>' + (esc(a[w[0]]) || '—') + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div></div>' + evolBloco(ch, salvo) + '<div class="pf"><span>Criado em <b>' + dataBr(criadoDe(reg)) + '</b></span>' + revisaoTag(salvo, ST.data) + '<span id="plano-st-' + ch + '" style="margin-left:auto">Última alteração em ' + dataBr(reg.data) + '</span></div>';
+  } else if (info.opcional && pode){
+    var p1o = planoDados('fund');
+    h += '<div class="ph">🧭 Plano — ' + info.titulo + ' <span>opcional</span></div><div class="pp" style="margin:0">' +
+      (p1o ? 'O representante já tem 1 plano de fundamentos em andamento. Dá para abrir um segundo, para outro indicador — o limite é de <b style="display:inline;font-size:inherit;text-transform:none;letter-spacing:0;color:inherit">2 planos de fundamentos em andamento</b>. Um terceiro só depois de encerrar um deles no slide "Planos em andamento".'
+           : 'Preencha primeiro o plano de Fundamentos no slide anterior. O segundo plano é opcional e serve para tratar outro indicador em paralelo (máximo de 2 em andamento).') + '</div>' +
+      (p1o ? '<div class="pf"><button class="b1" onclick="planoDesenhar(' + q + ',true)">＋ Abrir 2º plano de fundamentos</button></div>' : '');
   } else h += '<div class="ph">🧭 Plano — ' + info.titulo + '</div><div class="pf"><span>Plano ainda não preenchido — gravação indisponível nesta página.</span></div>';
   box.innerHTML = h; if (ed) planoPorques(ch); ajustar();
 }
@@ -961,12 +971,13 @@ async function planoSalvar(ch){ var p = planoLer(ch), st = $('plano-st-' + ch); 
 async function planoApagar(ch){ if (window.confirm('Apagar este plano?') && await planoEnviar(ch, null, true)){ planoDesenhar(ch, false); planoFinal(); desenharAndamento(); } }
 function planoFinal(){ var box = $('plano-final'); if (!box) return; var ls = '', n = 0, feitos = 0;
   PLANOS.forEach(function(p){ var d = planoDados(p.chave);
+    if (!d && p.opcional) return;
     if (!d){ ls += '<tr><td class="n">' + p.titulo + '</td><td colspan="5" style="text-align:left;color:#b45309;font-weight:700">Plano ainda não preenchido</td></tr>'; return; } feitos++;
     d.acoes.forEach(function(a, k){ n++; ls += '<tr>' + (k === 0 ? '<td class="n" rowspan="' + d.acoes.length + '">' + p.titulo + '</td><td rowspan="' + d.acoes.length + '" style="text-align:left">' + esc(raizDe(d)) + '</td>' : '') +
       '<td style="text-align:left">' + (esc(a.oque) || '—') + '</td><td>' + (esc(a.quem) || '—') + '</td><td>' + (esc(a.quando) || '—') + '</td><td style="text-align:left">' + (esc(a.como) || '—') + '</td></tr>'; }); });
   box.innerHTML = PLANOS.length ? '<div class="card"><table><thead><tr><th>Plano</th><th style="text-align:left">Causa raiz</th><th style="text-align:left">O quê</th><th>Quem</th><th>Quando</th><th style="text-align:left">Como</th></tr></thead><tbody>' + ls + '</tbody></table></div>'
     : '<div class="pok">✓ Sem desvio em fundamentos nem marca-chave abaixo de 100% — não há plano exigido para este setor.</div>';
-  box.closest('.slide').querySelector('.hdr span').textContent = PLANOS.length ? feitos + ' de ' + PLANOS.length + ' planos preenchidos · ' + n + ' ações' : 'Sem plano exigido'; }
+  box.closest('.slide').querySelector('.hdr span').textContent = PLANOS.length ? feitos + ' de ' + PLANOS.filter(function(p){ return !p.opcional || planoDados(p.chave); }).length + ' planos preenchidos · ' + n + ' ações' : 'Sem plano exigido'; }
 
 function montarIndividual(){
   PLANOS = [];
@@ -1033,8 +1044,9 @@ function telaHistorico(){
       var meus = planos[r.setor_id] || {}, exig = {}; (ex[r.setor_id] || []).forEach(function(e){ exig[e[1]] = e[0]; });
       if (Object.keys(meus).length) repsCom++;
       linhas += '<tr><td class="n">' + esc(r.nome) + '</td>' + cols.map(function(c){ var ch = c === 'Fundamentos' ? 'fund' : 'marca-' + c.replace(/[^A-Z0-9]+/g, '_');
+        if (ch === 'fund' && (meus.fund || meus.fund2)) return '<td><span class="p ok">✓ feito' + (meus.fund && meus.fund2 ? ' (2 planos)' : '') + '</span></td>';
         if (meus[ch]) return '<td><span class="p ok">✓ feito</span></td>'; if (exig[c]){ nPend++; return '<td><span class="p crit">pendente</span></td>'; } return '<td style="color:#d1d5db">—</td>'; }).join('') + '</tr>';
-      Object.keys(meus).forEach(function(ch){ var o = meus[ch], p = o.p, tit = ch === 'fund' ? 'Fundamentos' : ch.replace(/^marca-/, '').replace(/_/g, ' '); nPl++;
+      Object.keys(meus).forEach(function(ch){ var o = meus[ch], p = o.p, tit = planoTitulo(ch); nPl++;
         var gSet = ST.setor; ST.setor = r.setor_id; var atual = medir(ch); ST.setor = gSet;
         if (!p.base) semBase.push({ ch: ch, p: p, l: o.l, setor: r.setor_id });
         var evs = evolDados(ch, p, atual); evs.forEach(function(e, k){ evol += '<tr>' + (k === 0 ? '<td class="n" rowspan="' + evs.length + '">' + esc(r.nome) + '</td><td rowspan="' + evs.length + '">' + esc(tit) + '</td><td rowspan="' + evs.length + '">' + dataBr(criadoDe(o.l)) + '</td><td rowspan="' + evs.length + '">' + revisaoTag(p, hoje()) + '</td>' : '') +
