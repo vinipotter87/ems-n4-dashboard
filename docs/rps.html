@@ -685,6 +685,7 @@ function iMarcasDesvio(){
 }
 
 // ── planos: 5 porquês + 5W2H ──
+function raizDe(p){ return (p && p.raiz) || (p && p.porques && p.porques[p.porques.length - 1]) || ''; } // planos antigos não têm o campo: vale o último por quê
 function planoReg(ch){ var gd = 'N4:' + ST.gd, k = 'rpsi|' + ST.setor + '|' + ch + '|' + ST.mes; var rs = ST.lanc.filter(function(l){ return l.produto === 'RPS_PLANO' && l.gd === gd && l.crm === k; }); return rs.length ? rs[rs.length - 1] : null; }
 function planoDados(ch){ var r = planoReg(ch); if (!r) return null; try { return JSON.parse(r.acao); } catch(e){ return null; } }
 function planoInfo(ch){ return PLANOS.filter(function(p){ return p.chave === ch; })[0]; }
@@ -692,6 +693,7 @@ function planoLer(ch){ var box = $('plano-' + ch), p = { problema: (box.querySel
   p.problema = p.problema.trim();
   [].forEach.call(box.querySelectorAll('[data-kpi]'), function(c){ if (c.checked) p.kpis.push(c.getAttribute('data-kpi')); });
   [].forEach.call(box.querySelectorAll('[data-pq]'), function(i){ if (i.value.trim()) p.porques.push(i.value.trim()); });
+  p.raiz = ((box.querySelector('[data-f="raiz"]') || {}).value || '').trim();
   [].forEach.call(box.querySelectorAll('[data-acao]'), function(tr){ var a = { status: tr.getAttribute('data-st') || 'Pendente' }, tem = false; W.forEach(function(w){ a[w[0]] = tr.querySelector('[data-w="' + w[0] + '"]').value.trim(); if (a[w[0]]) tem = true; }); if (tem) p.acoes.push(a); });
   return p; }
 function planoPorques(ch){ var ins = document.querySelectorAll('#plano-' + ch + ' [data-pq]'), lib = true, ult = '';
@@ -707,16 +709,18 @@ function planoDesenhar(ch, editar, rasc){
     var p = rasc || salvo || { problema: info.problema, kpis: info.kpis.slice(), porques: [], acoes: [{}] }; if (!p.acoes || !p.acoes.length) p.acoes = [{}];
     h += '<div class="ph">🧭 Plano — ' + info.titulo + ' <span>5 porquês + 5W2H</span></div><label class="pl">Problema</label><textarea data-f="problema" rows="2">' + esc(p.problema) + '</textarea>';
     if (info.kpis.length) h += '<div class="pk"><span>Indicador que direciona este plano:</span>' + info.kpis.map(function(k){ return '<label><input type="checkbox" data-kpi="' + esc(k) + '"' + (p.kpis.indexOf(k) >= 0 ? ' checked' : '') + '> ' + k + '</label>'; }).join('') + '</div>';
-    h += '<label class="pl">5 porquês <small>mínimo 3 · o último é a causa raiz</small></label>';
+    h += '<label class="pl">5 porquês <small>mínimo 3</small></label>';
     for (var i = 0; i < 5; i++) h += '<div class="pq"><b>' + (i + 1) + 'º por quê?</b><input type="text" data-pq="' + i + '" value="' + esc(p.porques[i] || '') + '" oninput="planoPorques(' + q + ')" placeholder="' + (i ? 'Por que isso acontece?' : 'Por que o problema acontece?') + '"></div>';
-    h += '<div class="pcr">Causa raiz: <b id="plano-cr-' + ch + '">—</b></div><label class="pl">Plano de ação — 5W2H <small>pelo menos uma ação com O quê, Quando e Quem</small></label><table class="wt"><thead><tr>' + W.map(function(w){ return '<th>' + w[1] + '</th>'; }).join('') + '<th></th></tr></thead><tbody>';
+    h += '<label class="pl">Causa raiz <small>síntese dos porquês — o que o plano precisa atacar</small></label><textarea data-f="raiz" rows="2" placeholder="Escreva a causa raiz com suas palavras, a partir dos porquês acima.">' + esc(p.raiz || '') + '</textarea>' +
+      '<div class="pcr">Último por quê: <b id="plano-cr-' + ch + '">—</b></div><label class="pl">Plano de ação — 5W2H <small>pelo menos uma ação com O quê, Quando e Quem</small></label><table class="wt"><thead><tr>' + W.map(function(w){ return '<th>' + w[1] + '</th>'; }).join('') + '<th></th></tr></thead><tbody>';
     p.acoes.forEach(function(a, k){ h += '<tr data-acao="' + k + '" data-st="' + esc(a.status || 'Pendente') + '">' + W.map(function(w){ return '<td><textarea rows="2" data-w="' + w[0] + '">' + esc(a[w[0]] || '') + '</textarea></td>'; }).join('') + '<td><button class="b2" onclick="planoAcao(' + q + ',-1,' + k + ')">✕</button></td></tr>'; });
     h += '</tbody></table><div class="pf"><button class="b2" onclick="planoAcao(' + q + ',1)">+ Adicionar ação</button><button class="b1" onclick="planoSalvar(' + q + ')">Salvar plano</button>' +
       (salvo ? '<button class="b2" onclick="planoDesenhar(' + q + ',false)">Cancelar</button><button class="b2" onclick="planoApagar(' + q + ')">Apagar plano</button>' : '') + '<span id="plano-st-' + ch + '">' + (reg ? 'Salvo em ' + dataBr(reg.data) : 'Ainda não preenchido') + '</span></div>';
   } else if (salvo){
     h += '<div class="ph">🧭 Plano — ' + info.titulo + '<span style="margin-left:auto">' + (pode ? '<button class="b2" onclick="planoDesenhar(' + q + ',true)">✏️ Editar</button>' : '') + '</span></div>' +
       '<div class="pp"><b>Problema</b>' + esc(salvo.problema) + (salvo.kpis && salvo.kpis.length ? '<div class="ptags">' + salvo.kpis.map(function(k){ return '<span>' + esc(k) + '</span>'; }).join('') + '</div>' : '') + '</div><div class="pcols"><div><b class="psub">5 porquês</b>' +
-      salvo.porques.map(function(t, k){ var r = k === salvo.porques.length - 1; return '<div class="pv' + (r ? ' raiz' : '') + '"><i>' + (r ? 'Causa raiz' : (k + 1) + 'º por quê') + '</i>' + esc(t) + '</div>'; }).join('') +
+      salvo.porques.map(function(t, k){ var r = !salvo.raiz && k === salvo.porques.length - 1; return '<div class="pv' + (r ? ' raiz' : '') + '"><i>' + (r ? 'Causa raiz' : (k + 1) + 'º por quê') + '</i>' + esc(t) + '</div>'; }).join('') +
+      (salvo.raiz ? '<div class="pv raiz"><i>Causa raiz</i>' + esc(salvo.raiz) + '</div>' : '') +
       '</div><div><b class="psub">Plano de ação — 5W2H</b><table class="wt ver"><thead><tr>' + W.map(function(w){ return '<th>' + w[1] + '</th>'; }).join('') + '</tr></thead><tbody>' +
       salvo.acoes.map(function(a){ return '<tr>' + W.map(function(w){ return '<td>' + (esc(a[w[0]]) || '—') + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div></div><div class="pf"><span id="plano-st-' + ch + '">Salvo em ' + dataBr(reg.data) + '</span></div>';
   } else h += '<div class="ph">🧭 Plano — ' + info.titulo + '</div><div class="pf"><span>Plano ainda não preenchido — gravação indisponível nesta página.</span></div>';
@@ -732,13 +736,14 @@ async function planoEnviar(ch, plano, apagar){ var reg = planoReg(ch), st = $('p
   ST.lanc = await fetchAba('budget_lancamentos', true); return true; }
 async function planoSalvar(ch){ var p = planoLer(ch), st = $('plano-st-' + ch); function er(m){ st.textContent = m; st.style.color = 'var(--red)'; }
   if (!p.problema) return er('Descreva o problema.'); if (p.porques.length < 3) return er('Preencha pelo menos 3 porquês.');
+  if (!p.raiz) return er('Escreva a causa raiz, sintetizando os porquês.');
   if (!p.acoes.some(function(a){ return a.oque && a.quando && a.quem; })) return er('Inclua pelo menos uma ação com O quê, Quando e Quem.');
   st.style.color = ''; if (await planoEnviar(ch, p, false)){ planoDesenhar(ch, false); planoFinal(); } }
 async function planoApagar(ch){ if (window.confirm('Apagar este plano?') && await planoEnviar(ch, null, true)){ planoDesenhar(ch, false); planoFinal(); } }
 function planoFinal(){ var box = $('plano-final'); if (!box) return; var ls = '', n = 0, feitos = 0;
   PLANOS.forEach(function(p){ var d = planoDados(p.chave);
     if (!d){ ls += '<tr><td class="n">' + p.titulo + '</td><td colspan="5" style="text-align:left;color:#b45309;font-weight:700">Plano ainda não preenchido</td></tr>'; return; } feitos++;
-    d.acoes.forEach(function(a, k){ n++; ls += '<tr>' + (k === 0 ? '<td class="n" rowspan="' + d.acoes.length + '">' + p.titulo + '</td><td rowspan="' + d.acoes.length + '" style="text-align:left">' + esc(d.porques[d.porques.length - 1]) + '</td>' : '') +
+    d.acoes.forEach(function(a, k){ n++; ls += '<tr>' + (k === 0 ? '<td class="n" rowspan="' + d.acoes.length + '">' + p.titulo + '</td><td rowspan="' + d.acoes.length + '" style="text-align:left">' + esc(raizDe(d)) + '</td>' : '') +
       '<td style="text-align:left">' + (esc(a.oque) || '—') + '</td><td>' + (esc(a.quem) || '—') + '</td><td>' + (esc(a.quando) || '—') + '</td><td style="text-align:left">' + (esc(a.como) || '—') + '</td></tr>'; }); });
   box.innerHTML = PLANOS.length ? '<div class="card"><table><thead><tr><th>Plano</th><th style="text-align:left">Causa raiz</th><th style="text-align:left">O quê</th><th>Quem</th><th>Quando</th><th style="text-align:left">Como</th></tr></thead><tbody>' + ls + '</tbody></table></div>'
     : '<div class="pok">✓ Sem desvio em fundamentos nem marca-chave abaixo de 100% — não há plano exigido para este setor.</div>';
@@ -809,11 +814,11 @@ function telaHistorico(){
         if (meus[ch]) return '<td><span class="p ok">✓ feito</span></td>'; if (exig[c]){ nPend++; return '<td><span class="p crit">pendente</span></td>'; } return '<td style="color:#d1d5db">—</td>'; }).join('') + '</tr>';
       Object.keys(meus).forEach(function(ch){ var o = meus[ch], p = o.p, tit = ch === 'fund' ? 'Fundamentos' : ch.replace(/^marca-/, '').replace(/_/g, ' '); nPl++;
         p.acoes.forEach(function(a, k){ nAc++; var st = ACAO_ST.indexOf(a.status) >= 0 ? a.status : 'Pendente'; if (st === 'Concluída') nConc++;
-          acoes += '<tr>' + (k === 0 ? '<td class="n" rowspan="' + p.acoes.length + '">' + esc(r.nome) + '</td><td rowspan="' + p.acoes.length + '">' + esc(tit) + '</td><td rowspan="' + p.acoes.length + '" style="text-align:left">' + esc(p.porques[p.porques.length - 1] || '—') + '</td>' : '') +
+          acoes += '<tr>' + (k === 0 ? '<td class="n" rowspan="' + p.acoes.length + '">' + esc(r.nome) + '</td><td rowspan="' + p.acoes.length + '">' + esc(tit) + '</td><td rowspan="' + p.acoes.length + '" style="text-align:left">' + esc(raizDe(p) || '—') + '</td>' : '') +
             '<td style="text-align:left">' + (esc(a.oque) || '—') + '</td><td>' + (esc(a.quem) || '—') + '</td><td>' + (esc(a.quando) || '—') + '</td><td>' +
             (pode ? '<select class="st ' + ACAO_COR[st] + '" onchange="histAcaoStatus(\'' + o.l.id + '\',' + k + ',this)">' + ACAO_ST.map(function(s){ return '<option' + (s === st ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' : st) + '</td></tr>'; });
-        completos += '<details class="det"><summary><b>' + esc(r.nome) + '</b> · ' + esc(tit) + '<span>causa raiz: ' + esc(p.porques[p.porques.length - 1] || '—') + ' · salvo em ' + dataBr(o.l.data) + '</span></summary><div class="detc">' +
-          '<div class="pp"><b>Problema</b>' + esc(p.problema) + '</div><div class="pcols"><div><b class="psub">5 porquês</b>' + p.porques.map(function(t, k){ var rz = k === p.porques.length - 1; return '<div class="pv' + (rz ? ' raiz' : '') + '"><i>' + (rz ? 'Causa raiz' : (k + 1) + 'º por quê') + '</i>' + esc(t) + '</div>'; }).join('') +
+        completos += '<details class="det"><summary><b>' + esc(r.nome) + '</b> · ' + esc(tit) + '<span>causa raiz: ' + esc(raizDe(p) || '—') + ' · salvo em ' + dataBr(o.l.data) + '</span></summary><div class="detc">' +
+          '<div class="pp"><b>Problema</b>' + esc(p.problema) + '</div><div class="pcols"><div><b class="psub">5 porquês</b>' + p.porques.map(function(t, k){ var rz = !p.raiz && k === p.porques.length - 1; return '<div class="pv' + (rz ? ' raiz' : '') + '"><i>' + (rz ? 'Causa raiz' : (k + 1) + 'º por quê') + '</i>' + esc(t) + '</div>'; }).join('') + (p.raiz ? '<div class="pv raiz"><i>Causa raiz</i>' + esc(p.raiz) + '</div>' : '') +
           '</div><div><b class="psub">Plano de ação — 5W2H</b><table class="wt ver"><thead><tr>' + W.map(function(w){ return '<th>' + w[1] + '</th>'; }).join('') + '</tr></thead><tbody>' + p.acoes.map(function(a){ return '<tr>' + W.map(function(w){ return '<td>' + (esc(a[w[0]]) || '—') + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div></div></div></details>'; });
     });
     h += '<div class="kpis"><div class="kpi"><div class="l">Representantes com plano</div><div class="v">' + repsCom + ' de ' + ST.d.reps.length + '</div><div class="s">em ' + ST.mes + '/2026</div></div>' +

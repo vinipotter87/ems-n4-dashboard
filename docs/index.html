@@ -3113,6 +3113,7 @@ function apresPlanoMarcaGrupo(marca, chave, problema) {
   return { chave: '', nome: 'Plano — ' + marca, nodes: [el], msg: problema, plano: chave };
 }
 
+function raizDe(p){ return (p && p.raiz) || (p && p.porques && p.porques[p.porques.length - 1]) || ''; } // planos antigos não têm o campo: vale o último por quê
 // Lê o formulário de edição do plano
 function apresPlanoLer(chave) {
   var box = document.getElementById('ap-plano-' + chave);
@@ -3120,6 +3121,7 @@ function apresPlanoLer(chave) {
   var plano = { problema: v('[data-f="problema"]'), kpis: [], porques: [], acoes: [] };
   [].forEach.call(box.querySelectorAll('[data-kpi]'), function(c) { if (c.checked) plano.kpis.push(c.getAttribute('data-kpi')); });
   [].forEach.call(box.querySelectorAll('[data-pq]'), function(i) { if (i.value.trim()) plano.porques.push(i.value.trim()); });
+  plano.raiz = v('[data-f="raiz"]');
   [].forEach.call(box.querySelectorAll('[data-acao]'), function(tr) {
     var a = {}, tem = false;
     APRES_W.forEach(function(w) { a[w[0]] = tr.querySelector('[data-w="' + w[0] + '"]').value.trim(); if (a[w[0]]) tem = true; });
@@ -3162,9 +3164,10 @@ function apresPlanoDesenhar(chave, editar, rascunho) {
     if (info.kpis.length) h += '<div class="ap-plano-kpis"><span>Indicador que direciona este plano:</span>' + info.kpis.map(function(k) {
       return '<label><input type="checkbox" data-kpi="' + apresEsc(k) + '"' + (p.kpis.indexOf(k) >= 0 ? ' checked' : '') + '> ' + k + '</label>';
     }).join('') + '</div>';
-    h += '<label class="ap-plano-l">5 porquês <small>mínimo 3 · o último é a causa raiz</small></label><div class="ap-pqs">';
+    h += '<label class="ap-plano-l">5 porquês <small>mínimo 3</small></label><div class="ap-pqs">';
     for (var i = 0; i < 5; i++) h += '<div class="ap-pq"><b>' + (i + 1) + 'º por quê?</b><input type="text" data-pq="' + i + '" value="' + apresEsc(p.porques[i] || '') + '" oninput="apresPlanoPorques(' + q + ')" placeholder="' + (i === 0 ? 'Por que o problema acontece?' : 'Por que isso acontece?') + '"></div>';
-    h += '</div><div class="ap-plano-cr">Causa raiz: <b id="ap-plano-cr-' + chave + '">—</b></div>';
+    h += '</div><label class="ap-plano-l">Causa raiz <small>síntese dos porquês — o que o plano precisa atacar</small></label><textarea data-f="raiz" rows="2" placeholder="Escreva a causa raiz com suas palavras, a partir dos porquês acima.">' + apresEsc(p.raiz || '') + '</textarea>' +
+      '<div class="ap-plano-cr">Último por quê: <b id="ap-plano-cr-' + chave + '">—</b></div>';
     h += '<label class="ap-plano-l">Plano de ação — 5W2H <small>pelo menos uma ação com O quê, Quando e Quem</small></label>' +
       '<div class="visitas-table-wrap"><table class="visitas-table ap-w-tb"><thead><tr>' + APRES_W.map(function(w) { return '<th>' + w[1] + '</th>'; }).join('') + '<th></th></tr></thead><tbody>';
     p.acoes.forEach(function(a, k) {
@@ -3180,9 +3183,10 @@ function apresPlanoDesenhar(chave, editar, rascunho) {
     h += '<div class="ap-plano-prob"><b>Problema</b>' + apresEsc(salvo.problema) + (salvo.kpis && salvo.kpis.length ? '<div class="ap-plano-tags">' + salvo.kpis.map(function(k) { return '<span>' + apresEsc(k) + '</span>'; }).join('') + '</div>' : '') + '</div>';
     h += '<div class="ap-plano-cols"><div class="ap-plano-pq"><b class="ap-plano-sub">5 porquês</b>';
     salvo.porques.forEach(function(t, k) {
-      var raiz = k === salvo.porques.length - 1;
+      var raiz = !salvo.raiz && k === salvo.porques.length - 1;
       h += '<div class="ap-pq-v' + (raiz ? ' raiz' : '') + '"><i>' + (raiz ? 'Causa raiz' : (k + 1) + 'º por quê') + '</i>' + apresEsc(t) + '</div>';
     });
+    if (salvo.raiz) h += '<div class="ap-pq-v raiz"><i>Causa raiz</i>' + apresEsc(salvo.raiz) + '</div>';
     h += '</div><div class="ap-plano-w"><b class="ap-plano-sub">Plano de ação — 5W2H</b><div class="visitas-table-wrap"><table class="visitas-table ap-w-tb ver"><thead><tr>' +
       APRES_W.map(function(w) { return '<th>' + w[1] + '</th>'; }).join('') + '</tr></thead><tbody>';
     salvo.acoes.forEach(function(a) { h += '<tr>' + APRES_W.map(function(w) { return '<td>' + (apresEsc(a[w[0]]) || '—') + '</td>'; }).join('') + '</tr>'; });
@@ -3218,6 +3222,7 @@ async function apresPlanoSalvar(chave) {
   function erro(m) { st.textContent = m; st.style.color = 'var(--red)'; }
   if (!plano.problema) return erro('Descreva o problema.');
   if (plano.porques.length < 3) return erro('Preencha pelo menos 3 porquês.');
+  if (!plano.raiz) return erro('Escreva a causa raiz, sintetizando os porquês.');
   if (!plano.acoes.some(function(a) { return a.oque && a.quando && a.quem; })) return erro('Inclua pelo menos uma ação com O quê, Quando e Quem.');
   st.style.color = '';
   if (await apresPlanoEnviar(chave, plano, false)) { apresPlanoDesenhar(chave, false); apresPlanoFinalDesenhar(); }
@@ -3238,7 +3243,7 @@ function apresPlanoFinalDesenhar() {
     feitos++;
     d.acoes.forEach(function(a, k) {
       nAcoes++;
-      linhas += '<tr>' + (k === 0 ? '<td class="td-gd" rowspan="' + d.acoes.length + '">' + p.titulo + '</td><td rowspan="' + d.acoes.length + '">' + apresEsc(d.porques[d.porques.length - 1]) + '</td>' : '') +
+      linhas += '<tr>' + (k === 0 ? '<td class="td-gd" rowspan="' + d.acoes.length + '">' + p.titulo + '</td><td rowspan="' + d.acoes.length + '">' + apresEsc(raizDe(d)) + '</td>' : '') +
         '<td>' + (apresEsc(a.oque) || '—') + '</td><td>' + (apresEsc(a.quem) || '—') + '</td><td>' + (apresEsc(a.quando) || '—') + '</td><td>' + (apresEsc(a.como) || '—') + '</td><td>' + (apresEsc(a.quanto) || '—') + '</td>' +
         '<td><span class="crm-pct ' + ({ 'Concluída': 'ok', 'Não realizada': 'crit' }[a.status] || 'warn') + '">' + apresEsc(a.status || 'Pendente') + '</span></td></tr>';
     });

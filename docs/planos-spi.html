@@ -131,7 +131,7 @@ function lerPlanos(linhas){
     out.push({
       distrito: distrito, gd: l.medico || distrito, linha: (l.linha || '').toUpperCase(), mes: mes, tipo: fund ? 'fund' : 'marca',
       titulo: fund ? 'Fundamentos' : chave.replace(/^marca-/, '').replace(/_/g, ' '),
-      problema: p.problema || '', kpis: p.kpis || [], porques: p.porques || [], acoes: p.acoes || [], data: l.data,
+      problema: p.problema || '', kpis: p.kpis || [], porques: p.porques || [], raiz: p.raiz || (p.porques || [])[(p.porques || []).length - 1] || '', raizPropria: !!p.raiz, acoes: p.acoes || [], data: l.data,
       reg: l, bruto: p // linha original e JSON completo, para regravar o status
     });
     out[out.length - 1].acoes.forEach(function(a){ if (STATUS.indexOf(a.status) < 0) a.status = 'Pendente'; });
@@ -149,7 +149,7 @@ function filtrados(){
     if (tipo && p.tipo !== tipo) return false;
     if (st && !p.acoes.some(function(a){ return a.status === st; })) return false;
     if (q){
-      var txt = [p.gd, p.titulo, p.problema].concat(p.porques, p.kpis, p.acoes.map(function(a){ return W.map(function(w){ return a[w[0]] || ''; }).join(' '); })).join(' ').toLowerCase();
+      var txt = [p.gd, p.titulo, p.problema, p.raiz].concat(p.porques, p.kpis, p.acoes.map(function(a){ return W.map(function(w){ return a[w[0]] || ''; }).join(' '); })).join(' ').toLowerCase();
       if (txt.indexOf(q) < 0) return false;
     }
     return true;
@@ -244,7 +244,7 @@ function render(){
     as.forEach(function(x, i){
       var a = x.a;
       h += '<tr>' + (i === 0 ? '<td class="gd" rowspan="' + as.length + '">' + esc(p.gd) + '<div class="nota">' + p.mes + '/2026</div></td>' +
-        '<td rowspan="' + as.length + '"><span class="tag ' + p.tipo + '">' + esc(p.titulo) + '</span></td><td rowspan="' + as.length + '">' + esc(p.porques[p.porques.length - 1] || '—') + '</td>' : '') +
+        '<td rowspan="' + as.length + '"><span class="tag ' + p.tipo + '">' + esc(p.titulo) + '</span></td><td rowspan="' + as.length + '">' + esc(p.raiz || '—') + '</td>' : '') +
         '<td>' + (esc(a.oque) || '—') + '</td><td>' + (esc(a.quem) || '—') + '</td><td>' + (esc(a.quando) || '—') + '</td><td>' + (esc(a.como) || '—') + '</td><td>' + (esc(a.quanto) || '—') + '</td>' +
         '<td>' + seletor(p, x.k) + '</td></tr>';
     });
@@ -255,9 +255,9 @@ function render(){
   h += '<div class="card"><h2>Planos completos <small>clique para abrir o problema, os 5 porquês e o 5W2H</small></h2>';
   ps.forEach(function(p){
     h += '<details class="plano"><summary><b>' + esc(p.gd) + '</b><span class="tag ' + p.linha + '">' + p.linha + '</span><span class="tag ' + p.tipo + '">' + esc(p.titulo) + '</span>' +
-      '<span class="raiz"><i>Causa raiz:</i> ' + esc(p.porques[p.porques.length - 1] || '—') + '</span><span class="nota">' + p.mes + '/2026 · salvo em ' + dataBr(p.data) + ' · ' + p.acoes.length + ' ação(ões)</span></summary>' +
+      '<span class="raiz"><i>Causa raiz:</i> ' + esc(p.raiz || '—') + '</span><span class="nota">' + p.mes + '/2026 · salvo em ' + dataBr(p.data) + ' · ' + p.acoes.length + ' ação(ões)</span></summary>' +
       '<div class="corpo"><div class="prob"><span class="sub">Problema</span>' + esc(p.problema) + (p.kpis.length ? '<div class="kp">' + p.kpis.map(function(k){ return '<span>' + esc(k) + '</span>'; }).join('') + '</div>' : '') + '</div>' +
-      '<div><span class="sub">5 porquês</span>' + p.porques.map(function(t, k){ var r = k === p.porques.length - 1; return '<div class="pq' + (r ? ' raiz' : '') + '"><i>' + (r ? 'Causa raiz' : (k + 1) + 'º por quê') + '</i>' + esc(t) + '</div>'; }).join('') + '</div>' +
+      '<div><span class="sub">5 porquês</span>' + p.porques.map(function(t, k){ var r = !p.raizPropria && k === p.porques.length - 1; return '<div class="pq' + (r ? ' raiz' : '') + '"><i>' + (r ? 'Causa raiz' : (k + 1) + 'º por quê') + '</i>' + esc(t) + '</div>'; }).join('') + (p.raizPropria ? '<div class="pq raiz"><i>Causa raiz</i>' + esc(p.raiz) + '</div>' : '') + '</div>' +
       '<div><span class="sub">Plano de ação — 5W2H</span><table><thead><tr>' + W.map(function(w){ return '<th>' + w[1] + '</th>'; }).join('') + '<th>Status</th></tr></thead><tbody>' +
       p.acoes.map(function(a){ return '<tr>' + W.map(function(w){ return '<td>' + (esc(a[w[0]]) || '—') + '</td>'; }).join('') + '<td><span class="st ' + COR[a.status] + '">' + a.status + '</span></td></tr>'; }).join('') + '</tbody></table></div></div></details>';
   });
