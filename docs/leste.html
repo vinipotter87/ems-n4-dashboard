@@ -629,6 +629,147 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
 /* Rodapé de total nas tabelas de produto */
 .prod-total-row td{background:var(--light);font-weight:800;border-top:2px solid var(--border)}
 .prod-total-row .prod-nome{text-transform:uppercase;font-size:11px;letter-spacing:.4px;color:var(--dark)}
+/* ── Modo apresentação ── */
+.cycle-btn.apres-btn{border-color:var(--brand);color:var(--brand);font-weight:800}
+body.apres-on{overflow:hidden}
+#apres{position:fixed;inset:0;z-index:6000;background:#0b1f3f;display:none;flex-direction:column}
+#apres.on{display:flex}
+.ap-top{height:48px;flex:none;background:var(--brand-d);color:#fff;display:flex;align-items:center;gap:14px;padding:0 18px;font-size:14px;font-weight:700}
+.ap-top .logo{background:#fff;color:var(--brand);font-weight:900;font-size:14px;padding:3px 9px;border-radius:6px}
+.ap-sp{flex:1}
+.ap-btn{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.28);border-radius:8px;padding:6px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit}
+.ap-btn:hover:not(:disabled){background:rgba(255,255,255,.25)}
+.ap-btn:disabled{opacity:.35;cursor:default}
+.ap-stage{flex:1;min-height:0;padding:12px 18px 6px}
+.ap-slide{display:none;height:100%;background:#ECEDF0;border-radius:14px;overflow:hidden;flex-direction:column}
+.ap-slide.on{display:flex}
+.ap-hdr{flex:none;display:flex;align-items:baseline;gap:16px;background:#fff;padding:12px 24px;border-bottom:3px solid var(--brand)}
+.ap-hdr h2{font-size:20px;font-weight:800;color:var(--brand-d);white-space:nowrap}
+.ap-msg{font-size:14px;font-weight:600;color:var(--gray)}
+.ap-body{flex:1;min-height:0;overflow:hidden;padding:14px 22px}
+.ap-fit > *:last-child{margin-bottom:0}
+.ap-capa{flex:1;min-height:0;position:relative;display:flex;flex-direction:column;justify-content:safe center;padding:4vh 64px;color:#fff;overflow:auto;background:radial-gradient(900px 520px at 78% 8%,#1f6fe0 0%,rgba(31,111,224,0) 62%),radial-gradient(700px 480px at 4% 100%,#0b5bd6 0%,rgba(11,91,214,0) 60%),linear-gradient(135deg,#031a52 0%,#062a7a 45%,#0a3fb0 100%)}
+.ap-capa>*{position:relative;z-index:1}
+.ap-capa .ap-deco{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.ap-capa-k{font-size:14px;font-weight:600;letter-spacing:5px;text-transform:uppercase;opacity:.9}
+.ap-capa-k:after{content:'';display:block;width:128px;height:3px;border-radius:3px;margin-top:10px;background:linear-gradient(90deg,#22b8ff,rgba(34,184,255,.15))}
+.ap-capa h2{font-size:clamp(30px,min(4.6vw,8.5vh),64px);font-weight:900;line-height:1.08;letter-spacing:.5px;text-transform:uppercase;margin:1.8vh 0 1.2vh;text-shadow:0 6px 24px rgba(0,10,60,.45)}
+.ap-capa h2 span{background:linear-gradient(90deg,#1f8fff,#38c6ff);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none}
+.ap-capa-m{font-size:clamp(14px,1.4vw,18px);opacity:.95}
+.ap-indice,.ap-escolha{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:3.2vh;max-width:1240px}
+.ap-indice button,.ap-escolha button{display:flex;align-items:center;gap:12px;text-align:left;background:rgba(18,72,170,.42);border:1.5px solid rgba(120,180,255,.28);color:#fff;border-radius:12px;padding:1.2vh 14px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .15s,border-color .15s,box-shadow .15s}
+.ap-indice button:hover,.ap-escolha button:hover{background:rgba(30,100,215,.55);border-color:#5cc8ff;box-shadow:0 0 22px rgba(60,170,255,.45)}
+.ap-indice b{flex:none;min-width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:linear-gradient(145deg,#2b8cff,#0f5fe0);color:#fff;font-size:12px;font-weight:900;box-shadow:0 4px 12px rgba(0,30,110,.4)}
+.ap-escolha{gap:18px}
+.ap-escolha button{gap:16px;border-radius:18px;padding:2.2vh 22px;font-size:clamp(14px,1.35vw,17px);font-weight:700;line-height:1.3}
+.ap-escolha button.atual{background:linear-gradient(160deg,rgba(30,110,235,.85),rgba(12,70,190,.8));border-color:#5cc8ff;box-shadow:0 0 0 1px rgba(92,200,255,.6),0 0 28px rgba(60,170,255,.55)}
+.ap-escolha i{flex:none;width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#2b8cff,#0f5fe0);box-shadow:0 6px 18px rgba(0,30,110,.4)}
+.ap-escolha i svg{width:26px;height:26px;stroke:#fff;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.ap-escolha small{display:block;font-size:11px;font-weight:700;letter-spacing:1.5px;color:#7fd0ff;margin-top:2px}
+.ap-cv h2{font-size:clamp(24px,min(3.4vw,6vh),46px)}.ap-cv .ap-indice{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;max-width:none}.ap-cv .ap-indice button{font-size:13px;line-height:1.25}
+@media(max-height:700px){.ap-capa{padding:2.5vh 48px}.ap-capa-k{font-size:12px}.ap-capa-k:after{margin-top:6px}.ap-escolha{gap:12px;margin-top:2.4vh}.ap-escolha button{padding:1.4vh 16px}.ap-escolha i{width:40px;height:40px}.ap-escolha i svg{width:20px;height:20px}.ap-indice,.ap-cv .ap-indice{gap:6px;margin-top:2vh}.ap-indice button,.ap-cv .ap-indice button{padding:.6vh 10px;font-size:12px}.ap-indice b{min-width:24px;height:24px;font-size:11px}}
+@media(max-width:900px){.ap-capa{padding:22px;justify-content:flex-start}.ap-indice,.ap-escolha{grid-template-columns:1fr}}
+.ap-nav{height:46px;flex:none;display:flex;align-items:center;gap:8px;padding:0 18px;color:#fff}
+.ap-dots{flex:1;display:flex;justify-content:center;gap:5px;flex-wrap:wrap}
+.ap-dots button{background:rgba(255,255,255,.14);border:none;color:#fff;border-radius:7px;min-width:30px;padding:4px 8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit}
+.ap-dots button.on{background:#fff;color:var(--brand-d)}
+.ap-diag{background:#fff;border:1px solid var(--border);border-left:5px solid var(--orange);border-radius:10px;padding:12px 16px;margin-top:14px}
+.ap-diag-h{font-size:13px;font-weight:800;color:var(--text)}
+.ap-diag-s{font-size:11.5px;color:var(--gray);margin:3px 0 8px}
+.ap-diag textarea{width:100%;min-height:74px;resize:vertical;border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;font-family:inherit;font-size:13px;line-height:1.5;background:#fffef7}
+.ap-diag textarea:focus{outline:2px solid var(--brand);border-color:var(--brand)}
+.ap-diag-f{display:flex;align-items:center;gap:12px;margin-top:8px;font-size:11.5px;color:var(--gray)}
+.ap-diag-btn{background:var(--brand);color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+.ap-diag-btn:disabled{opacity:.45;cursor:default}
+.ap-diag-h{display:flex;align-items:center;gap:10px}
+.ap-diag-acoes{margin-left:auto;display:flex;gap:6px}
+.ap-diag-mini{background:#fff;border:1.5px solid var(--border);border-radius:7px;padding:3px 10px;font-size:11.5px;font-weight:700;color:var(--brand);cursor:pointer;font-family:inherit}
+.ap-diag-mini:hover{background:var(--light)}
+.ap-diag-barra{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+.ap-diag-barra button{background:#f1f5f9;border:1px solid var(--border);border-radius:6px;padding:3px 10px;font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--text)}
+.ap-diag-barra button:hover{background:#e2e8f0}
+.ap-diag-barra span{font-size:10.5px;color:var(--gray);margin-left:6px}
+.ap-diag-barra code{background:#f1f5f9;border-radius:4px;padding:0 4px}
+.ap-diag-view{font-size:100%;line-height:1.5;color:var(--text)}
+.ap-diag-rol{max-height:150px;overflow:hidden}
+.ap-diag-mais{display:block;width:100%;text-align:left;background:linear-gradient(#fff0,#fff 40%);border:none;margin-top:-18px;padding:20px 0 2px;position:relative;font-size:11.5px;font-weight:700;color:var(--brand);cursor:pointer;font-family:inherit}
+#ap-diag-full{position:absolute;inset:0;z-index:20;background:#fff;display:none;flex-direction:column;padding:22px 34px 18px}
+#ap-diag-full.on{display:flex}
+#ap-diag-full .ap-diag-h{font-size:22px;color:var(--brand-d);padding-bottom:10px;border-bottom:3px solid var(--brand)}
+#ap-diag-full .ap-diag-s{font-size:14px;margin:8px 0 10px}
+#ap-diag-full .ap-diag-mini{font-size:13px;padding:6px 14px}
+#ap-diag-full .ap-diag-barra{margin:6px 0 10px}
+#ap-diag-full .ap-diag-barra button{font-size:13px;padding:5px 14px}
+#ap-diag-full .ap-diag-barra span{font-size:12px}
+#ap-diag-full .ap-diag-duas{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:18px}
+#ap-diag-full .ap-diag-col{min-height:0;overflow:auto}
+#ap-diag-full textarea{width:100%;height:100%;min-height:0;resize:none;font-family:inherit;font-size:16px;line-height:1.6;padding:14px 16px;border:1.5px solid var(--border);border-radius:8px;background:#fffef7}
+#ap-diag-full .ap-diag-duas .ap-diag-view{font-size:18px;border:1.5px dashed var(--border);border-radius:8px;padding:10px 18px;background:#fafafa}
+#ap-diag-full .ap-diag-rol{flex:1;min-height:0;max-height:none;overflow:auto;font-size:24px;padding:6px 4px}
+#ap-diag-full .ap-diag-f{font-size:13px;margin-top:12px}
+#ap-diag-full .ap-diag-btn{font-size:14px;padding:9px 22px}
+.ap-diag-view h4{font-size:1.05em;font-weight:800;color:var(--brand-d);margin:10px 0 4px;padding-bottom:3px;border-bottom:2px solid var(--border)}
+.ap-diag-view h4:first-child{margin-top:2px}
+.ap-diag-view p{font-size:.95em;margin:3px 0}
+.ap-diag-view ol,.ap-diag-view ul{margin:3px 0 3px 22px;font-size:.95em}
+.ap-diag-view li{margin:2px 0}
+.ap-ata-vazio{background:#fff;border:2px dashed var(--border);border-radius:14px;padding:38px 30px;text-align:center;color:var(--gray);font-size:13px;line-height:1.6}
+.ap-ata-vazio b{display:block;font-size:17px;color:var(--text)}
+.ap-ata-vazio p{max-width:560px;margin:6px auto 16px}
+.ap-ata-ico{font-size:34px;margin-bottom:6px}
+.ap-ata-vazio label,.ap-ata-top label{display:inline-block;cursor:pointer}
+.ap-ata-st{font-size:12px;color:var(--gray);margin-top:10px;min-height:16px}
+.ap-ata-top{display:flex;align-items:flex-start;gap:14px;margin-bottom:10px}
+.ap-ata-sub{font-size:11.5px;color:var(--gray);margin-top:2px}
+.ap-ata-aviso{background:#fef9c3;color:#854d0e;font-size:12px;font-weight:700;padding:7px 12px;border-radius:8px;margin-bottom:10px}
+.ap-ata-tb td{text-align:center;vertical-align:top}
+.ap-ata-tb td.td-gd{text-align:left;font-weight:600}
+.ap-ata-tb textarea,.ap-ata-tb input[type=text]{width:100%;border:1.5px solid var(--border);border-radius:7px;padding:5px 8px;font-family:inherit;font-size:12.5px;line-height:1.4;background:#fffef7;resize:vertical}
+.ap-ata-tb textarea:focus,.ap-ata-tb input[type=text]:focus{outline:2px solid var(--brand);border-color:var(--brand)}
+.ap-ata-sel{font-family:inherit;font-size:12px;font-weight:700;border-radius:8px;padding:4px 8px;border:1.5px solid var(--border);background:#fff;cursor:pointer}
+.ap-ata-sel.ok{color:#15803d;border-color:#86efac;background:#f0fdf4}
+.ap-ata-sel.warn{color:#b45309;border-color:#fcd34d;background:#fffbeb}
+.ap-ata-sel.crit{color:#b91c1c;border-color:#fca5a5;background:#fef2f2}
+.ap-fund{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.ap-fund-c{background:#fff;border:1px solid var(--border);border-top:4px solid #22c55e;border-radius:10px;padding:9px 12px}
+.ap-fund-c.desvio{border-top-color:#ef4444;background:#fff7f7}
+.ap-fund-c.sem{border-top-color:#d1d5db}
+.ap-fund-c .l{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)}
+.ap-fund-c .v{font-size:20px;font-weight:800;line-height:1.2}
+.ap-fund-c .s{font-size:10.5px;color:var(--gray)}
+.ap-fund-c .t{font-size:10.5px;font-weight:800;margin-top:3px;color:#15803d}
+.ap-fund-c.desvio .t{color:#b91c1c}.ap-fund-c.sem .t{color:#9ca3af}
+.ap-plano{background:#fff;border:1px solid var(--border);border-left:5px solid var(--brand);border-radius:10px;padding:12px 16px}
+.ap-fund-nota{font-size:12.5px;color:var(--gray);background:#fff;border:1px dashed var(--border);border-radius:10px;padding:10px 14px}
+.ap-plano-ok{background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;border-radius:10px;padding:16px 18px;font-size:14px;font-weight:700}
+.ap-plano-h{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:800;color:var(--brand-d);margin-bottom:8px}
+.ap-plano-h span:not(.ap-diag-acoes){font-size:11px;font-weight:600;color:var(--gray)}
+.ap-plano-l{display:block;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--gray);margin:9px 0 4px}
+.ap-plano-l small{font-weight:600;text-transform:none;letter-spacing:0}
+.ap-plano textarea,.ap-plano input[type=text]{width:100%;border:1.5px solid var(--border);border-radius:7px;padding:6px 9px;font-family:inherit;font-size:12.5px;line-height:1.4;background:#fffef7;resize:vertical}
+.ap-plano textarea:focus,.ap-plano input[type=text]:focus{outline:2px solid var(--brand);border-color:var(--brand)}
+.ap-plano-kpis{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:11.5px;margin-top:6px;align-items:center}
+.ap-plano-kpis span{font-weight:700;color:var(--gray)}
+.ap-pqs{display:grid;gap:5px}
+.ap-pq{display:grid;grid-template-columns:92px 1fr;align-items:center;gap:8px}
+.ap-pq b{font-size:11.5px;color:var(--brand-d)}
+.ap-plano-cr{font-size:12px;margin-top:6px;color:var(--gray)}.ap-plano-cr b{color:#b91c1c}
+.ap-w-tb td{vertical-align:top;white-space:normal;text-align:left;padding:4px 5px}
+.ap-w-tb th{text-align:left}
+.ap-w-tb textarea{min-width:0;font-size:12px;padding:4px 6px}
+.ap-w-tb.ver td{padding:7px 9px;font-size:12.5px}
+.ap-w-tb.final td{font-size:12px}
+.ap-plano-prob{background:#f8fafc;border-radius:8px;padding:8px 12px;font-size:13px;line-height:1.5;margin-bottom:10px}
+.ap-plano-prob b,.ap-plano-sub{display:block;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--gray);margin-bottom:3px}
+.ap-plano-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.ap-plano-tags span{background:#fee2e2;color:#991b1b;font-size:10.5px;font-weight:700;border-radius:20px;padding:2px 9px}
+.ap-plano-cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:16px}
+.ap-pq-v{border-left:3px solid #cbd5e1;padding:3px 0 3px 10px;margin:0 0 6px;font-size:13px;line-height:1.4}
+.ap-pq-v i{display:block;font-style:normal;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--gray)}
+.ap-pq-v.raiz{border-left-color:#ef4444;background:#fef2f2;border-radius:0 8px 8px 0;padding:6px 10px;font-weight:700}
+.ap-pq-v.raiz i{color:#b91c1c}
+#ap-cnt{font-size:12px;font-weight:700;opacity:.8;min-width:54px;text-align:right}
+.cycle-btn.gov-btn{border-color:var(--border);color:var(--gray)}
 </style>
 </head>
 <body>
@@ -1973,6 +2114,926 @@ function abrirFrequencia() {
   atualizarVisibilidadeFiltroDistrito();
 }
 
+// ── Modo apresentação (portado do index.html — manter os dois iguais) ─────────────────────────────────────────────
+// Botão "▶ Apresentação" do menu: pega as seções que a página do mês já
+// montou para o distrito filtrado e mostra uma por tela (slides), sem
+// rolagem. Os próprios elementos da página são movidos para os slides —
+// nada é recalculado, então os números são os mesmos da tela normal. Ao
+// sair, a página do mês é montada de novo.
+var APRES = { on: false, i: 0, slides: [], scrollY: 0 };
+
+function apresNome(el) {
+  var t = el.querySelector && el.querySelector('.sec-title');
+  var raw = (t ? t.textContent : '').replace(/\s+/g, ' ').trim().toUpperCase();
+  if (/JORNADA/.test(raw)) return ['jornada', 'Jornada de Evolução'];
+  if (/PEX/.test(raw)) return ['pex', 'PEX'];
+  if (/VISITAS/.test(raw)) return ['visitas', 'Visitas GD'];
+  if (/CRM/.test(raw)) return ['crm', 'CRM Chave'];
+  if (/FREQU/.test(raw)) return ['freq', 'Frequência de Visitação'];
+  if (/SOBREPOSI/.test(raw)) return ['sobrep', 'Sobreposição Nexus × Vital'];
+  if (/BUDGET/.test(raw)) return ['budget', 'Budget'];
+  if (/AN[ÁA]LISE/.test(raw)) return ['analise', 'Análise e Alertas'];
+  if (/DIAGN/.test(raw)) return ['diag', 'Diagnóstico de Marcas'];
+  if (el.classList.contains('mtz-p-wrap')) return ['matriz', 'Matriz de Performance'];
+  if (el.classList.contains('prod-ating-card')) return ['produto', 'Atingimento por Produto'];
+  if (el.classList.contains('achados')) return ['achados', 'Achados Estratégicos'];
+  return ['outro', raw ? raw.charAt(0) + raw.slice(1).toLowerCase() : 'Seção'];
+}
+
+// Frase-resumo do slide, tirada dos mesmos dados da página (window._D)
+function apresMensagem(chave) {
+  var D = window._D || {};
+  function n(v) { var x = parseFloat(v); return isNaN(x) ? null : x; }
+  function p1(v) { return v.toFixed(1).replace('.', ','); }
+  try {
+    if (chave === 'geral') {
+      var d = (D.distritos || [])[0]; if (!d) return '';
+      var pr = n(d.prod); if (pr === null) return '';
+      if (pr < 5) pr *= 100;
+      return 'Produtividade do distrito em ' + p1(pr) + '% de MDV, com ' + d.reps_ativos + ' representantes ativos';
+    }
+    if (chave === 'pex') {
+      var px = D.pex || []; if (!px.length) return '';
+      var soma = 0, c = {};
+      px.forEach(function(r) { soma += n(r.pts) || 0; var m = (r.medalha || '').toUpperCase(); c[m] = (c[m] || 0) + 1; });
+      var partes = ['OURO', 'PRATA', 'BRONZE', 'ATENÇÃO', 'CRÍTICO'].filter(function(m) { return c[m]; })
+        .map(function(m) { return c[m] + ' ' + m.toLowerCase(); });
+      return 'PEX médio de ' + p1(soma / px.length) + ' pts em ' + px.length + ' reps: ' + partes.join(', ') +
+        (NOTAS_PEX_POR_MES[MES_ATUAL] ? ' (simulado)' : '');
+    }
+    if (chave === 'visitas') {
+      var v = (D.visitasNex || []).concat(D.visitasVit || [])[0]; if (!v) return '';
+      return Math.round(n(v.real)) + ' visitas acompanhadas para objetivo de ' + Math.round(n(v.obj)) +
+        ' (' + p1(n(v.cob_pct)) + '%), em ' + Math.round(n(v.dias)) + ' dias de campo';
+    }
+    if (chave === 'budget') {
+      var gdB = ((D.distritos || [])[0] || {}).nm, vb = 0, ub = 0;
+      Object.keys(BUDGET_VERBA_GD).forEach(function(k) { if (BUDGET_VERBA_GD[k].gd === gdB) vb = BUDGET_VERBA_GD[k].verba; });
+      if (!vb || BUDGET_LANC === null) return '';
+      BUDGET_LANC.forEach(function(l) { if (l.gd === gdB && l.produto !== 'GLEMPA' && l.produto !== 'GLEMPA_CLASSIF') ub += parseFloat(l.valor) || 0; });
+      function r0(v) { return 'R$ ' + Math.round(v).toLocaleString('pt-BR'); }
+      return r0(ub) + ' utilizados de ' + r0(vb) + ' (' + p1(ub / vb * 100) + '%) — saldo de ' + r0(vb - ub);
+    }
+    if (chave === 'crm') {
+      var cr = (D.crm || [])[0]; if (!cr) return '';
+      var re = n(cr.real_interacoes);
+      return re === null ? 'Nenhuma interação com médicos-chave registrada no mês'
+        : Math.round(re) + ' de ' + Math.round(n(cr.obj_interacoes)) + ' interações com médicos-chave (' + p1(n(cr.cob_interacoes)) + '%)';
+    }
+  } catch (e) {}
+  return '';
+}
+
+// Divide um elemento alto em páginas de até `limite` px. Desce nos blocos
+// internos que sozinhos passam do limite (menos tabelas e gráficos, que ficam
+// inteiros) e remonta cada página dentro de cópias vazias dos contêineres
+// originais, para manter o estilo.
+function apresPaginar(el, limite) {
+  if (el.offsetHeight <= limite || el.children.length < 2) return [el];
+  var folhas = [];
+  (function desce(n, caminho) {
+    [].forEach.call(n.children, function(k) {
+      var hk = k.offsetHeight;
+      if (hk > limite && k.children.length >= 2 && !/^(TABLE|THEAD|TBODY|TR|CANVAS|SVG)$/i.test(k.tagName)) desce(k, caminho.concat([k]));
+      else if (hk > 0) folhas.push({ n: k, h: hk, caminho: caminho });
+    });
+  })(el, []);
+  var paginas = [], atual = [], soma = 0;
+  folhas.forEach(function(f) {
+    // um título pequeno nunca fica sozinho no fim da página
+    var soTitulo = atual.length && atual.every(function(x) { return x.h < 60; });
+    if (atual.length && soma + f.h > limite && !soTitulo) { paginas.push(atual); atual = []; soma = 0; }
+    atual.push(f); soma += f.h;
+  });
+  if (atual.length) paginas.push(atual);
+  if (paginas.length < 2) return [el];
+  return paginas.map(function(pg) {
+    var raiz = el.cloneNode(false); raiz.removeAttribute('id');
+    var mapa = [];
+    pg.forEach(function(f) {
+      var pai = raiz;
+      f.caminho.forEach(function(orig) {
+        var achado = null;
+        mapa.forEach(function(m) { if (m[0] === orig) achado = m[1]; });
+        if (!achado) { achado = orig.cloneNode(false); achado.removeAttribute('id'); mapa.push([orig, achado]); pai.appendChild(achado); }
+        pai = achado;
+      });
+      pai.appendChild(f.n);
+    });
+    return raiz;
+  });
+}
+
+// Agrupa os filhos de #main-content em slides
+function apresGrupos(limite) {
+  var kids = [].slice.call(document.getElementById('main-content').children);
+  var grupos = [], i = 0;
+
+  // 1. tudo que vem antes da primeira seção com título = visão geral
+  var geral = [];
+  while (i < kids.length && !kids[i].querySelector('.sec-title') && !kids[i].classList.contains('mtz-p-wrap')) geral.push(kids[i++]);
+  if (geral.length) grupos.push({ chave: 'geral', nome: 'Visão geral', nodes: geral });
+
+  for (; i < kids.length; i++) {
+    var el = kids[i];
+    // cabeçalho de linha (NEXUS/VITAL) + cards + detalhe do distrito
+    if (el.classList.contains('sec-hdr')) {
+      var grid = kids[i + 1], det = kids[i + 2];
+      if (grid && grid.classList.contains('dgrid')) {
+        if (grid.offsetHeight > 0) {
+          if (det && det.offsetHeight) {
+            // detalhe do distrito: um slide por bloco ("EQUIPE & JORNADA", "ATINGIMENTO POR PRODUTO"…);
+            // o card e o cabeçalho do distrito repetem o que já está na capa e na visão geral
+            var pgs = [];
+            [].slice.call(det.children).forEach(function(b) {
+              if (b.classList.contains('dd-hdr')) return;
+              if (b.classList.contains('dd-section-lbl') || !pgs.length) pgs.push({ nome: b.textContent.trim(), nodes: [] });
+              pgs[pgs.length - 1].nodes.push(b);
+            });
+            pgs.forEach(function(pg) {
+              var casca = det.cloneNode(false); casca.removeAttribute('id');
+              pg.nodes.forEach(function(b) { casca.appendChild(b); });
+              var nm = pg.nome.charAt(0) + pg.nome.slice(1).toLowerCase();
+              grupos.push({ chave: /^equipe/i.test(nm) ? 'equipe' : '', nome: nm.replace(/nexus|vital/gi, function(x){ return x.toUpperCase(); }), nodes: [casca] });
+            });
+          }
+        }
+        i += det && det.classList.contains('distrito-detalhe') ? 2 : 1;
+        continue;
+      }
+    }
+    if (!el.offsetHeight) continue;
+    if (el.classList.contains('chart-card')) continue; // gráfico por distrito não diz nada com um distrito só
+    if (el.id === 'sec-rps') continue; // acompanhamento de RPS é do regional, não entra na N4
+    var nm = apresNome(el);
+    // Análise & Alertas e Achados Estratégicos ficam fora da apresentação
+    if (nm[0] === 'analise' || nm[0] === 'achados') continue;
+    // Visitas GD e CRM Chave dividem o mesmo slide
+    var ant = grupos[grupos.length - 1];
+    if (nm[0] === 'crm' && ant && ant.chave === 'visitas') {
+      ant.nodes.push(el); ant.chave = 'visitas+crm'; ant.nome = 'Visitas GD e CRM Chave';
+      continue;
+    }
+
+    // seção alta demais para um slide: divide em páginas pelos blocos internos
+    var pags = apresPaginar(el, limite);
+    if (pags.length > 1) {
+      pags.forEach(function(pg, k) {
+        grupos.push({ chave: k === 0 ? nm[0] : '', nome: nm[1] + ' (' + (k + 1) + '/' + pags.length + ')', nodes: [pg] });
+      });
+      continue;
+    }
+    grupos.push({ chave: nm[0], nome: nm[1], nodes: [el] });
+  }
+  return grupos;
+}
+
+// Com um GD só, a linha que não é a dele fica vazia na página (cabeçalho
+// "VITAL" sem linhas em Visitas GD, cartão "Sem dados para VITAL" no CRM
+// Chave). Na apresentação esses vazios são retirados.
+function apresLimparVazios(raiz) {
+  [].forEach.call(raiz.querySelectorAll('tr.row-sep'), function(tr) {
+    var prox = tr.nextElementSibling;
+    if (!prox || prox.classList.contains('row-sep')) tr.remove();
+  });
+  [].forEach.call(raiz.querySelectorAll('.crm-section'), function(sec) {
+    if (sec.querySelector('.crm-empty')) sec.remove();
+  });
+}
+
+// Verba por produto (BASE_ALLOC) mora em budget.html; a apresentação lê de lá
+// para não duplicar a alocação aqui. Se a leitura falhar, o slide de Budget
+// fica só com o total do GD.
+var APRES_ALLOC = null;
+async function apresCarregarAlloc() {
+  if (APRES_ALLOC) return;
+  try {
+    var txt = await (await fetch('budget.html?t=' + Date.now(), { cache: 'no-store' })).text();
+    var ini = txt.indexOf('var BASE_ALLOC_LESTE = '), fim = ini < 0 ? -1 : txt.indexOf('];', ini);
+    APRES_ALLOC = fim > 0 ? JSON.parse(txt.substring(ini + 'var BASE_ALLOC_LESTE = '.length, fim + 1)) : [];
+  } catch (e) { APRES_ALLOC = []; console.warn('Verba por produto indisponível para a apresentação.', e.message); }
+}
+
+// Detalhe do Budget no slide: verba, gasto e saldo por produto + ações lançadas
+function apresBudgetDetalhe(gd) {
+  var aloc = (APRES_ALLOC || []).filter(function(a) { return a.gd === gd; });
+  var lanc = (BUDGET_LANC || []).filter(function(l) { return l.gd === gd && l.produto !== 'GLEMPA' && l.produto !== 'GLEMPA_CLASSIF'; });
+  if (!aloc.length && !lanc.length) return null;
+  function brl(v) { return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
+  function nomeProd(p) { return String(p).split(' - ')[0]; }
+  function dataBr(d) { var x = String(d || '').split('-'); return x.length === 3 ? x[2] + '/' + x[1] + '/' + x[0] : (d || '—'); }
+  var prods = [];
+  aloc.forEach(function(a) {
+    var e = prods.filter(function(x) { return x.produto === a.produto; })[0];
+    if (e) e.verba += a.verba; else prods.push({ produto: a.produto, verba: a.verba });
+  });
+  var html = '<div class="visitas-chart-wrap"><h3>💰 Por produto — verba, gasto e saldo</h3>';
+  html += '<div class="visitas-table-wrap"><table class="visitas-table"><thead><tr><th class="th-gd">Produto</th><th>Verba</th><th>Gasto</th><th>Saldo</th><th>% utilizado</th><th>Ações</th></tr></thead><tbody>';
+  var tV = 0, tU = 0, tN = 0;
+  prods.forEach(function(p) {
+    var ls = lanc.filter(function(l) { return l.produto === p.produto; });
+    var u = ls.reduce(function(t, l) { return t + (parseFloat(l.valor) || 0); }, 0);
+    var pc = p.verba ? u / p.verba * 100 : 0, cls = pc >= 100 ? 'crit' : (pc >= 80 ? 'warn' : 'ok'), saldo = p.verba - u;
+    tV += p.verba; tU += u; tN += ls.length;
+    html += '<tr><td class="td-gd">' + nomeProd(p.produto) + '</td><td>' + brl(p.verba) + '</td><td>' + brl(u) + '</td>' +
+      '<td' + (saldo < 0 ? ' style="color:var(--red);font-weight:700"' : '') + '>' + brl(saldo) + '</td>' +
+      '<td><span class="crm-pct ' + cls + '">' + pc.toFixed(1).replace('.', ',') + '%</span> <span class="crm-bar-wrap"><span class="crm-bar-fill ' + cls + '" style="width:' + Math.min(100, pc) + '%"></span></span></td>' +
+      '<td>' + ls.length + '</td></tr>';
+  });
+  if (prods.length) html += '<tr style="background:#f3f4f6;font-weight:700"><td class="td-gd">Total</td><td>' + brl(tV) + '</td><td>' + brl(tU) + '</td><td>' + brl(tV - tU) + '</td><td>' + (tV ? (tU / tV * 100).toFixed(1).replace('.', ',') : '0,0') + '%</td><td>' + tN + '</td></tr>';
+  html += '</tbody></table></div></div>';
+
+  html += '<div class="visitas-chart-wrap" style="margin-top:14px"><h3>📒 Ações lançadas (' + lanc.length + ')</h3>';
+  if (!lanc.length) html += '<p style="font-size:12px;color:var(--gray);margin:0">Nenhum lançamento registrado para este GD.</p>';
+  else {
+    html += '<div class="visitas-table-wrap"><table class="visitas-table"><thead><tr><th class="th-gd">Data</th><th style="text-align:left">Produto</th><th style="text-align:left">Ação</th><th style="text-align:left">Médico</th><th>CRM</th><th>Valor</th></tr></thead><tbody>';
+    lanc.slice().sort(function(a, b) { return String(a.data).localeCompare(String(b.data)); }).forEach(function(l) {
+      html += '<tr><td class="td-gd">' + dataBr(l.data) + '</td><td style="text-align:left">' + nomeProd(l.produto) + '</td><td style="text-align:left">' + (l.acao || '—') + '</td>' +
+        '<td style="text-align:left">' + (l.medico || '—') + '</td><td>' + (l.crm || '—') + '</td><td>' + brl(parseFloat(l.valor) || 0) + '</td></tr>';
+    });
+    html += '</tbody></table></div>';
+  }
+  html += '</div>';
+  var d = document.createElement('div'); d.innerHTML = html;
+  return d;
+}
+
+// ── Planos do GD: 5 porquês + 5W2H ────────────────────────────────
+// Dois tipos de plano, preenchidos pelo GD antes da reunião:
+//   • Fundamentos — um por GD, quando algum indicador de execução está em
+//     desvio (produtividade, cobertura Q1–Q3 e de painel, visitas
+//     acompanhadas, CRM Chave, frequência, sobreposição, e PEX quando há
+//     representante em atenção ou crítico);
+//   • Marca-chave — um para cada marca-chave abaixo de 100% de cobertura.
+// Cada plano: problema → 3 a 5 porquês (o último é a causa raiz) → ações em
+// 5W2H. Fica salvo no Sheets pelo Apps Script do Budget: 1 linha em
+// budget_lancamentos com produto N4_PLANO, gd "N4:<distrito_id>" (as páginas
+// de Budget ignoram), crm "<plano>|<mês>" e o plano em JSON no campo "acao".
+var APRES_PLANO_PROD = 'N4_PLANO';
+var APRES_PLANOS = []; // planos da apresentação atual: {chave, titulo, problema, kpis}
+var APRES_W = [['oque', 'O quê'], ['porque', 'Por quê'], ['onde', 'Onde'], ['quando', 'Quando'], ['quem', 'Quem'], ['como', 'Como'], ['quanto', 'Quanto custa']];
+
+function apresEsc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+// data local (toISOString usa UTC e vira o dia à noite no Brasil)
+function apresHoje() { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+function apresDataBr(iso) { var x = String(iso || '').split('-'); return x.length === 3 ? x[2] + '/' + x[1] + '/' + x[0] : ''; }
+function apresPlanoReg(chave) {
+  var gd = 'N4:' + DISTRITO_FILTRO, k = chave + '|' + MES_ATUAL;
+  var regs = (BUDGET_LANC || []).filter(function(l) { return l.produto === APRES_PLANO_PROD && l.gd === gd && l.crm === k; });
+  return regs.length ? regs[regs.length - 1] : null;
+}
+function apresPlanoDados(chave) {
+  var reg = apresPlanoReg(chave);
+  if (!reg) return null;
+  try { return JSON.parse(reg.acao); } catch (e) { return null; }
+}
+function apresPlanoInfo(chave) { return APRES_PLANOS.filter(function(p) { return p.chave === chave; })[0]; }
+
+// Indicadores de execução do distrito e se cada um está em desvio
+function apresFundamentos() {
+  var D = window._D || {}, d = (D.distritos || [])[0] || {}, out = [];
+  function n(v) { var x = parseFloat(v); return isNaN(x) ? null : x; }
+  function p1(v) { return v.toFixed(1).replace('.', ',') + '%'; }
+  function add(nome, v, meta, desvio, extra) { out.push({ nome: nome, valor: v === null ? '—' : p1(v), meta: meta, desvio: v !== null && desvio, sem: v === null, extra: extra || '' }); }
+  var reps = (D.reps || []).filter(function(r) { return r.vago !== 'True' && n(r.prod) !== null; });
+  function media(campo) { var vs = reps.map(function(r) { return n(r[campo]); }).filter(function(x) { return x !== null; }); return vs.length ? vs.reduce(function(a, b) { return a + b; }, 0) / vs.length : null; }
+  var prod = n(d.prod); if (prod !== null && prod < 5) prod *= 100;
+  var abaixo = reps.filter(function(r) { return n(r.prod) < 100; }).length;
+  add('Produtividade (MDV)', prod, '≥ 100%', prod < 100 || abaixo > 0, abaixo ? abaixo + ' de ' + reps.length + ' reps abaixo de 100%' : 'todos os reps em 100% ou mais');
+  [['q1', 'Cobertura Q1'], ['q2', 'Cobertura Q2'], ['q3', 'Cobertura Q3']].forEach(function(q) { var v = media(q[0]); add(q[1], v, '≥ 90%', v < 90, 'média dos reps'); });
+  var cp = media('cob_painel'); add('Cobertura de painel', cp, '≥ 90%', cp < 90, 'média dos reps');
+  var vis = (D.visitasNex || []).concat(D.visitasVit || [])[0];
+  var vp = vis ? n(vis.cob_pct) : null; add('Visitas acompanhadas', vp, '≥ 100%', vp < 100, vis ? Math.round(n(vis.real)) + ' de ' + Math.round(n(vis.obj)) + ' visitas' : '');
+  var crm = (D.crm || [])[0], cr = crm ? n(crm.cob_interacoes) : null;
+  if (crm && cr === null) cr = 0;
+  add('CRM Chave', cr, '≥ 100%', cr < 100, crm ? (n(crm.real_interacoes) === null ? 0 : Math.round(n(crm.real_interacoes))) + ' de ' + Math.round(n(crm.obj_interacoes)) + ' interações' : '');
+  var prefixo = DISTRITO_FILTRO.substring(0, 6);
+  var fD = FREQ_SETORES_RAW[MES_ATUAL] ? freqDistritos(MES_ATUAL, prefixo) : [], fr = fD.length ? freqSoma(fD).cob : null;
+  add('Frequência de visitação', fr, '≥ 75%', fr < 75, 'Freq 80 + 100 ÷ painel');
+  var sb = typeof SOBREP_DIST !== 'undefined' && SOBREP_DIST[MES_ATUAL] ? SOBREP_DIST[MES_ATUAL].find(function(x) { return x.id === prefixo; }) : null;
+  var sv = sb && sb.painel ? sb.nv / sb.painel * 100 : null;
+  add('Sobreposição Nexus × Vital', sv, '≤ 10%', sv > 10, '% do painel');
+  // PEX entra só quando há representante em ATENÇÃO ou CRÍTICO (aí conta como desvio)
+  var risco = (D.pex || []).filter(function(r) { return /ATEN|CR[IÍ]T/i.test(r.medalha || ''); });
+  if (risco.length) out.push({
+    nome: 'PEX — atenção ou crítico', valor: risco.length + ' rep' + (risco.length > 1 ? 's' : ''), meta: 'nenhum rep abaixo de bronze', desvio: true, sem: false,
+    extra: risco.map(function(r) { return r.nome.split(' ').slice(0, 2).join(' ') + ' (' + r.pts + ')'; }).join(', ') + (NOTAS_PEX_POR_MES[MES_ATUAL] ? ' · simulado' : '')
+  });
+  return out;
+}
+
+// Grupos (slides) dos planos. O plano fica sempre no slide seguinte ao dos
+// números: Fundamentos → Plano — Fundamentos; Marca-chave X → Plano — X.
+function apresPlanoFundGrupo() {
+  var inds = apresFundamentos(), desv = inds.filter(function(i) { return i.desvio; });
+  var h = '<div class="ap-fund">' + inds.map(function(i) {
+    return '<div class="ap-fund-c ' + (i.sem ? 'sem' : (i.desvio ? 'desvio' : 'ok')) + '"><div class="l">' + i.nome + '</div><div class="v">' + i.valor + '</div>' +
+      '<div class="s">meta ' + i.meta + (i.extra ? ' · ' + i.extra : '') + '</div><div class="t">' + (i.sem ? 'sem dado' : (i.desvio ? '● em desvio' : '✓ dentro da meta')) + '</div></div>';
+  }).join('') + '</div>';
+  var el = document.createElement('div');
+  if (!desv.length) {
+    el.innerHTML = h + '<div class="ap-plano-ok">✓ Nenhum indicador de execução em desvio — plano de fundamentos não é necessário neste mês.</div>';
+    return [{ chave: '', nome: 'Fundamentos', nodes: [el], msg: 'Todos os indicadores de execução dentro da meta' }];
+  }
+  APRES_PLANOS.push({ chave: 'fund', titulo: 'Fundamentos', kpis: desv.map(function(i) { return i.nome; }),
+    problema: 'Indicadores de execução em desvio: ' + desv.map(function(i) { return i.nome + ' em ' + i.valor + ' (meta ' + i.meta + ')'; }).join('; ') + '.' });
+  // slide 1: só os números; slide 2 (seguinte): o plano, onde o GD marca qual indicador direciona
+  el.innerHTML = h + '<div class="ap-fund-nota">O plano de fundamentos está no próximo slide: nele o GD indica qual destes indicadores em desvio direciona o plano.</div>';
+  var pl = document.createElement('div');
+  pl.innerHTML = '<div class="ap-plano" id="ap-plano-fund"></div>';
+  return [
+    { chave: '', nome: 'Fundamentos', nodes: [el], msg: desv.length + ' de ' + inds.length + ' indicadores de execução em desvio' },
+    { chave: '', nome: 'Plano — Fundamentos', nodes: [pl], msg: 'Em desvio: ' + desv.map(function(i) { return i.nome + ' ' + i.valor; }).join(' · '), plano: 'fund' }
+  ];
+}
+function apresPlanoMarcaGrupo(marca, chave, problema) {
+  APRES_PLANOS.push({ chave: chave, titulo: marca, problema: problema, kpis: [] });
+  var el = document.createElement('div');
+  el.innerHTML = '<div class="ap-plano" id="ap-plano-' + chave + '"></div>';
+  return { chave: '', nome: 'Plano — ' + marca, nodes: [el], msg: problema, plano: chave };
+}
+
+function raizDe(p){ return (p && p.raiz) || (p && p.porques && p.porques[p.porques.length - 1]) || ''; } // planos antigos não têm o campo: vale o último por quê
+// Lê o formulário de edição do plano
+function apresPlanoLer(chave) {
+  var box = document.getElementById('ap-plano-' + chave);
+  function v(sel) { var e = box.querySelector(sel); return e ? e.value.trim() : ''; }
+  var plano = { problema: v('[data-f="problema"]'), kpis: [], porques: [], acoes: [] };
+  [].forEach.call(box.querySelectorAll('[data-kpi]'), function(c) { if (c.checked) plano.kpis.push(c.getAttribute('data-kpi')); });
+  [].forEach.call(box.querySelectorAll('[data-pq]'), function(i) { if (i.value.trim()) plano.porques.push(i.value.trim()); });
+  plano.raiz = v('[data-f="raiz"]');
+  [].forEach.call(box.querySelectorAll('[data-acao]'), function(tr) {
+    var a = {}, tem = false;
+    APRES_W.forEach(function(w) { a[w[0]] = tr.querySelector('[data-w="' + w[0] + '"]').value.trim(); if (a[w[0]]) tem = true; });
+    a.status = tr.getAttribute('data-st') || 'Pendente'; // status de execução, marcado na página Planos SPI
+    if (tem) plano.acoes.push(a);
+  });
+  return plano;
+}
+// Os campos de "por quê" aparecem um a um: o seguinte só depois de preencher o anterior
+function apresPlanoPorques(chave) {
+  var ins = document.querySelectorAll('#ap-plano-' + chave + ' [data-pq]'), libera = true, ultimo = '';
+  [].forEach.call(ins, function(i) {
+    i.closest('.ap-pq').style.display = libera ? '' : 'none';
+    if (i.value.trim()) ultimo = i.value.trim(); else libera = false;
+  });
+  var cr = document.getElementById('ap-plano-cr-' + chave);
+  if (cr) cr.textContent = ultimo || '—';
+}
+function apresPlanoAcao(chave, delta, idx) {
+  var plano = apresPlanoLer(chave), box = document.getElementById('ap-plano-' + chave);
+  // mantém as linhas em branco já abertas
+  var linhas = [].map.call(box.querySelectorAll('[data-acao]'), function(tr) { var a = { status: tr.getAttribute('data-st') || 'Pendente' }; APRES_W.forEach(function(w) { a[w[0]] = tr.querySelector('[data-w="' + w[0] + '"]').value; }); return a; });
+  if (delta > 0) linhas.push({}); else linhas.splice(idx, 1);
+  plano.acoes = linhas.length ? linhas : [{}];
+  apresPlanoDesenhar(chave, true, plano);
+}
+
+function apresPlanoDesenhar(chave, editar, rascunho) {
+  var box = document.getElementById('ap-plano-' + chave), info = apresPlanoInfo(chave);
+  if (!box || !info) return;
+  var pronto = !!(CONFIG && CONFIG.budget_webapp_url && CONFIG.budget_token);
+  var reg = apresPlanoReg(chave), salvo = apresPlanoDados(chave);
+  var modoEdicao = pronto && (editar === true || !salvo);
+  var q = "'" + chave + "'", h = '';
+  if (modoEdicao) {
+    var p = rascunho || salvo || { problema: info.problema, kpis: info.kpis.slice(), porques: [], acoes: [{}] };
+    if (!p.acoes || !p.acoes.length) p.acoes = [{}];
+    h += '<div class="ap-plano-h">🧭 Plano — ' + info.titulo + ' <span>5 porquês + 5W2H · preencha antes da reunião</span></div>';
+    h += '<label class="ap-plano-l">Problema</label><textarea data-f="problema" rows="2">' + apresEsc(p.problema) + '</textarea>';
+    if (info.kpis.length) h += '<div class="ap-plano-kpis"><span>Indicador que direciona este plano:</span>' + info.kpis.map(function(k) {
+      return '<label><input type="checkbox" data-kpi="' + apresEsc(k) + '"' + (p.kpis.indexOf(k) >= 0 ? ' checked' : '') + '> ' + k + '</label>';
+    }).join('') + '</div>';
+    h += '<label class="ap-plano-l">5 porquês <small>mínimo 3</small></label><div class="ap-pqs">';
+    for (var i = 0; i < 5; i++) h += '<div class="ap-pq"><b>' + (i + 1) + 'º por quê?</b><input type="text" data-pq="' + i + '" value="' + apresEsc(p.porques[i] || '') + '" oninput="apresPlanoPorques(' + q + ')" placeholder="' + (i === 0 ? 'Por que o problema acontece?' : 'Por que isso acontece?') + '"></div>';
+    h += '</div><label class="ap-plano-l">Causa raiz <small>síntese dos porquês — o que o plano precisa atacar</small></label><textarea data-f="raiz" rows="2" placeholder="Escreva a causa raiz com suas palavras, a partir dos porquês acima.">' + apresEsc(p.raiz || '') + '</textarea>' +
+      '<div class="ap-plano-cr">Último por quê: <b id="ap-plano-cr-' + chave + '">—</b></div>';
+    h += '<label class="ap-plano-l">Plano de ação — 5W2H <small>pelo menos uma ação com O quê, Quando e Quem</small></label>' +
+      '<div class="visitas-table-wrap"><table class="visitas-table ap-w-tb"><thead><tr>' + APRES_W.map(function(w) { return '<th>' + w[1] + '</th>'; }).join('') + '<th></th></tr></thead><tbody>';
+    p.acoes.forEach(function(a, k) {
+      h += '<tr data-acao="' + k + '" data-st="' + apresEsc(a.status || 'Pendente') + '">' + APRES_W.map(function(w) { return '<td><textarea rows="2" data-w="' + w[0] + '">' + apresEsc(a[w[0]] || '') + '</textarea></td>'; }).join('') +
+        '<td><button class="ap-diag-mini" title="Remover esta ação" onclick="apresPlanoAcao(' + q + ',-1,' + k + ')">✕</button></td></tr>';
+    });
+    h += '</tbody></table></div><div class="ap-diag-f"><button class="ap-diag-mini" onclick="apresPlanoAcao(' + q + ',1)">+ Adicionar ação</button>' +
+      '<button class="ap-diag-btn" onclick="apresPlanoSalvar(' + q + ')">Salvar plano</button>' +
+      (salvo ? '<button class="ap-diag-mini" onclick="apresPlanoDesenhar(' + q + ',false)">Cancelar</button><button class="ap-diag-mini" onclick="apresPlanoApagar(' + q + ')">Apagar plano</button>' : '') +
+      '<span id="ap-plano-st-' + chave + '">' + (reg ? 'Salvo em ' + apresDataBr(reg.data) : 'Ainda não preenchido') + '</span></div>';
+  } else if (salvo) {
+    h += '<div class="ap-plano-h">🧭 Plano — ' + info.titulo + '<span class="ap-diag-acoes">' + (pronto ? '<button class="ap-diag-mini" onclick="apresPlanoDesenhar(' + q + ',true)">✏️ Editar</button>' : '') + '</span></div>';
+    h += '<div class="ap-plano-prob"><b>Problema</b>' + apresEsc(salvo.problema) + (salvo.kpis && salvo.kpis.length ? '<div class="ap-plano-tags">' + salvo.kpis.map(function(k) { return '<span>' + apresEsc(k) + '</span>'; }).join('') + '</div>' : '') + '</div>';
+    h += '<div class="ap-plano-cols"><div class="ap-plano-pq"><b class="ap-plano-sub">5 porquês</b>';
+    salvo.porques.forEach(function(t, k) {
+      var raiz = !salvo.raiz && k === salvo.porques.length - 1;
+      h += '<div class="ap-pq-v' + (raiz ? ' raiz' : '') + '"><i>' + (raiz ? 'Causa raiz' : (k + 1) + 'º por quê') + '</i>' + apresEsc(t) + '</div>';
+    });
+    if (salvo.raiz) h += '<div class="ap-pq-v raiz"><i>Causa raiz</i>' + apresEsc(salvo.raiz) + '</div>';
+    h += '</div><div class="ap-plano-w"><b class="ap-plano-sub">Plano de ação — 5W2H</b><div class="visitas-table-wrap"><table class="visitas-table ap-w-tb ver"><thead><tr>' +
+      APRES_W.map(function(w) { return '<th>' + w[1] + '</th>'; }).join('') + '</tr></thead><tbody>';
+    salvo.acoes.forEach(function(a) { h += '<tr>' + APRES_W.map(function(w) { return '<td>' + (apresEsc(a[w[0]]) || '—') + '</td>'; }).join('') + '</tr>'; });
+    h += '</tbody></table></div></div></div><div class="ap-diag-f"><span id="ap-plano-st-' + chave + '">Salvo em ' + apresDataBr(reg.data) + '</span></div>';
+  } else {
+    h += '<div class="ap-plano-h">🧭 Plano — ' + info.titulo + '</div><div class="ap-diag-f"><span>Plano ainda não preenchido — gravação indisponível nesta página.</span></div>';
+  }
+  box.innerHTML = h;
+  if (modoEdicao) apresPlanoPorques(chave);
+  if (APRES.on && APRES.slides.length) apresAjustar();
+}
+
+async function apresPlanoEnviar(chave, plano, apagar) {
+  var reg = apresPlanoReg(chave), d = ((window._D || {}).distritos || [])[0] || {}, st = document.getElementById('ap-plano-st-' + chave);
+  var payload = {
+    token: CONFIG.budget_token, acao: apagar ? 'delete' : (reg ? 'edit' : 'add'),
+    id: reg ? reg.id : 'n4p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    gd: 'N4:' + DISTRITO_FILTRO, linha: d.linha || '', produto: APRES_PLANO_PROD, crm: chave + '|' + MES_ATUAL,
+    medico: d.nm || '', valor: 0, acao_lancamento: plano ? JSON.stringify(plano) : '',
+    data: apresHoje(), criadoEm: reg ? reg.criadoEm : Date.now().toString()
+  };
+  if (st) st.textContent = 'Salvando…';
+  try {
+    var r = await fetch(CONFIG.budget_webapp_url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) });
+    var resp = JSON.parse(await r.text());
+    if (!resp.ok) throw new Error(resp.erro || 'falha desconhecida');
+  } catch (e) { if (st) st.textContent = 'Não foi possível salvar: ' + e.message; return false; }
+  await carregarBudget();
+  return true;
+}
+async function apresPlanoSalvar(chave) {
+  var plano = apresPlanoLer(chave), st = document.getElementById('ap-plano-st-' + chave);
+  function erro(m) { st.textContent = m; st.style.color = 'var(--red)'; }
+  if (!plano.problema) return erro('Descreva o problema.');
+  if (plano.porques.length < 3) return erro('Preencha pelo menos 3 porquês.');
+  if (!plano.raiz) return erro('Escreva a causa raiz, sintetizando os porquês.');
+  if (!plano.acoes.some(function(a) { return a.oque && a.quando && a.quem; })) return erro('Inclua pelo menos uma ação com O quê, Quando e Quem.');
+  st.style.color = '';
+  if (await apresPlanoEnviar(chave, plano, false)) { apresPlanoDesenhar(chave, false); apresPlanoFinalDesenhar(); }
+}
+async function apresPlanoApagar(chave) {
+  if (!window.confirm('Apagar este plano?')) return;
+  if (await apresPlanoEnviar(chave, null, true)) { apresPlanoDesenhar(chave, false); apresPlanoFinalDesenhar(); }
+}
+
+// Slide final: todas as ações dos planos do GD numa tabela só
+function apresPlanoFinalDesenhar() {
+  var box = document.getElementById('ap-plano-final');
+  if (!box) return;
+  var linhas = '', nAcoes = 0, feitos = 0;
+  APRES_PLANOS.forEach(function(p) {
+    var d = apresPlanoDados(p.chave);
+    if (!d) { linhas += '<tr><td class="td-gd">' + p.titulo + '</td><td colspan="7" style="text-align:left;color:#b45309;font-weight:700">Plano ainda não preenchido</td></tr>'; return; }
+    feitos++;
+    d.acoes.forEach(function(a, k) {
+      nAcoes++;
+      linhas += '<tr>' + (k === 0 ? '<td class="td-gd" rowspan="' + d.acoes.length + '">' + p.titulo + '</td><td rowspan="' + d.acoes.length + '">' + apresEsc(raizDe(d)) + '</td>' : '') +
+        '<td>' + (apresEsc(a.oque) || '—') + '</td><td>' + (apresEsc(a.quem) || '—') + '</td><td>' + (apresEsc(a.quando) || '—') + '</td><td>' + (apresEsc(a.como) || '—') + '</td><td>' + (apresEsc(a.quanto) || '—') + '</td>' +
+        '<td><span class="crm-pct ' + ({ 'Concluída': 'ok', 'Não realizada': 'crit' }[a.status] || 'warn') + '">' + apresEsc(a.status || 'Pendente') + '</span></td></tr>';
+    });
+  });
+  box.innerHTML = APRES_PLANOS.length
+    ? '<div class="visitas-chart-wrap"><div class="visitas-table-wrap"><table class="visitas-table ap-w-tb ver final"><thead><tr><th class="th-gd">Plano</th><th>Causa raiz</th><th>O quê</th><th>Quem</th><th>Quando</th><th>Como</th><th>Quanto custa</th><th>Status</th></tr></thead><tbody>' + linhas + '</tbody></table></div></div>'
+    : '<div class="ap-plano-ok">✓ Nenhum desvio em fundamentos nem marca-chave abaixo de 100% — não há plano de ação exigido neste mês.</div>';
+  var msg = box.closest('.ap-slide').querySelector('.ap-msg');
+  if (msg) msg.textContent = APRES_PLANOS.length ? feitos + ' de ' + APRES_PLANOS.length + ' planos preenchidos · ' + nAcoes + ' ações' : 'Sem plano exigido';
+}
+
+// Slides de marca-chave: um por marca-chave da linha do GD que esteja abaixo
+// de 100% de cobertura (realizado ÷ cota) no distrito. Cada um traz os
+// números do distrito e a abertura por representante; o slide seguinte é o
+// plano da marca (5 porquês + 5W2H).
+function apresMarcasGrupos() {
+  var D = window._D || {}, d = (D.distritos || [])[0];
+  if (!d) return [];
+  function n(v) { var x = parseFloat(v); return isNaN(x) ? null : x; }
+  function p1(v) { return v === null ? '—' : v.toFixed(1).replace('.', ',') + '%'; }
+  function brl(v) { return v === null ? '—' : 'R$ ' + Math.round(v).toLocaleString('pt-BR'); }
+  function cls(v) { return v === null ? '' : (v >= 100 ? 'ok' : (v >= 80 ? 'warn' : 'crit')); }
+  function barra(v) { return '<span class="crm-pct ' + cls(v) + '">' + p1(v) + '</span> <span class="crm-bar-wrap"><span class="crm-bar-fill ' + cls(v) + '" style="width:' + Math.max(0, Math.min(100, v || 0)) + '%"></span></span>'; }
+  var vital = d.linha === 'VITAL';
+  var dist = (vital ? D.prodDistVit : D.prodDistNex) || [], reps = (vital ? D.prodRepVit : D.prodRepNex) || [];
+  var grupos = [];
+  marcasChaveDoMes(d.linha, MES_ATUAL).forEach(function(marca) {
+    var m = normProd(marca);
+    var linhaD = dist.filter(function(r) { return r.distrito_id === d.distrito_id && normProd(r.produto) === m; })[0];
+    if (!linhaD) return;
+    var cota = n(linhaD.cota), real = n(linhaD.realizado), cob = cota ? real / cota * 100 : null;
+    if (cob === null || cob >= 100) return; // só entra marca-chave abaixo de 100%
+    var rs = reps.filter(function(r) { return r.distrito_id === d.distrito_id && normProd(r.produto) === m; })
+      .map(function(r) { var c = n(r.cota), re = n(r.realizado); return { nome: r.nome, cota: c, real: re, cob: c ? re / c * 100 : null, cresc: n(r.crescimento) }; })
+      .sort(function(a, b) { return (a.cob === null ? 999 : a.cob) - (b.cob === null ? 999 : b.cob); });
+    var abaixo = rs.filter(function(r) { return r.cob !== null && r.cob < 100; }).length;
+
+    var h = '<div class="kpi-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:14px">' +
+      kpiCard(cob >= 80 ? 'o' : 'r', 'COBERTURA DA COTA', p1(cob), 'realizado ÷ cota do distrito') +
+      kpiCard('n', 'COTA', brl(cota), 'demanda · ' + MES_ATUAL + '/2026') +
+      kpiCard('n', 'REALIZADO', brl(real), 'faltam ' + brl(cota - real) + ' para a cota') +
+      kpiCard(abaixo ? 'r' : 'g', 'REPS ABAIXO DE 100%', abaixo + ' de ' + rs.length, 'na marca ' + marca) + '</div>';
+    h += '<div class="visitas-chart-wrap"><h3>' + marca + ' — cobertura por representante</h3>' +
+      '<div class="visitas-table-wrap"><table class="visitas-table"><thead><tr><th class="th-gd">Representante</th><th>Cota</th><th>Realizado</th><th>Falta</th><th>Cobertura</th><th>Cresc. vs mês ant.</th></tr></thead><tbody>';
+    rs.forEach(function(r) {
+      var falta = r.cota !== null && r.real !== null ? r.cota - r.real : null;
+      h += '<tr><td class="td-gd">' + r.nome + '</td><td>' + brl(r.cota) + '</td><td>' + brl(r.real) + '</td>' +
+        '<td' + (falta !== null && falta > 0 ? ' style="color:var(--red);font-weight:700"' : '') + '>' + (falta === null ? '—' : (falta > 0 ? brl(falta) : '—')) + '</td>' +
+        '<td>' + barra(r.cob) + '</td><td>' + (r.cresc === null ? '—' : (r.cresc > 0 ? '+' : '') + r.cresc.toFixed(1).replace('.', ',') + '%') + '</td></tr>';
+    });
+    h += '<tr style="background:#f3f4f6;font-weight:700"><td class="td-gd">Distrito</td><td>' + brl(cota) + '</td><td>' + brl(real) + '</td><td>' + brl(cota - real) + '</td><td>' + barra(cob) + '</td><td></td></tr>';
+    h += '</tbody></table></div></div>';
+    var el = document.createElement('div'); el.innerHTML = h;
+    grupos.push({
+      chave: '', nome: 'Marca-chave — ' + marca, nodes: [el],
+      msg: 'Cobertura de ' + p1(cob) + ' — faltam ' + brl(cota - real) + ' para a cota; ' + abaixo + ' de ' + rs.length + ' reps abaixo de 100%',
+      planoMarca: { marca: marca, chave: 'marca-' + m.replace(/[^A-Z0-9]+/g, '_'),
+        problema: marca + ' em ' + p1(cob) + ' de cobertura da cota no distrito — faltam ' + brl(cota - real) + '; ' + abaixo + ' de ' + rs.length + ' representantes abaixo de 100%.' }
+    });
+  });
+  return grupos;
+}
+
+// ── Slide "Combinados anteriores" (logo depois da capa) ───────────
+// O GD anexa o PDF da ata da N4 anterior (modelo "ATA N4 — Mês/AA | GD" do
+// Squad N4). O navegador lê o PDF, extrai a tabela "COMBINADOS DA REUNIÃO" e
+// grava os combinados no Sheets (1 linha em budget_lancamentos, produto
+// N4_ATA, com os itens em JSON no campo "acao"). O arquivo PDF em si não é
+// guardado — só o que foi lido dele. No slide, cada combinado ganha um status
+// que pode ser atualizado na reunião.
+var APRES_ATA_PROD = 'N4_ATA';
+var APRES_ATA_STATUS = ['Pendente', 'Em andamento', 'Resolvido', 'Não executado'];
+var APRES_ATA_PREVIA = null; // ata lida do PDF, aguardando confirmação
+
+function apresAtaReg() {
+  var gd = 'N4:' + DISTRITO_FILTRO, chave = 'ata|' + MES_ATUAL;
+  var regs = (BUDGET_LANC || []).filter(function(l) { return l.produto === APRES_ATA_PROD && l.gd === gd && l.crm === chave; });
+  return regs.length ? regs[regs.length - 1] : null;
+}
+function apresAtaDados() {
+  var reg = apresAtaReg();
+  if (!reg) return null;
+  try { return JSON.parse(reg.acao); } catch (e) { return null; }
+}
+function apresAtaResumo(ata) {
+  if (!ata || !ata.itens.length) return '';
+  var c = {};
+  ata.itens.forEach(function(i) { c[i.status] = (c[i.status] || 0) + 1; });
+  return ata.itens.length + ' combinados: ' + APRES_ATA_STATUS.filter(function(s) { return c[s]; }).map(function(s) { return c[s] + ' ' + s.toLowerCase(); }).join(', ');
+}
+
+// Linhas de texto do PDF (na ordem em que foram desenhadas) → ata
+function apresAtaInterpretar(linhas) {
+  linhas = linhas.map(function(l) { return l.replace(/\s+/g, ' ').trim(); }).filter(Boolean);
+  var titulo = linhas.filter(function(l) { return /^ATA N4/i.test(l); })[0] || '';
+  // rodapé de cada página = título + número da página: tira os dois
+  var limpas = [];
+  for (var i = 0; i < linhas.length; i++) {
+    if (linhas[i] === titulo && /^\d+$/.test(linhas[i + 1] || '')) { i++; continue; }
+    limpas.push(linhas[i]);
+  }
+  var data = (limpas.join(' ').match(/Data:\s*(\d{2}\/\d{2}\/\d{4})/) || [])[1] || '';
+  var ini = -1, fim = limpas.length;
+  limpas.forEach(function(l, k) {
+    if (ini < 0 && /^COMBINADOS DA REUNI/i.test(l)) ini = k;
+    // o título da seção é em maiúsculas; "Próxima N4 (Nov/26)" em minúsculas é prazo de combinado
+    else if (ini >= 0 && fim === limpas.length && /^PR[ÓO]XIMA N4$/.test(l)) fim = k;
+  });
+  if (ini < 0) return null;
+  var corpo = limpas.slice(ini + 1, fim);
+  var st = corpo.indexOf('Status'); // fim do cabeçalho da tabela
+  if (st >= 0 && st < 8) corpo = corpo.slice(st + 1);
+  var itens = [], atual = null, fase = 0; // fase: 1 texto, 2 prazo
+  var RESP = /^(GD|GRD|GN|GD \+ GRD|GRD \+ GD|GD \+ GN)$/i, STAT = /^(Pendente|Conclu[ií]do|Em andamento|Executado|N[ãa]o executado|Cancelado)$/i;
+  corpo.forEach(function(l) {
+    if ((!atual || fase === 0) && l === String(itens.length + 1)) { atual = { n: itens.length + 1, texto: '', resp: '', prazo: '', status: 'Pendente' }; itens.push(atual); fase = 1; return; }
+    if (!atual || fase === 0) return;
+    if (fase === 1) { if (RESP.test(l)) { atual.resp = l.toUpperCase(); fase = 2; } else atual.texto += (atual.texto ? ' ' : '') + l; return; }
+    if (STAT.test(l)) { fase = 0; return; } // status do PDF é sempre o inicial; aqui começa como Pendente
+    var cola = /[a-zà-ú]{6,}$/.test(atual.prazo) && /^[a-zà-ú](\s|$)/.test(l); // "Acompanhament" + "o contínuo"
+    atual.prazo += (cola ? '' : (atual.prazo ? ' ' : '')) + l;
+  });
+  itens = itens.filter(function(x) { return x.texto; });
+  return itens.length ? { titulo: titulo, data: data, itens: itens } : null;
+}
+
+function apresAtaCarregarPdfJs() {
+  return new Promise(function(ok, erro) {
+    if (window.pdfjsLib) return ok();
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    s.onload = function() { window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; ok(); };
+    s.onerror = function() { erro(new Error('não foi possível carregar o leitor de PDF')); };
+    document.head.appendChild(s);
+  });
+}
+async function apresAtaLerPdf(buffer) {
+  await apresAtaCarregarPdfJs();
+  var pdf = await window.pdfjsLib.getDocument({ data: buffer }).promise, linhas = [];
+  for (var p = 1; p <= pdf.numPages; p++) {
+    var tc = await (await pdf.getPage(p)).getTextContent();
+    tc.items.forEach(function(it) { if (it.str && it.str.trim()) linhas.push(it.str); });
+  }
+  return apresAtaInterpretar(linhas);
+}
+
+async function apresAtaArquivo(input) {
+  var f = input.files && input.files[0], st = document.getElementById('ap-ata-st');
+  if (!f) return;
+  if (!/\.pdf$/i.test(f.name)) { st.textContent = 'Escolha um arquivo PDF.'; return; }
+  st.textContent = 'Lendo ' + f.name + '…';
+  try {
+    var ata = await apresAtaLerPdf(await f.arrayBuffer());
+    if (!ata) { st.textContent = 'Não encontrei a tabela "COMBINADOS DA REUNIÃO" neste PDF. Confira se é a ata no modelo do Squad N4.'; return; }
+    ata.arquivo = f.name;
+    APRES_ATA_PREVIA = ata; APRES_ATA_EDIT = null;
+    apresAtaDesenhar();
+  } catch (e) { st.textContent = 'Não foi possível ler o PDF: ' + e.message; }
+}
+
+async function apresAtaGravar(ata, apagar) {
+  var reg = apresAtaReg(), d = ((window._D || {}).distritos || [])[0] || {};
+  var st = document.getElementById('ap-ata-st');
+  var payload = {
+    token: CONFIG.budget_token, acao: apagar ? 'delete' : (reg ? 'edit' : 'add'),
+    id: reg ? reg.id : 'n4a' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    gd: 'N4:' + DISTRITO_FILTRO, linha: d.linha || '', produto: APRES_ATA_PROD, crm: 'ata|' + MES_ATUAL,
+    medico: ata ? ata.titulo : '', valor: 0, acao_lancamento: ata ? JSON.stringify(ata) : '',
+    data: apresHoje(), criadoEm: reg ? reg.criadoEm : Date.now().toString()
+  };
+  if (st) st.textContent = 'Salvando…';
+  try {
+    var r = await fetch(CONFIG.budget_webapp_url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) });
+    var resp = JSON.parse(await r.text());
+    if (!resp.ok) throw new Error(resp.erro || 'falha desconhecida');
+  } catch (e) { if (st) st.textContent = 'Não foi possível salvar: ' + e.message; return false; }
+  await carregarBudget();
+  return true;
+}
+async function apresAtaConfirmar() {
+  if (!APRES_ATA_PREVIA) return;
+  if (await apresAtaGravar(APRES_ATA_PREVIA, false)) { APRES_ATA_PREVIA = null; apresAtaDesenhar(); }
+}
+async function apresAtaRemover() {
+  if (!window.confirm('Remover os combinados desta ata? Os status marcados serão perdidos.')) return;
+  if (await apresAtaGravar(null, true)) apresAtaDesenhar();
+}
+async function apresAtaStatus(n, status) {
+  if (APRES_ATA_PREVIA) { // ata ainda não salva: marca na prévia, vai junto no "Salvar combinados"
+    APRES_ATA_PREVIA.itens.forEach(function(i) { if (i.n === n) i.status = status; });
+    apresAtaDesenhar();
+    return;
+  }
+  var ata = apresAtaDados();
+  if (!ata) return;
+  ata.itens.forEach(function(i) { if (i.n === n) i.status = status; });
+  if (await apresAtaGravar(ata, false)) apresAtaDesenhar();
+}
+
+// Edição dos combinados lidos da ata: corrigir texto, responsável ou prazo,
+// excluir um combinado ou incluir outro. APRES_ATA_EDIT é a cópia de trabalho.
+var APRES_ATA_EDIT = null;
+function apresAtaEditar() {
+  var base = APRES_ATA_PREVIA || apresAtaDados();
+  if (!base) return;
+  APRES_ATA_EDIT = JSON.parse(JSON.stringify(base));
+  apresAtaDesenhar();
+}
+function apresAtaLerEdicao() {
+  var itens = [];
+  [].forEach.call(document.querySelectorAll('#ap-ata [data-item]'), function(tr) {
+    function v(c) { return tr.querySelector('[data-c="' + c + '"]').value.trim(); }
+    itens.push({ n: itens.length + 1, texto: v('texto'), resp: v('resp'), prazo: v('prazo'), status: tr.getAttribute('data-status') || 'Pendente' });
+  });
+  return itens;
+}
+function apresAtaEditLinha(delta, idx) {
+  var itens = apresAtaLerEdicao();
+  if (delta > 0) itens.push({ n: itens.length + 1, texto: '', resp: 'GD', prazo: '', status: 'Pendente' });
+  else itens.splice(idx, 1);
+  itens.forEach(function(i, k) { i.n = k + 1; });
+  APRES_ATA_EDIT.itens = itens;
+  apresAtaDesenhar();
+}
+async function apresAtaSalvarEdicao() {
+  var itens = apresAtaLerEdicao().filter(function(i) { return i.texto; }), st = document.getElementById('ap-ata-st');
+  if (!itens.length) { st.textContent = 'Deixe pelo menos um combinado, ou use "Remover" para tirar a ata.'; return; }
+  itens.forEach(function(i, k) { i.n = k + 1; });
+  APRES_ATA_EDIT.itens = itens;
+  if (await apresAtaGravar(APRES_ATA_EDIT, false)) { APRES_ATA_EDIT = null; APRES_ATA_PREVIA = null; apresAtaDesenhar(); }
+}
+
+function apresAtaDesenhar() {
+  var box = document.getElementById('ap-ata');
+  if (!box) return;
+  var pronto = !!(CONFIG && CONFIG.budget_webapp_url && CONFIG.budget_token);
+  var salva = apresAtaDados(), editando = !!APRES_ATA_EDIT;
+  var ata = APRES_ATA_EDIT || APRES_ATA_PREVIA || salva, previa = !editando && !!APRES_ATA_PREVIA;
+  var corSt = { 'Pendente': 'warn', 'Em andamento': 'warn', 'Resolvido': 'ok', 'Executado': 'ok', 'Não executado': 'crit' };
+  var h = '';
+  if (!ata) {
+    h += '<div class="ap-ata-vazio"><div class="ap-ata-ico">📎</div><b>Anexe a ata da N4 anterior</b>' +
+      '<p>PDF no modelo "ATA N4 — Mês/AA | GD". Os combinados da tabela "Combinados da reunião" aparecem aqui para conferência item a item.</p>' +
+      (pronto ? '<label class="ap-diag-btn">Escolher PDF da ata<input type="file" accept="application/pdf,.pdf" style="display:none" onchange="apresAtaArquivo(this)"></label>' : '<p>Gravação indisponível nesta página.</p>') +
+      '<div id="ap-ata-st" class="ap-ata-st"></div></div>';
+  } else {
+    h += '<div class="visitas-chart-wrap"><div class="ap-ata-top"><div><h3 style="margin:0">' + apresEsc(ata.titulo || 'Ata da N4 anterior') + '</h3>' +
+      '<div class="ap-ata-sub">' + (ata.data ? 'Reunião de ' + ata.data + ' · ' : '') + ata.itens.length + ' combinados' + (ata.arquivo ? ' · lido de ' + apresEsc(ata.arquivo) : '') + '</div></div><span class="ap-diag-acoes">';
+    if (editando) h += '<button class="ap-diag-btn" onclick="apresAtaSalvarEdicao()">Salvar alterações</button><button class="ap-diag-mini" onclick="APRES_ATA_EDIT=null;apresAtaDesenhar()">Cancelar</button>';
+    else if (previa) h += '<button class="ap-diag-btn" onclick="apresAtaConfirmar()">Salvar combinados</button><button class="ap-diag-mini" onclick="apresAtaEditar()">✏️ Editar</button><button class="ap-diag-mini" onclick="APRES_ATA_PREVIA=null;apresAtaDesenhar()">Cancelar</button>';
+    else if (pronto) h += '<button class="ap-diag-mini" onclick="apresAtaEditar()">✏️ Editar</button><label class="ap-diag-mini">Trocar ata<input type="file" accept="application/pdf,.pdf" style="display:none" onchange="apresAtaArquivo(this)"></label><button class="ap-diag-mini" onclick="apresAtaRemover()">Remover</button>';
+    h += '</span></div>';
+    if (previa) h += '<div class="ap-ata-aviso">Confira se os combinados foram lidos corretamente. Marque o status de cada um (por exemplo, Resolvido), use "Editar" para ajustar ou excluir algum, e depois "Salvar combinados".</div>';
+    if (editando) h += '<div class="ap-ata-aviso">Modo edição: ajuste o texto, o responsável e o prazo; use ✕ para excluir um combinado.</div>';
+    h += '<div class="visitas-table-wrap"><table class="visitas-table ap-ata-tb"><thead><tr><th style="width:44px">#</th><th class="th-gd">Combinado</th><th style="width:' + (editando ? 150 : 110) + 'px">Responsável</th><th style="width:' + (editando ? 220 : 190) + 'px">Prazo</th><th style="width:' + (editando ? 60 : 170) + 'px">' + (editando ? '' : 'Status') + '</th></tr></thead><tbody>';
+    ata.itens.forEach(function(i, k) {
+      if (editando) {
+        h += '<tr data-item="' + k + '" data-status="' + apresEsc(i.status) + '"><td>' + (k + 1) + '</td>' +
+          '<td class="td-gd"><textarea rows="2" data-c="texto" placeholder="Descreva o combinado">' + apresEsc(i.texto) + '</textarea></td>' +
+          '<td><input type="text" data-c="resp" value="' + apresEsc(i.resp) + '" list="ap-ata-resps"></td>' +
+          '<td><input type="text" data-c="prazo" value="' + apresEsc(i.prazo) + '" placeholder="Data ou Próxima N4"></td>' +
+          '<td><button class="ap-diag-mini" title="Excluir este combinado" onclick="apresAtaEditLinha(-1,' + k + ')">✕</button></td></tr>';
+        return;
+      }
+      var sel = !pronto ? '<span class="crm-pct ' + corSt[i.status] + '">' + i.status + '</span>'
+        : '<select class="ap-ata-sel ' + corSt[i.status] + '" onchange="apresAtaStatus(' + i.n + ',this.value)">' + APRES_ATA_STATUS.map(function(s) { return '<option' + (s === i.status ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>';
+      h += '<tr><td>' + i.n + '</td><td class="td-gd" style="white-space:normal">' + apresEsc(i.texto) + '</td><td>' + apresEsc(i.resp) + '</td><td style="white-space:normal">' + apresEsc(i.prazo) + '</td><td>' + sel + '</td></tr>';
+    });
+    h += '</tbody></table></div>';
+    if (editando) h += '<datalist id="ap-ata-resps"><option value="GD"><option value="GRD"><option value="GD + GRD"></datalist>' +
+      '<div class="ap-diag-f"><button class="ap-diag-mini" onclick="apresAtaEditLinha(1)">+ Adicionar combinado</button></div>';
+    h += '<div id="ap-ata-st" class="ap-ata-st"></div></div>';
+  }
+  box.innerHTML = h;
+  var msg = box.closest('.ap-slide').querySelector('.ap-msg');
+  if (msg) msg.textContent = editando ? 'Editando os combinados' : (previa ? 'Ata lida — aguardando confirmação' : (apresAtaResumo(salva) || 'Nenhuma ata anexada para ' + MES_ATUAL + '/2026'));
+  if (APRES.on && APRES.slides.length) apresAjustar();
+}
+
+function apresRaiz() {
+  var r = document.getElementById('apres');
+  if (r) return r;
+  r = document.createElement('div'); r.id = 'apres';
+  r.innerHTML = '<div class="ap-top"><div class="logo">EMS</div><span id="ap-ctx"></span><span class="ap-sp"></span>' +
+    '<button class="ap-btn" id="ap-trocar" onclick="apresMostrarEscolha()">⇄ Trocar GD</button>' +
+    '<button class="ap-btn" onclick="apresSair()">✕ Sair da apresentação</button></div>' +
+    '<div class="ap-stage" id="ap-stage"></div>' +
+    '<div class="ap-nav"><button class="ap-btn" id="ap-prev" onclick="apresIr(APRES.i - 1)">← Anterior</button>' +
+    '<div class="ap-dots" id="ap-dots"></div><span id="ap-cnt"></span>' +
+    '<button class="ap-btn" id="ap-next" onclick="apresIr(APRES.i + 1)">Próximo →</button></div>';
+  document.body.appendChild(r);
+  return r;
+}
+
+// A gravação de atas e planos usa o mesmo web app do Budget. O endereço e o token
+// ficam só no config.json (o config-leste.json não os tem); a apresentação lê de lá.
+async function apresCredenciais() {
+  if (CONFIG.budget_webapp_url && CONFIG.budget_token) return;
+  try {
+    var c = await (await fetch('config.json?t=' + Date.now(), { cache: 'no-store' })).json();
+    if (c.spreadsheet_id === CONFIG.spreadsheet_id) { CONFIG.budget_webapp_url = c.budget_webapp_url; CONFIG.budget_token = c.budget_token; }
+  } catch (e) { console.warn('Gravação de atas e planos indisponível.', e.message); }
+}
+
+async function apresAbrir() {
+  await apresCredenciais();
+  if (VIEW_ATUAL !== 'principal') await trocarMes(MES_ATUAL);
+  await apresCarregarAlloc();
+  var raiz = apresRaiz(), stage = document.getElementById('ap-stage');
+  APRES.scrollY = window.scrollY;
+  raiz.classList.add('on'); document.body.classList.add('apres-on');
+  APRES.on = true; APRES.slides = []; APRES.i = 0;
+
+  // sem distrito filtrado: pede para escolher o GD
+  if (!DISTRITO_FILTRO) { apresMostrarEscolha(); return; }
+  apresMontar();
+}
+
+// fundo decorativo das capas (mesmo visual da entrada do Copiloto de RPS)
+var APRES_DECO = '<svg class="ap-deco" viewBox="0 0 1330 750" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs><linearGradient id="apdg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2f9bff" stop-opacity="0"/><stop offset="1" stop-color="#4fc3ff" stop-opacity=".9"/></linearGradient><pattern id="apdp" width="9" height="9" patternUnits="userSpaceOnUse"><circle cx="1.5" cy="1.5" r="1.1" fill="#6fb6ff" opacity=".35"/></pattern></defs><path d="M0 60 C120 10 240 -10 360 0 L0 0Z" fill="#0d4fc4" opacity=".35"/><path d="M-20 250 C40 120 180 30 420 -10" fill="none" stroke="#3aa0ff" stroke-opacity=".35" stroke-width="1.5"/><path d="M1330 0 C1160 90 1050 240 1040 470 C1034 600 1120 700 1330 750Z" fill="#0a3aa6" opacity=".4"/><path d="M1010 -10 C760 120 620 300 560 520" fill="none" stroke="#3aa0ff" stroke-opacity=".28" stroke-width="1.5"/><path d="M0 600 C200 520 380 640 600 690 C820 740 1080 640 1330 700 L1330 750 L0 750Z" fill="#0b55d2" opacity=".35"/><path d="M0 640 C220 580 420 700 640 720 C860 740 1100 690 1330 730" fill="none" stroke="#2f9bff" stroke-opacity=".5" stroke-width="2"/><g fill="#3d8bff" opacity=".2"><rect x="1018" y="216" width="28" height="24"/><rect x="1068" y="188" width="28" height="52"/><rect x="1118" y="158" width="28" height="82"/><rect x="1168" y="126" width="30" height="114"/><rect x="1228" y="142" width="30" height="98"/></g><path d="M1010 236 C1100 232 1200 180 1285 68" fill="none" stroke="url(#apdg)" stroke-width="2.5"/><circle cx="1285" cy="67" r="13" fill="#2f9bff" opacity=".3"/><circle cx="1285" cy="67" r="7" fill="#35a8ff"/><rect x="930" y="170" width="150" height="110" fill="url(#apdp)"/><rect x="0" y="640" width="150" height="100" fill="url(#apdp)"/></svg>';
+// Tela de escolha do GD — usada na entrada sem filtro e pelo botão "Trocar GD"
+function apresMostrarEscolha() {
+  var ds = (DADOS_CACHE[MES_ATUAL] || {}).distritos || [];
+  APRES.slides = []; APRES.i = 0;
+  document.getElementById('ap-ctx').textContent = 'Apresentação · ' + MES_ATUAL + '/2026';
+  document.getElementById('ap-dots').innerHTML = ''; document.getElementById('ap-cnt').textContent = '';
+  document.getElementById('ap-prev').disabled = true; document.getElementById('ap-next').disabled = true;
+  document.getElementById('ap-trocar').style.display = 'none';
+  document.getElementById('ap-stage').innerHTML = '<div class="ap-slide on"><div class="ap-capa">' + APRES_DECO + '<div class="ap-capa-k">Regional Leste</div><h2>Apresentação <span>N4</span></h2>' +
+    '<div class="ap-capa-m">Escolha o GD para montar a apresentação com os dados de ' + MES_ATUAL + '/2026.</div>' +
+    '<div class="ap-escolha">' + ds.map(function(d) {
+      return '<button onclick="apresEscolher(\'' + d.distrito_id + '\')"' + (d.distrito_id === DISTRITO_FILTRO ? ' class="atual"' : '') + '><i><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.6"/><path d="M5 20c0-3.9 3.1-6.4 7-6.4s7 2.5 7 6.4"/></svg></i><span>' + d.nm + '<small>' + d.linha + '</small></span></button>';
+    }).join('') + '</div></div></div>';
+}
+
+function apresEscolher(id) {
+  aplicarFiltroDistrito(id);
+  document.getElementById('ap-stage').innerHTML = '<div class="ap-slide on"><div class="ap-capa">' + APRES_DECO + '<h2>Montando…</h2></div></div>';
+  setTimeout(apresMontar, 500); // espera a página do mês terminar de desenhar
+}
+
+function apresMontar() {
+  var stage = document.getElementById('ap-stage');
+  var D = window._D || {}, d = (D.distritos || [])[0] || {};
+  // altura útil de um slide; seções até 1,15× isso ainda cabem reduzindo pouco a escala
+  var util = window.innerHeight - 48 - 46 - 18 - 54 - 28;
+  APRES_PLANOS = [];
+  var grupos = apresGrupos(util * 1.15);
+  grupos = grupos.concat(apresPlanoFundGrupo());
+  apresMarcasGrupos().forEach(function(g) {
+    grupos.push(g);
+    grupos.push(apresPlanoMarcaGrupo(g.planoMarca.marca, g.planoMarca.chave, g.planoMarca.problema));
+  });
+  var fimEl = document.createElement('div'); fimEl.id = 'ap-plano-final';
+  grupos.push({ chave: '', nome: 'Plano de ação', nodes: [fimEl], msg: ' ' });
+  var ataEl = document.createElement('div'); ataEl.id = 'ap-ata';
+  grupos.unshift({ chave: '', nome: 'Combinados anteriores', nodes: [ataEl], msg: ' ', ata: true });
+  APRES_ATA_PREVIA = null; APRES_ATA_EDIT = null;
+  document.getElementById('ap-ctx').textContent = (d.nm || '') + ' · ' + (d.linha || '') + ' · ' + MES_ATUAL + '/2026';
+
+  stage.innerHTML = '';
+  APRES.slides = [];
+  document.getElementById('ap-trocar').style.display = '';
+  // capa com o índice
+  var capa = document.createElement('div'); capa.className = 'ap-slide';
+  var nmCapa = String(d.nm || '').split(' ');
+  capa.innerHTML = '<div class="ap-capa ap-cv">' + APRES_DECO + '<div class="ap-capa-k">Dashboard N4 · Regional Leste</div>' +
+    '<h2>' + nmCapa[0] + ' <span>' + nmCapa.slice(1).join(' ') + '</span></h2><div class="ap-capa-m">Linha ' + (d.linha || '') + ' · distrito ' + String(d.distrito_id || '').substring(0, 6) +
+    ' · ' + MES_ATUAL + '/2026 · ' + (d.reps_ativos || '—') + ' representantes ativos</div>' +
+    '<div class="ap-indice">' + grupos.map(function(g, k) { return '<button onclick="apresIr(' + (k + 1) + ')"><b>' + (k + 2) + '</b>' + g.nome + '</button>'; }).join('') + '</div></div>';
+  stage.appendChild(capa); APRES.slides.push({ el: capa, nome: 'Abertura' });
+
+  grupos.forEach(function(g) {
+    var s = document.createElement('div'); s.className = 'ap-slide';
+    var msg = g.msg || (g.chave ? g.chave.split('+').map(apresMensagem).filter(Boolean).join(' · ') : '');
+    s.innerHTML = '<div class="ap-hdr"><h2>' + g.nome + '</h2>' + (msg ? '<span class="ap-msg">' + msg + '</span>' : '') + '</div>' +
+      '<div class="ap-body"><div class="ap-fit"></div></div>';
+    var fit = s.querySelector('.ap-fit');
+    g.nodes.forEach(function(nd) { fit.appendChild(nd); }); // move o elemento real (mantém gráficos e cliques)
+    apresLimparVazios(fit);
+    if (g.chave === 'budget') { var det = apresBudgetDetalhe(d.nm); if (det) { fit.innerHTML = ''; fit.appendChild(det); } }
+    stage.appendChild(s);
+    APRES.slides.push({ el: s, nome: g.nome, body: s.querySelector('.ap-body'), fit: fit });
+  });
+
+  apresAtaDesenhar();
+  APRES_PLANOS.forEach(function(pl) { apresPlanoDesenhar(pl.chave, false); });
+  apresPlanoFinalDesenhar();
+  document.getElementById('ap-dots').innerHTML = APRES.slides.map(function(s, k) {
+    return '<button onclick="apresIr(' + k + ')" title="' + s.nome + '">' + (k + 1) + '</button>';
+  }).join('');
+  apresIr(0);
+}
+
+function apresIr(i) {
+  if (!APRES.slides.length) return;
+  APRES.i = Math.max(0, Math.min(APRES.slides.length - 1, i));
+  APRES.slides.forEach(function(s, k) { s.el.classList.toggle('on', k === APRES.i); });
+  [].forEach.call(document.getElementById('ap-dots').children, function(b, k) { b.classList.toggle('on', k === APRES.i); });
+  document.getElementById('ap-cnt').textContent = (APRES.i + 1) + ' / ' + APRES.slides.length;
+  document.getElementById('ap-prev').disabled = APRES.i === 0;
+  document.getElementById('ap-next').disabled = APRES.i === APRES.slides.length - 1;
+  apresAjustar();
+}
+
+// Sem rolagem: ajusta a escala do slide ativo para o conteúdo ocupar a tela.
+// A largura de layout acompanha a escala (menor escala = mais largura para as tabelas).
+function apresAjustar() {
+  var s = APRES.slides[APRES.i];
+  if (!s || !s.fit) return;
+  var cs = getComputedStyle(s.body);
+  var W = s.body.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  var H = s.body.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+  var z = 1;
+  function aplicar(v) { z = v; s.fit.style.zoom = v; s.fit.style.width = (W / v) + 'px'; }
+  // escala entre 45% e 135%: reduz o que não cabe e amplia o que sobra espaço
+  aplicar(1);
+  for (var k = 0; k < 8; k++) {
+    var h = s.fit.getBoundingClientRect().height;
+    var alvo = Math.max(0.45, Math.min(1.35, z * H / h * 0.985));
+    if (Math.abs(alvo - z) < 0.01) break;
+    aplicar(alvo);
+  }
+  if (s.fit.getBoundingClientRect().height > H + 1 && z > 0.45) aplicar(Math.max(0.45, z * 0.97));
+}
+
+function apresSair() {
+  if (!APRES.on) return;
+  APRES.on = false; APRES.slides = [];
+  document.getElementById('apres').classList.remove('on');
+  document.body.classList.remove('apres-on');
+  document.getElementById('ap-stage').innerHTML = '';
+  // as seções foram movidas para os slides: monta a página do mês de novo
+  // (pelo filtro de distrito, que também reabre o detalhe do distrito)
+  if (DISTRITO_FILTRO) aplicarFiltroDistrito(DISTRITO_FILTRO);
+  else if (DADOS_CACHE[MES_ATUAL]) renderTudo(DADOS_CACHE[MES_ATUAL], MES_ATUAL);
+  window.scrollTo(0, APRES.scrollY);
+}
+
+document.addEventListener('keydown', function(e) {
+  if (!APRES.on) return;
+  if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+  if (e.key === 'Escape') apresSair();
+  else if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); apresIr(APRES.i + 1); }
+  else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); apresIr(APRES.i - 1); }
+  else if (e.key === 'Home') apresIr(0);
+  else if (e.key === 'End') apresIr(APRES.slides.length - 1);
+});
+window.addEventListener('resize', function() { if (APRES.on) apresAjustar(); });
+
 // ── Filtro por distrito (topo da página) ───────────────────────────
 
 // Recorta um objeto `dados` (do carregarMes) para conter só as linhas do
@@ -2110,6 +3171,8 @@ function renderCycleBar(meses, mesAtual) {
   btns += '<button class="cycle-btn gloss-btn'    + (isGloss    ? ' active' : '') + '" onclick="abrirGlossario()">📖 Glossário</button>';
   btns += '<button class="cycle-btn diagevol-btn' + (isDiagEvol ? ' active' : '') + '" onclick="abrirEvolucaoDiag()">📊 Diag. Evolução</button>';
   btns += '<button class="cycle-btn budget-btn" onclick="window.location.href=\'budget.html?regional=LESTE\'">💰 Budget</button>';
+  btns += '<button class="cycle-btn gov-btn" onclick="window.location.href=\'planos-spi.html?regional=LESTE\'" title="Todos os planos dos GDs preenchidos na apresentação">📋 Planos Leste</button>';
+  btns += '<button class="cycle-btn apres-btn" onclick="apresAbrir()" title="Mostra as seções do distrito uma por tela">▶ Apresentação</button>';
   bar.innerHTML = btns;
   atualizarVisibilidadeFiltroDistrito();
 }

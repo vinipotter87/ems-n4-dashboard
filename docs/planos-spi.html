@@ -70,8 +70,8 @@ select.st{cursor:pointer}
 
 <div class="hdr">
   <div class="logo">EMS</div>
-  <div><h1>📋 Planos SPI</h1><p>Regional SPI Oeste · planos de ação dos GDs (5 porquês + 5W2H) preenchidos na apresentação</p></div>
-  <a href="index.html">← Voltar ao Dashboard</a>
+  <div><h1 id="pg-tit">📋 Planos SPI</h1><p><span id="pg-reg">Regional SPI Oeste</span> · planos de ação dos GDs (5 porquês + 5W2H) preenchidos na apresentação</p></div>
+  <a href="index.html" id="pg-volta">← Voltar ao Dashboard</a>
 </div>
 
 <div class="bar">
@@ -105,7 +105,10 @@ var CONFIG = {}, PLANOS = [], PODE_GRAVAR = false;
 function $(id){ return document.getElementById(id); }
 function esc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function dataBr(iso){ var x = String(iso || '').split('-'); return x.length === 3 ? x[2] + '/' + x[1] + '/' + x[0] : ''; }
-function ehSpi(distrito){ return /^(1103|1163)/.test(distrito); }
+// A mesma página serve às duas regionais: planos-spi.html (SPI Oeste) e planos-spi.html?regional=LESTE (Leste)
+var REGIONAL_LESTE = /[?&]regional=leste(&|$)/i.test(window.location.search);
+function ehSpi(distrito){ return (REGIONAL_LESTE ? /^(1105|1165)/ : /^(1103|1163)/).test(distrito); }
+if (REGIONAL_LESTE){ document.title = 'EMS | Planos Leste'; $('pg-tit').textContent = '📋 Planos Leste'; $('pg-reg').textContent = 'Regional Leste'; $('pg-volta').href = 'leste.html'; }
 
 async function fetchAba(aba, tent){
   tent = tent || 0;
@@ -218,7 +221,7 @@ function render(){
     kpi('Planos', ps.length, 'no filtro atual') +
     kpi('Ações (5W2H)', totAc, (cont['Pendente'] || 0) + ' pendentes · ' + (cont['Em andamento'] || 0) + ' em andamento') +
     kpi('Execução', (totAc ? Math.round(conc / totAc * 100) : 0) + '%', conc + ' de ' + totAc + ' ações concluídas' + (cont['Não realizada'] ? ' · ' + cont['Não realizada'] + ' não realizadas' : '')) +
-    kpi('GDs com plano', Object.keys(gds).length, 'de 8 distritos da SPI') +
+    kpi('GDs com plano', Object.keys(gds).length, (REGIONAL_LESTE ? 'de 4 distritos da Leste' : 'de 8 distritos da SPI')) +
     kpi('Fundamentos', nFund, 'planos de execução') +
     kpi('Marca-chave', ps.length - nFund, topMarca.length ? topMarca.map(function(m){ return m + ' ' + marcas[m]; }).join(' · ') : 'nenhum') + '</div>';
 
