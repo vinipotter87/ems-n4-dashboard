@@ -556,7 +556,7 @@ async function abrirRep(setor){
   $('stage').innerHTML = '<div class="slide on"><div class="capa"><h2>Montando…</h2></div></div>';
   // dois meses anteriores, para o slide de evolução
   var L = ST.d.dist.linha, ms = [mesAnt(mesAnt(ST.mes) || ''), mesAnt(ST.mes)].filter(Boolean); ST.d.hist = [];
-  for (var i = 0; i < ms.length; i++) ST.d.hist.push({ mes: ms[i], reps: await fetchAba('reps_' + ms[i]), pr: await fetchAba('produtos_rep_' + L + '_' + ms[i]) });
+  for (var i = 0; i < ms.length; i++) ST.d.hist.push({ mes: ms[i], reps: await fetchAba('reps_' + ms[i]), pr: await fetchAba('produtos_rep_' + L + '_' + ms[i]), pex: await fetchAba('pex_' + ms[i]) });
   montarIndividual();
 }
 
@@ -592,16 +592,31 @@ function iMarcas(){
     '<tr class="tot"><td>Soma das marcas-chave</td><td>' + brl(M.eu.cota) + '</td><td>' + brl(M.eu.real) + '</td><td>' + (M.eu.gap > 0 ? brl(M.eu.gap) : '—') + '</td><td>' + barra(M.eu.cob, cls(M.eu.cob)) + '</td><td></td><td></td></tr></tbody></table></div>';
   return { nome: 'Marcas-chave', msg: M.eu.abaixo.length ? M.eu.abaixo.length + ' marca(s)-chave abaixo de 100% — faltam ' + brl(M.eu.gap) : 'Todas as marcas-chave em 100% ou mais', html: h };
 }
-function iEvolucao(){
-  var L = ST.d.dist.linha, serie = ST.d.hist.concat([{ mes: ST.mes, reps: ST.d.reps, pr: ST.d.pr }]), ch = marcas(L, ST.mes);
-  function cob(pr, mk){ var r = pr.filter(function(p){ return p.setor_id === ST.setor && norm(p.produto) === mk; })[0]; return r && num(r.cota) ? num(r.realizado) / num(r.cota) * 100 : null; }
-  var h = '<div class="card"><h3>Últimos meses do setor</h3><table><thead><tr><th>Indicador</th>' + serie.map(function(s){ return '<th>' + s.mes + '</th>'; }).join('') + '<th>Variação</th></tr></thead><tbody>';
-  function linha(nome, vals, ok, warn){ var a = vals[0], b = vals[vals.length - 1];
-    h += '<tr><td class="n">' + nome + '</td>' + vals.map(function(v){ return '<td><span class="cel ' + cls(v, ok, warn) + '">' + p1(v) + '</span></td>'; }).join('') + '<td>' + (a === null || b === null ? '—' : ((b - a >= 0 ? '▲ +' : '▼ ') + (b - a).toFixed(1).replace('.', ',') + ' pp')) + '</td></tr>'; }
-  linha('Produtividade (MDV)', serie.map(function(s){ var r = s.reps.filter(function(x){ return x.setor_id === ST.setor; })[0]; return r ? num(r.prod) : null; }));
-  ch.forEach(function(mk){ linha(mk, serie.map(function(s){ return cob(s.pr, mk); })); });
-  h += '</tbody></table><div class="nota">Cobertura da cota por marca-chave e MDV do setor em cada mês. "—" = sem dado do setor naquele mês.</div></div>';
-  return { nome: 'Evolução', msg: serie.map(function(s){ return s.mes; }).join(' → '), html: h };
+function iEvolucao(){ // últimos 3 meses do setor: fundamentos (execução) e produtos (marcas-chave + demais)
+  var L = ST.d.dist.linha, serie = ST.d.hist.concat([{ mes: ST.mes, reps: ST.d.reps, pr: ST.d.pr, pex: ST.d.pex }]), ch = marcas(L, ST.mes);
+  function seta(vals, un, inv){ var com = vals.filter(function(v){ return v !== null; }), b = vals[vals.length - 1]; if (com.length < 2 || b === null) return '—'; var d = b - com[0]; if (Math.abs(d) < 0.05) d = 0; var bom = inv ? d <= 0 : d >= 0;
+    return '<b style="color:' + (Math.abs(d) < 0.05 ? 'var(--gray)' : (bom ? '#15803d' : '#b91c1c')) + '">' + (d >= 0 ? '▲ +' : '▼ ') + d.toFixed(1).replace('.', ',') + un + '</b>'; }
+  function tabela(tit, sub){ return '<div class="card" style="margin:0"><h3>' + tit + ' <small>' + sub + '</small></h3><table><thead><tr><th>Indicador</th>' + serie.map(function(s){ return '<th>' + s.mes + '</th>'; }).join('') + '<th>Variação</th></tr></thead><tbody>'; }
+  function linha(nome, vals, cor, fmt, un, inv){ return '<tr><td class="n">' + nome + '</td>' + vals.map(function(v){ return '<td><span class="cel ' + (v === null ? 'na' : cor(v)) + '">' + (v === null ? '—' : fmt(v)) + '</span></td>'; }).join('') + '<td>' + seta(vals, un, inv) + '</td></tr>'; }
+  function rep(s){ return s.reps.filter(function(x){ return x.setor_id === ST.setor; })[0]; }
+  function campo(k){ return serie.map(function(s){ var r = rep(s); return r ? num(r[k]) : null; }); }
+  function c100(v){ return cls(v); } function c90(v){ return cls(v, 90, 80); }
+  var f = tabela('Fundamentos', 'indicadores de execução');
+  f += linha('Produtividade (MDV)', campo('prod'), c100, p1, ' pp') + linha('Cobertura Q1', campo('q1'), c90, p1, ' pp') + linha('Cobertura Q2', campo('q2'), c90, p1, ' pp') + linha('Cobertura Q3', campo('q3'), c90, p1, ' pp') + linha('Cobertura de painel', campo('cob_painel'), c90, p1, ' pp');
+  f += linha('Dias trabalhados', campo('dias_trabalhados'), function(){ return ''; }, function(v){ return Math.round(v); }, ' d');
+  f += linha('Frequência de visitação', serie.map(function(s){ var x = freqSetor(s.mes); return x ? x.cob : null; }), function(v){ return v >= 75 ? 'ok' : (v >= 50 ? 'warn' : 'crit'); }, p1, ' pp');
+  f += linha('Sobreposição Nexus × Vital', serie.map(function(s){ var x = sobSetor(s.mes); return x ? x.pNv : null; }), function(v){ return v > 20 ? 'crit' : (v >= 10 ? 'warn' : 'ok'); }, p1, ' pp', true);
+  f += linha('PEX (pontos)', serie.map(function(s){ var x = (s.pex || []).filter(function(y){ return y.setor_id === ST.setor; })[0]; return x ? num(x.pts) : null; }), function(){ return ''; }, function(v){ return v.toFixed(1).replace('.', ','); }, ' pts');
+  f += '</tbody></table></div>';
+  function cob(pr, mk){ var r = pr.filter(function(x){ return x.setor_id === ST.setor && norm(x.produto) === mk; })[0]; return r && num(r.cota) ? num(r.realizado) / num(r.cota) * 100 : null; }
+  var outros = {}; serie.forEach(function(s){ s.pr.forEach(function(x){ var mk = norm(x.produto); if (x.setor_id === ST.setor && ch.indexOf(mk) < 0) outros[mk] = 1; }); });
+  var pt = tabela('Produtos', 'cobertura da cota');
+  ch.forEach(function(mk){ pt += linha('<span class="tag foco" style="margin-right:6px">chave</span>' + mk, serie.map(function(s){ return cob(s.pr, mk); }), c100, p1, ' pp'); });
+  Object.keys(outros).sort().forEach(function(mk){ pt += linha(mk, serie.map(function(s){ return cob(s.pr, mk); }), c100, p1, ' pp'); });
+  pt += '</tbody></table></div>';
+  var h = '<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start">' + f + pt + '</div>' +
+    '<div class="nota">Variação = último mês − primeiro mês com dado na série (verde = melhorou, vermelho = piorou; na sobreposição, cair é melhorar). "—" = sem dado do setor naquele mês; frequência e sobreposição só existem nos meses com snapshot.</div>';
+  return { nome: 'Evolução', msg: serie.map(function(s){ return s.mes; }).join(' → ') + ' · fundamentos e produtos do setor', html: h };
 }
 function iFreq(){
   var f = freqSetor(ST.mes), fa = mesAnt(ST.mes) ? freqSetor(mesAnt(ST.mes)) : null, s = sobSetor(ST.mes);
