@@ -75,6 +75,28 @@ tr.tot td{background:#f3f4f6;font-weight:800}
 .titulo-so{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;height:100%}
 .titulo-so h2{font-size:46px;font-weight:900;color:var(--brand-d)}
 .titulo-so p{font-size:14px;color:var(--gray);margin-top:10px}
+/* fundamentos e planos (individual) */
+.fund{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.fc{background:#fff;border:1px solid var(--border);border-top:4px solid #22c55e;border-radius:10px;padding:9px 12px}
+.fc.desvio{border-top-color:#ef4444;background:#fff7f7}.fc.sem{border-top-color:#d1d5db}
+.fc .l{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)}.fc .v{font-size:20px;font-weight:800;line-height:1.2}.fc .s{font-size:10.5px;color:var(--gray)}
+.fc .t{font-size:10.5px;font-weight:800;margin-top:3px;color:#15803d}.fc.desvio .t{color:#b91c1c}.fc.sem .t{color:#9ca3af}
+.pok{background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;border-radius:10px;padding:16px 18px;font-size:14px;font-weight:700}
+.plano{background:#fff;border:1px solid var(--border);border-left:5px solid var(--brand);border-radius:10px;padding:12px 16px}
+.ph{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:800;color:var(--brand-d);margin-bottom:8px}.ph span{font-size:11px;font-weight:600;color:var(--gray)}
+.pl{display:block;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--gray);margin:9px 0 4px}.pl small{font-weight:600;text-transform:none;letter-spacing:0}
+.plano textarea,.plano input[type=text]{width:100%;border:1.5px solid var(--border);border-radius:7px;padding:6px 9px;font-size:12.5px;line-height:1.4;background:#fffef7;resize:vertical}
+.pk{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:11.5px;margin-top:6px;align-items:center}.pk span{font-weight:700;color:var(--gray)}
+.pq{display:grid;grid-template-columns:92px 1fr;align-items:center;gap:8px;margin-bottom:5px}.pq b{font-size:11.5px;color:var(--brand-d)}
+.pcr{font-size:12px;margin-top:4px;color:var(--gray)}.pcr b{color:#b91c1c}
+.wt td{vertical-align:top;text-align:left;padding:4px 5px}.wt th{text-align:left}.wt.ver td{padding:7px 9px;font-size:12.5px}
+.pf{display:flex;align-items:center;gap:10px;margin-top:8px;font-size:11.5px;color:var(--gray);flex-wrap:wrap}
+.pp{background:#f8fafc;border-radius:8px;padding:8px 12px;font-size:13px;line-height:1.5;margin-bottom:10px}
+.pp b,.psub{display:block;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--gray);margin-bottom:3px}
+.ptags{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}.ptags span{background:#fee2e2;color:#991b1b;font-size:10.5px;font-weight:700;border-radius:20px;padding:2px 9px}
+.pcols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:16px}
+.pv{border-left:3px solid #cbd5e1;padding:3px 0 3px 10px;margin:0 0 6px;font-size:13px;line-height:1.4}.pv i{display:block;font-style:normal;font-size:10px;font-weight:800;text-transform:uppercase;color:var(--gray)}
+.pv.raiz{border-left-color:#ef4444;background:#fef2f2;border-radius:0 8px 8px 0;padding:6px 10px;font-weight:700}.pv.raiz i{color:#b91c1c}
 /* ata */
 .vazio{background:#fff;border:2px dashed var(--border);border-radius:14px;padding:38px 30px;text-align:center;color:var(--gray);line-height:1.6}
 .vazio b{display:block;font-size:17px;color:var(--text)}.vazio p{max-width:600px;margin:6px auto 16px}
@@ -90,14 +112,15 @@ tr.tot td{background:#f3f4f6;font-weight:800}
 </head>
 <body>
 <div class="top"><div class="logo">EMS</div><span id="ctx">RPS — Reunião de Performance Semanal</span><span class="sp"></span>
-  <button class="btn" id="b-trocar" style="display:none">⇄ Trocar reunião</button><a class="btn" href="index.html">← Dashboard</a></div>
+  <button class="btn" id="b-rep" style="display:none" onclick="telaReps()">⇄ Trocar representante</button><button class="btn" id="b-trocar" style="display:none">⇄ Trocar reunião</button><a class="btn" href="index.html">← Dashboard</a></div>
 <div class="stage" id="stage"></div>
 <div class="nav"><button class="btn" id="b-prev">← Anterior</button><div class="dots" id="dots"></div><span id="cnt"></span><button class="btn" id="b-next">Próximo →</button></div>
 
 <script>
 // ── RPS — apresentação do GD com o time ──────────────────────────
 // Página isolada: escolhe o modelo (coletiva ou individual), o GD, o mês e a
-// data da reunião. A COLETIVA é montada por GD com os mesmos dados do
+// data da reunião. A INDIVIDUAL abre um representante (ver bloco próprio abaixo).
+// A COLETIVA é montada por GD com os mesmos dados do
 // dashboard da regional (abas do Sheets) — só SPI. Frequência e sobreposição
 // são snapshots guardados dentro do index.html; esta página lê de lá para
 // não duplicar. Os combinados anteriores vêm da ata da RPS anterior em PDF
@@ -159,13 +182,13 @@ async function carregarExtra(){
 function telaEntrada(){
   ST.slides = []; ST.d = null;
   $('ctx').textContent = 'RPS — Reunião de Performance Semanal';
-  $('b-trocar').style.display = 'none'; $('dots').innerHTML = ''; $('cnt').textContent = '';
+  $('b-trocar').style.display = 'none'; $('b-rep').style.display = 'none'; $('dots').innerHTML = ''; $('cnt').textContent = '';
   $('b-prev').disabled = $('b-next').disabled = true;
   $('stage').innerHTML = '<div class="slide on"><div class="capa"><div class="k">Regional SPI Oeste</div><h2>RPS</h2>' +
     '<div class="m">Escolha o modelo da reunião, o GD, o mês de referência dos dados e a data da RPS.</div>' +
     '<div class="modelos">' +
       '<button class="modelo' + (ST.modelo === 'coletiva' ? ' on' : '') + '" onclick="ST.modelo=\'coletiva\';telaEntrada()"><b>Coletiva</b><span>1ª reunião do mês, com todo o time do distrito: fechamento, marcas-chave, produtividade e os setores prioritários.</span></button>' +
-      '<button class="modelo" disabled><b>Individual</b><span>Demais reuniões, 30 min por representante. Em construção.</span></button>' +
+      '<button class="modelo' + (ST.modelo === 'individual' ? ' on' : '') + '" onclick="ST.modelo=\'individual\';telaEntrada()"><b>Individual</b><span>Demais reuniões, 30 min por representante: retrato do setor, marcas-chave em desvio e planos com 5 porquês + 5W2H.</span></button>' +
     '</div><div class="form">' +
       '<div><label>GD</label><select id="e-gd">' + ST.distritos.map(function(d){ return '<option value="' + d.distrito_id + '"' + (d.distrito_id === ST.gd ? ' selected' : '') + '>' + esc(d.nm) + ' (' + d.linha + ')</option>'; }).join('') + '</select></div>' +
       '<div><label>Mês dos dados</label><select id="e-mes">' + ST.meses.map(function(m){ return '<option' + (m === ST.mes ? ' selected' : '') + '>' + m + '</option>'; }).join('') + '</select></div>' +
@@ -191,7 +214,7 @@ async function abrir(){
   ST.d = { dist: d, ant: a, reps: doD(r.reps).filter(function(x){ return x.vago !== 'True'; }), pd: doD(r.pd), pr: doD(r.pr), pex: doD(r.pex), pexAnt: doD(r.pexAnt), jor: r.jor,
            distAnt: doD(r.dAnt)[0] || null };
   ST.previa = null; ST.edit = null;
-  montar();
+  if (ST.modelo === 'individual') telaReps(); else montar();
 }
 
 // ── números derivados ──
@@ -316,7 +339,8 @@ function sPrioridades(){
 }
 
 // ── combinados anteriores: ata da RPS em PDF ──
-function ataReg(){ var gd = 'N4:' + ST.gd, k = 'rps|' + ST.data; var rs = ST.lanc.filter(function(l){ return l.produto === 'RPS_ATA' && l.gd === gd && l.crm === k; }); return rs.length ? rs[rs.length - 1] : null; }
+function ataChave(){ return ST.modelo === 'individual' ? 'rpsi|' + ST.setor + '|' + ST.data : 'rps|' + ST.data; }
+function ataReg(){ var gd = 'N4:' + ST.gd, k = ataChave(); var rs = ST.lanc.filter(function(l){ return l.produto === 'RPS_ATA' && l.gd === gd && l.crm === k; }); return rs.length ? rs[rs.length - 1] : null; }
 function ataDados(){ var r = ataReg(); if (!r) return null; try { return JSON.parse(r.acao); } catch(e){ return null; } }
 function pdfjs(){ return new Promise(function(ok, er){ if (window.pdfjsLib) return ok(); var s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
   s.onload = function(){ window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; ok(); }; s.onerror = function(){ er(new Error('não foi possível carregar o leitor de PDF')); }; document.head.appendChild(s); }); }
@@ -381,7 +405,7 @@ async function ataGravar(ata, apagar){
   try {
     var r = await fetch(CONFIG.budget_webapp_url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({
       token: CONFIG.budget_token, acao: apagar ? 'delete' : (reg ? 'edit' : 'add'), id: reg ? reg.id : 'rps' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-      gd: 'N4:' + ST.gd, linha: d.linha, produto: 'RPS_ATA', crm: 'rps|' + ST.data, medico: d.nm, valor: 0, acao_lancamento: ata ? JSON.stringify(ata) : '', data: hoje(), criadoEm: reg ? reg.criadoEm : Date.now().toString() }) });
+      gd: 'N4:' + ST.gd, linha: d.linha, produto: 'RPS_ATA', crm: ataChave(), medico: ST.modelo === 'individual' ? repSel().nome : d.nm, valor: 0, acao_lancamento: ata ? JSON.stringify(ata) : '', data: hoje(), criadoEm: reg ? reg.criadoEm : Date.now().toString() }) });
     var resp = JSON.parse(await r.text()); if (!resp.ok) throw new Error(resp.erro || 'falha desconhecida');
   } catch(e){ if (st) st.textContent = 'Não foi possível salvar: ' + e.message; return false; }
   ST.lanc = await fetchAba('budget_lancamentos', true);
@@ -404,7 +428,7 @@ function desenharAta(){
   var pode = !!(CONFIG.budget_webapp_url && CONFIG.budget_token), salva = ataDados(), ed = !!ST.edit, ata = ST.edit || ST.previa || salva, previa = !ed && !!ST.previa, h = '';
   var up = '<input type="file" accept="application/pdf,.pdf" style="display:none" onchange="ataArquivo(this)">';
   if (!ata){
-    h = '<div class="vazio"><div style="font-size:34px">📎</div><b>Anexe a ata da RPS anterior</b><p>PDF da ata no modelo padrão da RPS. A página lê a tabela "Plano de ação consolidado" e mostra os combinados para conferência item a item. Se a ata estiver em outro formato, dá para digitar os combinados.</p>' +
+    h = '<div class="vazio"><div style="font-size:34px">📎</div><b>Anexe a ata da RPS anterior' + (ST.modelo === 'individual' ? ' deste representante' : '') + '</b><p>PDF da ata no modelo padrão da RPS. A página lê a tabela "Plano de ação consolidado" e mostra os combinados para conferência item a item. Se a ata estiver em outro formato, dá para digitar os combinados.</p>' +
       (pode ? '<label class="b1">Escolher PDF da ata' + up + '</label> <button class="b2" style="padding:8px 14px" onclick="ST.edit={titulo:\'Combinados da RPS anterior\',data:\'\',itens:[{n:1,texto:\'\',resp:\'\',prazo:\'\',status:\'Pendente\'}]};desenharAta()">Digitar os combinados</button>' : '<p>Gravação indisponível nesta página.</p>') + '<div id="ata-st"></div></div>';
   } else {
     h = '<div class="card"><div class="ata-top"><div><h3 style="margin:0">' + esc(ata.titulo) + '</h3><div class="nota" style="margin:2px 0 0">' + (ata.data ? 'Reunião de ' + esc(ata.data) + ' · ' : '') + ata.itens.length + ' combinados' + (ata.arquivo ? ' · lido de ' + esc(ata.arquivo) : '') + '</div></div><span class="ac">';
@@ -428,6 +452,224 @@ function desenharAta(){
   ajustar();
 }
 
+// ── RPS INDIVIDUAL — um representante por vez ────────────────────
+// Mesmos dados da coletiva, recortados no setor. Para cada marca-chave do
+// setor abaixo de 100% e para os fundamentos em desvio há um plano com
+// 5 porquês + 5W2H no slide seguinte ao dos números. Os planos ficam no
+// Sheets (budget_lancamentos, produto RPS_PLANO, gd "N4:<distrito_id>",
+// crm "rpsi|<setor>|<plano>|<mês>", JSON no campo "acao").
+var W = [['oque','O quê'],['porque','Por quê'],['onde','Onde'],['quando','Quando'],['quem','Quem'],['como','Como'],['quanto','Quanto custa']];
+var PLANOS = []; // planos do representante aberto: {chave, titulo, problema, kpis}
+
+function repSel(){ return ST.d.reps.filter(function(r){ return r.setor_id === ST.setor; })[0]; }
+function mediaDist(campo){ var vs = ST.d.reps.map(function(r){ return num(r[campo]); }).filter(function(x){ return x !== null; }); return vs.length ? vs.reduce(function(a, b){ return a + b; }, 0) / vs.length : null; }
+function freqSetor(mes){ var l = (EXTRA.freq[mes] || []).filter(function(x){ return x.split('|')[0] === ST.setor; })[0]; if (!l) return null; var x = l.split('|');
+  return { painel: +x[4], f: [+x[5], +x[6], +x[7], +x[8], +x[9], +x[10]], cob: +x[4] ? (+x[9] + +x[10]) / +x[4] * 100 : null }; }
+function sobSetor(mes){ var l = (EXTRA.sobrep[mes] || []).filter(function(x){ return x.split('|')[0] === ST.setor; })[0]; if (!l) return null; var x = l.split('|');
+  return { painel: +x[4], todas: +x[5], nv: +x[6], pNv: +x[4] ? +x[6] / +x[4] * 100 : null, pTd: +x[4] ? +x[5] / +x[4] * 100 : null }; }
+function marcasRep(){ var c = coberturaMarcas(), eu = c.reps.filter(function(r){ return r.setor === ST.setor; })[0] || { m: {}, abaixo: [], gap: 0, cob: null, cota: 0, real: 0 };
+  return { marcas: c.marcas, eu: eu, todos: c.reps }; }
+
+// tela de escolha do representante (ordenada pelo desvio em marca-chave, como na coletiva)
+function telaReps(){
+  ST.slides = []; PLANOS = [];
+  var c = coberturaMarcas(), gap = {}; c.reps.forEach(function(r){ gap[r.setor] = r; });
+  var reps = ST.d.reps.slice().sort(function(a, b){ return ((gap[b.setor_id] || {}).gap || 0) - ((gap[a.setor_id] || {}).gap || 0); });
+  $('ctx').textContent = 'RPS individual · ' + ST.d.dist.nm + ' · ' + ST.mes + '/2026 · ' + dataBr(ST.data);
+  $('b-trocar').style.display = ''; $('b-rep').style.display = 'none'; $('dots').innerHTML = ''; $('cnt').textContent = '';
+  $('b-prev').disabled = $('b-next').disabled = true;
+  $('stage').innerHTML = '<div class="slide on"><div class="capa"><div class="k">RPS individual · ' + esc(ST.d.dist.nm) + '</div><h2>Escolha o representante</h2>' +
+    '<div class="m">Ordenados pelo valor que falta nas marcas-chave em ' + ST.mes + '/2026. Os quatro primeiros são a prioridade do mês.</div><div class="grade" style="grid-template-columns:repeat(2,minmax(0,1fr))">' +
+    reps.map(function(r, k){ var g = gap[r.setor_id]; return '<button onclick="abrirRep(\'' + r.setor_id + '\')"><b>' + (k < 4 && g && g.gap > 0 ? 'Prioridade' : r.setor_id.slice(-2)) + '</b><span style="flex:1">' + esc(r.nome) + '</span>' +
+      '<span style="font-size:12px;opacity:.85">' + (g && g.gap > 0 ? 'faltam ' + brl(g.gap) : 'marcas-chave entregues') + '</span></button>'; }).join('') + '</div></div></div>';
+}
+async function abrirRep(setor){
+  ST.setor = setor; ST.previa = null; ST.edit = null;
+  $('stage').innerHTML = '<div class="slide on"><div class="capa"><h2>Montando…</h2></div></div>';
+  // dois meses anteriores, para o slide de evolução
+  var L = ST.d.dist.linha, ms = [mesAnt(mesAnt(ST.mes) || ''), mesAnt(ST.mes)].filter(Boolean); ST.d.hist = [];
+  for (var i = 0; i < ms.length; i++) ST.d.hist.push({ mes: ms[i], reps: await fetchAba('reps_' + ms[i]), pr: await fetchAba('produtos_rep_' + L + '_' + ms[i]) });
+  montarIndividual();
+}
+
+// ── slides da individual ──
+function iCapa(lista){ var r = repSel(), j = (ST.d.jor.filter(function(x){ return x.setor_id === ST.setor; })[0] || {}).classificacao;
+  return '<div class="capa"><div class="k">RPS individual · ' + esc(ST.d.dist.nm) + '</div><h2>' + esc(r.nome) + '</h2>' +
+    '<div class="m">Setor ' + ST.setor + ' · linha ' + ST.d.dist.linha + (j ? ' · ' + j + ' na Jornada' : '') + ' · dados de ' + ST.mes + '/2026 · reunião de ' + dataBr(ST.data) + '</div>' +
+    '<div class="grade">' + lista.map(function(s, k){ return '<button onclick="ir(' + (k + 1) + ')"><b>' + (k + 2) + '</b>' + s.nome + '</button>'; }).join('') + '</div></div>'; }
+function iRetrato(){
+  var r = repSel(), px = ST.d.pex.filter(function(x){ return x.setor_id === ST.setor; })[0], f = freqSetor(ST.mes), s = sobSetor(ST.mes), sim = EXTRA.pexSim.indexOf(ST.mes) >= 0;
+  function k(l, v, c, sub){ return '<div class="kpi ' + c + '"><div class="l">' + l + '</div><div class="v">' + v + '</div><div class="s">' + sub + '</div></div>'; }
+  function comp(campo, ok, warn){ var v = num(r[campo]), m = mediaDist(campo); return [p1(v), cls(v, ok, warn), 'distrito ' + p1(m) + (v !== null && m !== null ? ' · ' + (v - m >= 0 ? '+' : '') + (v - m).toFixed(1).replace('.', ',') + ' pp' : '')]; }
+  var a = comp('prod'), q1 = comp('q1', 90, 80), q2 = comp('q2', 90, 80), q3 = comp('q3', 90, 80), cp = comp('cob_painel', 90, 80);
+  var h = '<div class="kpis">' + k('Produtividade (MDV)', a[0], a[1], a[2]) + k('Cobertura Q1', q1[0], q1[1], q1[2]) + k('Cobertura Q2', q2[0], q2[1], q2[2]) + k('Cobertura Q3', q3[0], q3[1], q3[2]) + k('Cobertura de painel', cp[0], cp[1], cp[2]) + '</div><div class="kpis">' +
+    k('Dias trabalhados', num(r.dias_trabalhados) === null ? '—' : Math.round(num(r.dias_trabalhados)), '', 'no mês') +
+    k('Frequência de visitação', f ? p1(f.cob) : '—', f ? (f.cob >= 75 ? 'ok' : (f.cob >= 50 ? 'warn' : 'crit')) : '', f ? 'meta 75% · painel de ' + f.painel : 'sem snapshot no mês') +
+    k('Sobreposição Nexus × Vital', s ? p1(s.pNv) : '—', s ? (s.pNv > 20 ? 'crit' : (s.pNv >= 10 ? 'warn' : 'ok')) : '', s ? 'meta até 10% · todas as linhas ' + p1(s.pTd) : 'sem snapshot no mês') +
+    k('PEX' + (sim ? ' (simulado)' : ''), px ? num(px.pts).toFixed(1).replace('.', ',') : '—', px ? (/ATEN|CR[IÍ]T/i.test(px.medalha) ? 'crit' : 'ok') : '', px ? px.medalha : 'sem PEX no mês') +
+    k('Marcas-chave', p1(marcasRep().eu.cob), cls(marcasRep().eu.cob), 'soma das marcas-chave do setor') + '</div>';
+  return { nome: 'Retrato do setor', msg: 'Produtividade em ' + a[0] + ' e marcas-chave em ' + p1(marcasRep().eu.cob), html: h };
+}
+function iMarcas(){
+  var M = marcasRep(), linhas = '', pr = ST.d.pr.filter(function(x){ return x.setor_id === ST.setor; });
+  M.marcas.forEach(function(mk){
+    var x = M.eu.m[mk], row = pr.filter(function(p){ return norm(p.produto) === mk; })[0];
+    if (!x){ linhas += '<tr><td class="n">' + mk + '</td><td colspan="6" style="color:#9ca3af">sem cota no mês</td></tr>'; return; }
+    var ord = M.todos.filter(function(r){ return r.m[mk] && r.m[mk].cob !== null; }).sort(function(a, b){ return b.m[mk].cob - a.m[mk].cob; }), pos = ord.map(function(r){ return r.setor; }).indexOf(ST.setor) + 1;
+    var cr = row ? num(row.crescimento) : null;
+    linhas += '<tr><td class="n">' + mk + '</td><td>' + brl(x.cota) + '</td><td>' + brl(x.real) + '</td><td>' + (x.cota - x.real > 0 ? '<b style="color:#b91c1c">' + brl(x.cota - x.real) + '</b>' : '—') + '</td><td>' + barra(x.cob, cls(x.cob)) + '</td>' +
+      '<td>' + (cr === null ? '—' : (cr > 0 ? '+' : '') + cr.toFixed(1).replace('.', ',') + '%') + '</td><td>' + pos + 'º de ' + ord.length + '</td></tr>';
+  });
+  var h = '<div class="card"><h3>Marcas-chave do setor</h3><table><thead><tr><th>Marca</th><th>Cota</th><th>Realizado</th><th>Falta</th><th>Cobertura</th><th>Crescimento</th><th>Posição no distrito</th></tr></thead><tbody>' + linhas +
+    '<tr class="tot"><td>Soma das marcas-chave</td><td>' + brl(M.eu.cota) + '</td><td>' + brl(M.eu.real) + '</td><td>' + (M.eu.gap > 0 ? brl(M.eu.gap) : '—') + '</td><td>' + barra(M.eu.cob, cls(M.eu.cob)) + '</td><td></td><td></td></tr></tbody></table></div>';
+  return { nome: 'Marcas-chave do setor', msg: M.eu.abaixo.length ? M.eu.abaixo.length + ' marca(s)-chave abaixo de 100% — faltam ' + brl(M.eu.gap) : 'Todas as marcas-chave em 100% ou mais', html: h };
+}
+function iEvolucao(){
+  var L = ST.d.dist.linha, serie = ST.d.hist.concat([{ mes: ST.mes, reps: ST.d.reps, pr: ST.d.pr }]), ch = marcas(L, ST.mes);
+  function cob(pr, mk){ var r = pr.filter(function(p){ return p.setor_id === ST.setor && norm(p.produto) === mk; })[0]; return r && num(r.cota) ? num(r.realizado) / num(r.cota) * 100 : null; }
+  var h = '<div class="card"><h3>Últimos meses do setor</h3><table><thead><tr><th>Indicador</th>' + serie.map(function(s){ return '<th>' + s.mes + '</th>'; }).join('') + '<th>Variação</th></tr></thead><tbody>';
+  function linha(nome, vals, ok, warn){ var a = vals[0], b = vals[vals.length - 1];
+    h += '<tr><td class="n">' + nome + '</td>' + vals.map(function(v){ return '<td><span class="cel ' + cls(v, ok, warn) + '">' + p1(v) + '</span></td>'; }).join('') + '<td>' + (a === null || b === null ? '—' : ((b - a >= 0 ? '▲ +' : '▼ ') + (b - a).toFixed(1).replace('.', ',') + ' pp')) + '</td></tr>'; }
+  linha('Produtividade (MDV)', serie.map(function(s){ var r = s.reps.filter(function(x){ return x.setor_id === ST.setor; })[0]; return r ? num(r.prod) : null; }));
+  ch.forEach(function(mk){ linha(mk, serie.map(function(s){ return cob(s.pr, mk); })); });
+  h += '</tbody></table><div class="nota">Cobertura da cota por marca-chave e MDV do setor em cada mês. "—" = sem dado do setor naquele mês.</div></div>';
+  return { nome: 'Evolução', msg: serie.map(function(s){ return s.mes; }).join(' → '), html: h };
+}
+function iFreq(){
+  var f = freqSetor(ST.mes), fa = mesAnt(ST.mes) ? freqSetor(mesAnt(ST.mes)) : null, s = sobSetor(ST.mes);
+  if (!f && !s) return { nome: 'Frequência e sobreposição', msg: 'Sem snapshot para ' + ST.mes, html: '<div class="vazio"><b>Sem dados de frequência e sobreposição para ' + ST.mes + '/2026</b>Esses indicadores são snapshots do Power BI e só existem nos meses em que foram extraídos.</div>' };
+  var h = '';
+  if (f){ var rot = ['Freq 0', 'Freq 20', 'Freq 40', 'Freq 60', 'Freq 80', 'Freq 100'];
+    h += '<div class="card"><h3>Frequência de visitação <small>painel de ' + f.painel + ' médicos · cobertura ' + p1(f.cob) + (fa ? ' · ' + (f.cob - fa.cob >= 0 ? '▲ +' : '▼ ') + (f.cob - fa.cob).toFixed(1).replace('.', ',') + ' pp vs ' + mesAnt(ST.mes) : '') + '</small></h3><table><thead><tr>' + rot.map(function(x){ return '<th>' + x + '</th>'; }).join('') + '</tr></thead><tbody><tr>' +
+      f.f.map(function(v, k){ var pc = f.painel ? v / f.painel * 100 : 0; return '<td><b style="font-size:20px">' + v + '</b><div class="nota" style="margin:0">' + p1(pc) + ' do painel</div><span class="bar" style="width:90%;margin:4px 0 0"><i class="' + (k >= 4 ? 'ok' : (k >= 2 ? 'warn' : 'crit')) + '" style="width:' + Math.min(100, pc) + '%"></i></span></td>'; }).join('') +
+      '</tr></tbody></table><div class="nota">Cobertura = (Freq 80 + Freq 100) ÷ painel; meta 75%. Médicos em Freq 0 a 60 são os que puxam o indicador para baixo.</div></div>'; }
+  if (s) h += '<div class="card"><h3>Sobreposição de visitas</h3><table><thead><tr><th>Recorte</th><th>Médicos em sobreposição</th><th>% do painel</th></tr></thead><tbody>' +
+    '<tr><td class="n">Nexus × Vital</td><td>' + s.nv + '</td><td><span class="cel ' + (s.pNv > 20 ? 'crit' : (s.pNv >= 10 ? 'warn' : 'ok')) + '">' + p1(s.pNv) + '</span></td></tr>' +
+    '<tr><td class="n">Todas as linhas</td><td>' + s.todas + '</td><td><span class="cel ' + (s.pTd > 20 ? 'crit' : (s.pTd >= 10 ? 'warn' : 'ok')) + '">' + p1(s.pTd) + '</span></td></tr></tbody></table><div class="nota">Mesmo médico agendado por duas linhas com até 4 dias de diferença. Meta: até 10% do painel.</div></div>';
+  return { nome: 'Frequência e sobreposição', msg: (f ? 'Frequência em ' + p1(f.cob) : '') + (f && s ? ' · ' : '') + (s ? 'sobreposição Nexus × Vital em ' + p1(s.pNv) : ''), html: h };
+}
+function iDemais(){
+  var ch = marcas(ST.d.dist.linha, ST.mes), pr = ST.d.pr.filter(function(x){ return x.setor_id === ST.setor && ch.indexOf(norm(x.produto)) < 0; }).map(function(x){ var c = num(x.cota), r = num(x.realizado); return { p: norm(x.produto), c: c, r: r, cob: c ? r / c * 100 : null, cr: num(x.crescimento) }; })
+    .sort(function(a, b){ return (a.cob === null ? 999 : a.cob) - (b.cob === null ? 999 : b.cob); });
+  if (!pr.length) return null;
+  var h = '<div class="card"><h3>Demais produtos do setor <small>do menor para o maior</small></h3><table><thead><tr><th>Produto</th><th>Cota</th><th>Realizado</th><th>Cobertura</th><th>Crescimento</th></tr></thead><tbody>' +
+    pr.map(function(x){ return '<tr><td class="n">' + x.p + '</td><td>' + brl(x.c) + '</td><td>' + brl(x.r) + '</td><td>' + barra(x.cob, cls(x.cob)) + '</td><td>' + (x.cr === null ? '—' : (x.cr > 0 ? '+' : '') + x.cr.toFixed(1).replace('.', ',') + '%') + '</td></tr>'; }).join('') + '</tbody></table></div>';
+  return { nome: 'Demais produtos', msg: pr.filter(function(x){ return x.cob !== null && x.cob < 100; }).length + ' de ' + pr.length + ' abaixo de 100%', html: h };
+}
+// fundamentos do setor: indicadores de execução e se estão em desvio
+function fundamentosRep(){
+  var r = repSel(), out = [], f = freqSetor(ST.mes), s = sobSetor(ST.mes), px = ST.d.pex.filter(function(x){ return x.setor_id === ST.setor; })[0];
+  function add(nome, v, meta, desvio){ out.push({ nome: nome, valor: v === null ? '—' : p1(v), meta: meta, desvio: v !== null && desvio, sem: v === null }); }
+  var p = num(r.prod); add('Produtividade (MDV)', p, '≥ 100%', p < 100);
+  [['q1','Cobertura Q1'],['q2','Cobertura Q2'],['q3','Cobertura Q3'],['cob_painel','Cobertura de painel']].forEach(function(q){ var v = num(r[q[0]]); add(q[1], v, '≥ 90%', v < 90); });
+  add('Frequência de visitação', f ? f.cob : null, '≥ 75%', f && f.cob < 75);
+  add('Sobreposição Nexus × Vital', s ? s.pNv : null, '≤ 10%', s && s.pNv > 10);
+  if (px && /ATEN|CR[IÍ]T/i.test(px.medalha)) out.push({ nome: 'PEX — ' + String(px.medalha).toLowerCase(), valor: num(px.pts).toFixed(1).replace('.', ',') + ' pts', meta: 'bronze ou acima', desvio: true, sem: false });
+  return out;
+}
+function iFundamentos(){
+  var inds = fundamentosRep(), desv = inds.filter(function(i){ return i.desvio; });
+  var h = '<div class="fund">' + inds.map(function(i){ return '<div class="fc ' + (i.sem ? 'sem' : (i.desvio ? 'desvio' : 'ok')) + '"><div class="l">' + i.nome + '</div><div class="v">' + i.valor + '</div><div class="s">meta ' + i.meta + '</div><div class="t">' + (i.sem ? 'sem dado' : (i.desvio ? '● em desvio' : '✓ dentro da meta')) + '</div></div>'; }).join('') + '</div>';
+  if (!desv.length) return [{ nome: 'Fundamentos', msg: 'Todos os indicadores de execução dentro da meta', html: h + '<div class="pok">✓ Nenhum indicador de execução em desvio — plano de fundamentos não é necessário.</div>' }];
+  PLANOS.push({ chave: 'fund', titulo: 'Fundamentos', kpis: desv.map(function(i){ return i.nome; }), problema: 'Indicadores de execução em desvio: ' + desv.map(function(i){ return i.nome + ' em ' + i.valor + ' (meta ' + i.meta + ')'; }).join('; ') + '.' });
+  return [{ nome: 'Fundamentos', msg: desv.length + ' de ' + inds.length + ' indicadores de execução em desvio', html: h + '<div class="nota" style="background:#fff;border:1px dashed var(--border);border-radius:10px;padding:10px 14px">O plano de fundamentos está no próximo slide.</div>' },
+          { nome: 'Plano — Fundamentos', msg: 'Em desvio: ' + desv.map(function(i){ return i.nome + ' ' + i.valor; }).join(' · '), html: '<div class="plano" id="plano-fund"></div>', plano: 'fund' }];
+}
+function iMarcasDesvio(){
+  var M = marcasRep(), out = [], serie = ST.d.hist.concat([{ mes: ST.mes, pr: ST.d.pr }]);
+  M.eu.abaixo.slice().sort(function(a, b){ return b.falta - a.falta; }).forEach(function(d){
+    var mk = d.m, x = M.eu.m[mk], ch = 'marca-' + mk.replace(/[^A-Z0-9]+/g, '_');
+    var ord = M.todos.filter(function(r){ return r.m[mk] && r.m[mk].cob !== null; }).sort(function(a, b){ return b.m[mk].cob - a.m[mk].cob; });
+    var h = '<div class="kpis" style="grid-template-columns:repeat(4,minmax(0,1fr))"><div class="kpi ' + cls(x.cob) + '"><div class="l">Cobertura da cota</div><div class="v">' + p1(x.cob) + '</div><div class="s">realizado ÷ cota do setor</div></div>' +
+      '<div class="kpi"><div class="l">Cota</div><div class="v">' + brl(x.cota) + '</div><div class="s">' + ST.mes + '/2026</div></div><div class="kpi"><div class="l">Realizado</div><div class="v">' + brl(x.real) + '</div><div class="s">faltam ' + brl(x.cota - x.real) + '</div></div>' +
+      '<div class="kpi"><div class="l">Posição no distrito</div><div class="v">' + (ord.map(function(r){ return r.setor; }).indexOf(ST.setor) + 1) + 'º de ' + ord.length + '</div><div class="s">em cobertura de ' + mk + '</div></div></div>';
+    h += '<div class="card"><h3>' + mk + ' — o setor e o distrito</h3><table><thead><tr><th>Representante</th><th>Cota</th><th>Realizado</th><th>Cobertura</th></tr></thead><tbody>' + ord.map(function(r){ var y = r.m[mk];
+      return '<tr' + (r.setor === ST.setor ? ' style="background:#eff6ff"' : '') + '><td class="n">' + esc(r.nome) + (r.setor === ST.setor ? ' ◀' : '') + '</td><td>' + brl(y.cota) + '</td><td>' + brl(y.real) + '</td><td>' + barra(y.cob, cls(y.cob)) + '</td></tr>'; }).join('') + '</tbody></table>' +
+      '<div class="nota">Histórico do setor em ' + mk + ': ' + serie.map(function(s){ var r = s.pr.filter(function(p){ return p.setor_id === ST.setor && norm(p.produto) === mk; })[0]; return s.mes + ' ' + (r && num(r.cota) ? p1(num(r.realizado) / num(r.cota) * 100) : '—'); }).join(' · ') + '</div></div>';
+    var prob = mk + ' em ' + p1(x.cob) + ' de cobertura da cota no setor — faltam ' + brl(x.cota - x.real) + '.';
+    PLANOS.push({ chave: ch, titulo: mk, kpis: [], problema: prob });
+    out.push({ nome: 'Marca-chave — ' + mk, msg: 'Cobertura de ' + p1(x.cob) + ' — faltam ' + brl(x.cota - x.real) + ' para a cota', html: h });
+    out.push({ nome: 'Plano — ' + mk, msg: prob, html: '<div class="plano" id="plano-' + ch + '"></div>', plano: ch });
+  });
+  return out;
+}
+
+// ── planos: 5 porquês + 5W2H ──
+function planoReg(ch){ var gd = 'N4:' + ST.gd, k = 'rpsi|' + ST.setor + '|' + ch + '|' + ST.mes; var rs = ST.lanc.filter(function(l){ return l.produto === 'RPS_PLANO' && l.gd === gd && l.crm === k; }); return rs.length ? rs[rs.length - 1] : null; }
+function planoDados(ch){ var r = planoReg(ch); if (!r) return null; try { return JSON.parse(r.acao); } catch(e){ return null; } }
+function planoInfo(ch){ return PLANOS.filter(function(p){ return p.chave === ch; })[0]; }
+function planoLer(ch){ var box = $('plano-' + ch), p = { problema: (box.querySelector('[data-f="problema"]') || {}).value || '', kpis: [], porques: [], acoes: [] };
+  p.problema = p.problema.trim();
+  [].forEach.call(box.querySelectorAll('[data-kpi]'), function(c){ if (c.checked) p.kpis.push(c.getAttribute('data-kpi')); });
+  [].forEach.call(box.querySelectorAll('[data-pq]'), function(i){ if (i.value.trim()) p.porques.push(i.value.trim()); });
+  [].forEach.call(box.querySelectorAll('[data-acao]'), function(tr){ var a = { status: tr.getAttribute('data-st') || 'Pendente' }, tem = false; W.forEach(function(w){ a[w[0]] = tr.querySelector('[data-w="' + w[0] + '"]').value.trim(); if (a[w[0]]) tem = true; }); if (tem) p.acoes.push(a); });
+  return p; }
+function planoPorques(ch){ var ins = document.querySelectorAll('#plano-' + ch + ' [data-pq]'), lib = true, ult = '';
+  [].forEach.call(ins, function(i){ i.closest('.pq').style.display = lib ? '' : 'none'; if (i.value.trim()) ult = i.value.trim(); else lib = false; });
+  var cr = $('plano-cr-' + ch); if (cr) cr.textContent = ult || '—'; }
+function planoAcao(ch, delta, idx){ var p = planoLer(ch), box = $('plano-' + ch);
+  var ls = [].map.call(box.querySelectorAll('[data-acao]'), function(tr){ var a = { status: tr.getAttribute('data-st') || 'Pendente' }; W.forEach(function(w){ a[w[0]] = tr.querySelector('[data-w="' + w[0] + '"]').value; }); return a; });
+  if (delta > 0) ls.push({}); else ls.splice(idx, 1); p.acoes = ls.length ? ls : [{}]; planoDesenhar(ch, true, p); }
+function planoDesenhar(ch, editar, rasc){
+  var box = $('plano-' + ch), info = planoInfo(ch); if (!box || !info) return;
+  var pode = !!(CONFIG.budget_webapp_url && CONFIG.budget_token), reg = planoReg(ch), salvo = planoDados(ch), ed = pode && (editar === true || !salvo), q = "'" + ch + "'", h = '';
+  if (ed){
+    var p = rasc || salvo || { problema: info.problema, kpis: info.kpis.slice(), porques: [], acoes: [{}] }; if (!p.acoes || !p.acoes.length) p.acoes = [{}];
+    h += '<div class="ph">🧭 Plano — ' + info.titulo + ' <span>5 porquês + 5W2H</span></div><label class="pl">Problema</label><textarea data-f="problema" rows="2">' + esc(p.problema) + '</textarea>';
+    if (info.kpis.length) h += '<div class="pk"><span>Indicador que direciona este plano:</span>' + info.kpis.map(function(k){ return '<label><input type="checkbox" data-kpi="' + esc(k) + '"' + (p.kpis.indexOf(k) >= 0 ? ' checked' : '') + '> ' + k + '</label>'; }).join('') + '</div>';
+    h += '<label class="pl">5 porquês <small>mínimo 3 · o último é a causa raiz</small></label>';
+    for (var i = 0; i < 5; i++) h += '<div class="pq"><b>' + (i + 1) + 'º por quê?</b><input type="text" data-pq="' + i + '" value="' + esc(p.porques[i] || '') + '" oninput="planoPorques(' + q + ')" placeholder="' + (i ? 'Por que isso acontece?' : 'Por que o problema acontece?') + '"></div>';
+    h += '<div class="pcr">Causa raiz: <b id="plano-cr-' + ch + '">—</b></div><label class="pl">Plano de ação — 5W2H <small>pelo menos uma ação com O quê, Quando e Quem</small></label><table class="wt"><thead><tr>' + W.map(function(w){ return '<th>' + w[1] + '</th>'; }).join('') + '<th></th></tr></thead><tbody>';
+    p.acoes.forEach(function(a, k){ h += '<tr data-acao="' + k + '" data-st="' + esc(a.status || 'Pendente') + '">' + W.map(function(w){ return '<td><textarea rows="2" data-w="' + w[0] + '">' + esc(a[w[0]] || '') + '</textarea></td>'; }).join('') + '<td><button class="b2" onclick="planoAcao(' + q + ',-1,' + k + ')">✕</button></td></tr>'; });
+    h += '</tbody></table><div class="pf"><button class="b2" onclick="planoAcao(' + q + ',1)">+ Adicionar ação</button><button class="b1" onclick="planoSalvar(' + q + ')">Salvar plano</button>' +
+      (salvo ? '<button class="b2" onclick="planoDesenhar(' + q + ',false)">Cancelar</button><button class="b2" onclick="planoApagar(' + q + ')">Apagar plano</button>' : '') + '<span id="plano-st-' + ch + '">' + (reg ? 'Salvo em ' + dataBr(reg.data) : 'Ainda não preenchido') + '</span></div>';
+  } else if (salvo){
+    h += '<div class="ph">🧭 Plano — ' + info.titulo + '<span style="margin-left:auto">' + (pode ? '<button class="b2" onclick="planoDesenhar(' + q + ',true)">✏️ Editar</button>' : '') + '</span></div>' +
+      '<div class="pp"><b>Problema</b>' + esc(salvo.problema) + (salvo.kpis && salvo.kpis.length ? '<div class="ptags">' + salvo.kpis.map(function(k){ return '<span>' + esc(k) + '</span>'; }).join('') + '</div>' : '') + '</div><div class="pcols"><div><b class="psub">5 porquês</b>' +
+      salvo.porques.map(function(t, k){ var r = k === salvo.porques.length - 1; return '<div class="pv' + (r ? ' raiz' : '') + '"><i>' + (r ? 'Causa raiz' : (k + 1) + 'º por quê') + '</i>' + esc(t) + '</div>'; }).join('') +
+      '</div><div><b class="psub">Plano de ação — 5W2H</b><table class="wt ver"><thead><tr>' + W.map(function(w){ return '<th>' + w[1] + '</th>'; }).join('') + '</tr></thead><tbody>' +
+      salvo.acoes.map(function(a){ return '<tr>' + W.map(function(w){ return '<td>' + (esc(a[w[0]]) || '—') + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div></div><div class="pf"><span id="plano-st-' + ch + '">Salvo em ' + dataBr(reg.data) + '</span></div>';
+  } else h += '<div class="ph">🧭 Plano — ' + info.titulo + '</div><div class="pf"><span>Plano ainda não preenchido — gravação indisponível nesta página.</span></div>';
+  box.innerHTML = h; if (ed) planoPorques(ch); ajustar();
+}
+async function planoEnviar(ch, plano, apagar){ var reg = planoReg(ch), st = $('plano-st-' + ch), r0 = repSel();
+  if (st) st.textContent = 'Salvando…';
+  try { var r = await fetch(CONFIG.budget_webapp_url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ token: CONFIG.budget_token, acao: apagar ? 'delete' : (reg ? 'edit' : 'add'),
+      id: reg ? reg.id : 'rpp' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), gd: 'N4:' + ST.gd, linha: ST.d.dist.linha, produto: 'RPS_PLANO', crm: 'rpsi|' + ST.setor + '|' + ch + '|' + ST.mes,
+      medico: r0.nome, valor: 0, acao_lancamento: plano ? JSON.stringify(plano) : '', data: hoje(), criadoEm: reg ? reg.criadoEm : Date.now().toString() }) });
+    var resp = JSON.parse(await r.text()); if (!resp.ok) throw new Error(resp.erro || 'falha desconhecida');
+  } catch(e){ if (st) st.textContent = 'Não foi possível salvar: ' + e.message; return false; }
+  ST.lanc = await fetchAba('budget_lancamentos', true); return true; }
+async function planoSalvar(ch){ var p = planoLer(ch), st = $('plano-st-' + ch); function er(m){ st.textContent = m; st.style.color = 'var(--red)'; }
+  if (!p.problema) return er('Descreva o problema.'); if (p.porques.length < 3) return er('Preencha pelo menos 3 porquês.');
+  if (!p.acoes.some(function(a){ return a.oque && a.quando && a.quem; })) return er('Inclua pelo menos uma ação com O quê, Quando e Quem.');
+  st.style.color = ''; if (await planoEnviar(ch, p, false)){ planoDesenhar(ch, false); planoFinal(); } }
+async function planoApagar(ch){ if (window.confirm('Apagar este plano?') && await planoEnviar(ch, null, true)){ planoDesenhar(ch, false); planoFinal(); } }
+function planoFinal(){ var box = $('plano-final'); if (!box) return; var ls = '', n = 0, feitos = 0;
+  PLANOS.forEach(function(p){ var d = planoDados(p.chave);
+    if (!d){ ls += '<tr><td class="n">' + p.titulo + '</td><td colspan="5" style="text-align:left;color:#b45309;font-weight:700">Plano ainda não preenchido</td></tr>'; return; } feitos++;
+    d.acoes.forEach(function(a, k){ n++; ls += '<tr>' + (k === 0 ? '<td class="n" rowspan="' + d.acoes.length + '">' + p.titulo + '</td><td rowspan="' + d.acoes.length + '" style="text-align:left">' + esc(d.porques[d.porques.length - 1]) + '</td>' : '') +
+      '<td style="text-align:left">' + (esc(a.oque) || '—') + '</td><td>' + (esc(a.quem) || '—') + '</td><td>' + (esc(a.quando) || '—') + '</td><td style="text-align:left">' + (esc(a.como) || '—') + '</td></tr>'; }); });
+  box.innerHTML = PLANOS.length ? '<div class="card"><table><thead><tr><th>Plano</th><th style="text-align:left">Causa raiz</th><th style="text-align:left">O quê</th><th>Quem</th><th>Quando</th><th style="text-align:left">Como</th></tr></thead><tbody>' + ls + '</tbody></table></div>'
+    : '<div class="pok">✓ Sem desvio em fundamentos nem marca-chave abaixo de 100% — não há plano exigido para este setor.</div>';
+  box.closest('.slide').querySelector('.hdr span').textContent = PLANOS.length ? feitos + ' de ' + PLANOS.length + ' planos preenchidos · ' + n + ' ações' : 'Sem plano exigido'; }
+
+function montarIndividual(){
+  PLANOS = [];
+  var r = repSel(), lista = [{ nome: 'Combinados anteriores', msg: ' ', html: '<div id="ata"></div>' }, iRetrato(), iMarcas(), iEvolucao(), iFreq()];
+  var dm = iDemais(); if (dm) lista.push(dm);
+  lista = lista.concat(iFundamentos(), iMarcasDesvio());
+  lista.push({ nome: 'Pauta da diretriz', msg: '', html: '<div class="titulo-so"><h2 style="font-size:34px;line-height:1.5">PX Share Base Zero<br>Consultório Virtual<br>Trilha de capacitação</h2><p>Temas da pauta — registrar o que for tratado na ata da reunião.</p></div>' });
+  lista.push({ nome: 'Plano de ação do setor', msg: ' ', html: '<div id="plano-final"></div>' });
+  var h = '<div class="slide">' + iCapa(lista) + '</div>';
+  lista.forEach(function(s){ h += '<div class="slide"><div class="hdr"><h2>' + s.nome + '</h2><span>' + esc(s.msg) + '</span></div><div class="body"><div class="fit">' + s.html + '</div></div></div>'; });
+  $('stage').innerHTML = h; ST.slides = [].slice.call(document.querySelectorAll('.slide'));
+  $('ctx').textContent = 'RPS individual · ' + r.nome + ' · ' + ST.mes + '/2026 · ' + dataBr(ST.data);
+  $('b-trocar').style.display = ''; $('b-rep').style.display = '';
+  $('dots').innerHTML = ST.slides.map(function(s, k){ return '<button onclick="ir(' + k + ')" title="' + (k ? lista[k - 1].nome : 'Abertura') + '">' + (k + 1) + '</button>'; }).join('');
+  desenharAta(); PLANOS.forEach(function(p){ planoDesenhar(p.chave, false); }); planoFinal(); ir(0);
+}
+
 // ── montagem e navegação ──
 function montar(){
   var D = ST.d.dist;
@@ -438,7 +680,7 @@ function montar(){
   $('stage').innerHTML = h;
   ST.slides = [].slice.call(document.querySelectorAll('.slide'));
   $('ctx').textContent = 'RPS coletiva · ' + D.nm + ' · ' + ST.mes + '/2026 · ' + dataBr(ST.data);
-  $('b-trocar').style.display = '';
+  $('b-trocar').style.display = ''; $('b-rep').style.display = 'none';
   $('dots').innerHTML = ST.slides.map(function(s, k){ return '<button onclick="ir(' + k + ')" title="' + (k ? lista[k - 1].nome : 'Abertura') + '">' + (k + 1) + '</button>'; }).join('');
   desenharAta(); ir(0);
 }
