@@ -3314,15 +3314,33 @@ function apresMarcasGrupos() {
 // N4_ATA, com os itens em JSON no campo "acao"). O arquivo PDF em si não é
 // guardado — só o que foi lido dele. No slide, cada combinado ganha um status
 // que pode ser atualizado na reunião.
-var APRES_ATA_PROD = 'N4_ATA';
+var APRES_ATA_PROD = 'N4_ATA', APRES_ATA_DOC = 'N4_ATA_DOC';
 var APRES_ATA_STATUS = ['Pendente', 'Em andamento', 'Resolvido', 'Não executado'];
-var APRES_ATA_PREVIA = null; // ata lida do PDF, aguardando confirmação
-
-function apresAtaReg() {
-  var gd = 'N4:' + DISTRITO_FILTRO, chave = 'ata|' + MES_ATUAL;
-  var regs = (BUDGET_LANC || []).filter(function(l) { return l.produto === APRES_ATA_PROD && l.gd === gd && l.crm === chave; });
+var APRES_ATA_PREVIA = null; // ata lida do PDF que não pôde ser gravada, aguardando nova tentativa
+// Fluxo (o mesmo do Copiloto de RPS): ao terminar a N4, o GD anexa a ata no último slide
+// ("Ata desta reunião"); ela é gravada no mês da apresentação (crm "ata|<mês>") com a marca
+// "daReuniao". Na N4 seguinte, o slide 2 ("Combinados anteriores") mostra sozinho a ata mais
+// recente de um mês anterior. Atas sem a marca foram anexadas direto no slide 2 (antes deste
+// fluxo) e valem como combinados anteriores inclusive no próprio mês. APRES_ATA_ALVO diz em
+// qual caixa a ação acontece: 'ant' (#ap-ata) ou 'atual' (#ap-ata-nova). Além dos combinados
+// (N4_ATA), o upload grava o texto integral da ata em outra linha (N4_ATA_DOC, mesma chave),
+// lido pela página atas-n4.html.
+var APRES_ATA_ALVO = 'ant', APRES_ATA_TEXTO = null;
+function apresAtaAlvo(a) { APRES_ATA_ALVO = a; }
+function apresAtaBox(alvo) { return document.getElementById((alvo || APRES_ATA_ALVO) === 'atual' ? 'ap-ata-nova' : 'ap-ata'); }
+function apresAtaSt() { return document.getElementById('ap-ata-st-' + APRES_ATA_ALVO); }
+function apresAtaMesDe(reg) { return reg ? String(reg.crm).slice(4) : ''; }
+function apresAtaRegDe(alvo) {
+  var gd = 'N4:' + DISTRITO_FILTRO, m = MES_ORDER.indexOf(MES_ATUAL);
+  var regs = (BUDGET_LANC || []).filter(function(l) { return l.produto === APRES_ATA_PROD && l.gd === gd && /^ata\|[A-Z]{3}$/.test(l.crm); });
+  function mi(l) { return MES_ORDER.indexOf(l.crm.slice(4)); }
+  function daReuniao(l) { try { return !!JSON.parse(l.acao).daReuniao; } catch (e) { return false; } }
+  if (alvo === 'atual') { regs = regs.filter(function(l) { return mi(l) === m && daReuniao(l); }); return regs.length ? regs[regs.length - 1] : null; }
+  regs = regs.filter(function(l) { return mi(l) < m || (mi(l) === m && !daReuniao(l)); })
+    .sort(function(a, b) { return mi(a) - mi(b) || (Number(a.criadoEm) || 0) - (Number(b.criadoEm) || 0); });
   return regs.length ? regs[regs.length - 1] : null;
 }
+function apresAtaReg() { return apresAtaRegDe(APRES_ATA_ALVO); }
 function apresAtaDados() {
   var reg = apresAtaReg();
   if (!reg) return null;
@@ -3390,37 +3408,96 @@ async function apresAtaLerPdf(buffer) {
   return apresAtaInterpretar(linhas);
 }
 
+// Texto integral da ata N4: linhas do PDF agrupadas pela altura; títulos de seção (em maiúsculas)
+// e de bloco (B1 — …) em parágrafos próprios; a tabela "COMBINADOS DA REUNIÃO" vira o marcador
+// [[COMBINADOS]], que a página atas-n4.html troca pelos combinados estruturados com o status.
+var APRES_ATA_TOPO = /^(RESUMO DA REUNI[ÃA]O|O QUE FOI DISCUTIDO POR BLOCO|IDEIAS E INICIATIVAS.*|COMBINADOS DA REUNI[ÃA]O|PR[ÓO]XIMA N4)$/;
+async function apresAtaLerTexto(buffer) {
+  await apresAtaCarregarPdfJs();
+  var pdf = await window.pdfjsLib.getDocument({ data: buffer }).promise, out = [], titulo = '', viuTitulo = false, pulando = false;
+  for (var p = 1; p <= pdf.numPages; p++) {
+    var tc = await (await pdf.getPage(p)).getTextContent();
+    var ts = tc.items.filter(function(i) { return i.str && i.str.trim(); }).map(function(i) { return { s: i.str.trim(), x: i.transform[4], y: i.transform[5], a: Math.abs(i.transform[3]) || i.height || 10 }; })
+      .sort(function(a, b) { return b.y - a.y || a.x - b.x; });
+    var linhas = [], cur = null, yAnt = null;
+    ts.forEach(function(i) { if (cur && Math.abs(cur.y - i.y) <= 2.5) cur.it.push(i); else { cur = { y: i.y, a: i.a, it: [i] }; linhas.push(cur); } });
+    linhas.forEach(function(l) {
+      var txt = l.it.sort(function(a, b) { return a.x - b.x; }).map(function(i) { return i.s; }).join(' ').replace(/\s+/g, ' ').trim(), salto = yAnt !== null && (yAnt - l.y) > l.a * 1.75; yAnt = l.y;
+      if (!txt || /^\d{1,2}$/.test(txt) || /^Gerado automaticamente/i.test(txt)) return; // número de página e rodapé
+      if (!titulo && /^ATA N4/i.test(txt)) titulo = txt;
+      if (/^ATA N4.*\S\s+\d{1,2}$/.test(txt)) return; // rodapé de cada página: título + número da página
+      if (txt === titulo) { if (viuTitulo) return; viuTitulo = true; out.push(txt, ''); return; } // o título se repete no cabeçalho de cada página
+      if (APRES_ATA_TOPO.test(txt)) { pulando = /^COMBINADOS/.test(txt); out.push('', txt, ''); if (pulando) out.push('[[COMBINADOS]]', ''); return; }
+      if (pulando) return;
+      if (/^B\d\s*[—–-]\s*\S/.test(txt) && txt.length < 70) { out.push('', txt, ''); return; }
+      var marc = /^[^0-9A-Za-zÀ-ú"'(\[]\s+\S/.test(txt); // linha que começa com o marcador de tópico
+      if (marc) { out.push(''); txt = '• ' + txt.replace(/^\S\s+/, ''); }
+      else if (salto) out.push('');
+      out.push(txt);
+    });
+    out.push('');
+  }
+  return out.join('\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, 45000);
+}
+
 async function apresAtaArquivo(input) {
-  var f = input.files && input.files[0], st = document.getElementById('ap-ata-st');
+  var f = input.files && input.files[0], st = apresAtaSt();
   if (!f) return;
   if (!/\.pdf$/i.test(f.name)) { st.textContent = 'Escolha um arquivo PDF.'; return; }
   st.textContent = 'Lendo ' + f.name + '…';
   try {
-    var ata = await apresAtaLerPdf(await f.arrayBuffer());
+    var buf = await f.arrayBuffer(), ata = await apresAtaLerPdf(buf.slice(0));
     if (!ata) { st.textContent = 'Não encontrei a tabela "COMBINADOS DA REUNIÃO" neste PDF. Confira se é a ata no modelo do Squad N4.'; return; }
     ata.arquivo = f.name;
-    APRES_ATA_PREVIA = ata; APRES_ATA_EDIT = null;
+    try { APRES_ATA_TEXTO = await apresAtaLerTexto(buf.slice(0)); } catch (e2) { APRES_ATA_TEXTO = null; console.warn('Texto completo da ata não foi lido.', e2.message); }
+    APRES_ATA_PREVIA = null; APRES_ATA_EDIT = null;
+    if (!(await apresAtaGravar(ata, false))) APRES_ATA_PREVIA = ata; // o upload já salva; se falhar, fica a prévia para tentar de novo
     apresAtaDesenhar();
   } catch (e) { st.textContent = 'Não foi possível ler o PDF: ' + e.message; }
 }
 
+// A leitura do Sheets logo após gravar pode vir sem a alteração; a cópia local é ajustada ao que
+// foi enviado, para o próximo salvamento não criar linha duplicada.
+function apresEspelhar(env) {
+  if (!BUDGET_LANC) BUDGET_LANC = [];
+  var i = -1; BUDGET_LANC.forEach(function(l, k) { if (l.id === env.id) i = k; });
+  if (env.acao === 'delete') { if (i >= 0) BUDGET_LANC.splice(i, 1); return; }
+  var l = { id: env.id, gd: env.gd, linha: env.linha, produto: env.produto, crm: env.crm, medico: env.medico, valor: '0', acao: env.acao_lancamento, data: env.data, criadoEm: env.criadoEm };
+  if (i >= 0) BUDGET_LANC[i] = l; else BUDGET_LANC.push(l);
+}
+async function apresAtaEnviar(env) {
+  var r = await fetch(CONFIG.budget_webapp_url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(env) });
+  var resp = JSON.parse(await r.text());
+  if (!resp.ok) throw new Error(resp.erro || 'falha desconhecida');
+}
+function apresAtaDocReg(crm) {
+  var gd = 'N4:' + DISTRITO_FILTRO, regs = (BUDGET_LANC || []).filter(function(l) { return l.produto === APRES_ATA_DOC && l.gd === gd && l.crm === crm; });
+  return regs.length ? regs[regs.length - 1] : null;
+}
 async function apresAtaGravar(ata, apagar) {
   var reg = apresAtaReg(), d = ((window._D || {}).distritos || [])[0] || {};
-  var st = document.getElementById('ap-ata-st');
+  var st = apresAtaSt();
+  if (ata && APRES_ATA_ALVO === 'atual') ata.daReuniao = true;
+  var mAnt = MES_ORDER[MES_ORDER.indexOf(MES_ATUAL) - 1] || MES_ATUAL; // ata antiga anexada direto no slide 2
   var payload = {
     token: CONFIG.budget_token, acao: apagar ? 'delete' : (reg ? 'edit' : 'add'),
     id: reg ? reg.id : 'n4a' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-    gd: 'N4:' + DISTRITO_FILTRO, linha: d.linha || '', produto: APRES_ATA_PROD, crm: 'ata|' + MES_ATUAL,
+    gd: 'N4:' + DISTRITO_FILTRO, linha: d.linha || '', produto: APRES_ATA_PROD, crm: reg ? reg.crm : 'ata|' + (APRES_ATA_ALVO === 'atual' ? MES_ATUAL : mAnt),
     medico: ata ? ata.titulo : '', valor: 0, acao_lancamento: ata ? JSON.stringify(ata) : '',
     data: apresHoje(), criadoEm: reg ? reg.criadoEm : Date.now().toString()
   };
   if (st) st.textContent = 'Salvando…';
-  try {
-    var r = await fetch(CONFIG.budget_webapp_url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) });
-    var resp = JSON.parse(await r.text());
-    if (!resp.ok) throw new Error(resp.erro || 'falha desconhecida');
-  } catch (e) { if (st) st.textContent = 'Não foi possível salvar: ' + e.message; return false; }
-  await carregarBudget();
+  try { await apresAtaEnviar(payload); }
+  catch (e) { if (st) st.textContent = 'Não foi possível salvar: ' + e.message; return false; }
+  await carregarBudget(); apresEspelhar(payload);
+  // texto completo, na mesma chave; falha aqui não desfaz os combinados já salvos
+  var doc = apresAtaDocReg(payload.crm), texto = APRES_ATA_TEXTO; APRES_ATA_TEXTO = null;
+  if (apagar ? doc : texto) {
+    var envDoc = { token: CONFIG.budget_token, acao: apagar ? 'delete' : (doc ? 'edit' : 'add'), id: doc ? doc.id : 'n4d' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      gd: payload.gd, linha: payload.linha, produto: APRES_ATA_DOC, crm: payload.crm, medico: payload.medico, valor: 0,
+      acao_lancamento: apagar ? '' : JSON.stringify({ titulo: ata.titulo, arquivo: ata.arquivo || '', texto: texto }), data: apresHoje(), criadoEm: doc ? doc.criadoEm : Date.now().toString() };
+    try { await apresAtaEnviar(envDoc); apresEspelhar(envDoc); } catch (e) { console.warn('Texto completo da ata não foi salvo.', e.message); }
+  }
   return true;
 }
 async function apresAtaConfirmar() {
@@ -3428,7 +3505,7 @@ async function apresAtaConfirmar() {
   if (await apresAtaGravar(APRES_ATA_PREVIA, false)) { APRES_ATA_PREVIA = null; apresAtaDesenhar(); }
 }
 async function apresAtaRemover() {
-  if (!window.confirm('Remover os combinados desta ata? Os status marcados serão perdidos.')) return;
+  if (!window.confirm('Remover esta ata? Os combinados e os status marcados serão perdidos.')) return;
   if (await apresAtaGravar(null, true)) apresAtaDesenhar();
 }
 async function apresAtaStatus(n, status) {
@@ -3454,7 +3531,7 @@ function apresAtaEditar() {
 }
 function apresAtaLerEdicao() {
   var itens = [];
-  [].forEach.call(document.querySelectorAll('#ap-ata [data-item]'), function(tr) {
+  [].forEach.call(apresAtaBox().querySelectorAll('[data-item]'), function(tr) {
     function v(c) { return tr.querySelector('[data-c="' + c + '"]').value.trim(); }
     itens.push({ n: itens.length + 1, texto: v('texto'), resp: v('resp'), prazo: v('prazo'), status: tr.getAttribute('data-status') || 'Pendente' });
   });
@@ -3469,58 +3546,69 @@ function apresAtaEditLinha(delta, idx) {
   apresAtaDesenhar();
 }
 async function apresAtaSalvarEdicao() {
-  var itens = apresAtaLerEdicao().filter(function(i) { return i.texto; }), st = document.getElementById('ap-ata-st');
+  var itens = apresAtaLerEdicao().filter(function(i) { return i.texto; }), st = apresAtaSt();
   if (!itens.length) { st.textContent = 'Deixe pelo menos um combinado, ou use "Remover" para tirar a ata.'; return; }
   itens.forEach(function(i, k) { i.n = k + 1; });
   APRES_ATA_EDIT.itens = itens;
   if (await apresAtaGravar(APRES_ATA_EDIT, false)) { APRES_ATA_EDIT = null; APRES_ATA_PREVIA = null; apresAtaDesenhar(); }
 }
 
-function apresAtaDesenhar() {
-  var box = document.getElementById('ap-ata');
+function apresAtaDesenhar() { apresAtaDesenharDe('ant'); apresAtaDesenharDe('atual'); if (APRES.on && APRES.slides.length) apresAjustar(); }
+function apresAtaDesenharDe(alvo) {
+  var box = apresAtaBox(alvo);
   if (!box) return;
   var pronto = !!(CONFIG && CONFIG.budget_webapp_url && CONFIG.budget_token);
-  var salva = apresAtaDados(), editando = !!APRES_ATA_EDIT;
-  var ata = APRES_ATA_EDIT || APRES_ATA_PREVIA || salva, previa = !editando && !!APRES_ATA_PREVIA;
+  var reg = apresAtaRegDe(alvo), salva = null; if (reg) try { salva = JSON.parse(reg.acao); } catch (e) {}
+  var meu = APRES_ATA_ALVO === alvo, editando = meu && !!APRES_ATA_EDIT, previa = meu && !editando && !!APRES_ATA_PREVIA;
+  var ata = editando ? APRES_ATA_EDIT : (previa ? APRES_ATA_PREVIA : salva), A = "apresAtaAlvo('" + alvo + "');";
   var corSt = { 'Pendente': 'warn', 'Em andamento': 'warn', 'Resolvido': 'ok', 'Executado': 'ok', 'Não executado': 'crit' };
+  var up = '<input type="file" accept="application/pdf,.pdf" style="display:none" onchange="' + A + 'apresAtaArquivo(this)">';
   var h = '';
   if (!ata) {
-    h += '<div class="ap-ata-vazio"><div class="ap-ata-ico">📎</div><b>Anexe a ata da N4 anterior</b>' +
-      '<p>PDF no modelo "ATA N4 — Mês/AA | GD". Os combinados da tabela "Combinados da reunião" aparecem aqui para conferência item a item.</p>' +
-      (pronto ? '<label class="ap-diag-btn">Escolher PDF da ata<input type="file" accept="application/pdf,.pdf" style="display:none" onchange="apresAtaArquivo(this)"></label>' : '<p>Gravação indisponível nesta página.</p>') +
-      '<div id="ap-ata-st" class="ap-ata-st"></div></div>';
+    h += alvo === 'atual'
+      ? '<div class="ap-ata-vazio"><div class="ap-ata-ico">📎</div><b>Anexe a ata desta N4</b>' +
+        '<p>Terminou a reunião e a ata está pronta? Anexe aqui o PDF no modelo "ATA N4 — Mês/AA | GD". A página salva a ata completa e, na próxima N4, os combinados já aparecem no slide 2 ("Combinados anteriores"), prontos para a cobrança.</p>' +
+        (pronto ? '<label class="ap-diag-btn">Escolher PDF da ata' + up + '</label>' : '<p>Gravação indisponível nesta página.</p>') + '<div id="ap-ata-st-atual" class="ap-ata-st"></div></div>'
+      : '<div class="ap-ata-vazio"><div class="ap-ata-ico">📋</div><b>Nenhuma ata de N4 anterior</b>' +
+        '<p>Os combinados aparecem aqui sozinhos quando a ata da N4 anterior foi anexada no último slide ("Ata desta reunião"). Se ela ainda não foi anexada, dá para anexar agora.</p>' +
+        (pronto ? '<label class="ap-diag-mini" style="padding:8px 14px">Anexar a ata da N4 anterior' + up + '</label>' : '') + '<div id="ap-ata-st-ant" class="ap-ata-st"></div></div>';
   } else {
-    h += '<div class="visitas-chart-wrap"><div class="ap-ata-top"><div><h3 style="margin:0">' + apresEsc(ata.titulo || 'Ata da N4 anterior') + '</h3>' +
+    h += '<div class="visitas-chart-wrap"><div class="ap-ata-top"><div><h3 style="margin:0">' + apresEsc(ata.titulo || 'Ata da N4') + '</h3>' +
       '<div class="ap-ata-sub">' + (ata.data ? 'Reunião de ' + ata.data + ' · ' : '') + ata.itens.length + ' combinados' + (ata.arquivo ? ' · lido de ' + apresEsc(ata.arquivo) : '') + '</div></div><span class="ap-diag-acoes">';
-    if (editando) h += '<button class="ap-diag-btn" onclick="apresAtaSalvarEdicao()">Salvar alterações</button><button class="ap-diag-mini" onclick="APRES_ATA_EDIT=null;apresAtaDesenhar()">Cancelar</button>';
-    else if (previa) h += '<button class="ap-diag-btn" onclick="apresAtaConfirmar()">Salvar combinados</button><button class="ap-diag-mini" onclick="apresAtaEditar()">✏️ Editar</button><button class="ap-diag-mini" onclick="APRES_ATA_PREVIA=null;apresAtaDesenhar()">Cancelar</button>';
-    else if (pronto) h += '<button class="ap-diag-mini" onclick="apresAtaEditar()">✏️ Editar</button><label class="ap-diag-mini">Trocar ata<input type="file" accept="application/pdf,.pdf" style="display:none" onchange="apresAtaArquivo(this)"></label><button class="ap-diag-mini" onclick="apresAtaRemover()">Remover</button>';
+    if (editando) h += '<button class="ap-diag-btn" onclick="' + A + 'apresAtaSalvarEdicao()">Salvar alterações</button><button class="ap-diag-mini" onclick="APRES_ATA_EDIT=null;apresAtaDesenhar()">Cancelar</button>';
+    else if (previa) h += '<button class="ap-diag-btn" onclick="' + A + 'apresAtaConfirmar()">Salvar combinados</button><button class="ap-diag-mini" onclick="' + A + 'apresAtaEditar()">✏️ Editar</button><button class="ap-diag-mini" onclick="APRES_ATA_PREVIA=null;apresAtaDesenhar()">Cancelar</button>';
+    else if (pronto) h += '<button class="ap-diag-mini" onclick="' + A + 'apresAtaEditar()">✏️ Editar</button><label class="ap-diag-mini">Trocar ata' + up + '</label><button class="ap-diag-mini" onclick="' + A + 'apresAtaRemover()">Remover</button>';
     h += '</span></div>';
-    if (previa) h += '<div class="ap-ata-aviso">Confira se os combinados foram lidos corretamente. Marque o status de cada um (por exemplo, Resolvido), use "Editar" para ajustar ou excluir algum, e depois "Salvar combinados".</div>';
-    if (editando) h += '<div class="ap-ata-aviso">Modo edição: ajuste o texto, o responsável e o prazo; use ✕ para excluir um combinado.</div>';
-    h += '<div class="visitas-table-wrap"><table class="visitas-table ap-ata-tb"><thead><tr><th style="width:44px">#</th><th class="th-gd">Combinado</th><th style="width:' + (editando ? 150 : 110) + 'px">Responsável</th><th style="width:' + (editando ? 220 : 190) + 'px">Prazo</th><th style="width:' + (editando ? 60 : 170) + 'px">' + (editando ? '' : 'Status') + '</th></tr></thead><tbody>';
+    if (previa) h += '<div class="ap-ata-aviso">A ata foi lida, mas não foi possível salvar. Confira os combinados e clique em "Salvar combinados" para tentar de novo.</div>';
+    else if (editando) h += '<div class="ap-ata-aviso">Modo edição: ajuste o texto, o responsável e o prazo; use ✕ para excluir um combinado.</div>';
+    else if (alvo === 'atual') h += '<div class="ap-ata-aviso" style="background:#f0fdf4;color:#166534;border-color:#bbf7d0">✓ Ata salva' + (reg && apresAtaDocReg(reg.crm) ? ' completa' : '') + '. Na próxima N4 estes combinados aparecem no slide 2 ("Combinados anteriores"). ' +
+      (reg ? '<a href="atas-n4.html?id=' + reg.id + (/leste/i.test(location.pathname) ? '&regional=LESTE' : '') + '" target="_blank" style="color:#166534">Abrir a ata completa ↗</a>' : '') + '</div>';
+    var comStatus = alvo === 'ant'; // o status é cobrado na N4 seguinte
+    h += '<div class="visitas-table-wrap"><table class="visitas-table ap-ata-tb"><thead><tr><th style="width:44px">#</th><th class="th-gd">Combinado</th><th style="width:' + (editando ? 150 : 110) + 'px">Responsável</th><th style="width:' + (editando ? 220 : 190) + 'px">Prazo</th>' +
+      (editando ? '<th style="width:60px"></th>' : (comStatus ? '<th style="width:170px">Status</th>' : '')) + '</tr></thead><tbody>';
     ata.itens.forEach(function(i, k) {
       if (editando) {
         h += '<tr data-item="' + k + '" data-status="' + apresEsc(i.status) + '"><td>' + (k + 1) + '</td>' +
           '<td class="td-gd"><textarea rows="2" data-c="texto" placeholder="Descreva o combinado">' + apresEsc(i.texto) + '</textarea></td>' +
           '<td><input type="text" data-c="resp" value="' + apresEsc(i.resp) + '" list="ap-ata-resps"></td>' +
           '<td><input type="text" data-c="prazo" value="' + apresEsc(i.prazo) + '" placeholder="Data ou Próxima N4"></td>' +
-          '<td><button class="ap-diag-mini" title="Excluir este combinado" onclick="apresAtaEditLinha(-1,' + k + ')">✕</button></td></tr>';
+          '<td><button class="ap-diag-mini" title="Excluir este combinado" onclick="' + A + 'apresAtaEditLinha(-1,' + k + ')">✕</button></td></tr>';
         return;
       }
       var sel = !pronto ? '<span class="crm-pct ' + corSt[i.status] + '">' + i.status + '</span>'
-        : '<select class="ap-ata-sel ' + corSt[i.status] + '" onchange="apresAtaStatus(' + i.n + ',this.value)">' + APRES_ATA_STATUS.map(function(s) { return '<option' + (s === i.status ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>';
-      h += '<tr><td>' + i.n + '</td><td class="td-gd" style="white-space:normal">' + apresEsc(i.texto) + '</td><td>' + apresEsc(i.resp) + '</td><td style="white-space:normal">' + apresEsc(i.prazo) + '</td><td>' + sel + '</td></tr>';
+        : '<select class="ap-ata-sel ' + corSt[i.status] + '" onchange="' + A + 'apresAtaStatus(' + i.n + ',this.value)">' + APRES_ATA_STATUS.map(function(s) { return '<option' + (s === i.status ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>';
+      h += '<tr><td>' + i.n + '</td><td class="td-gd" style="white-space:normal">' + apresEsc(i.texto) + '</td><td>' + apresEsc(i.resp) + '</td><td style="white-space:normal">' + apresEsc(i.prazo) + '</td>' + (comStatus ? '<td>' + sel + '</td>' : '') + '</tr>';
     });
     h += '</tbody></table></div>';
     if (editando) h += '<datalist id="ap-ata-resps"><option value="GD"><option value="GRD"><option value="GD + GRD"></datalist>' +
-      '<div class="ap-diag-f"><button class="ap-diag-mini" onclick="apresAtaEditLinha(1)">+ Adicionar combinado</button></div>';
-    h += '<div id="ap-ata-st" class="ap-ata-st"></div></div>';
+      '<div class="ap-diag-f"><button class="ap-diag-mini" onclick="' + A + 'apresAtaEditLinha(1)">+ Adicionar combinado</button></div>';
+    h += '<div id="ap-ata-st-' + alvo + '" class="ap-ata-st"></div></div>';
   }
   box.innerHTML = h;
   var msg = box.closest('.ap-slide').querySelector('.ap-msg');
-  if (msg) msg.textContent = editando ? 'Editando os combinados' : (previa ? 'Ata lida — aguardando confirmação' : (apresAtaResumo(salva) || 'Nenhuma ata anexada para ' + MES_ATUAL + '/2026'));
-  if (APRES.on && APRES.slides.length) apresAjustar();
+  if (msg) msg.textContent = editando ? 'Editando os combinados' : (previa ? 'Ata lida — aguardando salvar'
+    : (alvo === 'atual' ? (salva ? 'Ata desta N4 salva — ' + salva.itens.length + ' combinados' : 'Anexe a ata ao terminar a reunião')
+      : (apresAtaResumo(salva) || 'Nenhuma ata de N4 anterior')));
 }
 
 function apresRaiz() {
@@ -3588,9 +3676,11 @@ function apresMontar() {
   });
   var fimEl = document.createElement('div'); fimEl.id = 'ap-plano-final';
   grupos.push({ chave: '', nome: 'Plano de ação', nodes: [fimEl], msg: ' ' });
+  var ataNovaEl = document.createElement('div'); ataNovaEl.id = 'ap-ata-nova';
+  grupos.push({ chave: '', nome: 'Ata desta reunião', nodes: [ataNovaEl], msg: ' ' });
   var ataEl = document.createElement('div'); ataEl.id = 'ap-ata';
   grupos.unshift({ chave: '', nome: 'Combinados anteriores', nodes: [ataEl], msg: ' ', ata: true });
-  APRES_ATA_PREVIA = null; APRES_ATA_EDIT = null;
+  APRES_ATA_PREVIA = null; APRES_ATA_EDIT = null; APRES_ATA_ALVO = 'ant'; APRES_ATA_TEXTO = null;
   document.getElementById('ap-ctx').textContent = (d.nm || '') + ' · ' + (d.linha || '') + ' · ' + MES_ATUAL + '/2026';
 
   stage.innerHTML = '';
@@ -3827,6 +3917,7 @@ function renderCycleBar(meses, mesAtual) {
   btns += '<button class="cycle-btn gov-btn" onclick="window.location.href=\'planos-spi.html\'" title="Todos os planos dos GDs preenchidos na apresentação">📋 Planos SPI</button>';
   btns += '<button class="cycle-btn gov-btn" onclick="window.location.href=\'rps.html\'" title="Apresentação da RPS do GD com o time">📅 Copiloto de RPS</button>';
   btns += '<button class="cycle-btn gov-btn" onclick="window.location.href=\'atas-rps.html\'" title="Atas completas das RPS anexadas pelos GDs">📄 Atas de RPS</button>';
+  btns += '<button class="cycle-btn gov-btn" onclick="window.location.href=\'atas-n4.html\'" title="Atas completas das N4 anexadas na apresentação">📄 Atas de N4</button>';
   btns += '<button class="cycle-btn apres-btn" onclick="apresAbrir()" title="Mostra as seções do distrito uma por tela">▶ Apresentação</button>';
   bar.innerHTML = btns;
   atualizarVisibilidadeFiltroDistrito();
