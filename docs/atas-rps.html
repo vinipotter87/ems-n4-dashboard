@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>EMS | Atas de RPS</title>
+<style>
+:root{--red:#C8102E;--gray:#6B7280;--light:#F3F4F6;--border:#E5E7EB;--brand:#0057B8;--brand-d:#003D82;--text:#111827}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:'Segoe UI',system-ui,-apple-system,Arial,sans-serif;background:#ECEDF0;color:var(--text);font-size:13px;display:flex;flex-direction:column}
+button,select,input{font-family:inherit}
+.hdr{background:linear-gradient(135deg,var(--brand-d),var(--brand));color:#fff;padding:14px 28px;display:flex;align-items:center;gap:16px;flex:none}
+.logo{background:#fff;color:var(--brand);font-weight:900;font-size:16px;padding:5px 11px;border-radius:7px}
+.hdr h1{font-size:19px;font-weight:800}
+.hdr p{font-size:12px;opacity:.85;margin-top:2px}
+.hdr .sp{flex:1}
+.hdr a{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);color:#fff;text-decoration:none;font-size:12px;font-weight:700;padding:6px 14px;border-radius:20px;white-space:nowrap}
+.bar{background:#fff;border-bottom:1px solid var(--border);padding:10px 28px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex:none}
+.bar label{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)}
+.bar select,.bar input{border:1.5px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12.5px;background:#fff}
+.bar input{min-width:240px}
+.bar button{margin-left:auto;background:#fff;border:1.5px solid var(--border);border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;color:var(--brand);cursor:pointer}
+.cols{flex:1;min-height:0;display:grid;grid-template-columns:360px minmax(0,1fr);gap:16px;padding:16px 28px 20px}
+.lista{background:#fff;border-radius:12px;box-shadow:0 1px 6px rgba(0,0,0,.06);overflow:auto}
+.lista h2{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--gray);padding:12px 16px 8px;position:sticky;top:0;background:#fff;border-bottom:1px solid var(--border)}
+.item{display:block;width:100%;text-align:left;background:#fff;border:none;border-bottom:1px solid var(--border);border-left:4px solid transparent;padding:10px 14px;cursor:pointer}
+.item:hover{background:#f8fafc}
+.item.on{background:#eff6ff;border-left-color:var(--brand)}
+.item b{display:block;font-size:13px}
+.item span{display:block;font-size:11.5px;color:var(--gray);margin-top:2px;line-height:1.4}
+.tag{display:inline-block;font-size:10px;font-weight:800;border-radius:20px;padding:2px 9px;white-space:nowrap;margin-right:4px}
+.tag.col{background:#e0e7ff;color:#3730a3}.tag.ind{background:#fef3c7;color:#92400e}.tag.ok{background:#dcfce7;color:#166534}.tag.sem{background:#f3f4f6;color:#6b7280}
+.doc{background:#fff;border-radius:12px;box-shadow:0 1px 6px rgba(0,0,0,.06);overflow:auto;padding:26px 34px 40px}
+.doc .cab{border-bottom:3px solid var(--brand);padding-bottom:12px;margin-bottom:16px;display:flex;gap:16px;align-items:flex-start}
+.doc .cab h2{font-size:20px;font-weight:800;color:var(--brand-d);line-height:1.25}
+.doc .cab p{font-size:12px;color:var(--gray);margin-top:5px;line-height:1.5}
+.doc .cab button{margin-left:auto;flex:none;background:#fff;border:1.5px solid var(--border);border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;color:var(--brand);cursor:pointer}
+.txt{max-width:980px;font-size:14px;line-height:1.65}
+.txt h3{font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--brand-d);background:#eff6ff;border-left:4px solid var(--brand);border-radius:0 8px 8px 0;padding:7px 12px;margin:22px 0 10px}
+.txt h4{font-size:14.5px;font-weight:800;margin:16px 0 6px;color:var(--text)}
+.txt p{margin:0 0 8px}
+.txt p b{color:var(--brand-d)}
+.txt p.meta{margin:0 0 3px}
+.txt p.tit{font-size:15px;font-weight:700}
+table{width:100%;border-collapse:collapse;margin:6px 0 12px;font-size:13px}
+th{background:#f1f5f9;color:#334155;font-size:10px;text-transform:uppercase;letter-spacing:.4px;padding:8px 9px;text-align:left;font-weight:800}
+td{padding:8px 9px;border-bottom:1px solid var(--border);vertical-align:top;line-height:1.45}
+.st{display:inline-block;font-size:11.5px;font-weight:800;border-radius:8px;padding:3px 9px;border:1.5px solid;white-space:nowrap}
+.st.Pendente{color:#b45309;border-color:#fcd34d;background:#fffbeb}.st.Em{color:#1d4ed8;border-color:#93c5fd;background:#eff6ff}
+.st.Resolvido{color:#15803d;border-color:#86efac;background:#f0fdf4}.st.Nao{color:#b91c1c;border-color:#fca5a5;background:#fef2f2}
+.aviso{background:#fef9c3;color:#854d0e;font-size:12.5px;font-weight:700;padding:10px 14px;border-radius:8px;margin-bottom:14px;line-height:1.5}
+.vazio{text-align:center;color:var(--gray);padding:60px 20px;line-height:1.7}
+.vazio b{display:block;font-size:16px;color:var(--text)}
+@media(max-width:1000px){body{display:block;height:auto}.cols{grid-template-columns:1fr}.lista{max-height:320px}}
+@media print{.hdr a,.bar,.lista,.doc .cab button{display:none}.cols{display:block;padding:0}.doc{box-shadow:none;overflow:visible;padding:0}body{background:#fff;display:block}}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="logo">EMS</div>
+  <div><h1>📄 Atas de RPS</h1><p>Regional SPI Oeste · atas completas anexadas pelos GDs no Copiloto de RPS</p></div>
+  <span class="sp"></span>
+  <a href="rps.html">📅 Copiloto de RPS</a>
+  <a href="index.html">← Dashboard</a>
+</div>
+
+<div class="bar">
+  <label for="f-gd">GD</label><select id="f-gd"><option value="">Todos</option></select>
+  <label for="f-tipo">Tipo</label><select id="f-tipo"><option value="">Todas</option><option value="col">Coletiva</option><option value="ind">Individual</option></select>
+  <input id="f-busca" type="search" placeholder="Buscar no texto das atas">
+  <button id="btn-atualizar">🔄 Atualizar</button>
+</div>
+
+<div class="cols">
+  <div class="lista" id="lista"><div class="vazio">Carregando atas…</div></div>
+  <div class="doc" id="doc"><div class="vazio"><b>Escolha uma ata na lista</b>O texto completo aparece aqui.</div></div>
+</div>
+
+<script>
+// ── Atas de RPS ──────────────────────────────────────────────────
+// Leitura das atas que os GDs anexam no Copiloto de RPS (rps.html). Cada ata
+// são duas linhas da aba budget_lancamentos, com gd = "N4:<distrito_id>" e a
+// mesma chave em "crm" ("rps|<data>" na coletiva, "rpsi|<setor>|<data>" na
+// individual): produto RPS_ATA guarda os combinados (com status) e produto
+// RPS_ATA_DOC guarda o texto integral extraído do PDF. Atas anexadas antes de
+// o texto integral existir têm só os combinados. Página somente de leitura.
+var TAB = 'budget_lancamentos', MESES = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+var CONFIG = {}, ATAS = [], GDS = {}, SEL = null;
+var TOPO = /^(Metadados da reuni[ãa]o|Objetivo da reuni[ãa]o|Resumo executivo|Blocos da diretriz RPS|Plano de a[çc][ãa]o consolidado|Combinado para alavancar|Pend[êe]ncias|Texto curto para registro)/i;
+
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function dataBr(iso){ var x = String(iso || '').split('-'); return x.length === 3 ? x[2] + '/' + x[1] + '/' + x[0] : ''; }
+function norm(s){ return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); }
+
+async function fetchAba(aba, tent){
+  tent = tent || 0;
+  var res = await fetch('https://sheets.googleapis.com/v4/spreadsheets/' + CONFIG.spreadsheet_id + '/values/' + encodeURIComponent(aba) + '?key=' + CONFIG.api_key, {cache:'no-store'});
+  if (res.status === 429 && tent < 6){ await new Promise(function(r){ setTimeout(r, 600 * Math.pow(1.8, tent)); }); return fetchAba(aba, tent + 1); }
+  if (res.status === 400) return [];
+  if (!res.ok) throw new Error('Erro ao buscar a aba ' + aba + ' (' + res.status + ')');
+  var rows = (await res.json()).values || [];
+  if (rows.length < 2) return [];
+  var h = rows[0];
+  return rows.slice(1).map(function(r){ var o = {}; h.forEach(function(k, i){ o[k] = r[i] !== undefined ? r[i] : ''; }); return o; });
+}
+
+async function carregar(){
+  $('lista').innerHTML = '<div class="vazio">Carregando atas…</div>';
+  var linhas = await fetchAba(TAB), docs = {};
+  // nomes dos GDs: último mês com a aba de distritos
+  if (!Object.keys(GDS).length){
+    var cfg = await fetchAba('config'), meses = MESES.slice();
+    cfg.forEach(function(r){ if (r.chave === 'meses_disponiveis') meses = r.valor.split(',').map(function(s){ return s.trim(); }); });
+    for (var i = meses.length - 1; i >= 0 && !Object.keys(GDS).length; i--) (await fetchAba('distritos_' + meses[i])).forEach(function(d){ GDS[d.distrito_id] = d; });
+  }
+  linhas.forEach(function(l){ if (l.produto === 'RPS_ATA_DOC'){ try { docs[l.gd + '§' + l.crm] = JSON.parse(l.acao); } catch(e){} } });
+  ATAS = [];
+  linhas.forEach(function(l){
+    if (l.produto !== 'RPS_ATA' || String(l.gd).indexOf('N4:') !== 0) return;
+    var a; try { a = JSON.parse(l.acao); } catch(e){ return; }
+    var x = String(l.crm).split('|'), ind = x[0] === 'rpsi', distrito = String(l.gd).slice(3), g = GDS[distrito] || {};
+    ATAS.push({ id: l.id, distrito: distrito, gd: g.nm || (ind ? distrito : l.medico), linha: g.linha || l.linha, ind: ind, rep: ind ? (l.medico || x[1]) : '', setor: ind ? x[1] : '',
+      data: x[x.length - 1], anexada: l.data, ata: a, doc: docs[l.gd + '§' + l.crm] || null, criado: Number(l.criadoEm) || 0 });
+  });
+  ATAS.sort(function(p, q){ return q.data.localeCompare(p.data) || p.gd.localeCompare(q.gd) || q.criado - p.criado; });
+  var sel = $('f-gd'), atual = sel.value, vistos = {};
+  sel.innerHTML = '<option value="">Todos</option>' + ATAS.filter(function(t){ if (vistos[t.distrito]) return false; vistos[t.distrito] = 1; return true; })
+    .sort(function(p, q){ return p.gd.localeCompare(q.gd); }).map(function(t){ return '<option value="' + t.distrito + '">' + esc(t.gd) + '</option>'; }).join('');
+  sel.value = atual;
+  var pedido = (location.search.match(/[?&]id=([^&]+)/) || [])[1];
+  if (!SEL && pedido && ATAS.some(function(t){ return t.id === pedido; })) SEL = pedido;
+  desenharLista(); desenharDoc();
+}
+
+function filtradas(){
+  var gd = $('f-gd').value, tipo = $('f-tipo').value, b = norm($('f-busca').value.trim());
+  return ATAS.filter(function(t){
+    if (gd && t.distrito !== gd) return false;
+    if (tipo && (tipo === 'ind') !== t.ind) return false;
+    if (b){ var txt = norm([t.gd, t.rep, t.ata.titulo, t.ata.arquivo, t.doc ? t.doc.texto : ''].concat(t.ata.itens.map(function(i){ return i.texto + ' ' + i.resp; })).join(' ')); if (txt.indexOf(b) < 0) return false; }
+    return true;
+  });
+}
+function desenharLista(){
+  var ls = filtradas();
+  if (!ATAS.length){ $('lista').innerHTML = '<div class="vazio"><b>Nenhuma ata anexada</b>As atas aparecem aqui quando os GDs anexam o PDF no último slide da RPS.</div>'; return; }
+  $('lista').innerHTML = '<h2>' + ls.length + ' de ' + ATAS.length + ' atas · mais recentes primeiro</h2>' + (ls.length ? ls.map(function(t){
+    var res = t.ata.itens.filter(function(i){ return i.status === 'Resolvido'; }).length;
+    return '<button class="item' + (t.id === SEL ? ' on' : '') + '" onclick="abrir(\'' + t.id + '\')"><b>RPS de ' + dataBr(t.data) + ' · ' + esc(t.gd) + '</b>' +
+      '<span><i class="tag ' + (t.ind ? 'ind' : 'col') + '" style="font-style:normal">' + (t.ind ? 'Individual' : 'Coletiva') + '</i><i class="tag ' + (t.doc ? 'ok' : 'sem') + '" style="font-style:normal">' + (t.doc ? 'ata completa' : 'só combinados') + '</i></span>' +
+      '<span>' + (t.ind ? esc(t.rep) + ' · ' : '') + t.ata.itens.length + ' combinados · ' + res + ' resolvidos</span></button>'; }).join('') : '<div class="vazio">Nenhuma ata com esses filtros.</div>');
+}
+function abrir(id){ SEL = id; desenharLista(); desenharDoc(); $('doc').scrollTop = 0; }
+
+function combinadosHtml(t){
+  if (!t.ata.itens.length) return '<p>Nenhum combinado registrado.</p>';
+  return '<table><thead><tr><th style="width:36px">#</th><th>Ação</th><th style="width:210px">Responsável</th><th style="width:190px">Prazo</th><th style="width:130px">Status</th></tr></thead><tbody>' + t.ata.itens.map(function(i){
+    var st = i.status || 'Pendente';
+    return '<tr><td>' + i.n + '</td><td>' + esc(i.texto) + '</td><td>' + esc(i.resp) + '</td><td>' + esc(i.prazo) + '</td><td><span class="st ' + (st === 'Em andamento' ? 'Em' : (st === 'Não executado' ? 'Nao' : st)) + '">' + esc(st) + '</span></td></tr>'; }).join('') + '</tbody></table>';
+}
+function textoHtml(t){ // parágrafos separados por linha em branco; títulos de seção e de bloco em destaque
+  var sec = '', pos = 0, usou = false, h = '';
+  t.doc.texto.split(/\n\s*\n/).forEach(function(par){
+    var linha = par.replace(/\s*\n\s*/g, ' ').trim(); if (!linha) return; pos++;
+    if (linha === '[[COMBINADOS]]'){ h += combinadosHtml(t); usou = true; return; }
+    if (TOPO.test(linha) && linha.length < 90){ sec = linha; h += '<h3>' + esc(linha) + '</h3>'; return; }
+    if (/^Blocos/i.test(sec) && /^\d{1,2}\.\s+\S/.test(linha) && linha.length < 90){ h += '<h4>' + esc(linha) + '</h4>'; return; }
+    var e = esc(linha).replace(/^(Discuss[ãa]o|Dados e desvios|Decis[õo]es e a[çc][õo]es)\s*:/i, '<b>$1:</b>');
+    if (/^Metadados/i.test(sec)) e = e.replace(/^(Data|Hor[áa]rio|Dura[çc][ãa]o|Formato|Modalidade|Distrito|GD condutor|Participantes)\b/, '<b>$1</b>');
+    h += '<p class="' + (/^Metadados/i.test(sec) ? 'meta' : (!sec && pos <= 3 ? 'tit' : '')) + '">' + e + '</p>';
+  });
+  if (!usou) h += '<h3>Plano de ação consolidado</h3>' + combinadosHtml(t);
+  return h;
+}
+function desenharDoc(){
+  var t = ATAS.filter(function(x){ return x.id === SEL; })[0];
+  if (!t){ $('doc').innerHTML = '<div class="vazio"><b>Escolha uma ata na lista</b>O texto completo aparece aqui.</div>'; return; }
+  var h = '<div class="cab"><div><h2>' + esc(t.ata.titulo || 'Ata da RPS') + '</h2><p>RPS de <b>' + dataBr(t.data) + '</b> · ' + (t.ind ? 'Individual — ' + esc(t.rep) + ' (setor ' + esc(t.setor) + ')' : 'Coletiva') + ' · GD ' + esc(t.gd) + (t.linha ? ' · ' + esc(t.linha) : '') +
+    '<br>Anexada em ' + dataBr(t.anexada) + (t.ata.arquivo ? ' · arquivo: ' + esc(t.ata.arquivo) : '') + '</p></div><button onclick="window.print()">🖨️ Imprimir / PDF</button></div>';
+  if (t.doc && t.doc.texto) h += '<div class="txt">' + textoHtml(t) + '</div>';
+  else h += '<div class="aviso">Desta ata só os combinados foram guardados — ela foi anexada antes de a página salvar o texto completo, ou os combinados foram digitados. Para ter a ata inteira aqui, anexe o PDF de novo no Copiloto de RPS (slide da ata → "Trocar ata").</div>' +
+    '<div class="txt"><h3>Plano de ação consolidado</h3>' + combinadosHtml(t) + '</div>';
+  $('doc').innerHTML = h;
+}
+
+['f-gd', 'f-tipo'].forEach(function(id){ $(id).addEventListener('change', desenharLista); });
+$('f-busca').addEventListener('input', desenharLista);
+$('btn-atualizar').addEventListener('click', function(){ carregar().catch(erro); });
+function erro(e){ $('lista').innerHTML = '<div class="vazio"><b>Erro ao carregar</b>' + esc(e.message) + '</div>'; }
+
+(async function(){
+  try {
+    var res = await fetch('config.json?t=' + Date.now(), {cache:'no-store'}); if (!res.ok) throw new Error('config.json não encontrado.');
+    CONFIG = await res.json();
+    await carregar();
+  } catch(e){ erro(e); }
+})();
+</script>
+</body>
+</html>

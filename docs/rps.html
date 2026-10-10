@@ -532,12 +532,68 @@ async function lerAta(buffer){
   itens = itens.filter(function(i){ return i.texto; }); itens.forEach(function(i, k){ i.n = k + 1; });
   return itens.length ? { titulo: titulo || 'Ata da RPS anterior', data: dataAta, itens: itens } : null;
 }
+// ── ata completa ──
+// Além dos combinados (linha RPS_ATA), o upload guarda o texto integral da ata em outra linha
+// (produto RPS_ATA_DOC, mesma chave "crm"), para leitura na página atas-rps.html. O texto é
+// extraído do PDF linha a linha; títulos de seção ficam em parágrafos próprios e a tabela
+// "Plano de ação consolidado" é trocada pelo marcador [[COMBINADOS]] — a página de leitura
+// desenha ali os combinados estruturados, com o status atual. O PDF em si não é guardado.
+var ATA_TOPO = /^(Metadados da reuni[ãa]o|Objetivo da reuni[ãa]o|Resumo executivo|Blocos da diretriz RPS|Plano de a[çc][ãa]o consolidado|Combinado para alavancar|Pend[êe]ncias|Texto curto para registro)/i;
+async function lerTexto(buffer){
+  await pdfjs();
+  var pdf = await window.pdfjsLib.getDocument({ data: buffer }).promise, out = [], sec = '', pulando = false, meta = [];
+  // A tabela de metadados tem 2 colunas (rótulo | valor) e o valor pode ocupar várias linhas, com o
+  // rótulo centralizado na vertical. Cada linha de valor é atribuída ao rótulo mais próximo em altura.
+  function soltarMeta(){
+    if (!meta.length) return; var x0 = Math.min.apply(null, meta.map(function(i){ return i.x; })), dir = meta.filter(function(i){ return i.x > x0 + 40; });
+    var lim = dir.length ? Math.min.apply(null, dir.map(function(i){ return i.x; })) - 2 : Infinity;
+    function linhasDe(its){ var ls = [], c = null; its.sort(function(a, b){ return b.y - a.y || a.x - b.x; }).forEach(function(i){ if (c && Math.abs(c.y - i.y) <= 2.5) c.t += ' ' + i.s; else { c = { y: i.y, t: i.s }; ls.push(c); } }); return ls; }
+    var rot = linhasDe(meta.filter(function(i){ return i.x < lim; })), val = linhasDe(meta.filter(function(i){ return i.x >= lim; }));
+    rot.forEach(function(r){ r.v = []; });
+    val.forEach(function(v){ var m = null; rot.forEach(function(r){ if (!m || Math.abs(r.y - v.y) < Math.abs(m.y - v.y)) m = r; }); if (m) m.v.push(v.t); else out.push(v.t, ''); });
+    rot.forEach(function(r){ if (/^Metadado$/i.test(r.t)) return; out.push((r.t + ' ' + r.v.join(' ')).replace(/\s+/g, ' ').trim(), ''); });
+    meta = [];
+  }
+  for (var p = 1; p <= pdf.numPages; p++){
+    var pg = await pdf.getPage(p), alt = pg.view[3], tc = await pg.getTextContent();
+    var ts = tc.items.filter(function(i){ return i.str && i.str.trim(); }).map(function(i){ return { s: i.str.trim(), x: i.transform[4], y: i.transform[5], a: Math.abs(i.transform[3]) || i.height || 10 }; })
+      .filter(function(i){ return i.y <= alt - 45 && i.y >= 32; }).sort(function(a, b){ return b.y - a.y || a.x - b.x; });
+    var linhas = [], cur = null;
+    ts.forEach(function(i){ if (cur && Math.abs(cur.y - i.y) <= 2.5) cur.it.push(i); else { cur = { y: i.y, a: i.a, it: [i] }; linhas.push(cur); } });
+    var yAnt = null;
+    linhas.forEach(function(l){
+      var txt = l.it.sort(function(a, b){ return a.x - b.x; }).map(function(i){ return i.s; }).join(' ').replace(/\s+/g, ' ').trim(), salto = yAnt !== null && (yAnt - l.y) > l.a * 1.75; yAnt = l.y;
+      if (!txt || /^REGIONAL SPI\s*-\s*EMS\s*\|\s*RPS$/i.test(txt) || /^Ata elaborada exclusivamente/i.test(txt) || /P[áa]gina \d+$/i.test(txt)) return;
+      if (/^Metadado\s+Registro$/i.test(txt)){ if (!/^Metadados/i.test(sec)){ sec = 'Metadados da reunião'; out.push('', sec, ''); } return; } // cabeçalho da tabela, quando a ata não traz o título da seção
+      if (ATA_TOPO.test(txt)){ soltarMeta(); sec = txt; pulando = /^Plano de a/i.test(txt); out.push('', txt, ''); if (pulando) out.push('[[COMBINADOS]]', ''); return; }
+      if (pulando) return;
+      if (/^Blocos/i.test(sec) && /^\d{1,2}\.\s+\S/.test(txt) && txt.length < 90){ out.push('', txt, ''); return; }
+      if (/^Metadados/i.test(sec)){ meta = meta.concat(l.it); return; }
+      if (salto || /^(Discuss[ãa]o|Dados e desvios|Decis[õo]es e a[çc][õo]es)\s*:/i.test(txt)) out.push('');
+      out.push(txt);
+    });
+    soltarMeta(); out.push('');
+  }
+  return out.join('\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, 45000);
+}
+function docReg(crm){ var gd = 'N4:' + ST.gd, rs = ST.lanc.filter(function(l){ return l.produto === 'RPS_ATA_DOC' && l.gd === gd && l.crm === crm; }); return rs.length ? rs[rs.length - 1] : null; }
+async function docGravar(crm, doc, apagar){ // doc = {titulo, arquivo, texto}; falha aqui não desfaz a ata já salva
+  var reg = docReg(crm), d = ST.d.dist; if (apagar && !reg) return;
+  try {
+    var env = { token: CONFIG.budget_token, acao: apagar ? 'delete' : (reg ? 'edit' : 'add'), id: reg ? reg.id : 'rpd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), gd: 'N4:' + ST.gd, linha: d.linha,
+      produto: 'RPS_ATA_DOC', crm: crm, medico: ST.modelo === 'individual' ? repSel().nome : d.nm, valor: 0, acao_lancamento: doc ? JSON.stringify(doc) : '', data: hoje(), criadoEm: reg ? reg.criadoEm : Date.now().toString() };
+    var r = await fetch(CONFIG.budget_webapp_url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(env) });
+    var resp = JSON.parse(await r.text()); if (!resp.ok) throw new Error(resp.erro || 'falha desconhecida');
+    espelhar(env);
+  } catch(e){ console.warn('Texto completo da ata não foi salvo.', e.message); var st = ataSt(); if (st) st.textContent = 'Combinados salvos, mas o texto completo da ata não foi gravado: ' + e.message; }
+}
 async function ataArquivo(input){
   var f = input.files && input.files[0], st = ataSt(); if (!f) return;
   if (!/\.pdf$/i.test(f.name)){ st.textContent = 'Escolha um arquivo PDF.'; return; }
   st.textContent = 'Lendo ' + f.name + '…';
   try {
-    var ata = await lerAta(await f.arrayBuffer());
+    var buf = await f.arrayBuffer(), ata = await lerAta(buf.slice(0));
+    try { ST.doc = { arquivo: f.name, texto: await lerTexto(buf.slice(0)) }; } catch(e2){ ST.doc = null; console.warn('Texto completo da ata não foi lido.', e2.message); }
     if (!ata){ ata = { titulo: f.name.replace(/\.pdf$/i, ''), data: '', itens: [] }; ST.previa = null; ST.edit = ata; ata.arquivo = f.name; ata.naoLida = true; desenharAta(); return; }
     ata.arquivo = f.name; ST.previa = null; ST.edit = null;
     if (await ataGravar(ata, false)) desenharAta(); // o upload já salva a ata; ajustes depois pelo botão Editar
@@ -557,6 +613,8 @@ async function ataGravar(ata, apagar){
     var resp = JSON.parse(await r.text()); if (!resp.ok) throw new Error(resp.erro || 'falha desconhecida');
   } catch(e){ if (st) st.textContent = 'Não foi possível salvar: ' + e.message; return false; }
   ST.lanc = await fetchAba('budget_lancamentos', true); espelhar(env);
+  if (apagar) await docGravar(env.crm, null, true);
+  else if (ST.doc && ST.doc.texto){ var dc = ST.doc; ST.doc = null; dc.titulo = ata.titulo; await docGravar(env.crm, dc, false); }
   return true;
 }
 // A leitura do Sheets logo após gravar pode vir sem a alteração. Sem a linha na cópia local, o
@@ -589,7 +647,7 @@ function desenharAtaDe(alvo){
   var quem = ST.modelo === 'individual' ? ' deste representante' : ' do distrito';
   if (!ata){
     h = alvo === 'atual'
-      ? '<div class="vazio"><div style="font-size:34px">📎</div><b>Anexe a ata desta reunião — RPS de ' + dataBr(ST.data) + '</b><p>Terminou a reunião e a ata está pronta? Anexe o PDF aqui. A página lê a tabela "Plano de ação consolidado", salva a ata no histórico do time e, na próxima RPS' + quem + ', os combinados já aparecem no slide 2 ("Combinados anteriores"), prontos para a cobrança.</p>' +
+      ? '<div class="vazio"><div style="font-size:34px">📎</div><b>Anexe a ata desta reunião — RPS de ' + dataBr(ST.data) + '</b><p>Terminou a reunião e a ata está pronta? Anexe o PDF aqui. A página lê a tabela "Plano de ação consolidado", salva a ata completa (todas as seções) no histórico do time e, na próxima RPS' + quem + ', os combinados já aparecem no slide 2 ("Combinados anteriores"), prontos para a cobrança.</p>' +
         (pode ? '<label class="b1">Escolher PDF da ata' + up + '</label> ' + digitar : '<p>Gravação indisponível nesta página.</p>') + '<div id="ata-st-atual"></div></div>'
       : '<div class="vazio"><div style="font-size:34px">📋</div><b>Nenhuma ata de RPS anterior' + quem + '</b><p>Os combinados aparecem aqui sozinhos quando a ata da reunião anterior foi anexada no último slide ("Ata desta reunião"). Se a ata anterior ainda não foi anexada, dá para anexar agora.</p>' +
         (pode ? '<label class="b2" style="padding:8px 14px">Anexar a ata da reunião anterior' + up + '</label> ' + digitar : '') + '<div id="ata-st-ant"></div></div>';
@@ -602,7 +660,7 @@ function desenharAtaDe(alvo){
     h += '</span></div>';
     if (ed && ata.naoLida) h += '<div class="aviso">Não encontrei a tabela "Plano de ação consolidado" neste PDF. Digite os combinados abaixo.</div>';
     else if (previa) h += '<div class="aviso">Confira se os combinados foram lidos corretamente, use "Editar" para ajustar ou excluir, e depois "Salvar combinados".</div>';
-    else if (alvo === 'atual') h += '<div class="pok" style="font-size:12.5px;padding:9px 14px;margin-bottom:10px">✓ Ata salva. Na próxima RPS' + quem + ' estes combinados aparecem no slide 2 ("Combinados anteriores").</div>';
+    else if (alvo === 'atual') h += '<div class="pok" style="font-size:12.5px;padding:9px 14px;margin-bottom:10px">✓ Ata salva' + (reg && docReg(reg.crm) ? ' completa' : '') + '. Na próxima RPS' + quem + ' estes combinados aparecem no slide 2 ("Combinados anteriores").' + (reg ? ' <a href="atas-rps.html?id=' + reg.id + '" target="_blank" style="color:#166534">Abrir a ata completa ↗</a>' : '') + '</div>';
     var comStatus = alvo === 'ant'; // o status é cobrado na reunião seguinte
     h += '<table class="ata-tb"><thead><tr><th style="width:40px">#</th><th style="text-align:left">Combinado</th><th style="width:' + (ed ? 200 : 190) + 'px">Responsável</th><th style="width:' + (ed ? 200 : 190) + 'px">Prazo</th>' + (ed ? '<th style="width:50px"></th>' : (comStatus ? '<th style="width:160px">Status</th>' : '')) + '</tr></thead><tbody>';
     ata.itens.forEach(function(i, k){
@@ -1113,9 +1171,10 @@ function telaHistorico(){ // consolidado da regional, com filtro por GD (HIST.fi
     h += '<div class="kpis" style="grid-template-columns:repeat(4,minmax(0,1fr))"><div class="kpi"><div class="l">Atas salvas</div><div class="v">' + atas.length + '</div><div class="s">' + atas.filter(function(t){ return !t.ind; }).length + ' coletivas · ' + atas.filter(function(t){ return t.ind; }).length + ' individuais</div></div>' +
       '<div class="kpi"><div class="l">Combinados</div><div class="v">' + tot + '</div><div class="s">somando todas as atas</div></div><div class="kpi ' + (ab ? 'warn' : 'ok') + '"><div class="l">Em aberto</div><div class="v">' + ab + '</div><div class="s">ainda não marcados como resolvidos</div></div>' +
       '<div class="kpi"><div class="l">Resolvidos</div><div class="v">' + (tot ? Math.round((tot - ab) / tot * 100) : 0) + '%</div><div class="s">' + (tot - ab) + ' de ' + tot + '</div></div></div>';
-    h += atas.length ? '<div class="card"><h3>Atas <small>da mais recente para a mais antiga · clique para abrir os combinados</small></h3>' + atas.map(function(t){
+    h += atas.length ? '<div class="card"><h3>Atas <small>da mais recente para a mais antiga · clique para abrir os combinados</small> <a href="atas-rps.html" target="_blank" style="float:right;font-size:12px;font-weight:800;color:var(--brand);text-decoration:none;text-transform:none;letter-spacing:0">📄 Página de atas completas ↗</a></h3>' + atas.map(function(t){
         var res = t.a.itens.filter(function(i){ return i.status === 'Resolvido'; }).length;
         return '<details class="det"><summary><b>RPS de ' + dataBr(t.data) + '</b> · ' + (varios ? 'GD ' + esc(t.gd.ab || t.gd.nm) + ' · ' : '') + (t.ind ? 'Individual — ' + esc(t.rep) : 'Coletiva') + '<span>' + t.a.itens.length + ' combinados · ' + res + ' resolvidos' + (t.a.arquivo ? ' · ' + esc(t.a.arquivo) : '') + ' · anexada em ' + dataBr(t.l.data) + '</span></summary><div class="detc">' +
+          '<div style="margin-bottom:8px"><a class="b2" style="text-decoration:none;display:inline-block" href="atas-rps.html?id=' + t.l.id + '" target="_blank">📄 Abrir a ata completa ↗</a></div>' +
           '<table class="ata-tb"><thead><tr><th style="width:40px">#</th><th style="text-align:left">Combinado</th><th style="width:190px">Responsável</th><th style="width:190px">Prazo</th><th style="width:160px">Status</th></tr></thead><tbody>' + t.a.itens.map(function(i){
             return '<tr><td>' + i.n + '</td><td class="n">' + esc(i.texto) + '</td><td>' + esc(i.resp) + '</td><td>' + esc(i.prazo) + '</td><td>' + (pode ? '<select class="st ' + COR[i.status] + '" onchange="histAtaStatus(\'' + t.l.id + '\',' + i.n + ',this)">' + STATUS.map(function(s){ return '<option' + (s === i.status ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' : esc(i.status)) + '</td></tr>'; }).join('') + '</tbody></table></div></details>'; }).join('') + '</div>'
       : '<div class="vazio"><b>Nenhuma ata salva' + (varios ? ' na regional' : ' para este distrito') + '</b>As atas ficam guardadas aqui a partir do momento em que são anexadas no último slide ("Ata desta reunião") da RPS coletiva ou individual.</div>';
