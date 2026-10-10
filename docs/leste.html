@@ -29,6 +29,18 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
 .cycle-bar{background:#fff;border-bottom:1px solid var(--border);padding:8px 28px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .cycle-btn{padding:6px 18px;border-radius:8px;border:2px solid var(--border);background:#fff;font-size:12px;font-weight:700;cursor:pointer;color:var(--gray);font-family:inherit;transition:all .15s}
 .cycle-btn.active{border-color:var(--red);color:var(--red);background:var(--red-l)}
+/* Menu em faixas: Mês · Análises · N4 | RPS | Gestão */
+.cycle-bar{flex-direction:column;align-items:stretch;gap:7px}
+.cb-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap}.cycle-bar .cycle-btn{padding:6px 13px}
+.cb-lbl{flex:none;width:72px;font-size:10px;font-weight:800;letter-spacing:.9px;text-transform:uppercase;color:var(--gray)}
+.cb-grp{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding-right:13px;margin-right:6px;border-right:1px solid var(--border)}
+.cb-grp:last-child{border-right:none;padding-right:0;margin-right:0}
+.cb-grp .cb-lbl{width:auto;margin-right:2px}
+.cb-row > .cb-grp:first-child .cb-lbl,.cb-grp.g-ges .cb-lbl{width:72px;margin-right:0}
+.cb-grp.g-n4 .cb-lbl{color:#1d4ed8}.cb-grp.g-rps .cb-lbl{color:#b45309}.cb-grp.g-ges .cb-lbl{color:#4b5563}
+.cb-grp.g-n4 .cycle-btn:not(.apres-btn){border-color:#bfdbfe}.cb-grp.g-rps .cycle-btn{border-color:#fde68a}
+.cb-fim{margin-left:auto}
+@media(max-width:700px){.cb-lbl,.cb-row > .cb-grp:first-child .cb-lbl{width:100%}.cb-grp{border-right:none;padding-right:0;margin-right:0;width:100%}.cb-fim{margin-left:0}}
 .cycle-btn:hover:not(.active){border-color:#ccc;color:var(--dark)}
 .distrito-filtro-bar{background:#FAFAFB;border-bottom:1px solid var(--border);padding:8px 28px;align-items:center;gap:10px;flex-wrap:wrap}
 .distrito-filtro-bar .df-label{font-size:12px;font-weight:700;color:var(--dark)}
@@ -3251,20 +3263,26 @@ function renderCycleBar(meses, mesAtual) {
     return '<button class="cycle-btn' + (m === mesAtual && !nenhuma ? ' active' : '') +
       '" onclick="trocarMes(\'' + m + '\')">' + m + '/2026</button>';
   }).join('');
-  btns += '<span style="display:inline-block;width:1px;height:22px;background:var(--border);margin:0 6px;align-self:center"></span>';
-  btns += '<button class="cycle-btn anual-btn'   + (isAnual   ? ' active' : '') + '" onclick="abrirVisaoAnual()">📅 Visão Anual</button>';
-  btns += '<button class="cycle-btn cota-btn'    + (isCota    ? ' active' : '') + '" onclick="abrirEvolucaoCota()">📈 Cota</button>';
-  btns += '<button class="cycle-btn freq-btn'    + (isFreq    ? ' active' : '') + '" onclick="abrirFrequencia()">🩺 Frequência</button>';
-  btns += '<button class="cycle-btn visitas-btn' + (isVisitas ? ' active' : '') + '" onclick="abrirVisitasGD()">👁 Visitas GD</button>';
-  btns += '<button class="cycle-btn gap-btn'     + (isGap     ? ' active' : '') + '" onclick="abrirGapAnalise()">🔍 Gap & Outliers</button>';
-  btns += '<button class="cycle-btn mtz-btn'     + (isMatrix  ? ' active' : '') + '" onclick="abrirMatrizPerformance()">🎯 Matriz</button>';
-  btns += '<button class="cycle-btn gloss-btn'    + (isGloss    ? ' active' : '') + '" onclick="abrirGlossario()">📖 Glossário</button>';
-  btns += '<button class="cycle-btn diagevol-btn' + (isDiagEvol ? ' active' : '') + '" onclick="abrirEvolucaoDiag()">📊 Diag. Evolução</button>';
-  btns += '<button class="cycle-btn budget-btn" onclick="window.location.href=\'budget.html?regional=LESTE\'">💰 Budget</button>';
-  btns += '<button class="cycle-btn gov-btn" onclick="window.location.href=\'planos-spi.html?regional=LESTE\'" title="Todos os planos dos GDs preenchidos na apresentação">📋 Planos Leste</button>';
-  btns += '<button class="cycle-btn gov-btn" onclick="window.location.href=\'atas-n4.html?regional=LESTE\'" title="Atas completas das N4 anexadas na apresentação">📄 Atas de N4</button>';
-  btns += '<button class="cycle-btn apres-btn" onclick="apresAbrir()" title="Mostra as seções do distrito uma por tela">▶ Apresentação N4</button>';
-  bar.innerHTML = btns;
+  // Menu em faixas: Mês · Análises · e, na última linha, os grupos N4, RPS e Gestão
+  function faixa(rot, conteudo) { return '<div class="cb-row"><span class="cb-lbl">' + rot + '</span>' + conteudo + '</div>'; }
+  function grupo(rot, cls, conteudo) { return '<div class="cb-grp ' + cls + '"><span class="cb-lbl">' + rot + '</span>' + conteudo + '</div>'; }
+  var analises =
+    '<button class="cycle-btn anual-btn'   + (isAnual   ? ' active' : '') + '" onclick="abrirVisaoAnual()">📅 Visão Anual</button>' +
+    '<button class="cycle-btn cota-btn'    + (isCota    ? ' active' : '') + '" onclick="abrirEvolucaoCota()">📈 Cota</button>' +
+    '<button class="cycle-btn freq-btn'    + (isFreq    ? ' active' : '') + '" onclick="abrirFrequencia()">🩺 Frequência</button>' +
+    '<button class="cycle-btn visitas-btn' + (isVisitas ? ' active' : '') + '" onclick="abrirVisitasGD()">👁 Visitas GD</button>' +
+    '<button class="cycle-btn mtz-btn'     + (isMatrix  ? ' active' : '') + '" onclick="abrirMatrizPerformance()">🎯 Matriz</button>' +
+    '<button class="cycle-btn gap-btn'     + (isGap     ? ' active' : '') + '" onclick="abrirGapAnalise()">🔍 Gap & Outliers</button>' +
+    '<button class="cycle-btn diagevol-btn' + (isDiagEvol ? ' active' : '') + '" onclick="abrirEvolucaoDiag()">📊 Diag. Evolução</button>' +
+    '<button class="cycle-btn gloss-btn cb-fim' + (isGloss ? ' active' : '') + '" onclick="abrirGlossario()">📖 Glossário</button>';
+  var n4 =
+    '<button class="cycle-btn apres-btn" onclick="apresAbrir()" title="Mostra as seções do distrito uma por tela">▶ Apresentação N4</button>' +
+    '<button class="cycle-btn gov-btn" onclick="window.location.href=\'planos-spi.html?regional=LESTE\'" title="Todos os planos dos GDs preenchidos na apresentação">📋 Planos Leste</button>' +
+    '<button class="cycle-btn gov-btn" onclick="window.location.href=\'atas-n4.html?regional=LESTE\'" title="Atas completas das N4 anexadas na apresentação">📄 Atas de N4</button>';
+  var gestao =
+    '<button class="cycle-btn budget-btn" onclick="window.location.href=\'budget.html?regional=LESTE\'">💰 Budget</button>';
+  bar.innerHTML = faixa('Mês', btns) + faixa('Análises', analises) +
+    '<div class="cb-row">' + grupo('N4', 'g-n4', n4) + grupo('Gestão', 'g-ges', gestao) + '</div>';
   atualizarVisibilidadeFiltroDistrito();
 }
 
