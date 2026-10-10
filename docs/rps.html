@@ -129,7 +129,7 @@ tr.tot td{background:#f3f4f6;font-weight:800}
 .pv.raiz{border-left-color:#ef4444;background:#fef2f2;border-radius:0 8px 8px 0;padding:6px 10px;font-weight:700}.pv.raiz i{color:#b91c1c}
 /* histórico do time */
 .body.rol{overflow:auto}
-.abas{display:flex;gap:8px;margin-bottom:14px}
+.abas{display:flex;gap:8px;margin-bottom:14px;align-items:center}
 .abas button{background:#fff;border:1.5px solid var(--border);border-radius:9px;padding:8px 18px;font-size:13px;font-weight:800;color:var(--gray);cursor:pointer}
 .abas button.on{background:var(--brand);border-color:var(--brand);color:#fff}
 .det{border:1px solid var(--border);border-left:5px solid var(--brand);border-radius:10px;margin-bottom:10px;overflow:hidden}
@@ -234,9 +234,9 @@ function telaEntrada(){
     '<div class="modelos">' +
       '<button class="modelo' + (ST.modelo === 'coletiva' ? ' on' : '') + '" onclick="ST.modelo=\'coletiva\';telaEntrada()"><i><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="2.6"/><path d="M7.4 17.5c0-2.6 2-4.4 4.6-4.4s4.6 1.8 4.6 4.4"/><circle cx="5.2" cy="9.6" r="1.9"/><path d="M2 16.4c0-1.9 1.3-3.2 3.2-3.2"/><circle cx="18.8" cy="9.6" r="1.9"/><path d="M22 16.4c0-1.9-1.3-3.2-3.2-3.2"/></svg></i><b>Coletiva</b><span>1ª reunião do mês, com todo o time do distrito: fechamento, marcas-chave, produtividade e os setores prioritários.</span></button>' +
       '<button class="modelo' + (ST.modelo === 'individual' ? ' on' : '') + '" onclick="ST.modelo=\'individual\';telaEntrada()"><i><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.6"/><path d="M5 20c0-3.9 3.1-6.4 7-6.4s7 2.5 7 6.4"/></svg></i><b>Individual</b><span>Demais reuniões, 30 min por representante: retrato do setor, marcas-chave em desvio e planos com 5 porquês + 5W2H.</span></button>' +
-      '<button class="modelo' + (ST.modelo === 'historico' ? ' on' : '') + '" onclick="ST.modelo=\'historico\';telaEntrada()"><i><svg viewBox="0 0 24 24"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/><path d="M10 12h5M10 16h5"/></svg></i><b>Histórico do time</b><span>Consulta: planos dos representantes no mês e todas as atas anexadas, com o status de cada ação e combinado.</span></button>' +
+      '<button class="modelo' + (ST.modelo === 'historico' ? ' on' : '') + '" onclick="ST.modelo=\'historico\';telaEntrada()"><i><svg viewBox="0 0 24 24"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/><path d="M10 12h5M10 16h5"/></svg></i><b>Histórico do time</b><span>Consulta consolidada da regional, com filtro por GD: planos dos representantes, evolução, ações e todas as atas anexadas.</span></button>' +
     '</div><div class="form">' +
-      '<div><label>GD</label><select id="e-gd">' + ST.distritos.map(function(d){ return '<option value="' + d.distrito_id + '"' + (d.distrito_id === ST.gd ? ' selected' : '') + '>' + esc(d.nm) + ' (' + d.linha + ')</option>'; }).join('') + '</select></div>' +
+      '<div><label>GD</label><select id="e-gd">' + (ST.modelo === 'historico' ? '<option value=""' + (HIST.filtro ? '' : ' selected') + '>Todos os GDs — regional</option>' : '') + ST.distritos.map(function(d){ return '<option value="' + d.distrito_id + '"' + (d.distrito_id === (ST.modelo === 'historico' ? HIST.filtro : ST.gd) ? ' selected' : '') + '>' + esc(d.nm) + ' (' + d.linha + ')</option>'; }).join('') + '</select></div>' +
       '<div><label>Mês dos dados</label><select id="e-mes">' + ST.meses.map(function(m){ return '<option' + (m === ST.mes ? ' selected' : '') + '>' + m + '</option>'; }).join('') + '</select></div>' +
       '<div><label>Data da RPS</label><input type="date" id="e-data" value="' + ST.data + '"></div>' +
       '<button class="ir" onclick="abrir()">' + (ST.modelo === 'historico' ? 'Abrir histórico →' : 'Abrir apresentação →') + '</button>' +
@@ -245,11 +245,24 @@ function telaEntrada(){
 }
 
 async function abrir(){
-  ST.gd = $('e-gd').value; ST.mes = $('e-mes').value; ST.data = $('e-data').value || hoje();
-  $('stage').innerHTML = '<div class="slide on"><div class="capa"><h2>Montando…</h2></div></div>';
+  var esc0 = $('e-gd').value; ST.mes = $('e-mes').value; ST.data = $('e-data').value || hoje();
+  $('stage').innerHTML = '<div class="slide on"><div class="capa"><h2 id="montando">Montando…</h2></div></div>';
+  ST.previa = null; ST.edit = null; ST.alvo = 'ant';
+  if (ST.modelo === 'historico'){ // consolidado: carrega todos os distritos; o filtro por GD fica dentro da página
+    HIST.filtro = esc0; HIST.dist = {}; ST.lanc = await fetchAba('budget_lancamentos', true);
+    for (var k = 0; k < ST.distritos.length; k++){ $('montando').textContent = 'Carregando ' + (k + 1) + ' de ' + ST.distritos.length + ' GDs…'; HIST.dist[ST.distritos[k].distrito_id] = await carregarDistrito(ST.distritos[k], ST.mes); }
+    ST.gd = esc0 || (ST.distritos[0] || {}).distrito_id; ST.d = HIST.dist[ST.gd];
+    return telaHistorico();
+  }
+  ST.gd = esc0;
   var d = ST.distritos.filter(function(x){ return x.distrito_id === ST.gd; })[0];
   if (!d) return telaEntrada();
-  var L = d.linha, m = ST.mes;
+  ST.lanc = await fetchAba('budget_lancamentos', true);
+  ST.d = await carregarDistrito(d, ST.mes);
+  if (ST.modelo === 'individual') telaReps(); else montar();
+}
+async function carregarDistrito(d, m){ // dados de um distrito no mês, cada fonte no último mês que tem resultado
+  var L = d.linha;
   function doD(arr){ return (arr || []).filter(function(x){ return x.distrito_id === d.distrito_id; }); }
   function temD(rows){ return doD(rows).length > 0; }
   // em série, por causa da cota do Sheets
@@ -260,19 +273,17 @@ async function abrir(){
   var pd = await fetchAba('produtos_dist_' + L + '_' + ref.prod), jor = await fetchAba('jornada');
   var dRef = ref.reps === m ? d : (doD(await fetchAba('distritos_' + ref.reps))[0] || d);
   var distAnt = aR ? doD(await fetchAba('distritos_' + aR))[0] || null : null, pexAnt = aX ? doD(await fetchAba('pex_' + aX)) : [];
-  ST.lanc = await fetchAba('budget_lancamentos', true);
   await carregarExtra();
   var pref = d.distrito_id.substring(0, 6);
   [['freq', EXTRA.freq], ['sob', EXTRA.sobrep]].forEach(function(par){ // frequência e sobreposição têm snapshots em meses diferentes
     for (var mf = m, nf = 0; mf && nf < 6; mf = mesAnt(mf), nf++){ if ((par[1][mf] || []).some(function(l){ return l.substring(0, 6) === pref; })){ ref[par[0]] = mf; break; } } });
   var dist = {}; Object.keys(d).forEach(function(k){ dist[k] = d[k]; }); dist.prod = dRef.prod;
-  ST.d = { dist: dist, ref: ref, antReps: aR, antPex: aX, reps: doD(uR.rows).filter(function(x){ return x.vago !== 'True'; }), pd: doD(pd), pr: doD(uP.rows), pex: doD(uX.rows), pexAnt: pexAnt, jor: jor,
+  var o = { dist: dist, ref: ref, antReps: aR, antPex: aX, reps: doD(uR.rows).filter(function(x){ return x.vago !== 'True'; }), pd: doD(pd), pr: doD(uP.rows), pex: doD(uX.rows), pexAnt: pexAnt, jor: jor,
            distAnt: distAnt, histD: [] };
   // evolução do distrito: os três meses até o escolhido, cada um com o dado do próprio mês
   var ms = [mesAnt(mesAnt(m) || ''), mesAnt(m), m].filter(Boolean);
-  for (var i = 0; i < ms.length; i++) ST.d.histD.push({ mes: ms[i], dist: doD(await fetchAba('distritos_' + ms[i]))[0] || null, pd: doD(await fetchAba('produtos_dist_' + L + '_' + ms[i])) });
-  ST.previa = null; ST.edit = null; ST.alvo = 'ant';
-  if (ST.modelo === 'individual') telaReps(); else if (ST.modelo === 'historico') telaHistorico(); else montar();
+  for (var i = 0; i < ms.length; i++) o.histD.push({ mes: ms[i], dist: doD(await fetchAba('distritos_' + ms[i]))[0] || null, pd: doD(await fetchAba('produtos_dist_' + L + '_' + ms[i])) });
+  return o;
 }
 
 // ── último resultado disponível ──
@@ -1002,7 +1013,7 @@ function montarIndividual(){
 // status de execução de cada ação. Aba Atas: todas as atas anexadas
 // (RPS_ATA), coletivas e individuais, com os combinados e o status.
 var ACAO_ST = ['Pendente', 'Em andamento', 'Concluída', 'Não realizada'], ACAO_COR = { 'Pendente': 'warn', 'Em andamento': 'warn', 'Concluída': 'ok', 'Não realizada': 'crit' };
-var HIST = { aba: 'planos' };
+var HIST = { aba: 'planos', filtro: '', dist: null }; // dist[distrito_id] = dados do distrito (mesmo formato de ST.d)
 
 async function gravarLinha(reg, obj){ // regrava o JSON de uma linha existente (status de ação ou de combinado)
   try {
@@ -1027,67 +1038,94 @@ function histExigidos(){
   ST.setor = guarda; return out;
 }
 
-function telaHistorico(){
+function telaHistorico(){ // consolidado da regional, com filtro por GD (HIST.filtro = '' → todos)
   ST.slides = [];
-  var D = ST.d.dist, pode = !!(CONFIG.budget_webapp_url && CONFIG.budget_token);
-  $('ctx').textContent = 'Histórico do time · ' + D.nm + ' · ' + ST.mes + '/2026';
+  var pode = !!(CONFIG.budget_webapp_url && CONFIG.budget_token);
+  var todos = ST.distritos.filter(function(d){ return HIST.dist && HIST.dist[d.distrito_id]; });
+  if (HIST.filtro && !todos.some(function(d){ return d.distrito_id === HIST.filtro; })) HIST.filtro = '';
+  var gds = todos.filter(function(d){ return !HIST.filtro || d.distrito_id === HIST.filtro; }), varios = gds.length > 1;
+  var rotulo = HIST.filtro ? gds[0].nm : 'Regional SPI Oeste · ' + todos.length + ' GDs';
+  $('ctx').textContent = 'Histórico do time · ' + rotulo + ' · ' + ST.mes + '/2026';
   $('b-trocar').style.display = ''; $('b-rep').style.display = 'none'; $('dots').innerHTML = ''; $('cnt').textContent = ''; $('b-prev').disabled = $('b-next').disabled = true;
-  var nomeRep = {}; ST.d.reps.forEach(function(r){ nomeRep[r.setor_id] = r.nome; });
-  var h = '<div class="abas"><button class="' + (HIST.aba === 'planos' ? 'on' : '') + '" onclick="HIST.aba=\'planos\';telaHistorico()">🧭 Planos</button><button class="' + (HIST.aba === 'atas' ? 'on' : '') + '" onclick="HIST.aba=\'atas\';telaHistorico()">📎 Atas</button></div>';
+  var h = '<div class="abas"><button class="' + (HIST.aba === 'planos' ? 'on' : '') + '" onclick="HIST.aba=\'planos\';telaHistorico()">🧭 Planos</button><button class="' + (HIST.aba === 'atas' ? 'on' : '') + '" onclick="HIST.aba=\'atas\';telaHistorico()">📎 Atas</button>' +
+    '<span style="flex:1"></span><label style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--gray);align-self:center">GD</label>' +
+    '<select onchange="HIST.filtro=this.value;telaHistorico()" style="border:1.5px solid var(--border);border-radius:9px;padding:7px 12px;font-size:13px;font-weight:700;background:#fff;min-width:300px"><option value="">Todos os GDs — regional</option>' +
+    todos.map(function(d){ return '<option value="' + d.distrito_id + '"' + (d.distrito_id === HIST.filtro ? ' selected' : '') + '>' + esc(d.nm) + ' (' + d.linha + ')</option>'; }).join('') + '</select></div>';
+  function tdGd(D, span){ return varios ? '<td' + (span > 1 ? ' rowspan="' + span + '"' : '') + '><span class="tag foco" style="white-space:nowrap">' + esc(D.ab || D.nm.split(' ')[0]) + '</span></td>' : ''; }
+  var thGd = varios ? '<th>GD</th>' : '';
+  var gGd = ST.gd, gD = ST.d, gSetor = ST.setor;
 
   if (HIST.aba === 'planos'){
-    var ex = histExigidos(), planos = {}, evol = '', semBase = []; // planos[setor][chave] = {l, p}
-    histLinhas('RPS_PLANO').forEach(function(l){ var x = l.crm.split('|'), p = x[0] === 'rpsi' ? histJson(l) : null; if (!p || (x[3] !== ST.mes && p.encerrado)) return; // do mês, ou de outro mês ainda em andamento
-      var s = (planos[x[1]] = planos[x[1]] || {}), ja = s[x[2]]; if (!ja || !p.encerrado || ja.p.encerrado) s[x[2]] = { l: l, p: p, mes: x[3] }; });
-    var cols = ['Fundamentos'].concat(marcas(D.linha, ST.mes)), nPl = 0, nAc = 0, nConc = 0, nPend = 0, repsCom = 0, linhas = '', acoes = '', completos = '';
-    ST.d.reps.forEach(function(r){
-      var meus = planos[r.setor_id] || {}, exig = {}; (ex[r.setor_id] || []).forEach(function(e){ exig[e[1]] = e[0]; });
-      if (Object.keys(meus).length) repsCom++;
-      linhas += '<tr><td class="n">' + esc(r.nome) + '</td>' + cols.map(function(c){ var ch = c === 'Fundamentos' ? 'fund' : 'marca-' + c.replace(/[^A-Z0-9]+/g, '_');
-        if (ch === 'fund' && (meus.fund || meus.fund2)) return '<td><span class="p ok">✓ feito' + (meus.fund && meus.fund2 ? ' (2 planos)' : '') + '</span></td>';
-        if (meus[ch]) return '<td><span class="p ok">✓ feito</span></td>'; if (exig[c]){ nPend++; return '<td><span class="p crit">pendente</span></td>'; } return '<td style="color:#d1d5db">—</td>'; }).join('') + '</tr>';
-      Object.keys(meus).forEach(function(ch){ var o = meus[ch], p = o.p, tit = planoTitulo(ch); nPl++;
-        var gSet = ST.setor; ST.setor = r.setor_id; var atual = medir(ch); ST.setor = gSet;
-        if (!p.base) semBase.push({ ch: ch, p: p, l: o.l, setor: r.setor_id });
-        var evs = evolDados(ch, p, atual); evs.forEach(function(e, k){ evol += '<tr>' + (k === 0 ? '<td class="n" rowspan="' + evs.length + '">' + esc(r.nome) + '</td><td rowspan="' + evs.length + '">' + esc(tit) + '</td><td rowspan="' + evs.length + '">' + dataBr(criadoDe(o.l)) + '</td><td rowspan="' + evs.length + '">' + revisaoTag(p, hoje()) + '</td>' : '') +
-          '<td style="text-align:left"><b>' + esc(e.nome) + '</b></td><td style="text-align:left">' + evolChips(e.pontos) + '</td><td>' + e.delta + '</td></tr>'; });
-        p.acoes.forEach(function(a, k){ nAc++; var st = ACAO_ST.indexOf(a.status) >= 0 ? a.status : 'Pendente'; if (st === 'Concluída') nConc++;
-          acoes += '<tr>' + (k === 0 ? '<td class="n" rowspan="' + p.acoes.length + '">' + esc(r.nome) + '</td><td rowspan="' + p.acoes.length + '">' + esc(tit) + '</td><td rowspan="' + p.acoes.length + '" style="text-align:left">' + esc(raizDe(p) || '—') + '</td>' : '') +
-            '<td style="text-align:left">' + (esc(a.oque) || '—') + '</td><td>' + (esc(a.quem) || '—') + '</td><td>' + (esc(a.quando) || '—') + '</td><td>' +
-            (pode ? '<select class="st ' + ACAO_COR[st] + '" onchange="histAcaoStatus(\'' + o.l.id + '\',' + k + ',this)">' + ACAO_ST.map(function(s){ return '<option' + (s === st ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' : st) + '</td></tr>'; });
-        completos += '<details class="det"><summary><b>' + esc(r.nome) + '</b> · ' + esc(tit) + '<span>causa raiz: ' + esc(raizDe(p) || '—') + ' · criado em ' + dataBr(criadoDe(o.l)) + (p.revisao && !p.encerrado ? ' · próxima revisão ' + dataBr(p.revisao) : '') + (p.encerrado ? ' · encerrado em ' + dataBr(p.encerrado.data) : '') + '</span></summary><div class="detc">' +
-          '<div class="pp"><b>Problema</b>' + esc(p.problema) + '</div><div class="pcols"><div><b class="psub">5 porquês</b>' + p.porques.map(function(t, k){ var rz = !p.raiz && k === p.porques.length - 1; return '<div class="pv' + (rz ? ' raiz' : '') + '"><i>' + (rz ? 'Causa raiz' : (k + 1) + 'º por quê') + '</i>' + esc(t) + '</div>'; }).join('') + (p.raiz ? '<div class="pv raiz"><i>Causa raiz</i>' + esc(p.raiz) + '</div>' : '') +
-          '</div><div><b class="psub">Plano de ação — 5W2H</b><table class="wt ver"><thead><tr>' + W.map(function(w){ return '<th>' + w[1] + '</th>'; }).join('') + '</tr></thead><tbody>' + p.acoes.map(function(a){ return '<tr>' + W.map(function(w){ return '<td>' + (esc(a[w[0]]) || '—') + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div></div></div></details>'; });
+    var nPl = 0, nAc = 0, nConc = 0, nPend = 0, repsCom = 0, nReps = 0, evol = '', acoes = '', completos = '', matriz = '', resumo = '', semBase = [];
+    gds.forEach(function(dd){
+      ST.gd = dd.distrito_id; ST.d = HIST.dist[ST.gd]; var D = ST.d.dist;
+      var ex = histExigidos(), planos = {}; // planos[setor][chave] = {l, p}
+      histLinhas('RPS_PLANO').forEach(function(l){ var x = l.crm.split('|'), p = x[0] === 'rpsi' ? histJson(l) : null; if (!p || (x[3] !== ST.mes && p.encerrado)) return; // do mês, ou de outro mês ainda em andamento
+        var s = (planos[x[1]] = planos[x[1]] || {}), ja = s[x[2]]; if (!ja || !p.encerrado || ja.p.encerrado) s[x[2]] = { l: l, p: p, mes: x[3] }; });
+      var cols = ['Fundamentos'].concat(marcas(D.linha, ST.mes)), linhas = '', g = { pl: 0, ac: 0, conc: 0, pend: 0, com: 0, atras: 0 };
+      ST.d.reps.forEach(function(r){
+        var meus = planos[r.setor_id] || {}, exig = {}; (ex[r.setor_id] || []).forEach(function(e){ exig[e[1]] = e[0]; });
+        if (Object.keys(meus).length) g.com++;
+        linhas += '<tr><td class="n">' + esc(r.nome) + '</td>' + cols.map(function(c){ var ch = c === 'Fundamentos' ? 'fund' : 'marca-' + c.replace(/[^A-Z0-9]+/g, '_');
+          if (ch === 'fund' && (meus.fund || meus.fund2)) return '<td><span class="p ok">✓ feito' + (meus.fund && meus.fund2 ? ' (2 planos)' : '') + '</span></td>';
+          if (meus[ch]) return '<td><span class="p ok">✓ feito</span></td>'; if (exig[c]){ g.pend++; return '<td><span class="p crit">pendente</span></td>'; } return '<td style="color:#d1d5db">—</td>'; }).join('') + '</tr>';
+        Object.keys(meus).forEach(function(ch){ var o = meus[ch], p = o.p, tit = planoTitulo(ch); g.pl++;
+          ST.setor = r.setor_id; var atual = medir(ch);
+          if (!p.base) semBase.push({ ch: ch, p: p, l: o.l, setor: r.setor_id, gd: ST.gd });
+          if (!p.encerrado && p.revisao && p.revisao < hoje()) g.atras++;
+          var evs = evolDados(ch, p, atual); evs.forEach(function(e, k){ evol += '<tr>' + (k === 0 ? tdGd(D, evs.length) + '<td class="n" rowspan="' + evs.length + '">' + esc(r.nome) + '</td><td rowspan="' + evs.length + '">' + esc(tit) + '</td><td rowspan="' + evs.length + '">' + dataBr(criadoDe(o.l)) + '</td><td rowspan="' + evs.length + '">' + revisaoTag(p, hoje()) + '</td>' : '') +
+            '<td style="text-align:left"><b>' + esc(e.nome) + '</b></td><td style="text-align:left">' + evolChips(e.pontos) + '</td><td>' + e.delta + '</td></tr>'; });
+          p.acoes.forEach(function(a, k){ g.ac++; var st = ACAO_ST.indexOf(a.status) >= 0 ? a.status : 'Pendente'; if (st === 'Concluída') g.conc++;
+            acoes += '<tr>' + (k === 0 ? tdGd(D, p.acoes.length) + '<td class="n" rowspan="' + p.acoes.length + '">' + esc(r.nome) + '</td><td rowspan="' + p.acoes.length + '">' + esc(tit) + '</td><td rowspan="' + p.acoes.length + '" style="text-align:left">' + esc(raizDe(p) || '—') + '</td>' : '') +
+              '<td style="text-align:left">' + (esc(a.oque) || '—') + '</td><td>' + (esc(a.quem) || '—') + '</td><td>' + (esc(a.quando) || '—') + '</td><td>' +
+              (pode ? '<select class="st ' + ACAO_COR[st] + '" onchange="histAcaoStatus(\'' + o.l.id + '\',' + k + ',this)">' + ACAO_ST.map(function(s){ return '<option' + (s === st ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' : st) + '</td></tr>'; });
+          completos += '<details class="det"><summary><b>' + esc(r.nome) + '</b> · ' + esc(tit) + (varios ? ' · GD ' + esc(D.ab || D.nm) : '') + '<span>causa raiz: ' + esc(raizDe(p) || '—') + ' · criado em ' + dataBr(criadoDe(o.l)) + (p.revisao && !p.encerrado ? ' · próxima revisão ' + dataBr(p.revisao) : '') + (p.encerrado ? ' · encerrado em ' + dataBr(p.encerrado.data) : '') + '</span></summary><div class="detc">' +
+            '<div class="pp"><b>Problema</b>' + esc(p.problema) + '</div><div class="pcols"><div><b class="psub">5 porquês</b>' + p.porques.map(function(t, k){ var rz = !p.raiz && k === p.porques.length - 1; return '<div class="pv' + (rz ? ' raiz' : '') + '"><i>' + (rz ? 'Causa raiz' : (k + 1) + 'º por quê') + '</i>' + esc(t) + '</div>'; }).join('') + (p.raiz ? '<div class="pv raiz"><i>Causa raiz</i>' + esc(p.raiz) + '</div>' : '') +
+            '</div><div><b class="psub">Plano de ação — 5W2H</b><table class="wt ver"><thead><tr>' + W.map(function(w){ return '<th>' + w[1] + '</th>'; }).join('') + '</tr></thead><tbody>' + p.acoes.map(function(a){ return '<tr>' + W.map(function(w){ return '<td>' + (esc(a[w[0]]) || '—') + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div></div></div></details>'; });
+      });
+      var nAtas = histLinhas('RPS_ATA').length;
+      resumo += '<tr style="cursor:pointer" onclick="HIST.filtro=\'' + ST.gd + '\';telaHistorico()" title="Ver só este GD"><td class="n">' + esc(D.nm) + '</td><td>' + D.linha + '</td><td><b>' + g.com + ' de ' + ST.d.reps.length + '</b></td><td>' + g.pl + '</td><td>' + (g.pend ? '<span class="p crit">' + g.pend + '</span>' : '<span class="p ok">0</span>') + '</td>' +
+        '<td>' + (g.ac ? g.conc + ' de ' + g.ac + ' · ' + Math.round(g.conc / g.ac * 100) + '%' : '—') + '</td><td>' + (g.atras ? '<span class="p crit">' + g.atras + '</span>' : '0') + '</td><td>' + nAtas + '</td></tr>';
+      matriz += '<div class="card"><h3>' + (varios ? esc(D.nm) + ' <small>' + D.linha + ' · ' : 'Planos por representante <small>') + ST.mes + '/2026 · "pendente" = há desvio e o plano não foi preenchido</small></h3><table><thead><tr><th>Representante</th>' + cols.map(function(c){ return '<th>' + c + '</th>'; }).join('') + '</tr></thead><tbody>' + linhas + '</tbody></table></div>';
+      nPl += g.pl; nAc += g.ac; nConc += g.conc; nPend += g.pend; repsCom += g.com; nReps += ST.d.reps.length;
     });
-    h += '<div class="kpis"><div class="kpi"><div class="l">Representantes com plano</div><div class="v">' + repsCom + ' de ' + ST.d.reps.length + '</div><div class="s">em ' + ST.mes + '/2026</div></div>' +
+    h += '<div class="kpis"><div class="kpi"><div class="l">Representantes com plano</div><div class="v">' + repsCom + ' de ' + nReps + '</div><div class="s">em ' + ST.mes + '/2026</div></div>' +
       '<div class="kpi"><div class="l">Planos preenchidos</div><div class="v">' + nPl + '</div><div class="s">fundamentos e marcas-chave</div></div>' +
       '<div class="kpi ' + (nPend ? 'crit' : 'ok') + '"><div class="l">Planos pendentes</div><div class="v">' + nPend + '</div><div class="s">exigidos pelo desvio e não preenchidos</div></div>' +
       '<div class="kpi"><div class="l">Ações</div><div class="v">' + nAc + '</div><div class="s">somando todos os planos</div></div>' +
       '<div class="kpi ' + (nAc && nConc === nAc ? 'ok' : '') + '"><div class="l">Execução</div><div class="v">' + (nAc ? Math.round(nConc / nAc * 100) : 0) + '%</div><div class="s">' + nConc + ' de ' + nAc + ' ações concluídas</div></div></div>';
-    h += '<div class="card"><h3>Planos por representante <small>' + ST.mes + '/2026 · "pendente" = há desvio e o plano não foi preenchido</small></h3><table><thead><tr><th>Representante</th>' + cols.map(function(c){ return '<th>' + c + '</th>'; }).join('') + '</tr></thead><tbody>' + linhas + '</tbody></table></div>';
-    if (evol) h += '<div class="card"><h3>Evolução dos planos <small>base gravada quando o plano foi salvo · uma medição a cada RPS individual seguinte · atual = dado mais recente</small></h3><table><thead><tr><th>Representante</th><th>Plano</th><th>Criado em</th><th>Próxima revisão</th><th style="text-align:left">Acompanha</th><th style="text-align:left">Linha do tempo</th><th>Variação (atual − base)</th></tr></thead><tbody>' + evol + '</tbody></table></div>';
+    if (varios) h += '<div class="card"><h3>Resumo por GD <small>clique na linha para ver só aquele GD</small></h3><table><thead><tr><th>GD</th><th>Linha</th><th>Reps com plano</th><th>Planos</th><th>Planos pendentes</th><th>Ações concluídas</th><th>Revisões atrasadas</th><th>Atas salvas</th></tr></thead><tbody>' + resumo + '</tbody></table></div>';
+    if (evol) h += '<div class="card"><h3>Evolução dos planos <small>base gravada quando o plano foi salvo · uma medição a cada RPS individual seguinte · atual = dado mais recente</small></h3><table><thead><tr>' + thGd + '<th>Representante</th><th>Plano</th><th>Criado em</th><th>Próxima revisão</th><th style="text-align:left">Acompanha</th><th style="text-align:left">Linha do tempo</th><th>Variação (atual − base)</th></tr></thead><tbody>' + evol + '</tbody></table></div>';
     if (semBase.length && pode){ HIST.tentou = HIST.tentou || {}; var novos = semBase.filter(function(x){ return !HIST.tentou[x.l.id]; });
-      if (novos.length){ novos.forEach(function(x){ HIST.tentou[x.l.id] = 1; }); setTimeout(async function(){ var g = ST.setor, gravou = false; for (var i = 0; i < novos.length; i++){ ST.setor = novos[i].setor; if (await planoAcompanhar(novos[i].ch, novos[i].p, novos[i].l, null)) gravou = true; } ST.setor = g; if (gravou && ST.modelo === 'historico') telaHistorico(); }, 0); } }
-    h += nAc ? '<div class="card"><h3>Ações <small>marque o status conforme a execução</small></h3><table><thead><tr><th>Representante</th><th>Plano</th><th style="text-align:left">Causa raiz</th><th style="text-align:left">O quê</th><th>Quem</th><th>Quando</th><th>Status</th></tr></thead><tbody>' + acoes + '</tbody></table></div>' +
-      '<div class="card"><h3>Planos completos <small>clique para abrir</small></h3>' + completos + '</div>'
+      if (novos.length){ novos.forEach(function(x){ HIST.tentou[x.l.id] = 1; }); setTimeout(async function(){ var a1 = ST.gd, a2 = ST.d, a3 = ST.setor, gravou = false;
+        for (var i = 0; i < novos.length; i++){ ST.gd = novos[i].gd; ST.d = HIST.dist[ST.gd]; ST.setor = novos[i].setor; if (await planoAcompanhar(novos[i].ch, novos[i].p, novos[i].l, null)) gravou = true; }
+        ST.gd = a1; ST.d = a2; ST.setor = a3; if (gravou && ST.modelo === 'historico') telaHistorico(); }, 0); } }
+    h += nAc ? '<div class="card"><h3>Ações <small>marque o status conforme a execução</small></h3><table><thead><tr>' + thGd + '<th>Representante</th><th>Plano</th><th style="text-align:left">Causa raiz</th><th style="text-align:left">O quê</th><th>Quem</th><th>Quando</th><th>Status</th></tr></thead><tbody>' + acoes + '</tbody></table></div>'
       : '<div class="vazio"><b>Nenhum plano salvo em ' + ST.mes + '/2026</b>Os planos aparecem aqui quando são preenchidos na RPS individual de cada representante.</div>';
+    h += matriz;
+    if (nAc) h += '<div class="card"><h3>Planos completos <small>clique para abrir</small></h3>' + completos + '</div>';
   } else {
-    var atas = histLinhas('RPS_ATA').map(function(l){ var x = l.crm.split('|'), a = histJson(l); return a ? { l: l, a: a, ind: x[0] === 'rpsi', setor: x[0] === 'rpsi' ? x[1] : '', data: x[x.length - 1] } : null; }).filter(Boolean)
-      .sort(function(p, q){ return q.data.localeCompare(p.data); });
+    var atas = [];
+    gds.forEach(function(dd){ ST.gd = dd.distrito_id; ST.d = HIST.dist[ST.gd]; var nomeRep = {}; ST.d.reps.forEach(function(r){ nomeRep[r.setor_id] = r.nome; });
+      histLinhas('RPS_ATA').forEach(function(l){ var x = l.crm.split('|'), a = histJson(l); if (a) atas.push({ l: l, a: a, ind: x[0] === 'rpsi', rep: x[0] === 'rpsi' ? (nomeRep[x[1]] || l.medico || x[1]) : '', data: x[x.length - 1], gd: ST.d.dist }); }); });
+    atas.sort(function(p, q){ return q.data.localeCompare(p.data) || p.gd.nm.localeCompare(q.gd.nm); });
     var ab = 0, tot = 0; atas.forEach(function(t){ t.a.itens.forEach(function(i){ tot++; if (i.status !== 'Resolvido') ab++; }); });
     h += '<div class="kpis" style="grid-template-columns:repeat(4,minmax(0,1fr))"><div class="kpi"><div class="l">Atas salvas</div><div class="v">' + atas.length + '</div><div class="s">' + atas.filter(function(t){ return !t.ind; }).length + ' coletivas · ' + atas.filter(function(t){ return t.ind; }).length + ' individuais</div></div>' +
       '<div class="kpi"><div class="l">Combinados</div><div class="v">' + tot + '</div><div class="s">somando todas as atas</div></div><div class="kpi ' + (ab ? 'warn' : 'ok') + '"><div class="l">Em aberto</div><div class="v">' + ab + '</div><div class="s">ainda não marcados como resolvidos</div></div>' +
       '<div class="kpi"><div class="l">Resolvidos</div><div class="v">' + (tot ? Math.round((tot - ab) / tot * 100) : 0) + '%</div><div class="s">' + (tot - ab) + ' de ' + tot + '</div></div></div>';
     h += atas.length ? '<div class="card"><h3>Atas <small>da mais recente para a mais antiga · clique para abrir os combinados</small></h3>' + atas.map(function(t){
         var res = t.a.itens.filter(function(i){ return i.status === 'Resolvido'; }).length;
-        return '<details class="det"><summary><b>RPS de ' + dataBr(t.data) + '</b> · ' + (t.ind ? 'Individual — ' + esc(nomeRep[t.setor] || t.l.medico || t.setor) : 'Coletiva') + '<span>' + t.a.itens.length + ' combinados · ' + res + ' resolvidos' + (t.a.arquivo ? ' · ' + esc(t.a.arquivo) : '') + ' · anexada em ' + dataBr(t.l.data) + '</span></summary><div class="detc">' +
+        return '<details class="det"><summary><b>RPS de ' + dataBr(t.data) + '</b> · ' + (varios ? 'GD ' + esc(t.gd.ab || t.gd.nm) + ' · ' : '') + (t.ind ? 'Individual — ' + esc(t.rep) : 'Coletiva') + '<span>' + t.a.itens.length + ' combinados · ' + res + ' resolvidos' + (t.a.arquivo ? ' · ' + esc(t.a.arquivo) : '') + ' · anexada em ' + dataBr(t.l.data) + '</span></summary><div class="detc">' +
           '<table class="ata-tb"><thead><tr><th style="width:40px">#</th><th style="text-align:left">Combinado</th><th style="width:190px">Responsável</th><th style="width:190px">Prazo</th><th style="width:160px">Status</th></tr></thead><tbody>' + t.a.itens.map(function(i){
             return '<tr><td>' + i.n + '</td><td class="n">' + esc(i.texto) + '</td><td>' + esc(i.resp) + '</td><td>' + esc(i.prazo) + '</td><td>' + (pode ? '<select class="st ' + COR[i.status] + '" onchange="histAtaStatus(\'' + t.l.id + '\',' + i.n + ',this)">' + STATUS.map(function(s){ return '<option' + (s === i.status ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' : esc(i.status)) + '</td></tr>'; }).join('') + '</tbody></table></div></details>'; }).join('') + '</div>'
-      : '<div class="vazio"><b>Nenhuma ata salva para este distrito</b>As atas ficam guardadas aqui a partir do momento em que são anexadas no último slide ("Ata desta reunião") da RPS coletiva ou individual.</div>';
+      : '<div class="vazio"><b>Nenhuma ata salva' + (varios ? ' na regional' : ' para este distrito') + '</b>As atas ficam guardadas aqui a partir do momento em que são anexadas no último slide ("Ata desta reunião") da RPS coletiva ou individual.</div>';
   }
+  ST.gd = gGd; ST.d = gD; ST.setor = gSetor;
   var abertos = [].map.call(document.querySelectorAll('details.det[open] summary b'), function(b){ return b.parentNode.textContent; });
-  $('stage').innerHTML = '<div class="slide on"><div class="hdr"><h2>Histórico do time</h2><span>' + esc(D.nm) + ' · planos de ' + ST.mes + '/2026 e todas as atas anexadas</span></div><div class="body rol">' + h + '</div></div>';
+  var corpo = document.querySelector('#stage .body.rol'), rolagem = corpo ? corpo.scrollTop : 0;
+  $('stage').innerHTML = '<div class="slide on"><div class="hdr"><h2>Histórico do time</h2><span>' + esc(rotulo) + ' · planos de ' + ST.mes + '/2026 e todas as atas anexadas</span></div><div class="body rol">' + h + '</div></div>';
   [].forEach.call(document.querySelectorAll('details.det'), function(d){ if (abertos.indexOf(d.querySelector('summary').textContent) >= 0) d.open = true; });
+  document.querySelector('#stage .body.rol').scrollTop = rolagem;
 }
 
 // ── montagem e navegação ──
