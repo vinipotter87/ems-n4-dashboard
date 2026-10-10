@@ -3238,7 +3238,9 @@ function aplicarFiltroDistrito(distritoId) {
 function abrirDetalheDoFiltroAtivo() {
   if (!DISTRITO_FILTRO) return;
   DISTRITO_ATIVO = null; // garante que abrirDistrito abra em vez de fazer toggle-fechar
-  abrirDistrito(DISTRITO_FILTRO);
+  window._semRolar = true; // filtrar por GD não desce a página até o detalhe do distrito
+  try { abrirDistrito(DISTRITO_FILTRO); } finally { window._semRolar = false; }
+  window.scrollTo(0, 0);
 }
 
 function atualizarVisibilidadeFiltroDistrito() {
@@ -5972,7 +5974,8 @@ function abrirDistrito(distritoId) {
     panel.classList.add('open');
     // Re-renderiza os cards para marcar o ativo
     reRenderGrids(d.distritos, d.reps);
-    setTimeout(function() { panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 50);
+    // aberto por clique no card: rola até o detalhe; aberto pelo filtro de GD: a página fica no topo
+    if (!window._semRolar) setTimeout(function() { panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 50);
   }
 }
 
