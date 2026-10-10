@@ -3119,11 +3119,10 @@ function apresSair() {
   document.getElementById('apres').classList.remove('on');
   document.body.classList.remove('apres-on');
   document.getElementById('ap-stage').innerHTML = '';
-  // as seções foram movidas para os slides: monta a página do mês de novo
-  // (pelo filtro de distrito, que também reabre o detalhe do distrito)
-  if (DISTRITO_FILTRO) aplicarFiltroDistrito(DISTRITO_FILTRO);
-  else if (DADOS_CACHE[MES_ATUAL]) renderTudo(DADOS_CACHE[MES_ATUAL], MES_ATUAL);
-  window.scrollTo(0, APRES.scrollY);
+  // as seções foram movidas para os slides: monta a página do mês de novo, sem filtro de
+  // distrito — o GD escolhido na apresentação não fica aplicado ao dashboard
+  aplicarFiltroDistrito('');
+  window.scrollTo(0, 0);
 }
 
 document.addEventListener('keydown', function(e) {
