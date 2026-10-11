@@ -440,7 +440,7 @@ function render() {
     '<div class="box graf-box"><div class="graf-t">Indicadores da marca' + (noDistrito ? ' <span class="sub">linha cheia = distrito · tracejada = regional</span>' : '') + '</div>' + graficoLinhas(labels, seriesMarca, estimado) + '</div>' +
     '<div class="box graf-box"><div class="graf-t">Disputa entre marcas <span class="sub">share entre marcas, sem o genérico' + (noDistrito ? ' · tracejada = marca na regional' : '') + '</span></div>' + graficoLinhas(labels, seriesMarcas, estimado) + '</div>' +
     '</div>';
-  html += '<div class="nota" style="margin-top:8px">Cada ponto é um ciclo lido do Raio X com o filtro Período no mês. Um ciclo novo publicado entra como mais um ponto.</div>';
+  html += '<div class="nota" style="margin-top:8px">Cada ponto é um ciclo lido do Raio X com o filtro Período no mês. O Raio X libera cada mês com cerca de 45 dias de defasagem; um ciclo novo publicado entra como mais um ponto.</div>';
 
   html += '<div class="box" style="margin-top:12px"><div class="box-scroll"><table><thead><tr><th class="l">Ciclo</th><th>Presc. share</th><th>Penetração</th><th>Market share</th><th>Penetração</th><th>Share entre marcas</th><th>Genérico</th><th>GAP PX vs DEM</th><th>Mercado</th><th>Marca R$</th>' + (noDistrito ? '<th class="reg">Presc. share regional</th><th class="reg">Market share regional</th><th class="reg">Entre marcas regional</th>' : '') + '</tr></thead><tbody>';
   hist.forEach(function(h) {

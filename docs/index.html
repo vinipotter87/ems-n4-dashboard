@@ -448,6 +448,9 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
 .mkp-back-btn{display:flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;border:2px solid var(--border);background:#fff;font-size:12px;font-weight:700;cursor:pointer;color:var(--gray);font-family:inherit;white-space:nowrap}
 .mkp-back-btn:hover{border-color:#1e3a8a;color:#1e3a8a;background:#eff4ff}
 .mkp-frame{width:100%;border:0;display:block;min-height:900px;border-radius:12px;background:transparent}
+.mk-ref{font-size:11px;font-weight:800;letter-spacing:.3px;color:#1e3a8a;background:#eff4ff;border:1px solid #c7d7fe;padding:3px 12px;border-radius:6px;white-space:nowrap}
+.mk-ref.atraso{color:#fff;background:#b45309;border-color:#b45309}
+.mk-aviso{font-size:12px;color:#7a5600;background:#FFF7E0;border:1px solid #f3d98b;border-radius:8px;padding:8px 12px;margin:0 0 12px}
 .mk-chip{font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:10px;white-space:nowrap}
 .mk-chip.up{background:#E8F5EE;color:#15693A}.mk-chip.down{background:#fce8ec;color:#C8102E}.mk-chip.flat{background:#F3F4F6;color:#6B7280}
 .mk-reg{display:block;font-size:10px;color:var(--gray);font-weight:500;margin-top:1px}
@@ -9067,8 +9070,17 @@ function renderMercadoMes(mes) {
   }
 
   var html = '<div class="crm-wrap">';
-  html += '<div class="sec-hdr"><div class="sec-title">PANORAMA — DADOS DE MERCADO</div><div class="sec-line"></div>';
-  html += '<span style="font-size:11px;color:var(--gray)">' + ciclo + '/2026' + (ciclo !== mes ? ' · último ciclo liberado no Raio X' : '') + '</span></div>';
+  // Tarja no título dizendo de quando é o dado (âmbar quando o mês da página está à frente do Raio X)
+  html += '<div class="sec-hdr"><div class="sec-title">PANORAMA — DADOS DE MERCADO</div>' +
+    '<span class="mk-ref' + (ciclo !== mes ? ' atraso' : '') + '">' + (ciclo !== mes ? '⚠ ' : '') + 'DADOS DE ' + ciclo + '/2026' + (ciclo !== mes ? ' · MAIS RECENTE DISPONÍVEL' : '') + '</span>' +
+    '<div class="sec-line"></div></div>';
+  if (ciclo !== mes) {
+    // O Raio X libera prescrição e demanda com cerca de 45 dias de defasagem: nas páginas
+    // de meses ainda não liberados, mostra o ciclo mais recente e avisa de quando ele é.
+    var pendentes = MK_MESES.slice(MK_MESES.indexOf(ciclo) + 1, MK_MESES.indexOf(mes) + 1);
+    html += '<div class="mk-aviso">📅 <b>Dados de mercado de ' + ciclo + '/2026</b> — é o ciclo mais recente disponível. ' +
+      'O Raio X libera prescrição e demanda com cerca de 45 dias de defasagem; ' + pendentes.join(' e ') + (pendentes.length > 1 ? ' ainda não foram liberados.' : ' ainda não foi liberado.') + '</div>';
+  }
   html += secao('NEXUS') + secao('VITAL');
   html += '<p style="font-size:11px;color:var(--gray);margin:10px 0 0">Penetração = mudança do share contra o mês anterior, em pontos percentuais. Share entre marcas e principal concorrente desconsideram o genérico. ' +
     'Evolução mês a mês, concorrentes e setores na aba <a href="#" onclick="abrirMercado();return false" style="color:#1e3a8a;font-weight:700">📊 Mercado</a>.</p>';
@@ -9091,6 +9103,7 @@ function abrirMercado() {
         '<button class="mkp-back-btn" onclick="irParaMes(MES_ATUAL)">← Voltar ao Dashboard</button>' +
         '<div><div style="font-size:16px;font-weight:800">📊 Dados de Mercado — Marcas-Chave</div>' +
         '<div style="font-size:11px;color:var(--gray);margin-top:2px">Regional SPI OESTE · Prescription share, market share e concorrentes · fonte: Power BI Raio X</div></div>' +
+        (ciclo && ciclo !== MES_ATUAL ? '<span class="mk-ref atraso" style="margin-left:auto">Dados de ' + ciclo + '/2026 · mais recente disponível (' + MES_ATUAL + ' ainda não liberado)</span>' : (ciclo ? '<span class="mk-ref" style="margin-left:auto">Dados de ' + ciclo + '/2026</span>' : '')) +
       '</div>' +
       '<iframe class="mkp-frame" id="mkp-frame" src="' + src + '" title="Dados de Mercado"></iframe>' +
     '</div>';
