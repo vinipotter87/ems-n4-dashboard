@@ -91,6 +91,7 @@ tr.ref td{background:#f1f4fb;border-bottom:2px solid #dbe3f5}
 th.reg{background:#e5e9f2;color:var(--pri)}
 td.reg{background:#f7f9fd}
 html.embed .hdr{display:none}
+html.embed.reg-fixa .grp-reg{display:none !important}
 html.embed body{background:transparent;min-height:0}
 html.embed .bar{border-radius:10px;margin-bottom:8px;border:1px solid var(--border)}
 html.embed .bar,html.embed .main{padding-left:14px;padding-right:14px}
@@ -131,8 +132,8 @@ html.embed .main{padding-top:14px}
 </div>
 
 <div class="bar" id="filtro-bar" style="display:none">
-  <span class="bar-label">Regional:</span>
-  <div id="reg-btns" style="display:flex;gap:6px"></div>
+  <span class="bar-label grp-reg">Regional:</span>
+  <div id="reg-btns" class="grp-reg" style="display:flex;gap:6px"></div>
   <span class="bar-label" style="margin-left:8px">Marca:</span>
   <select class="sel" id="sel-marca"></select>
   <span class="bar-label" style="margin-left:8px">Distrito:</span>
@@ -151,7 +152,7 @@ var STATE = { rx: [], dem: [], mes: null, regional: null, marcaKey: null, distri
 var PARAMS = new URLSearchParams(location.search);
 var EMBED = PARAMS.get('embed') === '1';
 if (EMBED) document.documentElement.classList.add('embed');
-if (PARAMS.get('regional')) STATE.regional = PARAMS.get('regional');
+if (PARAMS.get('regional')) { STATE.regional = PARAMS.get('regional'); if (EMBED) document.documentElement.classList.add('reg-fixa'); } // embutida no dashboard de uma regional: sem troca de regional
 if (PARAMS.get('mes')) STATE.mes = PARAMS.get('mes');
 var DISTRITO_INICIAL = PARAMS.get('distrito') || '';
 function avisarAltura() {
