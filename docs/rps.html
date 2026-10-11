@@ -100,6 +100,40 @@ tr.tot td{background:#f3f4f6;font-weight:800}
 .tag.OURO{background:#fef3c7;color:#92400e}.tag.PRATA{background:#e5e7eb;color:#374151}.tag.BRONZE{background:#fde5d0;color:#9a3412}.tag.ATENCAO{background:#fef9c3;color:#854d0e}.tag.CRITICO{background:#fee2e2;color:#991b1b}
 .tag.Destaque{background:#dcfce7;color:#166534}.tag.Performance{background:#ffedd5;color:#9a3412}.tag.Start{background:#fee2e2;color:#991b1b}
 .tag.foco{background:var(--brand);color:#fff}
+.mk-tarjas{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.mk-tarja{font-size:11px;font-weight:800;letter-spacing:.3px;color:#1e3a8a;background:#eff4ff;border:1px solid #c7d7fe;padding:3px 12px;border-radius:6px;white-space:nowrap}
+.mk-tarja.atraso{color:#fff;background:#b45309;border-color:#b45309}
+.mk-wrap{overflow-x:auto}
+.mkt td,.mkt th{white-space:nowrap;padding:8px 6px}
+.mkt td{font-size:14px;text-align:right}
+.mkt th{font-size:9.5px;line-height:1.2;text-align:right}
+.mkt td.n,.mkt th:first-child{text-align:left}
+.mkt td.mk-esq,.mkt.mkd th:nth-last-child(3){text-align:left}
+.mkt.mkd td{vertical-align:top}
+.mkt th.mk-grp{text-align:center;background:#fef3c7;color:#78350f;font-size:11px;border-left:2px solid #f3d98b}
+.mkt td.mk-g1,.mkt th.mk-g1{border-left:2px solid #f3d98b}
+.mkt .cel{min-width:0}
+.mkt tr.mk-ref td{background:#f1f4fb;font-weight:700}
+.mkt tr.mk-ref:first-of-type td{border-top:2px solid #dbe3f5}
+.mkt td.mk-top{background:#fef3c7;font-weight:800;color:#78350f}
+.mkt td.mk-vazio{color:#cbd5e1}
+.mk-rank{display:inline-block;font-size:9px;font-weight:800;color:#fff;background:#b45309;border-radius:8px;padding:0 5px;margin-right:4px;vertical-align:1px}
+.mk-rank.p1{background:#15693A}.mk-rank.p2{background:#2563eb}.mk-rank.p3{background:#b45309}.mk-rank.p4{background:#6B7280}
+.mk-reg{display:block;font-size:10px;color:var(--gray);font-weight:500;margin-top:1px;white-space:nowrap}
+.mk-pen{font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:10px;white-space:nowrap}
+.mk-pen.up{background:#dcfce7;color:#166534}.mk-pen.down{background:#fee2e2;color:#991b1b}.mk-pen.flat{background:#f3f4f6;color:#6b7280}
+.mk-seta{font-style:normal;font-size:9px;margin-left:2px;color:#9ca3af}.mk-seta.up{color:#15693A}.mk-seta.down{color:#C8102E}
+.mk-up{color:#15693A}.mk-dn{color:#C8102E}
+.mk-gpos{color:#9C6D00}.mk-gneg{color:#2563eb}
+.mk-grafs{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-top:6px}
+.mk-graf{border:1px solid var(--border);border-radius:10px;padding:8px 10px 4px}
+.mk-graf-t{font-size:12px;font-weight:800;color:#78350f}
+.mk-svg{width:100%;height:auto;display:block}
+.mk-eixo{font-size:9.5px;fill:#6b7280}.mk-eixo.atual{font-weight:800;fill:#111827}
+.mk-val{font-size:10.5px;font-weight:800;paint-order:stroke;stroke:#fff;stroke-width:3px}.mk-val.ref{font-weight:600;font-size:9.5px}
+.mk-leg{display:flex;gap:16px;flex-wrap:wrap;font-size:11px;color:var(--gray);margin-top:8px}
+.mk-leg span{display:flex;align-items:center;gap:5px}.mk-leg i{width:16px;height:3px;border-radius:2px;display:inline-block}
+.mk-nota-top{font-size:11.5px;color:#5b4300;background:#fffbeb;border:1px solid #f3d98b;border-radius:8px;padding:8px 12px;margin-top:10px;line-height:1.6}
 .nota{font-size:11px;color:var(--gray);line-height:1.5;margin-top:8px}
 .aviso{background:#fef9c3;color:#854d0e;font-size:12px;font-weight:700;padding:7px 12px;border-radius:8px;margin-bottom:10px}
 .titulo-so{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;height:100%}
@@ -280,6 +314,17 @@ async function carregarDistrito(d, m){ // dados de um distrito no mês, cada fon
   var dist = {}; Object.keys(d).forEach(function(k){ dist[k] = d[k]; }); dist.prod = dRef.prod;
   var o = { dist: dist, ref: ref, antReps: aR, antPex: aX, reps: doD(uR.rows).filter(function(x){ return x.vago !== 'True'; }), pd: doD(pd), pr: doD(uP.rows), pex: doD(uX.rows), pexAnt: pexAnt, jor: jor,
            distAnt: distAnt, histD: [] };
+  // Dados de mercado (Raio X): chegam com ~45 dias de defasagem; usa o ciclo mais recente até o mês escolhido
+  var mrx = await fetchAba('mercado_rx'), mdm = await fetchAba('mercado_demanda'), ciclos = {}, cic = null;
+  mrx.concat(mdm).forEach(function(r){ if (r.regional === 'SPI' && r.linha === L) ciclos[r.mes] = 1; });
+  for (var mm = m, nn = 0; mm && nn < 8 && !cic; mm = mesAnt(mm), nn++){ if (ciclos[mm]) cic = mm; }
+  function doCiclo(arr){ return arr.filter(function(r){ return r.mes === cic && r.regional === 'SPI' && r.linha === L; }); }
+  o.mk = { ciclo: cic, rx: cic ? doCiclo(mrx) : [], dem: cic ? doCiclo(mdm) : [] };
+  if (cic) ref.mercado = cic;
+  var hm = []; for (var hx = cic, hn = 0; hx && hn < 3; hx = mesAnt(hx), hn++){ if (ciclos[hx]) hm.unshift(hx); }
+  function doHist(arr){ return arr.filter(function(r){ return hm.indexOf(r.mes) >= 0 && r.regional === 'SPI' && r.linha === L; }); }
+  o.mk.meses = hm; o.mk.hrx = doHist(mrx); o.mk.hdem = doHist(mdm);
+  o.pReg = await fetchAba('produtos_' + L + '_' + ref.prod); // cota da regional por produto (referência)
   // evolução do distrito: os três meses até o escolhido, cada um com o dado do próprio mês
   var ms = [mesAnt(mesAnt(m) || ''), mesAnt(m), m].filter(Boolean);
   for (var i = 0; i < ms.length; i++) o.histD.push({ mes: ms[i], dist: doD(await fetchAba('distritos_' + ms[i]))[0] || null, pd: doD(await fetchAba('produtos_dist_' + L + '_' + ms[i])) });
@@ -296,10 +341,11 @@ async function ultimaAba(nomeDe, mes, tem){
   return { mes: mes, rows: [] };
 }
 async function distritosDe(mes){ return (await ultimaAba(function(m){ return 'distritos_' + m; }, mes, function(r){ return r.length > 0; })).rows; }
-var FONTE_NOME = { reps: 'Produtividade e coberturas (MDV, Q1 a Q4 e painel)', prod: 'Produtos (cota e realizado)', pex: 'PEX', freq: 'Frequência de visitação', sob: 'Sobreposição' };
+var FONTE_NOME = { mercado: 'Dados de mercado (Raio X)', reps: 'Produtividade e coberturas (MDV, Q1 a Q4 e painel)', prod: 'Produtos (cota e realizado)', pex: 'PEX', freq: 'Frequência de visitação', sob: 'Sobreposição' };
 function fontesDe(nome){
   if (nome === 'Fechamento do mês') return ST.modelo === 'individual' ? ['reps', 'prod', 'pex', 'freq', 'sob'] : ['reps', 'prod', 'pex'];
   if (nome === 'Marcas-chave' || nome === 'Demais produtos' || nome === 'Prioridades do mês' || /^Marca-chave — /.test(nome)) return ['prod'];
+  if (/^Mercado — /.test(nome)) return ['prod', 'mercado'];
   if (nome === 'Produtividade') return ['reps'];
   if (nome === 'Frequência e sobreposição') return ['freq', 'sob'];
   if (nome === 'Jornada e PEX') return ['pex', 'reps'];
@@ -327,6 +373,214 @@ function coberturaMarcas(){ // por rep: cobertura em cada marca-chave e gap em R
     if (cob !== null && cob < 100){ o.gap += c - re; o.abaixo.push({ m: mk, cob: cob, falta: c - re }); }
   });
   return { marcas: ch, reps: Object.keys(reps).map(function(k){ var o = reps[k]; o.cob = o.cota ? o.real / o.cota * 100 : null; return o; }) };
+}
+
+// ── dados de mercado (Raio X): prescription share, market share e concorrentes ──
+// Mesmas regras do dashboard: Penetração = mudança do share contra o mês anterior (pp);
+// genérico conta no tamanho do mercado, mas fica fora da disputa (concorrente é sempre marca);
+// GAP PX vs DEM = prescription share − market share.
+function mkN(v){ if (v === null || v === undefined || v === '' || v === 'None') return null; var f = parseFloat(v); return isNaN(f) ? null : f; }
+function mkPct(v){ if (v === null || v === undefined) return '—'; var a = Math.abs(v); return v.toLocaleString('pt-BR', { minimumFractionDigits: a < 10 && a % 1 ? 1 : 0, maximumFractionDigits: a < 1 ? 2 : 1 }) + '%'; }
+function mkRS(v){ if (v === null || v === undefined) return '—'; var a = Math.abs(v); return a >= 1e6 ? 'R$ ' + (v / 1e6).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' mi' : (a >= 1e3 ? 'R$ ' + Math.round(v / 1e3).toLocaleString('pt-BR') + ' mil' : 'R$ ' + Math.round(v).toLocaleString('pt-BR')); }
+function mkCurto(v){ return mkRS(v).replace('R$ ', ''); }
+function mkPP(v){ return (v > 0 ? '+' : '') + v.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }); }
+function mkPen(v){ if (v === null || v === undefined) return ''; v = Math.round(v * 10) / 10 || 0; return '<span class="mk-pen ' + (v > 0 ? 'up' : (v < 0 ? 'down' : 'flat')) + '">' + (v > 0 ? '▲ ' : (v < 0 ? '▼ ' : '● ')) + mkPP(v) + ' pp</span>'; }
+function mkSeta(v){ if (v === null || v === undefined) return ''; return v > 0.05 ? '<i class="mk-seta up" title="penetração ' + mkPP(v) + ' pp">▲</i>' : (v < -0.05 ? '<i class="mk-seta down" title="penetração ' + mkPP(v) + ' pp">▼</i>' : '<i class="mk-seta">●</i>'); }
+function mkGap(g){ return g === null || g === undefined ? '—' : '<b class="' + (g > 0 ? 'mk-gpos' : 'mk-gneg') + '">' + mkPP(g) + '</b>'; }
+function mkAnt(r){ var v = mkN(r.valor) || 0, c = mkN(r.cresc_pct); return (c !== null && c > -100) ? v / (1 + c / 100) : v; }
+function mkResumo(linhas){
+  var total = 0, mar = 0, marAnt = 0, gen = 0, marca = null;
+  function ehGen(r){ return /\(GENERICO\)/i.test(r.produto || ''); }
+  linhas.forEach(function(r){ var v = mkN(r.valor) || 0; total += v; if (ehGen(r)) gen += v; else { mar += v; marAnt += mkAnt(r); } if (r.eh_marca === '1') marca = r; });
+  var concs = linhas.filter(function(r){ return !ehGen(r) && !/\(EMS\)\s*$/i.test(r.produto || ''); }).sort(function(a, b){ return (mkN(b.valor) || 0) - (mkN(a.valor) || 0); });
+  var mv = marca ? (mkN(marca.valor) || 0) : 0, sm = mar > 0 ? mv / mar * 100 : null, smAnt = (marca && marAnt > 0) ? mkAnt(marca) / marAnt * 100 : null;
+  return { tem: linhas.length > 0, total: total, marcaValor: mv, share: marca ? mkN(marca.share) : (linhas.length ? 0 : null), pen: marca ? mkN(marca.var_pp) : null,
+    shareMarcas: sm, genShare: total > 0 ? gen / total * 100 : null, temGen: gen > 0,
+    conc: concs.length ? concs[0].produto : '', concShare: (concs.length && mar > 0) ? (mkN(concs[0].valor) || 0) / mar * 100 : null };
+}
+function mkRx(marca, nivel, cod){ return ST.d.mk.rx.filter(function(r){ return r.marca === marca && r.nivel === nivel && (!cod || r.codigo === cod); })[0]; }
+function mkDem(marca, nivel, cod){ return mkResumo(ST.d.mk.dem.filter(function(r){ return r.marca === marca && r.nivel === nivel && (!cod || r.codigo === cod); })); }
+function mkCodDistrito(){ return ST.d.dist.distrito_id.substring(0, 6) + '00'; }
+function mkCob(reg){ if (!reg) return null; var c = num(reg.cota), r = num(reg.realizado); return c ? r / c * 100 : null; }
+function mkTarjas(){
+  var ref = ST.d.ref, c = ST.d.mk.ciclo;
+  return '<div class="mk-tarjas"><span class="mk-tarja' + (ref.prod !== ST.mes ? ' atraso' : '') + '">' + (ref.prod !== ST.mes ? '⚠ ' : '') + 'COTA DE ' + ref.prod + '/2026' + (ref.prod !== ST.mes ? ' · MAIS RECENTE DISPONÍVEL' : '') + '</span>' +
+    '<span class="mk-tarja' + (c !== ST.mes ? ' atraso' : '') + '">' + (c !== ST.mes ? '⚠ ' : '') + 'MERCADO DE ' + c + '/2026' + (c !== ST.mes ? ' · MAIS RECENTE DISPONÍVEL' : '') + '</span></div>';
+}
+function mkSemDados(nome){ return { nome: nome, msg: 'Ainda sem dados de mercado publicados', html: '<div class="card"><div class="nota">Os dados de mercado (Raio X) ainda não foram publicados para esta linha até ' + ST.mes + '/2026.</div></div>' }; }
+function mkReg(txt){ return '<span class="mk-reg">regional ' + txt + '</span>'; }
+
+// Visão do distrito: uma linha por marca-chave, com a regional como referência
+function sMercadoDistrito(){
+  var nome = 'Mercado — marcas-chave do distrito', D = ST.d;
+  if (!D.mk.ciclo) return mkSemDados(nome);
+  var ch = marcas(D.dist.linha, D.mk.ciclo), cod = mkCodDistrito(), acima = 0, tot = 0;
+  var h = mkTarjas() + '<div class="card"><h3>Marcas-chave do distrito — cota × mercado <small>valor do distrito em destaque, regional embaixo</small></h3><div class="mk-wrap"><table class="mkt mkd"><thead><tr><th>Marca-chave</th>' +
+    '<th>Cota</th><th>Realizado</th><th>Cobertura<br>da cota</th><th>Presc.<br>share</th><th>Penetração</th><th>Mercado (R$)<br>e tamanho na regional</th><th>Marca<br>(R$)</th><th>Market<br>share</th><th>Penetração</th>' +
+    '<th>Entre<br>marcas</th><th>Principal<br>concorrente</th><th>Genérico</th><th>GAP<br>PX vs DEM</th></tr></thead><tbody>';
+  ch.forEach(function(mk){
+    var pd = D.pd.filter(function(x){ return norm(x.produto) === mk; })[0], pr = (D.pReg || []).filter(function(x){ return norm(x.produto) === mk; })[0];
+    var cob = mkCob(pd), cobR = mkCob(pr);
+    var rx = mkRx(mk, 'DISTRITO', cod), rxR = mkRx(mk, 'REGIONAL'), d = mkDem(mk, 'DISTRITO', cod), dR = mkDem(mk, 'REGIONAL');
+    var sh = rx ? mkN(rx.share) : null, shR = rxR ? mkN(rxR.share) : null;
+    var gap = (sh !== null && d.share !== null) ? sh - d.share : null, gapR = (shR !== null && dR.share !== null) ? shR - dR.share : null;
+    if (sh !== null && shR !== null){ tot++; if (sh >= shR) acima++; }
+    // tamanho do mercado do distrito dentro da regional
+    var porD = {}; D.mk.dem.forEach(function(r){ if (r.marca === mk && r.nivel === 'DISTRITO') porD[r.codigo] = (porD[r.codigo] || 0) + (mkN(r.valor) || 0); });
+    var rk = Object.keys(porD).sort(function(x, y){ return porD[y] - porD[x]; }), pos = rk.indexOf(cod) + 1;
+    var pctReg = (d.tem && dR.tem && dR.total > 0) ? d.total / dR.total * 100 : null;
+    h += '<tr><td class="n">' + mk + '</td><td>' + (pd ? mkRS(num(pd.cota)) : '—') + '</td><td>' + (pd ? mkRS(num(pd.realizado)) : '—') + '</td>' +
+      '<td><span class="cel ' + cls(cob) + '">' + p1(cob) + '</span>' + (cobR !== null ? mkReg(p1(cobR)) : '') + '</td>' +
+      '<td><b>' + mkPct(sh) + '</b>' + mkReg(mkPct(shR)) + '</td><td>' + mkPen(rx ? mkN(rx.var_pp) : null) + '</td>' +
+      '<td><b>' + (d.tem ? mkRS(d.total) : '—') + '</b>' + (pos ? '<span class="mk-reg"><span class="mk-rank p' + pos + '">' + pos + 'º de ' + rk.length + '</span>' + (pctReg !== null ? '<b>' + mkPct(pctReg) + '</b> da regional' : '') + '</span>' : '') + mkReg(dR.tem ? mkRS(dR.total) : '—') + '</td>' +
+      '<td>' + (d.tem ? mkRS(d.marcaValor) : '—') + mkReg(dR.tem ? mkRS(dR.marcaValor) : '—') + '</td>' +
+      '<td><b>' + mkPct(d.share) + '</b>' + mkReg(mkPct(dR.share)) + '</td><td>' + mkPen(d.pen) + '</td>' +
+      '<td><b>' + mkPct(d.shareMarcas) + '</b>' + mkReg(mkPct(dR.shareMarcas)) + '</td>' +
+      '<td class="mk-esq">' + (d.conc ? esc(d.conc) + '<span class="mk-reg">' + mkPct(d.concShare) + ' entre marcas</span>' : '—') + '</td>' +
+      '<td>' + (d.temGen ? mkPct(d.genShare) : '<span class="mk-reg">sem genérico</span>') + '</td>' +
+      '<td>' + mkGap(gap) + (gap !== null ? ' pp' : '') + (gapR !== null ? mkReg(mkPP(gapR) + ' pp') : '') + '</td></tr>';
+  });
+  h += '</tbody></table></div>';
+  // Evolução dos últimos 3 ciclos: distrito (linha cheia) contra a regional (tracejada)
+  if (D.mk.meses.length > 1){
+    h += '<h3 style="margin-top:14px">Desempenho nos últimos ' + D.mk.meses.length + ' meses <small>' + D.mk.meses.join(' · ') + ' · linha cheia = distrito · tracejada = regional</small></h3><div class="mk-grafs">';
+    ch.forEach(function(mk){
+      function rxH(mes, nivel, c){ var r = D.mk.hrx.filter(function(x){ return x.mes === mes && x.marca === mk && x.nivel === nivel && (!c || x.codigo === c); })[0]; return r ? mkN(r.share) : null; }
+      function demH(mes, nivel, c){ var d = mkResumo(D.mk.hdem.filter(function(x){ return x.mes === mes && x.marca === mk && x.nivel === nivel && (!c || x.codigo === c); })); return d.tem ? d.share : null; }
+      h += '<div class="mk-graf"><div class="mk-graf-t">' + mk + '</div>' + mkGrafico(D.mk.meses, [
+        { nome: 'Presc. share · distrito', cor: '#0d9488', pts: D.mk.meses.map(function(m){ return rxH(m, 'DISTRITO', cod); }) },
+        { nome: 'Market share · distrito', cor: '#2563eb', pts: D.mk.meses.map(function(m){ return demH(m, 'DISTRITO', cod); }) },
+        { nome: 'Presc. share · regional', cor: '#0d9488', ref: true, pts: D.mk.meses.map(function(m){ return rxH(m, 'REGIONAL'); }) },
+        { nome: 'Market share · regional', cor: '#2563eb', ref: true, pts: D.mk.meses.map(function(m){ return demH(m, 'REGIONAL'); }) }
+      ]) + '</div>';
+    });
+    h += '</div>' + '<div class="mk-leg"><span><i style="background:#0d9488"></i>Prescription share do distrito</span><span><i style="background:#2563eb"></i>Market share do distrito</span>' +
+      '<span><i style="background:repeating-linear-gradient(90deg,#0d9488 0 4px,transparent 4px 7px)"></i>Prescription share da regional</span><span><i style="background:repeating-linear-gradient(90deg,#2563eb 0 4px,transparent 4px 7px)"></i>Market share da regional</span></div>';
+  }
+  h += '<div class="nota">Cobertura da cota = realizado ÷ cota do mês (parcial enquanto o mês não fecha). Penetração = mudança do share contra o mês anterior, em pontos percentuais. ' +
+    'Entre marcas e principal concorrente desconsideram o genérico. GAP PX vs DEM = prescription share − market share. Tamanho na regional: posição do mercado do distrito entre os distritos da linha e quanto ele representa do mercado da regional (o restante inclui a demanda não visitada).</div></div>';
+  return { nome: nome, msg: tot ? acima + ' de ' + tot + ' marcas-chave com prescription share igual ou acima da regional' : 'Prescription share e market share contra a regional', html: h };
+}
+
+// Detalhamento por setor: uma linha por representante; cada marca-chave é um grupo de 6 colunas
+function sMercadoSetores(){
+  var nome = 'Mercado — marcas-chave por setor', D = ST.d;
+  if (!D.mk.ciclo) return mkSemDados(nome);
+  var ch = marcas(D.dist.linha, D.mk.ciclo), cod = mkCodDistrito(), reps = D.reps, notas = [];
+  var blocos = ch.map(function(mk){
+    var rxD = mkRx(mk, 'DISTRITO', cod), dD = mkDem(mk, 'DISTRITO', cod), rxR = mkRx(mk, 'REGIONAL'), dR = mkDem(mk, 'REGIONAL');
+    var shD = rxD ? mkN(rxD.share) : null, shR = rxR ? mkN(rxR.share) : null;
+    var setores = reps.map(function(r){
+      var rx = mkRx(mk, 'SETOR', r.setor_id), dm = mkDem(mk, 'SETOR', r.setor_id), sh = rx ? mkN(rx.share) : null;
+      return { cob: mkCob(D.pr.filter(function(x){ return norm(x.produto) === mk && x.setor_id === r.setor_id; })[0]), sh: sh, pen: rx ? mkN(rx.var_pp) : null,
+        mercado: dm.tem ? dm.total : null, marcaRS: dm.tem ? dm.marcaValor : null, ms: dm.tem ? dm.share : null, msPen: dm.pen, gap: (sh !== null && dm.tem && dm.share !== null) ? sh - dm.share : null };
+    });
+    var ordem = setores.map(function(x, i){ return { i: i, v: x.mercado }; }).filter(function(o){ return o.v !== null && o.v > 0; }).sort(function(x, y){ return y.v - x.v; }).slice(0, 3), top = {};
+    ordem.forEach(function(o, k){ top[o.i] = k + 1; });
+    if (ordem.length && dD.tem && dD.total > 0){
+      var soma = ordem.reduce(function(a, o){ return a + o.v; }, 0);
+      notas.push('<b>' + mk + ':</b> os ' + ordem.length + ' maiores mercados (' + ordem.map(function(o){ return esc(String(reps[o.i].nome || reps[o.i].setor_id).split(' ')[0]); }).join(', ') + ') somam ' + mkRS(soma) + ', <b>' + mkPct(soma / dD.total * 100) + '</b> do mercado do distrito (' + mkRS(dD.total) + ')');
+    }
+    return { mk: mk, setores: setores, top: top, shD: shD, msD: dD.tem ? dD.share : null,
+      dist: { cob: mkCob(D.pd.filter(function(x){ return norm(x.produto) === mk; })[0]), sh: shD, pen: rxD ? mkN(rxD.var_pp) : null, mercado: dD.tem ? dD.total : null, marcaRS: dD.tem ? dD.marcaValor : null, ms: dD.tem ? dD.share : null, msPen: dD.pen, gap: shD !== null && dD.share !== null ? shD - dD.share : null },
+      reg: { cob: mkCob((D.pReg || []).filter(function(x){ return norm(x.produto) === mk; })[0]), sh: shR, pen: rxR ? mkN(rxR.var_pp) : null, mercado: dR.tem ? dR.total : null, marcaRS: dR.tem ? dR.marcaValor : null, ms: dR.tem ? dR.share : null, msPen: dR.pen, gap: shR !== null && dR.share !== null ? shR - dR.share : null } };
+  });
+  function share(v, pen, base, ref){ if (v === null || v === undefined) return '<td class="mk-vazio">—</td>'; var c = ref || base === null || base === undefined ? '' : (v > base + 0.05 ? 'mk-up' : (v < base - 0.05 ? 'mk-dn' : '')); return '<td><b class="' + c + '">' + mkPct(v) + '</b>' + mkSeta(pen) + '</td>'; }
+  function cels(x, bl, ref, top){
+    return '<td class="mk-g1"><span class="cel ' + cls(x.cob) + '">' + p1(x.cob) + '</span></td>' + share(x.sh, x.pen, bl.shD, ref) +
+      '<td class="' + (top ? 'mk-top' : '') + (x.mercado === null ? ' mk-vazio' : '') + '"' + (top ? ' title="' + top + 'º maior mercado do distrito"' : '') + '>' + (top ? '<span class="mk-rank">' + top + 'º</span>' : '') + (x.mercado === null ? '—' : mkCurto(x.mercado)) + '</td>' +
+      '<td' + (x.marcaRS === null ? ' class="mk-vazio"' : '') + '>' + (x.marcaRS === null ? '—' : mkCurto(x.marcaRS)) + '</td>' + share(x.ms, x.msPen, bl.msD, ref) + '<td>' + mkGap(x.gap) + '</td>';
+  }
+  var h = mkTarjas() + '<div class="card"><h3>Marcas-chave por setor — cota × mercado <small>uma linha por representante</small></h3><div class="mk-wrap"><table class="mkt mks"><thead><tr><th rowspan="2">Representante</th>' +
+    blocos.map(function(bl){ return '<th colspan="6" class="mk-grp">★ ' + bl.mk + '</th>'; }).join('') + '</tr><tr>' +
+    blocos.map(function(){ return '<th class="mk-g1">Cobertura<br>cota</th><th>Presc.<br>share</th><th>Mercado<br>R$</th><th>Marca<br>R$</th><th>Market<br>share</th><th>GAP<br>pp</th>'; }).join('') + '</tr></thead><tbody>';
+  reps.forEach(function(r, i){
+    var pt = String(r.nome || r.setor_id).trim().split(/\s+/), curto = pt.length > 1 ? pt[0] + ' ' + pt[pt.length - 1] : pt[0];
+    h += '<tr><td class="n" title="' + esc(r.nome) + ' · setor ' + r.setor_id + '">' + esc(curto) + '</td>' + blocos.map(function(bl){ return cels(bl.setores[i], bl, false, bl.top[i]); }).join('') + '</tr>';
+  });
+  h += '<tr class="mk-ref"><td class="n">Distrito</td>' + blocos.map(function(bl){ return cels(bl.dist, bl, true); }).join('') + '</tr>' +
+    '<tr class="mk-ref"><td class="n">Regional</td>' + blocos.map(function(bl){ return cels(bl.reg, bl, true); }).join('') + '</tr></tbody></table></div>';
+  if (notas.length) h += '<div class="mk-nota-top"><span class="mk-rank">1º 2º 3º</span> <b>Maiores mercados do distrito</b> (células destacadas na coluna Mercado R$):<br>' + notas.join('<br>') + '</div>';
+  h += '<div class="nota">Share em <b class="mk-up">verde</b> = setor acima do distrito; em <b class="mk-dn">vermelho</b> = abaixo. ▲▼ = penetração (ganhando ou perdendo share contra o mês anterior). ' +
+    'Cobertura da cota = realizado ÷ cota do mês. Mercado e Marca em R$ a preço fábrica. GAP PX vs DEM = prescription share − market share. O prescription share por setor vem do Raio X sem casa decimal.</div></div>';
+  return { nome: nome, msg: 'Cota, prescrição e mercado de cada marca-chave por representante', html: h };
+}
+
+// Gráfico de linhas pequeno (SVG, sem biblioteca): série de referência sai tracejada e só rotula o último ponto
+function mkGrafico(labels, series){
+  var W = 360, H = 190, mL = 34, mR = 34, mT = 16, mB = 24, vals = [];
+  series.forEach(function(s){ s.pts.forEach(function(v){ if (v !== null && !isNaN(v)) vals.push(v); }); });
+  if (!vals.length) return '<div class="nota" style="padding:20px 0">Sem dados neste recorte.</div>';
+  var max = Math.max.apply(null, vals), passo = max <= 5 ? 1 : (max <= 12 ? 2 : (max <= 30 ? 5 : (max <= 60 ? 10 : 20))), topo = Math.ceil(max * 1.15 / passo) * passo || passo, n = labels.length;
+  function X(i){ return n === 1 ? mL + (W - mL - mR) / 2 : mL + i * (W - mL - mR) / (n - 1); }
+  function Y(v){ return mT + (1 - v / topo) * (H - mT - mB); }
+  var o = '<svg viewBox="0 0 ' + W + ' ' + H + '" class="mk-svg" role="img">';
+  for (var g = 0; g <= topo + 1e-9; g += passo) o += '<line x1="' + mL + '" x2="' + (W - mR) + '" y1="' + Y(g) + '" y2="' + Y(g) + '" stroke="#e5e7eb"/><text x="' + (mL - 5) + '" y="' + (Y(g) + 3.5) + '" class="mk-eixo" text-anchor="end">' + g + '%</text>';
+  labels.forEach(function(l, i){ o += '<text x="' + X(i) + '" y="' + (H - 7) + '" class="mk-eixo' + (i === n - 1 ? ' atual' : '') + '" text-anchor="middle">' + l + '</text>'; });
+  series.forEach(function(s){
+    var d = '', novo = true;
+    s.pts.forEach(function(v, i){ if (v === null || isNaN(v)){ novo = true; return; } d += (novo ? 'M' : 'L') + X(i).toFixed(1) + ' ' + Y(v).toFixed(1) + ' '; novo = false; });
+    o += '<path d="' + d + '" fill="none" stroke="' + s.cor + '" stroke-width="' + (s.ref ? 1.6 : 2.6) + '" stroke-opacity="' + (s.ref ? 0.65 : 1) + '"' + (s.ref ? ' stroke-dasharray="5 4"' : '') + ' stroke-linecap="round" stroke-linejoin="round"/>';
+    s.pts.forEach(function(v, i){
+      if (v === null || isNaN(v)) return;
+      o += '<circle cx="' + X(i).toFixed(1) + '" cy="' + Y(v).toFixed(1) + '" r="' + (s.ref ? 2.4 : 3.6) + '" fill="' + (s.ref ? '#fff' : s.cor) + '" stroke="' + s.cor + '" stroke-width="1.8"><title>' + s.nome + ' · ' + labels[i] + ': ' + mkPct(v) + '</title></circle>';
+      if (s.ref){ if (i === n - 1) o += '<text x="' + (X(i) + 6).toFixed(1) + '" y="' + (Y(v) + 3.5).toFixed(1) + '" class="mk-val ref" fill="' + s.cor + '">' + mkPct(v) + '</text>'; }
+      else o += '<text x="' + X(i).toFixed(1) + '" y="' + (Y(v) - 7).toFixed(1) + '" class="mk-val" fill="' + s.cor + '" text-anchor="middle">' + mkPct(v) + '</text>';
+    });
+  });
+  return o + '</svg>';
+}
+
+// RPS individual: o setor do representante contra o distrito e a regional
+function iMercado(){
+  var nome = 'Mercado — marcas-chave do setor', D = ST.d;
+  if (!D.mk.ciclo) return mkSemDados(nome);
+  var ch = marcas(D.dist.linha, D.mk.ciclo), cod = mkCodDistrito(), setor = ST.setor, acima = 0, tot = 0;
+  function cmp(v, dv, rv, fmt){ return '<b>' + fmt(v) + '</b><span class="mk-reg">distrito ' + fmt(dv) + ' · regional ' + fmt(rv) + '</span>'; }
+  var h = mkTarjas() + '<div class="card"><h3>Marcas-chave do setor — cota × mercado <small>valor do setor em destaque; distrito e regional embaixo</small></h3><div class="mk-wrap"><table class="mkt mkd"><thead><tr><th>Marca-chave</th>' +
+    '<th>Cobertura<br>da cota</th><th>Presc.<br>share</th><th>Penetração</th><th>Mercado (R$)<br>e tamanho no distrito</th><th>Marca<br>(R$)</th><th>Market<br>share</th><th>Penetração</th><th>Entre<br>marcas</th><th>Principal<br>concorrente</th><th>Genérico</th><th>GAP<br>PX vs DEM</th></tr></thead><tbody>';
+  ch.forEach(function(mk){
+    var cob = mkCob(D.pr.filter(function(x){ return norm(x.produto) === mk && x.setor_id === setor; })[0]), cobD = mkCob(D.pd.filter(function(x){ return norm(x.produto) === mk; })[0]), cobR = mkCob((D.pReg || []).filter(function(x){ return norm(x.produto) === mk; })[0]);
+    var rx = mkRx(mk, 'SETOR', setor), rxD = mkRx(mk, 'DISTRITO', cod), rxR = mkRx(mk, 'REGIONAL');
+    var d = mkDem(mk, 'SETOR', setor), dD = mkDem(mk, 'DISTRITO', cod), dR = mkDem(mk, 'REGIONAL');
+    var sh = rx ? mkN(rx.share) : null, shD = rxD ? mkN(rxD.share) : null, shR = rxR ? mkN(rxR.share) : null;
+    var gap = (sh !== null && d.tem && d.share !== null) ? sh - d.share : null, gapD = (shD !== null && dD.share !== null) ? shD - dD.share : null, gapR = (shR !== null && dR.share !== null) ? shR - dR.share : null;
+    if (sh !== null && shD !== null){ tot++; if (sh >= shD) acima++; }
+    var porS = {}; D.mk.dem.forEach(function(r){ if (r.marca === mk && r.nivel === 'SETOR' && r.distrito === cod) porS[r.codigo] = (porS[r.codigo] || 0) + (mkN(r.valor) || 0); });
+    var rk = Object.keys(porS).sort(function(x, y){ return porS[y] - porS[x]; }), pos = rk.indexOf(setor) + 1;
+    var pctD = (d.tem && dD.tem && dD.total > 0) ? d.total / dD.total * 100 : null;
+    h += '<tr><td class="n">' + mk + '</td>' +
+      '<td><span class="cel ' + cls(cob) + '">' + p1(cob) + '</span><span class="mk-reg">distrito ' + p1(cobD) + ' · regional ' + p1(cobR) + '</span></td>' +
+      '<td>' + cmp(sh, shD, shR, mkPct) + '</td><td>' + mkPen(rx ? mkN(rx.var_pp) : null) + '</td>' +
+      '<td><b>' + (d.tem ? mkRS(d.total) : '—') + '</b>' + (pos ? '<span class="mk-reg"><span class="mk-rank p' + Math.min(pos, 4) + '">' + pos + 'º de ' + rk.length + '</span>' + (pctD !== null ? '<b>' + mkPct(pctD) + '</b> do distrito' : '') + '</span>' : '') + '<span class="mk-reg">distrito ' + (dD.tem ? mkRS(dD.total) : '—') + '</span></td>' +
+      '<td>' + (d.tem ? mkRS(d.marcaValor) : '—') + '<span class="mk-reg">distrito ' + (dD.tem ? mkRS(dD.marcaValor) : '—') + '</span></td>' +
+      '<td>' + cmp(d.tem ? d.share : null, dD.share, dR.share, mkPct) + '</td><td>' + mkPen(d.pen) + '</td>' +
+      '<td>' + cmp(d.tem ? d.shareMarcas : null, dD.shareMarcas, dR.shareMarcas, mkPct) + '</td>' +
+      '<td class="mk-esq">' + (d.conc ? esc(d.conc) + '<span class="mk-reg">' + mkPct(d.concShare) + ' entre marcas</span>' : '—') + '</td>' +
+      '<td>' + (d.temGen ? mkPct(d.genShare) : '<span class="mk-reg">sem genérico</span>') + '</td>' +
+      '<td>' + mkGap(gap) + (gap !== null ? ' pp' : '') + '<span class="mk-reg">distrito ' + (gapD !== null ? mkPP(gapD) : '—') + ' · regional ' + (gapR !== null ? mkPP(gapR) : '—') + '</span></td></tr>';
+  });
+  h += '</tbody></table></div>';
+  // Evolução dos últimos 3 ciclos: setor (linha cheia) contra a regional (tracejada)
+  if (D.mk.meses.length > 1){
+    h += '<h3 style="margin-top:14px">Desempenho nos últimos ' + D.mk.meses.length + ' meses <small>' + D.mk.meses.join(' · ') + ' · linha cheia = setor · tracejada = regional</small></h3><div class="mk-grafs">';
+    ch.forEach(function(mk){
+      function rxH(mes, nivel, c){ var r = D.mk.hrx.filter(function(x){ return x.mes === mes && x.marca === mk && x.nivel === nivel && (!c || x.codigo === c); })[0]; return r ? mkN(r.share) : null; }
+      function demH(mes, nivel, c){ var d = mkResumo(D.mk.hdem.filter(function(x){ return x.mes === mes && x.marca === mk && x.nivel === nivel && (!c || x.codigo === c); })); return d.tem ? d.share : null; }
+      var series = [
+        { nome: 'Presc. share · setor', cor: '#0d9488', pts: D.mk.meses.map(function(m){ return rxH(m, 'SETOR', setor); }) },
+        { nome: 'Market share · setor', cor: '#2563eb', pts: D.mk.meses.map(function(m){ return demH(m, 'SETOR', setor); }) },
+        { nome: 'Presc. share · regional', cor: '#0d9488', ref: true, pts: D.mk.meses.map(function(m){ return rxH(m, 'REGIONAL'); }) },
+        { nome: 'Market share · regional', cor: '#2563eb', ref: true, pts: D.mk.meses.map(function(m){ return demH(m, 'REGIONAL'); }) }
+      ];
+      h += '<div class="mk-graf"><div class="mk-graf-t">' + mk + '</div>' + mkGrafico(D.mk.meses, series) + '</div>';
+    });
+    h += '</div><div class="mk-leg"><span><i style="background:#0d9488"></i>Prescription share do setor</span><span><i style="background:#2563eb"></i>Market share do setor</span>' +
+      '<span><i style="background:repeating-linear-gradient(90deg,#0d9488 0 4px,transparent 4px 7px)"></i>Prescription share da regional</span><span><i style="background:repeating-linear-gradient(90deg,#2563eb 0 4px,transparent 4px 7px)"></i>Market share da regional</span></div>';
+  }
+  h += '<div class="nota">Cobertura da cota = realizado ÷ cota do mês (parcial enquanto o mês não fecha). Penetração = mudança do share contra o mês anterior, em pontos percentuais. ' +
+    'Entre marcas e principal concorrente desconsideram o genérico. GAP PX vs DEM = prescription share − market share. Tamanho no distrito: posição do mercado do setor entre os setores do distrito e quanto ele representa do mercado do distrito. O prescription share por setor vem do Raio X sem casa decimal.</div></div>';
+  return { nome: nome, msg: tot ? acima + ' de ' + tot + ' marcas-chave com prescription share igual ou acima do distrito' : 'Prescription share e market share do setor', html: h };
 }
 
 // ── slides ──
@@ -1050,7 +1304,7 @@ function planoFinal(){ var box = $('plano-final'); if (!box) return; var ls = ''
 
 function montarIndividual(){
   PLANOS = [];
-  var r = repSel(), lista = [{ nome: 'Combinados anteriores', msg: ' ', html: '<div id="ata"></div>' }, { nome: 'Planos em andamento', msg: ' ', html: '<div id="andamento"></div>' }, iRetrato(), iMarcas(), iProd(), iEvolucao(), iFreq(), sJornadaPex(ST.setor), iDemais()]
+  var r = repSel(), lista = [{ nome: 'Combinados anteriores', msg: ' ', html: '<div id="ata"></div>' }, { nome: 'Planos em andamento', msg: ' ', html: '<div id="andamento"></div>' }, iRetrato(), iMarcas(), iMercado(), iProd(), iEvolucao(), iFreq(), sJornadaPex(ST.setor), iDemais()]
     .concat(TEMAS.map(sTitulo), iFundamentos(), iMarcasDesvio()); // mesma sequência da coletiva; só o bloco final muda
   lista.push({ nome: 'Plano de ação do setor', msg: ' ', html: '<div id="plano-final"></div>' });
   lista.push({ nome: 'Ata desta reunião', msg: ' ', html: '<div id="ata-nova"></div>' });
@@ -1190,7 +1444,7 @@ function telaHistorico(){ // consolidado da regional, com filtro por GD (HIST.fi
 // ── montagem e navegação ──
 function montar(){
   var D = ST.d.dist;
-  var lista = [{ nome: 'Combinados anteriores', msg: ' ', html: '<div id="ata"></div>' }, sFechamento(), sMarcas(), sProd(), sEvolucao(), sFreqSobrep(), sJornadaPex(), demaisSlide(ST.d.pd, 'distrito')]
+  var lista = [{ nome: 'Combinados anteriores', msg: ' ', html: '<div id="ata"></div>' }, sFechamento(), sMarcas(), sMercadoDistrito(), sMercadoSetores(), sProd(), sEvolucao(), sFreqSobrep(), sJornadaPex(), demaisSlide(ST.d.pd, 'distrito')]
     .concat(TEMAS.map(sTitulo), [sPrioridades(), { nome: 'Ata desta reunião', msg: ' ', html: '<div id="ata-nova"></div>' }]); // mesma sequência da individual; só o bloco final muda
   var h = '<div class="slide">' + sCapa(lista) + '</div>';
   lista.forEach(function(s){ h += slideHtml(s); });
@@ -1219,6 +1473,8 @@ function ajustar(){
   if (f.querySelector('.titulo-so')) return;
   for (var k = 0; k < 8; k++){ var h = f.getBoundingClientRect().height, alvo = Math.max(0.45, Math.min(1.35, z * H / h * 0.985)); if (Math.abs(alvo - z) < 0.01) break; ap(alvo); }
   if (f.getBoundingClientRect().height > H + 1 && z > 0.45) ap(Math.max(0.45, z * 0.97));
+  var largo = f.querySelector('.mk-wrap');
+  for (var q = 0; largo && q < 30 && z > 0.45 && largo.scrollWidth > largo.clientWidth + 1; q++) ap(Math.max(0.45, z * 0.96));
 }
 $('b-prev').onclick = function(){ ir(ST.i - 1); }; $('b-next').onclick = function(){ ir(ST.i + 1); }; $('b-trocar').onclick = telaEntrada;
 document.addEventListener('keydown', function(e){
