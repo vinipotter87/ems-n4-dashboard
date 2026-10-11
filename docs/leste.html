@@ -461,6 +461,8 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
 .mkc-ref{color:var(--gray)}
 .mkc-tbl .mk-chip{padding:1px 6px;font-size:10.5px}
 .mkc-pos{color:#15693A;font-weight:700}.mkc-neg{color:#C8102E;font-weight:700}
+.mkc-sub{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:#1e3a8a;margin:10px 0 2px;padding-top:6px;border-top:1px dashed #e5e7eb}
+.mkc-insight + .mkc-sub{border-top:0;padding-top:0;margin-top:4px}
 .mkc-graf{max-width:430px;margin:8px auto 0}
 .ap-fit .mkc-grid{grid-template-columns:repeat(var(--n,3),minmax(410px,1fr))}
 .ap-fit .mkc-card{overflow:visible}
@@ -8086,7 +8088,7 @@ function renderGlossario() {
 // (abas mercado_rx e mercado_demanda; página completa em mercado.html)
 // ═══════════════════════════════════════════════════════════════════
 
-var MERCADO = { rx: [], dem: [], ok: false };
+var MERCADO = { rx: [], dem: [], rxc: [], ok: false };
 var MERCADO_REGIONAL = 'LESTE';
 var MK_MESES = ["JAN","FEV","MAR","ABR","MAI","JUN","JUL","AGO","SET","OUT","NOV","DEZ"];
 
@@ -8094,9 +8096,10 @@ async function carregarMercado() {
   if (MERCADO.ok) return;
   var r = await Promise.all([
     fetchAba('mercado_rx').catch(function() { return []; }),
-    fetchAba('mercado_demanda').catch(function() { return []; })
+    fetchAba('mercado_demanda').catch(function() { return []; }),
+    fetchAba('mercado_rx_conc').catch(function() { return []; })
   ]);
-  MERCADO.rx = r[0]; MERCADO.dem = r[1]; MERCADO.ok = true;
+  MERCADO.rx = r[0]; MERCADO.dem = r[1]; MERCADO.rxc = r[2]; MERCADO.ok = true;
 }
 
 function mkNum(v) {
@@ -8327,6 +8330,50 @@ function mkConcNome(produto) {
 }
 function mkConcPP(v) { return (v > 0 ? '+' : '') + v.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' pp'; }
 
+// Prescrição por concorrente: share de receitas de cada marca do mercado no ciclo mais recente
+// publicado até mesMax, com o share do mês anterior e a variação em pontos percentuais.
+function mkRxConcDados(linhas, marca, nivel, codigo, mesMax) {
+  var MESES = ["JAN","FEV","MAR","ABR","MAI","JUN","JUL","AGO","SET","OUT","NOV","DEZ"], disp = {};
+  linhas.forEach(function(r) { if (r.marca === marca && MESES.indexOf(r.mes) <= MESES.indexOf(mesMax)) disp[r.mes] = 1; });
+  var mes = Object.keys(disp).sort(function(a, b) { return MESES.indexOf(a) - MESES.indexOf(b); }).pop();
+  if (!mes) return { tem: false, lista: [], por: {} };
+  var por = {}, lista = linhas.filter(function(r) { return r.mes === mes && r.marca === marca && r.nivel === nivel && (!codigo || r.codigo === codigo); })
+    .map(function(r) { return { produto: r.produto, share: mkNum(r.share), ant: mkNum(r.share_ant), pp: mkNum(r.var_pp), nossa: r.eh_marca === '1', ems: /\(EMS\)\s*$/i.test(r.produto || '') }; })
+    .sort(function(a, b) { return (b.share || 0) - (a.share || 0); });
+  lista.forEach(function(p, i) { p.pos = i + 1; por[p.produto] = p; });
+  return { tem: lista.length > 0, mes: mes, ant: MESES[MESES.indexOf(mes) - 1] || '', lista: lista, por: por };
+}
+// refs = [{ rot: 'Regional', d: <mkRxConcDados> }]; devolve a frase de leitura e a tabela
+function mkRxConcBloco(d, refs, marca, rotulo) {
+  if (!d.tem) return { frase: '', tabela: '' };
+  function pp(v) { return (v > 0 ? '+' : '') + v.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' pp'; }
+  function cor(v) { return v > 0.05 ? 'mkc-pos' : (v < -0.05 ? 'mkc-neg' : ''); }
+  var nossa = d.lista.filter(function(p) { return p.nossa; })[0], lider = d.lista[0], n = d.lista.length, frase = '<b>Prescrição:</b> ';
+  if (nossa) {
+    if (nossa.pos === 1) { var seg = d.lista[1]; frase += marca + ' lidera as receitas, com <b>' + mkPct(nossa.share) + '</b>' + (seg ? ' (' + seg.produto + ' em 2º, com ' + mkPct(seg.share) + ')' : '') + '.'; }
+    else frase += marca + ' é a <b>' + nossa.pos + 'ª</b> de ' + n + ', com <b>' + mkPct(nossa.share) + '</b> das receitas. Líder: <b>' + lider.produto + '</b> (' + mkPct(lider.share) + ').';
+    if (nossa.pp !== null && d.ant) frase += ' Contra ' + d.ant + ': <span class="' + cor(nossa.pp) + '">' + pp(nossa.pp) + '</span>.';
+  } else frase += marca + ' sem receita neste recorte. Líder: <b>' + lider.produto + '</b> (' + mkPct(lider.share) + ').';
+  var mex = d.lista.filter(function(p) { return !p.ems && p.pp !== null && ((p.share || 0) >= 1 || Math.abs(p.pp) >= 1); }).sort(function(a, b) { return b.pp - a.pp; });
+  if (mex.length && mex[0].pp > 0.05) frase += ' Concorrente que mais ganhou receita: <b>' + mex[0].produto + '</b> <span class="mkc-neg">' + pp(mex[0].pp) + '</span>.';
+  refs.forEach(function(r) { var nr = r.d.lista.filter(function(p) { return p.nossa; })[0]; if (nr) frase += ' ' + r.rot + ': ' + nr.pos + 'ª, com ' + mkPct(nr.share) + '.'; });
+  var top = d.lista.slice(0, 5); if (nossa && top.indexOf(nossa) < 0) top.push(nossa);
+  var resto = d.lista.filter(function(p) { return top.indexOf(p) < 0; }), maxSh = Math.max.apply(null, top.map(function(p) { return p.share || 0; })) || 1;
+  var t = '<div class="mkc-sub">Prescrição · share de receitas · ' + d.mes + (rotulo ? ' · ' + rotulo : '') + '</div>' +
+    '<table class="mkc-tbl"><thead><tr><th>#</th><th>Marca</th><th>Share de Rx</th>' + refs.map(function(r) { return '<th>' + r.rot + '</th>'; }).join('') + (d.ant ? '<th>' + d.ant + '</th><th>Contra ' + d.ant + '</th>' : '') + '</tr></thead><tbody>';
+  top.forEach(function(p) {
+    var m = /^(.*?)\s*\(([^)]*)\)\s*$/.exec(p.produto || '');
+    // para concorrente, ganhar receita é ruim para nós: a cor segue a nossa ótica
+    var bom = p.pp === null ? '' : cor(p.ems ? p.pp : -p.pp);
+    t += '<tr class="' + (p.nossa ? 'nossa' : '') + '"><td><span class="mks-rank mkd-pos' + Math.min(p.pos, 4) + '">' + p.pos + 'º</span></td><td>' + (m ? m[1] + '<span class="mkc-lab">' + m[2] + '</span>' : p.produto) + '</td>' +
+      '<td><b>' + mkPct(p.share) + '</b><div class="mkc-bar" style="width:' + Math.max(3, Math.round((p.share || 0) / maxSh * 100)) + '%"></div></td>' +
+      refs.map(function(r) { var q = r.d.por[p.produto]; return '<td class="mkc-ref">' + (q && q.share !== null ? mkPct(q.share) : '—') + '</td>'; }).join('') +
+      (d.ant ? '<td class="mkc-ref">' + (p.ant === null ? '—' : mkPct(p.ant)) + '</td><td class="' + bom + '">' + (p.pp === null ? '—' : (p.pp > 0.05 ? '▲ ' : (p.pp < -0.05 ? '▼ ' : '● ')) + pp(p.pp)) + '</td>' : '') + '</tr>';
+  });
+  if (resto.length) t += '<tr class="mkc-resto"><td></td><td>Outras ' + resto.length + ' marcas</td><td>' + mkPct(resto.reduce(function(a, p) { return a + (p.share || 0); }, 0)) + '</td>' + refs.map(function() { return '<td></td>'; }).join('') + (d.ant ? '<td></td><td></td>' : '') + '</tr>';
+  return { frase: frase + '<br>', tabela: t + '</tbody></table>' };
+}
+
 // cod = código do distrito no Raio X (8 dígitos) ou null para a regional; linhaFiltro = 'NEXUS' | 'VITAL' | null
 function renderConcorrentes(cod, linhaFiltro, mostrarLinha) {
   if (!MERCADO.ok) return '';
@@ -8381,6 +8428,9 @@ function renderConcorrentes(cod, linhaFiltro, mostrarLinha) {
       if (nr) frase += ' Na regional: ' + nr.pos + 'ª, com ' + mkPct(nr.share) + '.';
     }
 
+    // prescrição: share de receitas das marcas do mesmo mercado (o distrito contra a regional, quando há distrito)
+    var rxL = MERCADO.rxc.filter(function(r) { return r.regional === MERCADO_REGIONAL && r.linha === linha; });
+    var rxB = mkRxConcBloco(mkRxConcDados(rxL, marca, nivel, cod, ciclo), cod ? [{ rot: 'Regional', d: mkRxConcDados(rxL, marca, 'REGIONAL', null, ciclo) }] : [], marca, '');
     // tabela: 5 maiores marcas + a nossa (se estiver fora das 5) + demais agrupadas
     var top = at.lista.slice(0, 5);
     if (nossa && top.indexOf(nossa) < 0) top.push(nossa);
@@ -8389,7 +8439,8 @@ function renderConcorrentes(cod, linhaFiltro, mostrarLinha) {
     var h = '<div class="mkc-card"><div class="mkc-hdr"><span class="mkc-marca">★ ' + marca + '</span>' +
       (mostrarLinha ? '<span class="crm-linha-badge ' + linha.toLowerCase() + '">' + linha + '</span>' : '') +
       '<span class="mkc-meta">Mercado <b>' + mkRS(at.total) + '</b> · entre marcas <b>' + mkRS(at.marcas) + '</b> · ' + (at.temGen ? 'genérico <b>' + mkPct(at.genShare) + '</b>' : 'sem genérico') + '</span></div>' +
-      '<div class="mkc-insight">' + frase + '</div>' +
+      '<div class="mkc-insight">' + rxB.frase + '<b>Demanda:</b> ' + frase + '</div>' + rxB.tabela +
+      '<div class="mkc-sub">Demanda · venda em preço fábrica · ' + ciclo + '</div>' +
       '<table class="mkc-tbl"><thead><tr><th>#</th><th>Marca</th><th>Venda R$</th><th>Share marcas</th>' + (ref ? '<th>Regional</th>' : '') +
       (meses.length > 1 ? '<th>Desde ' + meses[0] + '</th>' : '') + '<th>Cresc. mês</th></tr></thead><tbody>';
     top.forEach(function(p) {
@@ -8427,7 +8478,7 @@ function renderConcorrentes(cod, linhaFiltro, mostrarLinha) {
   });
   return html + '</div>';
 }
-var MKC_NOTA = '<p style="font-size:11px;color:var(--gray);margin:8px 0 0">Share entre marcas = venda da marca ÷ venda de todas as marcas do mercado (preço fábrica), sem o genérico. ' +
+var MKC_NOTA = '<p style="font-size:11px;color:var(--gray);margin:8px 0 0">Prescrição = share de receitas de cada marca no mercado, com o share do mês anterior ao lado (Raio X, Prescrição | Análise de Concorrentes); a sigla ao lado do nome é o laboratório, como aparece no Raio X. Demanda: share entre marcas = venda da marca ÷ venda de todas as marcas do mercado (preço fábrica), sem o genérico. ' +
   '“Desde” = mudança desse share contra o primeiro ciclo do gráfico, em pontos percentuais: <span class="mks-up">verde</span> é bom para nós (nossa marca ganhou ou o concorrente perdeu), <span class="mks-dn">vermelho</span> é ruim. ' +
   'Cresc. mês = venda contra o mês anterior. Fonte: Raio X, Demanda | Análise de Concorrentes.</p>';
 
