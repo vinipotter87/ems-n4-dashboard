@@ -479,6 +479,29 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
 .mks-rank.mkd-pos1{background:#15693A}.mks-rank.mkd-pos2{background:#2563eb}.mks-rank.mkd-pos3{background:#b45309}.mks-rank.mkd-pos4{background:#6B7280}
 .mks-up{color:#15693A;font-weight:700}.mks-dn{color:#C8102E;font-weight:700}.mks-eq{color:var(--dark);font-weight:700}
 .mks-seta{font-size:9px;margin-left:3px}
+.mkc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(390px,1fr));gap:12px}
+.mkc-card{border:1px solid #e5e7eb;border-radius:12px;background:#fff;padding:12px 12px;min-width:0;overflow-x:auto}
+.mkc-hdr{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.mkc-marca{font-size:14px;font-weight:800;color:#78350f}
+.mkc-meta{font-size:11px;color:var(--gray);margin-left:auto}
+.mkc-meta b{color:var(--dark)}
+.mkc-insight{font-size:12px;line-height:1.55;background:#f8fafc;border-left:3px solid #1e3a8a;border-radius:4px;padding:6px 10px;margin-bottom:8px}
+.mkc-tbl{width:100%;border-collapse:collapse;font-size:12px}
+.mkc-tbl th{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--gray);text-align:right;padding:4px 4px;border-bottom:1px solid #e5e7eb;white-space:nowrap}
+.mkc-tbl td{padding:5px 4px;border-bottom:1px solid #f3f4f6;text-align:right;white-space:nowrap}
+.mkc-tbl th:nth-child(1),.mkc-tbl td:nth-child(1){text-align:left;width:1%;padding-right:0}
+.mkc-tbl th:nth-child(2),.mkc-tbl td:nth-child(2){text-align:left}
+.mkc-tbl tr.nossa td{background:#fffbeb;font-weight:700}
+.mkc-tbl tr.mkc-resto td{color:var(--gray);font-size:11.5px;border-bottom:0}
+.mkc-lab{font-size:10px;color:var(--gray);font-weight:500;margin-left:5px}
+.mkc-bar{height:4px;border-radius:2px;background:#cbd5e1;margin:2px 0 0 auto}
+.mkc-tbl tr.nossa .mkc-bar{background:#0d9488}
+.mkc-ref{color:var(--gray)}
+.mkc-tbl .mk-chip{padding:1px 6px;font-size:10.5px}
+.mkc-pos{color:#15693A;font-weight:700}.mkc-neg{color:#C8102E;font-weight:700}
+.mkc-graf{max-width:430px;margin:8px auto 0}
+.ap-fit .mkc-grid{grid-template-columns:repeat(var(--n,3),minmax(410px,1fr))}
+.ap-fit .mkc-card{overflow:visible}
 .mk-sub-lbl{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--gray);margin:14px 0 6px}
 .mk-grafs{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-top:6px}
 .mk-graf{border:1px solid #e5e7eb;border-radius:10px;padding:8px 10px 4px;background:#fff}
@@ -6682,6 +6705,7 @@ function abrirDistrito(distritoId) {
 
   // Marcas-chave por setor: cobertura de cota (ating. %) + dados de mercado na mesma tela
   html += renderMercadoDistrito(distritoId, isNexus ? 'NEXUS' : 'VITAL');
+  html += renderConcorrentesDistrito(distritoId, isNexus ? 'NEXUS' : 'VITAL');
   html += renderMercadoSetores(distritoId, repsD, prodRepD, isNexus ? 'NEXUS' : 'VITAL', d);
 
   // Exibe no painel correto
@@ -9135,6 +9159,11 @@ function renderMercadoMes(mes) {
       'O Raio X libera prescrição e demanda com cerca de 45 dias de defasagem; ' + pendentes.join(' e ') + (pendentes.length > 1 ? ' ainda não foram liberados.' : ' ainda não foi liberado.') + '</div>';
   }
   html += secao('NEXUS') + secao('VITAL');
+  var conc = renderConcorrentes(cod, linhaFiltro, !cod);
+  if (conc.indexOf('mkc-card') >= 0) {
+    html += '<div class="sec-hdr" style="margin-top:18px"><div class="sec-title">ANÁLISE DE CONCORRENTES — POR MARCA-CHAVE</div>' +
+      '<span class="mk-ref">' + (cod ? 'DISTRITO × REGIONAL' : 'REGIONAL') + ' · ' + ciclo + '/2026</span><div class="sec-line"></div></div>' + conc + MKC_NOTA;
+  }
   html += '<p style="font-size:11px;color:var(--gray);margin:10px 0 0">Penetração = mudança do share contra o mês anterior, em pontos percentuais. Share entre marcas e principal concorrente desconsideram o genérico. ' +
     'Evolução mês a mês, concorrentes e setores na aba <a href="#" onclick="abrirMercado();return false" style="color:#1e3a8a;font-weight:700">📊 Mercado</a>.</p>';
   html += '</div>';
@@ -9186,11 +9215,157 @@ function mkGrafico(labels, series){
     s.pts.forEach(function(v, i){
       if (v === null || isNaN(v)) return;
       o += '<circle cx="' + X(i).toFixed(1) + '" cy="' + Y(v).toFixed(1) + '" r="' + (s.ref ? 2.4 : 3.6) + '" fill="' + (s.ref ? '#fff' : s.cor) + '" stroke="' + s.cor + '" stroke-width="1.8"><title>' + s.nome + ' · ' + labels[i] + ': ' + mkPct(v) + '</title></circle>';
+      if (s.semRotulo) return;
       if (s.ref){ if (i === n - 1) o += '<text x="' + (X(i) + 6).toFixed(1) + '" y="' + (Y(v) + 3.5).toFixed(1) + '" class="mk-val ref" fill="' + s.cor + '">' + mkPct(v) + '</text>'; }
       else o += '<text x="' + X(i).toFixed(1) + '" y="' + (Y(v) - 7).toFixed(1) + '" class="mk-val" fill="' + s.cor + '" text-anchor="middle">' + mkPct(v) + '</text>';
     });
   });
   return o + '</svg>';
+}
+
+// ── Análise de concorrentes por marca-chave ──
+// Ranking das marcas de cada mercado (o genérico entra no tamanho, mas fica fora da disputa),
+// quem ganhou e quem perdeu share nos últimos ciclos e a distância da nossa marca para o líder.
+function mkConcDados(linha, marca, nivel, codigo, mes) {
+  var tot = 0, mar = 0, gen = 0, prods = {}, n = 0;
+  MERCADO.dem.forEach(function(r) {
+    if (!(r.mes === mes && r.regional === MERCADO_REGIONAL && r.linha === linha && r.marca === marca && r.nivel === nivel && (!codigo || r.codigo === codigo))) return;
+    var v = mkNum(r.valor) || 0; n++; tot += v;
+    if (/\(GENERICO\)/i.test(r.produto || '')) { gen += v; return; }
+    mar += v;
+    var p = prods[r.produto] || (prods[r.produto] = { produto: r.produto, valor: 0, ant: 0, nossa: false, ems: /\(EMS\)\s*$/i.test(r.produto || '') });
+    p.valor += v; p.ant += mkValorAnterior(r);
+    if (r.eh_marca === '1') p.nossa = true;
+  });
+  var lista = Object.keys(prods).map(function(k) { return prods[k]; }).sort(function(a, b) { return b.valor - a.valor; });
+  lista.forEach(function(p, i) {
+    p.pos = i + 1;
+    p.share = mar > 0 ? p.valor / mar * 100 : null;
+    p.cresc = p.ant > 0 ? (p.valor / p.ant - 1) * 100 : null;
+  });
+  return { tem: n > 0, total: tot, marcas: mar, genShare: tot > 0 ? gen / tot * 100 : null, temGen: gen > 0, lista: lista, por: prods };
+}
+function mkConcNome(produto) {
+  var m = /^(.*?)\s*\(([^)]*)\)\s*$/.exec(produto || '');
+  return m ? m[1] + '<span class="mkc-lab">' + m[2] + '</span>' : (produto || '—');
+}
+function mkConcPP(v) { return (v > 0 ? '+' : '') + v.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' pp'; }
+
+// cod = código do distrito no Raio X (8 dígitos) ou null para a regional; linhaFiltro = 'NEXUS' | 'VITAL' | null
+function renderConcorrentes(cod, linhaFiltro, mostrarLinha) {
+  if (!MERCADO.ok) return '';
+  var ciclo = mkCicloPara(MES_ATUAL);
+  if (!ciclo) return '';
+  var disp = {}, chaves = {};
+  MERCADO.dem.forEach(function(r) {
+    if (r.regional !== MERCADO_REGIONAL || (linhaFiltro && r.linha !== linhaFiltro)) return;
+    disp[r.mes] = 1;
+    if (r.mes === ciclo) chaves[r.linha + '|' + r.marca] = 1;
+  });
+  var meses = Object.keys(disp).filter(function(m) { return MK_MESES.indexOf(m) <= MK_MESES.indexOf(ciclo); })
+    .sort(function(x, y) { return MK_MESES.indexOf(x) - MK_MESES.indexOf(y); }).slice(-3);
+  var nivel = cod ? 'DISTRITO' : 'REGIONAL', CORES = ['#dc2626', '#7c3aed', '#f59e0b'];
+  var html = '<div class="mkc-grid">';
+  Object.keys(chaves).sort().forEach(function(k) {
+    var linha = k.split('|')[0], marca = k.split('|')[1];
+    var hist = meses.map(function(m) { return mkConcDados(linha, marca, nivel, cod, m); });
+    var at = hist[hist.length - 1], ini = hist[0], ref = cod ? mkConcDados(linha, marca, 'REGIONAL', null, ciclo) : null;
+    if (!at.tem || !at.lista.length) return;
+    var nossa = at.lista.filter(function(p) { return p.nossa; })[0];
+    var rivais = at.lista.filter(function(p) { return !p.ems; });
+    var lider = at.lista[0], n = at.lista.length;
+    function delta(p) { // mudança do share entre marcas desde o primeiro ciclo da janela
+      var a = ini.por[p.produto];
+      return (meses.length > 1 && a && a.share !== null && p.share !== null) ? p.share - a.share : null;
+    }
+    // leitura em uma frase: posição, distância para o líder (ou para o 2º) e quem mais mexeu no período
+    var frase = '';
+    if (nossa) {
+      if (nossa.pos === 1) {
+        var seg = at.lista[1];
+        frase = '<b>' + marca + ' lidera</b> entre ' + n + ' marcas, com <b>' + mkPct(nossa.share) + '</b>' + (seg ? '; ' + seg.produto + ' vem em 2º, ' + mkConcPP(nossa.share - seg.share).replace('+', '') + ' atrás' : '') + '.';
+      } else {
+        frase = '<b>' + marca + ' é a ' + nossa.pos + 'ª</b> de ' + n + ' marcas, com <b>' + mkPct(nossa.share) + '</b>. Líder: <b>' + lider.produto + '</b> (' + mkPct(lider.share) + '), ' +
+          mkConcPP(lider.share - nossa.share).replace('+', '') + ' à frente.';
+      }
+      var dn = delta(nossa);
+      if (dn !== null) frase += ' Desde ' + meses[0] + ': <span class="' + (dn > 0.05 ? 'mks-up' : (dn < -0.05 ? 'mks-dn' : 'mks-eq')) + '">' + mkConcPP(dn) + '</span>.';
+    } else {
+      frase = '<b>' + marca + ' sem venda</b> neste recorte. Líder: <b>' + lider.produto + '</b> (' + mkPct(lider.share) + ').';
+    }
+    var mexeram = rivais.map(function(p) { return { p: p, d: delta(p) }; }).filter(function(x) { return x.d !== null && (x.p.share >= 1 || Math.abs(x.d) >= 1); })
+      .sort(function(a, b) { return b.d - a.d; });
+    if (mexeram.length) {
+      var sobe = mexeram[0], cai = mexeram[mexeram.length - 1];
+      if (sobe.d > 0.05) frase += ' Concorrente que mais ganhou: <b>' + sobe.p.produto + '</b> <span class="mks-dn">' + mkConcPP(sobe.d) + '</span>.';
+      if (cai.d < -0.05 && cai !== sobe) frase += ' Que mais perdeu: <b>' + cai.p.produto + '</b> <span class="mks-up">' + mkConcPP(cai.d) + '</span>.';
+    }
+    if (ref && ref.tem) {
+      var nr = ref.lista.filter(function(p) { return p.nossa; })[0];
+      if (nr) frase += ' Na regional: ' + nr.pos + 'ª, com ' + mkPct(nr.share) + '.';
+    }
+
+    // tabela: 5 maiores marcas + a nossa (se estiver fora das 5) + demais agrupadas
+    var top = at.lista.slice(0, 5);
+    if (nossa && top.indexOf(nossa) < 0) top.push(nossa);
+    var resto = at.lista.filter(function(p) { return top.indexOf(p) < 0; });
+    var maxSh = Math.max.apply(null, top.map(function(p) { return p.share || 0; })) || 1;
+    var h = '<div class="mkc-card"><div class="mkc-hdr"><span class="mkc-marca">★ ' + marca + '</span>' +
+      (mostrarLinha ? '<span class="crm-linha-badge ' + linha.toLowerCase() + '">' + linha + '</span>' : '') +
+      '<span class="mkc-meta">Mercado <b>' + mkRS(at.total) + '</b> · entre marcas <b>' + mkRS(at.marcas) + '</b> · ' + (at.temGen ? 'genérico <b>' + mkPct(at.genShare) + '</b>' : 'sem genérico') + '</span></div>' +
+      '<div class="mkc-insight">' + frase + '</div>' +
+      '<table class="mkc-tbl"><thead><tr><th>#</th><th>Marca</th><th>Venda R$</th><th>Share marcas</th>' + (ref ? '<th>Regional</th>' : '') +
+      (meses.length > 1 ? '<th>Desde ' + meses[0] + '</th>' : '') + '<th>Cresc. mês</th></tr></thead><tbody>';
+    top.forEach(function(p) {
+      var d = delta(p), pr = ref ? ref.por[p.produto] : null;
+      // para concorrente, ganhar share é ruim para nós: a cor do chip segue a nossa ótica
+      var chip = d === null ? '<span style="color:#ccc">—</span>' : mkChip(d);
+      if (d !== null && !p.ems) chip = chip.replace('mk-chip up', 'mk-chip down@').replace('mk-chip down"', 'mk-chip up"').replace('down@', 'down');
+      h += '<tr class="' + (p.nossa ? 'nossa' : '') + '"><td><span class="mks-rank mkd-pos' + Math.min(p.pos, 4) + '">' + p.pos + 'º</span></td>' +
+        '<td>' + mkConcNome(p.produto) + '</td><td>' + mkRS(p.valor).replace('R$ ', '') + '</td>' +
+        '<td><b>' + mkPct(p.share) + '</b><div class="mkc-bar" style="width:' + Math.max(3, Math.round((p.share || 0) / maxSh * 100)) + '%"></div></td>' +
+        (ref ? '<td class="mkc-ref">' + (pr && pr.share !== null ? mkPct(pr.share) : '—') + '</td>' : '') +
+        (meses.length > 1 ? '<td>' + chip + '</td>' : '') +
+        '<td class="' + (p.cresc === null ? '' : (p.cresc >= 0 ? 'mkc-pos' : 'mkc-neg')) + '">' + (p.cresc === null ? '—' : (p.cresc > 0 ? '+' : '') + p.cresc.toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + '%') + '</td></tr>';
+    });
+    if (resto.length) {
+      var vr = resto.reduce(function(a, p) { return a + p.valor; }, 0);
+      h += '<tr class="mkc-resto"><td></td><td>Outras ' + resto.length + ' marcas</td><td>' + mkRS(vr).replace('R$ ', '') + '</td><td>' + mkPct(at.marcas > 0 ? vr / at.marcas * 100 : null) + '</td>' +
+        (ref ? '<td></td>' : '') + (meses.length > 1 ? '<td></td>' : '') + '<td></td></tr>';
+    }
+    h += '</tbody></table>';
+    // evolução do share entre marcas: a nossa (rotulada) contra os 3 maiores concorrentes
+    if (meses.length > 1) {
+      var series = [], leg = '';
+      if (nossa) {
+        series.push({ nome: nossa.produto, cor: '#0d9488', pts: hist.map(function(x) { var p = x.por[nossa.produto]; return p ? p.share : null; }) });
+        leg += '<span><i style="background:#0d9488"></i><b>' + marca + '</b></span>';
+      }
+      rivais.slice(0, 3).forEach(function(p, i) {
+        series.push({ nome: p.produto, cor: CORES[i], semRotulo: true, pts: hist.map(function(x) { var q = x.por[p.produto]; return q ? q.share : null; }) });
+        leg += '<span><i style="background:' + CORES[i] + '"></i>' + p.produto.replace(/\s*\([^)]*\)\s*$/, '') + '</span>';
+      });
+      h += '<div class="mkc-graf">' + mkGrafico(meses, series) + '<div class="mk-leg" style="margin-top:2px">' + leg + '</div></div>';
+    }
+    html += h + '</div>';
+  });
+  return html + '</div>';
+}
+var MKC_NOTA = '<p style="font-size:11px;color:var(--gray);margin:8px 0 0">Share entre marcas = venda da marca ÷ venda de todas as marcas do mercado (preço fábrica), sem o genérico. ' +
+  '“Desde” = mudança desse share contra o primeiro ciclo do gráfico, em pontos percentuais: <span class="mks-up">verde</span> é bom para nós (nossa marca ganhou ou o concorrente perdeu), <span class="mks-dn">vermelho</span> é ruim. ' +
+  'Cresc. mês = venda contra o mês anterior. Fonte: Raio X, Demanda | Análise de Concorrentes.</p>';
+
+// Painel do distrito / slide da Apresentação N4
+function renderConcorrentesDistrito(distritoId, linha) {
+  if (!MERCADO.ok) return '';
+  var ciclo = mkCicloPara(MES_ATUAL);
+  if (!ciclo) return '';
+  var corpo = renderConcorrentes(distritoId.substring(0, 6) + '00', linha, false);
+  // no slide os cartões ficam lado a lado numa linha só; o quadro .mks-wrap é reduzido até caber na largura
+  corpo = '<div class="mks-wrap" style="overflow-x:auto">' + corpo.replace('<div class="mkc-grid">', '<div class="mkc-grid" style="--n:' + (corpo.split('mkc-card"').length - 1) + '">') + '</div>';
+  if (corpo.indexOf('mkc-card') < 0) return '';
+  return '<div class="dd-section-lbl" style="margin-top:18px">Concorrentes por Marca-chave — Distrito × Regional</div>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 10px">' + mkTarjaMercado(ciclo) + '</div>' + corpo + MKC_NOTA;
 }
 
 // Marcas-chave do distrito (visão consolidada): cota e dados de mercado de cada marca-chave,
