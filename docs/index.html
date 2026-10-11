@@ -803,6 +803,8 @@ body.apres-on{overflow:hidden}
 .ap-indice,.ap-escolha{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:3.2vh;max-width:1240px}
 .ap-indice button,.ap-escolha button{display:flex;align-items:center;gap:12px;text-align:left;background:rgba(18,72,170,.42);border:1.5px solid rgba(120,180,255,.28);color:#fff;border-radius:12px;padding:1.2vh 14px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .15s,border-color .15s,box-shadow .15s}
 .ap-indice button:hover,.ap-escolha button:hover{background:rgba(30,100,215,.55);border-color:#5cc8ff;box-shadow:0 0 22px rgba(60,170,255,.45)}
+.ap-ind-t{grid-column:1/-1;font-size:12px;font-weight:800;letter-spacing:3px;text-transform:uppercase;color:#9fd4ff;margin-top:1vh;cursor:pointer}
+.ap-ind-t:first-child{margin-top:0}
 .ap-indice b{flex:none;min-width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:linear-gradient(145deg,#2b8cff,#0f5fe0);color:#fff;font-size:12px;font-weight:900;box-shadow:0 4px 12px rgba(0,30,110,.4)}
 .ap-escolha{gap:18px}
 .ap-escolha button{gap:16px;border-radius:18px;padding:2.2vh 22px;font-size:clamp(14px,1.35vw,17px);font-weight:700;line-height:1.3}
@@ -3758,17 +3760,32 @@ function apresMontar() {
   // altura útil de um slide; seções até 1,15× isso ainda cabem reduzindo pouco a escala
   var util = window.innerHeight - 48 - 46 - 18 - 54 - 28;
   APRES_PLANOS = [];
-  var grupos = apresGrupos(util * 1.15);
-  grupos = grupos.concat(apresPlanoFundGrupo());
-  apresMarcasGrupos().forEach(function(g) {
-    grupos.push(g);
-    grupos.push(apresPlanoMarcaGrupo(g.planoMarca.marca, g.planoMarca.chave, g.planoMarca.problema));
+  // Ordem da apresentação: abertura → bloco Fundamentos (fecha com o quadro de desvios, o plano
+  // e o Budget) → bloco Produtos (fecha com as marcas abaixo da cota e seus planos) → fechamento.
+  var base = apresGrupos(util * 1.15), abre = [], equipe = [], fund = [], budget = [], prod = [];
+  base.forEach(function(g) {
+    if (g.chave === 'geral') abre.push(g);
+    else if (g.chave === 'equipe') equipe.push(g);
+    else if (g.chave === 'budget') budget.push(g);
+    else if (g.chave === 'produto' || g.chave === 'diag' || /marcas?-chave|concorrentes|atingimento por produto/i.test(g.nome)) prod.push(g);
+    else fund.push(g);
   });
+  var fundTodos = equipe.concat(fund, apresPlanoFundGrupo(), budget);
+  apresMarcasGrupos().forEach(function(g) {
+    prod.push(g);
+    prod.push(apresPlanoMarcaGrupo(g.planoMarca.marca, g.planoMarca.chave, g.planoMarca.problema));
+  });
+  function divisor(k, titulo, sub, itens) { return { chave: '', nome: titulo, nodes: [], msg: ' ', divisor: { k: k, sub: sub, itens: itens } }; }
+  var grupos = abre.concat(
+    fundTodos.length ? [divisor('Bloco 1', 'Fundamentos', 'Execução do distrito: equipe, jornada, PEX, matriz, visitas e CRM, plano de fundamentos e Budget.', fundTodos)] : [], fundTodos,
+    prod.length ? [divisor('Bloco 2', 'Produtos', 'Resultado das marcas: cota, mercado, concorrentes, setores e planos das marcas abaixo da cota.', prod)] : [], prod);
+  var fimIni = grupos.length; // a partir daqui é o fechamento (plano de ação e ata)
   var fimEl = document.createElement('div'); fimEl.id = 'ap-plano-final';
   grupos.push({ chave: '', nome: 'Plano de ação', nodes: [fimEl], msg: ' ' });
   var ataNovaEl = document.createElement('div'); ataNovaEl.id = 'ap-ata-nova';
   grupos.push({ chave: '', nome: 'Ata desta reunião', nodes: [ataNovaEl], msg: ' ' });
   var ataEl = document.createElement('div'); ataEl.id = 'ap-ata';
+  grupos[fimIni].fim1 = true;
   grupos.unshift({ chave: '', nome: 'Combinados anteriores', nodes: [ataEl], msg: ' ', ata: true });
   APRES_ATA_PREVIA = null; APRES_ATA_EDIT = null; APRES_ATA_ALVO = 'ant'; APRES_ATA_TEXTO = null;
   document.getElementById('ap-ctx').textContent = (d.nm || '') + ' · ' + (d.linha || '') + ' · ' + MES_ATUAL + '/2026';
@@ -3782,10 +3799,20 @@ function apresMontar() {
   capa.innerHTML = '<div class="ap-capa ap-cv">' + APRES_DECO + '<div class="ap-capa-k">Dashboard N4 · Regional SPI Oeste</div>' +
     '<h2>' + nmCapa[0] + ' <span>' + nmCapa.slice(1).join(' ') + '</span></h2><div class="ap-capa-m">Linha ' + (d.linha || '') + ' · distrito ' + String(d.distrito_id || '').substring(0, 6) +
     ' · ' + MES_ATUAL + '/2026 · ' + (d.reps_ativos || '—') + ' representantes ativos</div>' +
-    '<div class="ap-indice">' + grupos.map(function(g, k) { return '<button onclick="apresIr(' + (k + 1) + ')"><b>' + (k + 2) + '</b>' + g.nome + '</button>'; }).join('') + '</div></div>';
+    '<div class="ap-indice">' + grupos.map(function(g, k) {
+      if (g.divisor) return '<div class="ap-ind-t" onclick="apresIr(' + (k + 1) + ')">' + g.divisor.k + ' · ' + g.nome + '</div>';
+      return (g.fim1 ? '<div class="ap-ind-t">Fechamento</div>' : '') + '<button onclick="apresIr(' + (k + 1) + ')"><b>' + (k + 2) + '</b>' + g.nome + '</button>';
+    }).join('') + '</div></div>';
   stage.appendChild(capa); APRES.slides.push({ el: capa, nome: 'Abertura' });
 
   grupos.forEach(function(g) {
+    if (g.divisor) {
+      var dv = document.createElement('div'); dv.className = 'ap-slide';
+      dv.innerHTML = '<div class="ap-capa ap-cv">' + APRES_DECO + '<div class="ap-capa-k">' + g.divisor.k + '</div><h2>' + g.nome + '</h2><div class="ap-capa-m">' + g.divisor.sub + '</div>' +
+        '<div class="ap-indice">' + g.divisor.itens.map(function(it) { var p = grupos.indexOf(it); return '<button onclick="apresIr(' + (p + 1) + ')"><b>' + (p + 2) + '</b>' + it.nome + '</button>'; }).join('') + '</div></div>';
+      stage.appendChild(dv); APRES.slides.push({ el: dv, nome: g.divisor.k + ' — ' + g.nome });
+      return;
+    }
     var s = document.createElement('div'); s.className = 'ap-slide';
     var msg = g.msg || (g.chave ? g.chave.split('+').map(apresMensagem).filter(Boolean).join(' · ') : '');
     s.innerHTML = '<div class="ap-hdr"><h2>' + g.nome + '</h2>' + (msg ? '<span class="ap-msg">' + msg + '</span>' : '') + '</div>' +

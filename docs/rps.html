@@ -33,6 +33,7 @@ button,select,input,textarea{font-family:inherit}
 .capa h2{font-size:42px;font-weight:900;line-height:1.1;margin:8px 0 10px}
 .capa .m{font-size:15px;opacity:.9}
 .grade{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:24px}
+.grade-t{grid-column:1/-1;font-size:11px;font-weight:800;letter-spacing:3px;text-transform:uppercase;opacity:.75;margin-top:8px;cursor:pointer}
 .grade button{display:flex;align-items:center;gap:10px;text-align:left;background:rgba(255,255,255,.12);border:none;color:#fff;border-radius:9px;padding:10px 14px;font-size:14px;font-weight:600;cursor:pointer}
 .grade button:hover{background:rgba(255,255,255,.24)}
 .grade b{background:#fff;color:var(--brand-d);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:900}
@@ -133,6 +134,25 @@ tr.tot td{background:#f3f4f6;font-weight:800}
 .mk-val{font-size:10.5px;font-weight:800;paint-order:stroke;stroke:#fff;stroke-width:3px}.mk-val.ref{font-weight:600;font-size:9.5px}
 .mk-leg{display:flex;gap:16px;flex-wrap:wrap;font-size:11px;color:var(--gray);margin-top:8px}
 .mk-leg span{display:flex;align-items:center;gap:5px}.mk-leg i{width:16px;height:3px;border-radius:2px;display:inline-block}
+.mkc-grid{display:grid;grid-template-columns:repeat(var(--n,3),minmax(410px,1fr));gap:12px}
+.mkc-card{border:1px solid var(--border);border-radius:12px;background:#fff;padding:12px}
+.mkc-hdr{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.mkc-marca{font-size:14px;font-weight:800;color:#78350f}
+.mkc-meta{font-size:11px;color:var(--gray);margin-left:auto}.mkc-meta b{color:#111827}
+.mkc-insight{font-size:12px;line-height:1.55;background:#f8fafc;border-left:3px solid #1e3a8a;border-radius:4px;padding:6px 10px;margin-bottom:8px}
+.mkc-tbl{width:100%;border-collapse:collapse;font-size:12px}
+.mkc-tbl th{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--gray);text-align:right;padding:4px;border-bottom:1px solid #e5e7eb;white-space:nowrap;background:none}
+.mkc-tbl td{padding:5px 4px;border-bottom:1px solid #f3f4f6;text-align:right;white-space:nowrap}
+.mkc-tbl th:nth-child(1),.mkc-tbl td:nth-child(1){text-align:left;width:1%;padding-right:0}
+.mkc-tbl th:nth-child(2),.mkc-tbl td:nth-child(2){text-align:left}
+.mkc-tbl tr.nossa td{background:#fffbeb;font-weight:700}
+.mkc-tbl tr.mkc-resto td{color:var(--gray);font-size:11.5px;border-bottom:0}
+.mkc-lab{font-size:10px;color:var(--gray);font-weight:500;margin-left:5px}
+.mkc-bar{height:4px;border-radius:2px;background:#cbd5e1;margin:2px 0 0 auto}
+.mkc-tbl tr.nossa .mkc-bar{background:#0d9488}
+.mkc-ref{color:var(--gray)}
+.mkc-pos{color:#15693A;font-weight:700}.mkc-neg{color:#C8102E;font-weight:700}
+.mkc-graf{max-width:430px;margin:8px auto 0}
 .mk-nota-top{font-size:11.5px;color:#5b4300;background:#fffbeb;border:1px solid #f3d98b;border-radius:8px;padding:8px 12px;margin-top:10px;line-height:1.6}
 .nota{font-size:11px;color:var(--gray);line-height:1.5;margin-top:8px}
 .aviso{background:#fef9c3;color:#854d0e;font-size:12px;font-weight:700;padding:7px 12px;border-radius:8px;margin-bottom:10px}
@@ -358,7 +378,8 @@ function avisoRef(nome){
   return '<div class="aviso">⚠️ Ainda sem resultado de ' + ST.mes + '/2026 — exibindo o último disponível: ' + d.map(function(f){ return '<b>' + FONTE_NOME[f] + ': ' + ref[f] + '/2026</b>'; }).join(' · ') + '.</div>';
 }
 function resumoRef(){ var ref = ST.d.ref, d = defasadas(['reps', 'prod', 'pex', 'freq', 'sob']); return d.length ? ' · último resultado disponível — ' + d.map(function(f){ return (f === 'reps' ? 'produtividade' : (f === 'prod' ? 'produtos' : (f === 'pex' ? 'PEX' : (f === 'freq' ? 'frequência' : 'sobreposição')))) + ': ' + ref[f]; }).join(', ') : ''; }
-function slideHtml(s){ return '<div class="slide"><div class="hdr"><h2>' + s.nome + '</h2><span>' + esc(s.msg) + '</span></div><div class="body"><div class="fit">' + avisoRef(s.nome) + s.html + '</div></div></div>'; }
+function slideHtml(s){ if (s.divisor) return '<div class="slide"><div class="capa"><div class="k">' + s.divisor.k + '</div><h2>' + s.divisor.t + '</h2><div class="m">' + s.divisor.sub + '</div></div></div>';
+  return '<div class="slide"><div class="hdr"><h2>' + s.nome + '</h2><span>' + esc(s.msg) + '</span></div><div class="body"><div class="fit">' + avisoRef(s.nome) + s.html + '</div></div></div>'; }
 
 // ── números derivados ──
 function prodDist(d){ var p = num(d.prod); return p !== null && p < 5 ? p * 100 : p; }
@@ -411,6 +432,89 @@ function mkSemDados(nome){ return { nome: nome, msg: 'Ainda sem dados de mercado
 function mkReg(txt){ return '<span class="mk-reg">regional ' + txt + '</span>'; }
 
 // Visão do distrito: uma linha por marca-chave, com a regional como referência
+// ── Concorrentes por marca-chave (demanda, preço fábrica) ──
+// Ranking das marcas do mercado (genérico fora da disputa), distância para o líder e quem ganhou
+// ou perdeu share nos últimos ciclos. nivel/cod = recorte principal; refs = colunas de referência.
+function mkConcDados(marca, nivel, cod, mes){
+  var tot = 0, mar = 0, gen = 0, prods = {}, n = 0;
+  ST.d.mk.hdem.forEach(function(r){
+    if (!(r.mes === mes && r.marca === marca && r.nivel === nivel && (!cod || r.codigo === cod))) return;
+    var v = mkN(r.valor) || 0; n++; tot += v;
+    if (/\(GENERICO\)/i.test(r.produto || '')){ gen += v; return; }
+    mar += v;
+    var p = prods[r.produto] || (prods[r.produto] = { produto: r.produto, valor: 0, ant: 0, nossa: false, ems: /\(EMS\)\s*$/i.test(r.produto || '') });
+    p.valor += v; p.ant += mkAnt(r); if (r.eh_marca === '1') p.nossa = true;
+  });
+  var lista = Object.keys(prods).map(function(k){ return prods[k]; }).sort(function(a, b){ return b.valor - a.valor; });
+  lista.forEach(function(p, i){ p.pos = i + 1; p.share = mar > 0 ? p.valor / mar * 100 : null; p.cresc = p.ant > 0 ? (p.valor / p.ant - 1) * 100 : null; });
+  return { tem: n > 0, total: tot, marcas: mar, genShare: tot > 0 ? gen / tot * 100 : null, temGen: gen > 0, lista: lista, por: prods };
+}
+function mkConcHtml(nivel, cod, refs){
+  var D = ST.d, meses = D.mk.meses, ciclo = D.mk.ciclo, CORES = ['#dc2626', '#7c3aed', '#f59e0b'], cards = 0;
+  var ch = marcas(D.dist.linha, ciclo), h = '<div class="mk-wrap"><div class="mkc-grid" style="--n:' + ch.length + '">';
+  ch.forEach(function(marca){
+    var hist = meses.map(function(m){ return mkConcDados(marca, nivel, cod, m); }), at = hist[hist.length - 1], ini = hist[0];
+    if (!at || !at.tem || !at.lista.length) return;
+    var rf = refs.map(function(r){ return { rot: r.rot, d: mkConcDados(marca, r.nivel, r.cod, ciclo) }; });
+    var nossa = at.lista.filter(function(p){ return p.nossa; })[0], rivais = at.lista.filter(function(p){ return !p.ems; }), lider = at.lista[0], n = at.lista.length;
+    function delta(p){ var a = ini.por[p.produto]; return (meses.length > 1 && a && a.share !== null && p.share !== null) ? p.share - a.share : null; }
+    function cor(d){ return d > 0.05 ? 'mkc-pos' : (d < -0.05 ? 'mkc-neg' : ''); }
+    var frase;
+    if (nossa){
+      if (nossa.pos === 1){ var seg = at.lista[1]; frase = '<b>' + marca + ' lidera</b> entre ' + n + ' marcas, com <b>' + mkPct(nossa.share) + '</b>' + (seg ? '; ' + seg.produto + ' vem em 2º, ' + mkPP(nossa.share - seg.share).replace('+', '') + ' pp atrás' : '') + '.'; }
+      else frase = '<b>' + marca + ' é a ' + nossa.pos + 'ª</b> de ' + n + ' marcas, com <b>' + mkPct(nossa.share) + '</b>. Líder: <b>' + lider.produto + '</b> (' + mkPct(lider.share) + '), ' + mkPP(lider.share - nossa.share).replace('+', '') + ' pp à frente.';
+      var dn = delta(nossa); if (dn !== null) frase += ' Desde ' + meses[0] + ': <span class="' + cor(dn) + '">' + mkPP(dn) + ' pp</span>.';
+    } else frase = '<b>' + marca + ' sem venda</b> neste recorte. Líder: <b>' + lider.produto + '</b> (' + mkPct(lider.share) + ').';
+    var mex = rivais.map(function(p){ return { p: p, d: delta(p) }; }).filter(function(x){ return x.d !== null && (x.p.share >= 1 || Math.abs(x.d) >= 1); }).sort(function(a, b){ return b.d - a.d; });
+    if (mex.length){
+      var sobe = mex[0], cai = mex[mex.length - 1];
+      if (sobe.d > 0.05) frase += ' Concorrente que mais ganhou: <b>' + sobe.p.produto + '</b> <span class="mkc-neg">' + mkPP(sobe.d) + ' pp</span>.';
+      if (cai.d < -0.05 && cai !== sobe) frase += ' Que mais perdeu: <b>' + cai.p.produto + '</b> <span class="mkc-pos">' + mkPP(cai.d) + ' pp</span>.';
+    }
+    rf.forEach(function(r){ var nr = r.d.lista.filter(function(p){ return p.nossa; })[0]; if (nr) frase += ' ' + r.rot + ': ' + nr.pos + 'ª, com ' + mkPct(nr.share) + '.'; });
+    var top = at.lista.slice(0, 5); if (nossa && top.indexOf(nossa) < 0) top.push(nossa);
+    var resto = at.lista.filter(function(p){ return top.indexOf(p) < 0; }), maxSh = Math.max.apply(null, top.map(function(p){ return p.share || 0; })) || 1;
+    cards++;
+    h += '<div class="mkc-card"><div class="mkc-hdr"><span class="mkc-marca">★ ' + marca + '</span><span class="mkc-meta">Mercado <b>' + mkRS(at.total) + '</b> · entre marcas <b>' + mkRS(at.marcas) + '</b> · ' + (at.temGen ? 'genérico <b>' + mkPct(at.genShare) + '</b>' : 'sem genérico') + '</span></div>' +
+      '<div class="mkc-insight">' + frase + '</div><table class="mkc-tbl"><thead><tr><th>#</th><th>Marca</th><th>Venda R$</th><th>Share marcas</th>' + rf.map(function(r){ return '<th>' + r.rot + '</th>'; }).join('') +
+      (meses.length > 1 ? '<th>Desde ' + meses[0] + '</th>' : '') + '<th>Cresc. mês</th></tr></thead><tbody>';
+    top.forEach(function(p){
+      var d = delta(p), m = /^(.*?)\s*\(([^)]*)\)\s*$/.exec(p.produto), bom = d === null ? '' : cor(p.ems ? d : -d);
+      h += '<tr class="' + (p.nossa ? 'nossa' : '') + '"><td><span class="mk-rank p' + Math.min(p.pos, 4) + '">' + p.pos + 'º</span></td><td>' + (m ? m[1] + '<span class="mkc-lab">' + m[2] + '</span>' : p.produto) + '</td><td>' + mkCurto(p.valor) + '</td>' +
+        '<td><b>' + mkPct(p.share) + '</b><div class="mkc-bar" style="width:' + Math.max(3, Math.round((p.share || 0) / maxSh * 100)) + '%"></div></td>' +
+        rf.map(function(r){ var q = r.d.por[p.produto]; return '<td class="mkc-ref">' + (q && q.share !== null ? mkPct(q.share) : '—') + '</td>'; }).join('') +
+        (meses.length > 1 ? '<td class="' + bom + '">' + (d === null ? '—' : (d > 0.05 ? '▲ ' : (d < -0.05 ? '▼ ' : '● ')) + mkPP(d) + ' pp') + '</td>' : '') +
+        '<td class="' + (p.cresc === null ? '' : (p.cresc >= 0 ? 'mkc-pos' : 'mkc-neg')) + '">' + (p.cresc === null ? '—' : (p.cresc > 0 ? '+' : '') + p.cresc.toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + '%') + '</td></tr>';
+    });
+    if (resto.length){ var vr = resto.reduce(function(a, p){ return a + p.valor; }, 0);
+      h += '<tr class="mkc-resto"><td></td><td>Outras ' + resto.length + ' marcas</td><td>' + mkCurto(vr) + '</td><td>' + mkPct(at.marcas > 0 ? vr / at.marcas * 100 : null) + '</td>' + rf.map(function(){ return '<td></td>'; }).join('') + (meses.length > 1 ? '<td></td>' : '') + '<td></td></tr>'; }
+    h += '</tbody></table>';
+    if (meses.length > 1){
+      var series = [], leg = '';
+      if (nossa){ series.push({ nome: nossa.produto, cor: '#0d9488', pts: hist.map(function(x){ var p = x.por[nossa.produto]; return p ? p.share : null; }) }); leg += '<span><i style="background:#0d9488"></i><b>' + marca + '</b></span>'; }
+      rivais.slice(0, 3).forEach(function(p, i){ series.push({ nome: p.produto, cor: CORES[i], semRotulo: true, pts: hist.map(function(x){ var q = x.por[p.produto]; return q ? q.share : null; }) });
+        leg += '<span><i style="background:' + CORES[i] + '"></i>' + p.produto.replace(/\s*\([^)]*\)\s*$/, '') + '</span>'; });
+      h += '<div class="mkc-graf">' + mkGrafico(meses, series) + '<div class="mk-leg" style="margin-top:2px">' + leg + '</div></div>';
+    }
+    h += '</div>';
+  });
+  return cards ? h + '</div></div><div class="nota">Share entre marcas = venda da marca ÷ venda de todas as marcas do mercado (preço fábrica), sem o genérico. “Desde” = mudança desse share contra o primeiro ciclo do gráfico: verde é bom para nós (nossa marca ganhou ou o concorrente perdeu), vermelho é ruim. Cresc. mês = venda contra o mês anterior. Fonte: Raio X, Demanda | Análise de Concorrentes.</div>' : '';
+}
+function sConcorrentes(){ // coletiva: distrito contra a regional
+  var nome = 'Mercado — concorrentes por marca-chave';
+  if (!ST.d.mk.ciclo) return mkSemDados(nome);
+  var c = mkConcHtml('DISTRITO', mkCodDistrito(), [{ rot: 'Regional', nivel: 'REGIONAL', cod: null }]);
+  return c ? { nome: nome, msg: 'Quem disputa cada mercado no distrito e como o share mudou', html: mkTarjas() + c } : mkSemDados(nome);
+}
+function iConcorrentes(){ // individual: setor contra o distrito e a regional
+  var nome = 'Mercado — concorrentes por marca-chave';
+  if (!ST.d.mk.ciclo) return mkSemDados(nome);
+  var c = mkConcHtml('SETOR', ST.setor, [{ rot: 'Distrito', nivel: 'DISTRITO', cod: mkCodDistrito() }, { rot: 'Regional', nivel: 'REGIONAL', cod: null }]);
+  return c ? { nome: nome, msg: 'Quem disputa cada mercado no setor e como o share mudou', html: mkTarjas() + c } : mkSemDados(nome);
+}
+// Slide divisor de bloco (Fundamentos / Produtos)
+function sDivisor(k, titulo, sub){ return { nome: k + ' — ' + titulo, msg: '', divisor: { k: k, t: titulo, sub: sub } }; }
+
 function sMercadoDistrito(){
   var nome = 'Mercado — marcas-chave do distrito', D = ST.d;
   if (!D.mk.ciclo) return mkSemDados(nome);
@@ -524,6 +628,7 @@ function mkGrafico(labels, series){
     s.pts.forEach(function(v, i){
       if (v === null || isNaN(v)) return;
       o += '<circle cx="' + X(i).toFixed(1) + '" cy="' + Y(v).toFixed(1) + '" r="' + (s.ref ? 2.4 : 3.6) + '" fill="' + (s.ref ? '#fff' : s.cor) + '" stroke="' + s.cor + '" stroke-width="1.8"><title>' + s.nome + ' · ' + labels[i] + ': ' + mkPct(v) + '</title></circle>';
+      if (s.semRotulo) return;
       if (s.ref){ if (i === n - 1) o += '<text x="' + (X(i) + 6).toFixed(1) + '" y="' + (Y(v) + 3.5).toFixed(1) + '" class="mk-val ref" fill="' + s.cor + '">' + mkPct(v) + '</text>'; }
       else o += '<text x="' + X(i).toFixed(1) + '" y="' + (Y(v) - 7).toFixed(1) + '" class="mk-val" fill="' + s.cor + '" text-anchor="middle">' + mkPct(v) + '</text>';
     });
@@ -584,11 +689,18 @@ function iMercado(){
 }
 
 // ── slides ──
+// índice da capa, com o título de cada bloco (Fundamentos, Produtos, Fechamento)
+function gradeCapa(lista){
+  return lista.map(function(s, k){
+    if (s.divisor) return '<div class="grade-t" onclick="ir(' + (k + 1) + ')">' + s.nome + '</div>';
+    return (s.fim1 ? '<div class="grade-t">Fechamento</div>' : '') + '<button onclick="ir(' + (k + 1) + ')"><b>' + (k + 2) + '</b>' + s.nome + '</button>';
+  }).join('');
+}
 function sCapa(lista){
   var D = ST.d.dist;
   return '<div class="capa"><div class="k">RPS coletiva · Regional SPI Oeste</div><h2>' + esc(D.nm) + '</h2>' +
     '<div class="m">Linha ' + D.linha + ' · distrito ' + D.distrito_id.substring(0, 6) + ' · dados de ' + ST.mes + '/2026 · reunião de ' + dataBr(ST.data) + ' · ' + ST.d.reps.length + ' representantes' + resumoRef() + '</div>' +
-    '<div class="grade">' + lista.map(function(s, k){ return '<button onclick="ir(' + (k + 1) + ')"><b>' + (k + 2) + '</b>' + s.nome + '</button>'; }).join('') + '</div></div>';
+    '<div class="grade">' + gradeCapa(lista) + '</div></div>';
 }
 function sFechamento(){
   var D = ST.d, pd = prodDist(D.dist), pa = D.distAnt ? prodDist(D.distAnt) : null, ch = marcas(D.dist.linha, ST.mes);
@@ -976,7 +1088,7 @@ async function abrirRep(setor){
 function iCapa(lista){ var r = repSel(), j = (ST.d.jor.filter(function(x){ return x.setor_id === ST.setor; })[0] || {}).classificacao;
   return '<div class="capa"><div class="k">RPS individual · ' + esc(ST.d.dist.nm) + '</div><h2>' + esc(r.nome) + '</h2>' +
     '<div class="m">Setor ' + ST.setor + ' · linha ' + ST.d.dist.linha + (j ? ' · ' + j + ' na Jornada' : '') + ' · dados de ' + ST.mes + '/2026 · reunião de ' + dataBr(ST.data) + resumoRef() + '</div>' +
-    '<div class="grade">' + lista.map(function(s, k){ return '<button onclick="ir(' + (k + 1) + ')"><b>' + (k + 2) + '</b>' + s.nome + '</button>'; }).join('') + '</div></div>'; }
+    '<div class="grade">' + gradeCapa(lista) + '</div></div>'; }
 function iRetrato(){
   var r = repSel(), px = ST.d.pex.filter(function(x){ return x.setor_id === ST.setor; })[0], f = freqSetor(ST.d.ref.freq), s = sobSetor(ST.d.ref.sob), sim = EXTRA.pexSim.indexOf(ST.d.ref.pex) >= 0;
   function k(l, v, c, sub){ return '<div class="kpi ' + c + '"><div class="l">' + l + '</div><div class="v">' + v + '</div><div class="s">' + sub + '</div></div>'; }
@@ -1304,9 +1416,14 @@ function planoFinal(){ var box = $('plano-final'); if (!box) return; var ls = ''
 
 function montarIndividual(){
   PLANOS = [];
-  var r = repSel(), lista = [{ nome: 'Combinados anteriores', msg: ' ', html: '<div id="ata"></div>' }, { nome: 'Planos em andamento', msg: ' ', html: '<div id="andamento"></div>' }, iRetrato(), iMarcas(), iMercado(), iProd(), iEvolucao(), iFreq(), sJornadaPex(ST.setor), iDemais()]
-    .concat(TEMAS.map(sTitulo), iFundamentos(), iMarcasDesvio()); // mesma sequência da coletiva; só o bloco final muda
-  lista.push({ nome: 'Plano de ação do setor', msg: ' ', html: '<div id="plano-final"></div>' });
+  var r = repSel(), lista = [{ nome: 'Combinados anteriores', msg: ' ', html: '<div id="ata"></div>' }, { nome: 'Planos em andamento', msg: ' ', html: '<div id="andamento"></div>' }, iRetrato(),
+      // abertura → Fundamentos (fecha com o quadro de desvios e o plano) → Produtos (fecha com as marcas em desvio e seus planos) → fechamento
+      sDivisor('Bloco 1', 'Fundamentos', 'Execução do setor: produtividade, evolução, frequência, jornada, PEX e plano de fundamentos.'),
+      iProd(), iEvolucao(), iFreq(), sJornadaPex(ST.setor)].concat(iFundamentos(),
+      [sDivisor('Bloco 2', 'Produtos', 'Resultado das marcas: cota, mercado, concorrentes e planos das marcas em desvio.'),
+       iMarcas(), iMercado(), iConcorrentes(), iDemais()], iMarcasDesvio());
+  var fim = TEMAS.map(sTitulo).concat([{ nome: 'Plano de ação do setor', msg: ' ', html: '<div id="plano-final"></div>' }]); fim[0].fim1 = true;
+  lista = lista.concat(fim);
   lista.push({ nome: 'Ata desta reunião', msg: ' ', html: '<div id="ata-nova"></div>' });
   var h = '<div class="slide">' + iCapa(lista) + '</div>';
   lista.forEach(function(s){ h += slideHtml(s); });
@@ -1444,8 +1561,13 @@ function telaHistorico(){ // consolidado da regional, com filtro por GD (HIST.fi
 // ── montagem e navegação ──
 function montar(){
   var D = ST.d.dist;
-  var lista = [{ nome: 'Combinados anteriores', msg: ' ', html: '<div id="ata"></div>' }, sFechamento(), sMarcas(), sMercadoDistrito(), sMercadoSetores(), sProd(), sEvolucao(), sFreqSobrep(), sJornadaPex(), demaisSlide(ST.d.pd, 'distrito')]
-    .concat(TEMAS.map(sTitulo), [sPrioridades(), { nome: 'Ata desta reunião', msg: ' ', html: '<div id="ata-nova"></div>' }]); // mesma sequência da individual; só o bloco final muda
+  // abertura → Fundamentos → Produtos → fechamento (mesma sequência da individual; só o bloco final muda)
+  var fim = TEMAS.map(sTitulo).concat([sPrioridades(), { nome: 'Ata desta reunião', msg: ' ', html: '<div id="ata-nova"></div>' }]); fim[0].fim1 = true;
+  var lista = [{ nome: 'Combinados anteriores', msg: ' ', html: '<div id="ata"></div>' }, sFechamento(),
+      sDivisor('Bloco 1', 'Fundamentos', 'Execução do distrito: produtividade, evolução, frequência e sobreposição, jornada e PEX.'),
+      sProd(), sEvolucao(), sFreqSobrep(), sJornadaPex(),
+      sDivisor('Bloco 2', 'Produtos', 'Resultado das marcas: cota, mercado, concorrentes, setores e demais produtos.'),
+      sMarcas(), sMercadoDistrito(), sConcorrentes(), sMercadoSetores(), demaisSlide(ST.d.pd, 'distrito')].concat(fim);
   var h = '<div class="slide">' + sCapa(lista) + '</div>';
   lista.forEach(function(s){ h += slideHtml(s); });
   $('stage').innerHTML = h;
