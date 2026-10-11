@@ -90,6 +90,11 @@ svg.graf{width:100%;height:auto;display:block}
 tr.ref td{background:#f1f4fb;border-bottom:2px solid #dbe3f5}
 th.reg{background:#e5e9f2;color:var(--pri)}
 td.reg{background:#f7f9fd}
+html.embed .hdr{display:none}
+html.embed body{background:transparent;min-height:0}
+html.embed .bar{border-radius:10px;margin-bottom:8px;border:1px solid var(--border)}
+html.embed .bar,html.embed .main{padding-left:14px;padding-right:14px}
+html.embed .main{padding-top:14px}
 .nota{font-size:11px;color:var(--gray);margin-top:10px;line-height:1.5}
 .loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,.92);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
 .loading-spinner{width:48px;height:48px;border:4px solid #dbe5ff;border-top:4px solid var(--pri-2);border-radius:50%;animation:spin .8s linear infinite}
@@ -142,6 +147,16 @@ var CONFIG = {};
 var TODOS_MESES = ["JAN","FEV","MAR","ABR","MAI","JUN","JUL","AGO","SET","OUT","NOV","DEZ"];
 var REG_LABEL = { SPI: 'SPI OESTE', LESTE: 'LESTE' };
 var STATE = { rx: [], dem: [], mes: null, regional: null, marcaKey: null, distrito: '', sort: { col: 'rxMercado', dir: -1 } };
+// Modo embutido (dentro do dashboard): sem cabeçalho próprio, estado inicial pela URL e altura avisada ao pai
+var PARAMS = new URLSearchParams(location.search);
+var EMBED = PARAMS.get('embed') === '1';
+if (EMBED) document.documentElement.classList.add('embed');
+if (PARAMS.get('regional')) STATE.regional = PARAMS.get('regional');
+if (PARAMS.get('mes')) STATE.mes = PARAMS.get('mes');
+var DISTRITO_INICIAL = PARAMS.get('distrito') || '';
+function avisarAltura() {
+  if (EMBED && window.parent !== window) window.parent.postMessage({ mercadoAltura: document.documentElement.scrollHeight }, location.origin);
+}
 
 function sheetsUrl(aba) {
   return 'https://sheets.googleapis.com/v4/spreadsheets/' + CONFIG.spreadsheet_id +
@@ -595,7 +610,7 @@ function montarFiltros() {
   document.getElementById('btn-limpar').style.display = STATE.distrito ? '' : 'none';
 }
 
-function atualizar() { montarFiltros(); render(); }
+function atualizar() { montarFiltros(); render(); avisarAltura(); }
 
 document.addEventListener('click', function(e) {
   var t = e.target.closest('[data-mes],[data-reg],[data-distrito],[data-sort],[data-marca],#btn-limpar');
@@ -630,12 +645,21 @@ async function init() {
     } else {
       document.getElementById('mes-bar').style.display = '';
       document.getElementById('filtro-bar').style.display = '';
+      if (DISTRITO_INICIAL) {
+        var linhaIni = (DISTRITO_INICIAL.substring(0, 4) === '1163' || DISTRITO_INICIAL.substring(0, 4) === '1165') ? 'VITAL' : 'NEXUS';
+        var chavesIni = {};
+        STATE.rx.concat(STATE.dem).forEach(function(r) { if (r.linha === linhaIni && (!STATE.regional || r.regional === STATE.regional)) chavesIni[r.linha + '|' + r.marca] = 1; });
+        var primeira = Object.keys(chavesIni).sort()[0];
+        if (primeira) { STATE.marcaKey = primeira; STATE.distrito = DISTRITO_INICIAL; }
+      }
       atualizar();
     }
   } catch (e) {
     document.getElementById('main').innerHTML = '<div class="error-card"><div class="error-title">Erro ao carregar</div><div class="error-sub">' + esc(e.message) + '</div></div>';
   }
   document.getElementById('loading').style.display = 'none';
+  avisarAltura();
+  if (EMBED && window.ResizeObserver) new ResizeObserver(avisarAltura).observe(document.body);
 }
 init();
 </script>
