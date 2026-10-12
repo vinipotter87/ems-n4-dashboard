@@ -8544,7 +8544,7 @@ function renderConcorrentes(cod, linhaFiltro, mostrarLinha) {
     if (MK_MESES.indexOf(r.mes) <= MK_MESES.indexOf(ciclo)) chaves[r.linha + '|' + r.marca] = 1;
   });
   var meses = Object.keys(disp).filter(function(m) { return MK_MESES.indexOf(m) <= MK_MESES.indexOf(ciclo); })
-    .sort(function(x, y) { return MK_MESES.indexOf(x) - MK_MESES.indexOf(y); }).slice(-3);
+    .sort(function(x, y) { return MK_MESES.indexOf(x) - MK_MESES.indexOf(y); }).slice(-6);
   var nivel = cod ? 'DISTRITO' : 'REGIONAL', CORES = ['#dc2626', '#7c3aed', '#f59e0b'];
   var cardsRx = '', cardsMs = '', listaRx = [], listaMs = [];
   Object.keys(chaves).sort().forEach(function(k) {
@@ -8557,10 +8557,10 @@ function renderConcorrentes(cod, linhaFiltro, mostrarLinha) {
     var dRx = mkRxConcDados(rxL, marca, nivel, cod, ciclo);
     var rxB = mkRxConcBloco(dRx, cod ? [{ rot: 'Regional', d: mkRxConcDados(rxL, marca, 'REGIONAL', null, ciclo) }] : [], marca, '');
     if (rxB.tabela) {
-      // prescription share da marca nos últimos 3 ciclos (aba mercado_rx): linha cheia = recorte, tracejada = regional
+      // prescription share da marca nos últimos ciclos (aba mercado_rx, até 6): linha cheia = recorte, tracejada = regional
       var mesesRx = {};
       MERCADO.rx.forEach(function(r) { if (r.regional === MERCADO_REGIONAL && r.linha === linha && r.marca === marca && MK_MESES.indexOf(r.mes) <= MK_MESES.indexOf(ciclo)) mesesRx[r.mes] = 1; });
-      var mRx = Object.keys(mesesRx).sort(function(x, y) { return MK_MESES.indexOf(x) - MK_MESES.indexOf(y); }).slice(-3);
+      var mRx = Object.keys(mesesRx).sort(function(x, y) { return MK_MESES.indexOf(x) - MK_MESES.indexOf(y); }).slice(-6);
       function shRx(m, nv, c) {
         var r = MERCADO.rx.filter(function(x) { return x.mes === m && x.regional === MERCADO_REGIONAL && x.linha === linha && x.marca === marca && x.nivel === nv && (!c || x.codigo === c); })[0];
         return r ? mkNum(r.share) : null;
@@ -8794,11 +8794,11 @@ function renderMercadoDistrito(distritoId, linha, tipo) {
     });
     html += '</tbody></table></div>';
   }
-  // Evolução dos últimos 3 ciclos publicados: distrito (linha cheia) contra a regional (tracejada), só a medida do bloco
+  // Evolução dos últimos ciclos publicados (até 6): distrito (linha cheia) contra a regional (tracejada), só a medida do bloco
   var disp = {};
   (tipo === 'rx' ? MERCADO.rx : MERCADO.dem).forEach(function(r) { if (r.regional === MERCADO_REGIONAL && r.linha === linha) disp[r.mes] = 1; });
   var mesesG = Object.keys(disp).filter(function(m) { return MK_MESES.indexOf(m) <= MK_MESES.indexOf(ciclo); })
-    .sort(function(x, y) { return MK_MESES.indexOf(x) - MK_MESES.indexOf(y); }).slice(-3);
+    .sort(function(x, y) { return MK_MESES.indexOf(x) - MK_MESES.indexOf(y); }).slice(-6);
   var cor = tipo === 'rx' ? '#0d9488' : '#2563eb', nomeMed = tipo === 'rx' ? 'Prescription share' : 'Market share';
   if (mesesG.length > 1) {
     html += '<div class="mk-sub-lbl">' + nomeMed + ' nos últimos ' + mesesG.length + ' meses <span style="font-weight:600;text-transform:none;letter-spacing:0;color:var(--gray)">' + mesesG.join(' · ') + ' · linha cheia = distrito · tracejada = regional</span></div><div class="mk-grafs">';

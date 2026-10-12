@@ -375,7 +375,7 @@ async function carregarDistrito(d, m){ // dados de um distrito no mês, cada fon
   function doCiclo(arr){ return arr.filter(function(r){ return r.mes === cic && r.regional === REG && r.linha === L; }); }
   o.mk = { ciclo: cic, rx: cic ? doCiclo(mrx) : [], dem: cic ? doCiclo(mdm) : [] };
   if (cic) ref.mercado = cic;
-  var hm = []; for (var hx = cic, hn = 0; hx && hn < 3; hx = mesAnt(hx), hn++){ if (ciclos[hx]) hm.unshift(hx); }
+  var hm = []; for (var hx = cic, hn = 0; hx && hn < 6; hx = mesAnt(hx), hn++){ if (ciclos[hx]) hm.unshift(hx); }
   function doHist(arr){ return arr.filter(function(r){ return hm.indexOf(r.mes) >= 0 && r.regional === REG && r.linha === L; }); }
   o.mk.meses = hm; o.mk.hrx = doHist(mrx); o.mk.hdem = doHist(mdm);
   o.mk.rxc = (mrc || []).filter(function(r){ return r.regional === REG && r.linha === L; });
@@ -648,7 +648,7 @@ function sMercadoDistrito(){
       '<td>' + mkGap(gap) + (gap !== null ? ' pp' : '') + (gapR !== null ? mkReg(mkPP(gapR) + ' pp') : '') + '</td></tr>';
   });
   h += '</tbody></table></div>';
-  // Evolução dos últimos 3 ciclos: distrito (linha cheia) contra a regional (tracejada)
+  // Evolução dos últimos ciclos (até 6): distrito (linha cheia) contra a regional (tracejada)
   if (D.mk.meses.length > 1){
     h += '<h3 style="margin-top:14px">Desempenho nos últimos ' + D.mk.meses.length + ' meses <small>' + D.mk.meses.join(' · ') + ' · linha cheia = distrito · tracejada = regional</small></h3><div class="mk-grafs">';
     ch.forEach(function(mk){
@@ -797,7 +797,7 @@ function iMercado(){
     '<tr><td class="n"><b>' + esc(rep.nome) + '</b><span class="mk-reg">setor ' + setor + '</span></td>' + blocos.map(function(x){ return x.setor; }).join('') + '</tr>' +
     '<tr class="mk-ref"><td class="n">Distrito</td>' + blocos.map(function(x){ return x.dist; }).join('') + '</tr>' +
     '<tr class="mk-ref"><td class="n">Regional</td>' + blocos.map(function(x){ return x.reg; }).join('') + '</tr></tbody></table></div>';
-  // Evolução dos últimos 3 ciclos: setor (linha cheia) contra a regional (tracejada)
+  // Evolução dos últimos ciclos (até 6): setor (linha cheia) contra a regional (tracejada)
   if (D.mk.meses.length > 1){
     h += '<h3 style="margin-top:14px">Desempenho nos últimos ' + D.mk.meses.length + ' meses <small>' + D.mk.meses.join(' · ') + ' · linha cheia = setor · tracejada = regional</small></h3><div class="mk-grafs">';
     ch.forEach(function(mk){
