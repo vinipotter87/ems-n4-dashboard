@@ -3234,8 +3234,12 @@ function apresPlanoFundGrupo() {
     { chave: '', nome: 'Plano — Fundamentos', nodes: [pl], msg: 'Em desvio: ' + desv.map(function(i) { return i.nome + ' ' + i.valor; }).join(' · '), plano: 'fund' }
   ];
 }
-function apresPlanoMarcaGrupo(marca, chave, problema) {
-  APRES_PLANOS.push({ chave: chave, titulo: marca, problema: problema, kpis: [] });
+function apresPlanoMarcaGrupo(marca, chave, problema, metricas) {
+  var ks = (metricas || []).map(function(k) { return k.nome; }), vals = {};
+  (metricas || []).forEach(function(k) { vals[k.nome] = k.val; });
+  // plano de produto: o GD escolhe o que vai acompanhar (distrito ou setores); começa marcado no distrito
+  APRES_PLANOS.push({ chave: chave, titulo: marca, problema: problema, kpis: ks, kpisPadrao: ks.slice(0, 1), kpiVal: vals,
+    rotuloKpi: 'Métrica que vamos acompanhar neste plano:' });
   var el = document.createElement('div');
   el.innerHTML = '<div class="ap-plano" id="ap-plano-' + chave + '"></div>';
   return { chave: '', nome: 'Plano — ' + marca, nodes: [el], msg: problema, plano: chave };
@@ -3285,12 +3289,15 @@ function apresPlanoDesenhar(chave, editar, rascunho) {
   var modoEdicao = pronto && (editar === true || !salvo);
   var q = "'" + chave + "'", h = '';
   if (modoEdicao) {
-    var p = rascunho || salvo || { problema: info.problema, kpis: info.kpis.slice(), porques: [], acoes: [{}] };
+    var p = rascunho || salvo || { problema: info.problema, kpis: (info.kpisPadrao || info.kpis).slice(), porques: [], acoes: [{}] };
+    if (!p.kpis) p.kpis = [];
     if (!p.acoes || !p.acoes.length) p.acoes = [{}];
     h += '<div class="ap-plano-h">🧭 Plano — ' + info.titulo + ' <span>5 porquês + 5W2H · preencha antes da reunião</span></div>';
     h += '<label class="ap-plano-l">Problema</label><textarea data-f="problema" rows="2">' + apresEsc(p.problema) + '</textarea>';
-    if (info.kpis.length) h += '<div class="ap-plano-kpis"><span>Indicador que direciona este plano:</span>' + info.kpis.map(function(k) {
-      return '<label><input type="checkbox" data-kpi="' + apresEsc(k) + '"' + (p.kpis.indexOf(k) >= 0 ? ' checked' : '') + '> ' + k + '</label>';
+    // métricas já gravadas que não estão mais na lista (ex.: setor que voltou a 100%) continuam aparecendo, marcadas
+    var opcoes = info.kpis.concat(p.kpis.filter(function(k) { return info.kpis.indexOf(k) < 0; }));
+    if (opcoes.length) h += '<div class="ap-plano-kpis"><span>' + (info.rotuloKpi || 'Indicador que direciona este plano:') + '</span>' + opcoes.map(function(k) {
+      return '<label><input type="checkbox" data-kpi="' + apresEsc(k) + '"' + (p.kpis.indexOf(k) >= 0 ? ' checked' : '') + '> ' + apresEsc(k) + (info.kpiVal && info.kpiVal[k] ? ' <small>(' + info.kpiVal[k] + ')</small>' : '') + '</label>';
     }).join('') + '</div>';
     h += '<label class="ap-plano-l">5 porquês <small>mínimo 3</small></label><div class="ap-pqs">';
     for (var i = 0; i < 5; i++) h += '<div class="ap-pq"><b>' + (i + 1) + 'º por quê?</b><input type="text" data-pq="' + i + '" value="' + apresEsc(p.porques[i] || '') + '" oninput="apresPlanoPorques(' + q + ')" placeholder="' + (i === 0 ? 'Por que o problema acontece?' : 'Por que isso acontece?') + '"></div>';
@@ -3429,7 +3436,10 @@ function apresMarcasGrupos() {
       chave: '', nome: 'Marca-chave — ' + marca, nodes: [el],
       msg: 'Cobertura de ' + p1(cob) + ' — faltam ' + brl(cota - real) + ' para a cota; ' + abaixo + ' de ' + rs.length + ' reps abaixo de 100%',
       planoMarca: { marca: marca, chave: 'marca-' + m.replace(/[^A-Z0-9]+/g, '_'),
-        problema: marca + ' em ' + p1(cob) + ' de cobertura da cota no distrito — faltam ' + brl(cota - real) + '; ' + abaixo + ' de ' + rs.length + ' representantes abaixo de 100%.' }
+        problema: marca + ' em ' + p1(cob) + ' de cobertura da cota no distrito — faltam ' + brl(cota - real) + '; ' + abaixo + ' de ' + rs.length + ' representantes abaixo de 100%.',
+        // métricas que o plano pode acompanhar: a cobertura do distrito ou a de cada setor abaixo de 100%
+        kpis: [{ nome: 'Cobertura da cota do distrito', val: p1(cob) }].concat(rs.filter(function(r) { return r.cob !== null && r.cob < 100; })
+          .map(function(r) { return { nome: 'Setor — ' + r.nome, val: p1(r.cob) }; })) }
     });
   });
   return grupos;
@@ -3842,7 +3852,7 @@ function apresMontar() {
   }
   apresMarcasGrupos().forEach(function(g) {
     prod.push(g);
-    prod.push(apresPlanoMarcaGrupo(g.planoMarca.marca, g.planoMarca.chave, g.planoMarca.problema));
+    prod.push(apresPlanoMarcaGrupo(g.planoMarca.marca, g.planoMarca.chave, g.planoMarca.problema, g.planoMarca.kpis));
   });
   function divisor(k, titulo, sub, itens) { return { chave: '', nome: titulo, nodes: [], msg: ' ', divisor: { k: k, sub: sub, itens: itens } }; }
   var grupos = abre.concat(
