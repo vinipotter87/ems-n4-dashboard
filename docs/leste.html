@@ -487,7 +487,8 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
 /* no slide: o título do bloco já está no cabeçalho do slide; no 2×2 de prescrição o rótulo do quadro também sai, para sobrar altura */
 .ap-fit .dd-section-lbl.mk-lbl{display:none}
 .ap-fit .mkc-bloco.rx .mkc-bloco-t{display:none}.ap-fit .mkc-bloco.rx{margin-top:4px;padding-top:4px}
-.ap-fit .mkc-card{padding:8px 12px}.ap-fit .mkc-par .mkc-graf{max-width:none}.ap-fit .mkc-par .mk-svg{max-height:230px}.ap-fit .mkc-hdr{margin-bottom:2px}.ap-fit .mkc-grid{gap:12px}
+.ap-fit .mkc-card{padding:8px 12px}
+.mks-tbl th.mks-rxcol{color:#0f766e;background:#e6f6f4}.mks-tbl td.mks-rxcol{background:#f3fbfa}.ap-fit .mkc-par .mkc-graf{max-width:none}.ap-fit .mkc-par .mk-svg{max-height:230px}.ap-fit .mkc-hdr{margin-bottom:2px}.ap-fit .mkc-grid{gap:12px}
 .mk-sub-lbl{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--gray);margin:14px 0 6px}
 .mk-grafs{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-top:6px}
 .mk-graf{border:1px solid #e5e7eb;border-radius:10px;padding:8px 10px 4px;background:#fff}
@@ -6125,7 +6126,8 @@ function abrirDistrito(distritoId) {
 
   // Marcas-chave: PRESCRIÇÃO e DEMANDA (cota + market share) em blocos separados, nunca na mesma tabela
   var lnMk = isNexus ? 'NEXUS' : 'VITAL';
-  var mkRxD = renderMercadoDistrito(distritoId, lnMk, 'rx') + renderConcorrentesDistrito(distritoId, lnMk, 'rx') + renderMercadoSetores(distritoId, repsD, prodRepD, lnMk, d, 'rx');
+  // prescription share por setor vai como coluna na tabela de cota e market share por setor (pedido do Vinicius)
+  var mkRxD = renderMercadoDistrito(distritoId, lnMk, 'rx') + renderConcorrentesDistrito(distritoId, lnMk, 'rx');
   var mkDemD = renderMercadoDistrito(distritoId, lnMk, 'dem') + renderConcorrentesDistrito(distritoId, lnMk, 'dem') + renderMercadoSetores(distritoId, repsD, prodRepD, lnMk, d, 'dem');
   // sem caixa em volta: cada título (.dd-section-lbl) precisa ficar direto no painel, porque a
   // Apresentação N4 abre um slide por título; o prefixo e a cor dizem se é prescrição ou demanda
@@ -8825,7 +8827,7 @@ function renderMercadoSetores(distritoId, repsD, prodRepD, linha, d, tipo) {
   if (cota) prodRepD = cota.rep;
   var temAting = !rx && prodRepD.length > 0;
 
-  var html = '<div class="dd-section-lbl mk-lbl ' + (rx ? 'rx' : 'dem') + '" style="margin-top:18px">' + (rx ? 'Prescrição — marcas-chave por setor' : 'Market share — cota e market share por setor') + '</div>';
+  var html = '<div class="dd-section-lbl mk-lbl ' + (rx ? 'rx' : 'dem') + '" style="margin-top:18px">' + (rx ? 'Prescrição — marcas-chave por setor' : 'Market share — cota e market share por setor · com prescription share') + '</div>';
   html += '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 10px">' +
     (rx ? '' : mkTarjaCota(temAting ? cota.mes : null)) + mkTarjaMercado(ciclo) + '</div>';
   var notasTop = [];
@@ -8868,15 +8870,16 @@ function renderMercadoSetores(distritoId, repsD, prodRepD, linha, d, tipo) {
       '<td class="r' + (ref ? ' mks-ref' : '') + (top ? ' mks-top' : '') + '"' + (x.mercado === null ? ' style="color:#ccc"' : '') + (top ? ' title="' + top + 'º maior mercado do distrito"' : '') + '>' +
         (top ? '<span class="mks-rank">' + top + 'º</span>' : '') + rsCurto(x.mercado) + '</td>' +
       '<td class="r' + (ref ? ' mks-ref' : '') + '"' + (x.marcaRS === null ? ' style="color:#ccc"' : '') + '>' + rsCurto(x.marcaRS) + '</td>' +
-      celShare(x.ms, x.msPen, ref ? null : bl.msD, ref);
+      celShare(x.ms, x.msPen, ref ? null : bl.msD, ref) +
+      celShare(x.sh, x.pen, ref ? null : bl.shD, ref).replace('<td class="r', '<td class="r mks-rxcol');
   }
-  var nCol = rx ? 1 : 4;
+  var nCol = rx ? 1 : 5;
   html += '<div class="mks-wrap" style="overflow-x:auto"><table class="prod-table mks-tbl"><thead><tr><th rowspan="2">Representante</th>';
   blocos.forEach(function(bl) { html += '<th colspan="' + nCol + '" class="mks-grp">★ ' + bl.marca + '</th>'; });
   html += '</tr><tr>';
   blocos.forEach(function() {
     html += rx ? '<th class="r mks-g1 mks-sub">Presc.<br>share</th>'
-      : '<th class="r mks-g1 mks-sub">Ating.<br>cota</th><th class="r mks-sub">Mercado<br>R$</th><th class="r mks-sub">Marca<br>R$</th><th class="r mks-sub">Market<br>share</th>';
+      : '<th class="r mks-g1 mks-sub">Ating.<br>cota</th><th class="r mks-sub">Mercado<br>R$</th><th class="r mks-sub">Marca<br>R$</th><th class="r mks-sub">Market<br>share</th><th class="r mks-sub mks-rxcol">Presc.<br>share</th>';
   });
   html += '</tr></thead><tbody>';
   repsD.forEach(function(r, i) {
@@ -8894,7 +8897,7 @@ function renderMercadoSetores(distritoId, repsD, prodRepD, linha, d, tipo) {
   html += '<p style="font-size:11px;color:var(--gray);margin:8px 0 0">Uma linha por representante. Share em <span class="mks-up">verde</span> = setor acima do distrito; em <span class="mks-dn">vermelho</span> = abaixo. ' +
     '▲▼ = penetração (ganhando ou perdendo share contra o mês anterior). ' +
     (rx ? 'O prescription share por setor vem do Raio X sem casa decimal.'
-        : 'Atingimento da cota = realizado ÷ cota do mês (parcial enquanto o mês não fecha). Mercado e Marca em R$ a preço fábrica.') + '</p>';
+        : 'Atingimento da cota = realizado ÷ cota do mês (parcial enquanto o mês não fecha). Mercado e Marca em R$ a preço fábrica. Presc. share (coluna verde) = fatia das receitas do mercado nos médicos do painel do setor, vinda do Raio X sem casa decimal.') + '</p>';
   return html;
 }
 
