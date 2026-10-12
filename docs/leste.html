@@ -3157,6 +3157,16 @@ function apresMontar() {
   var fundOrd = equipe.concat(fund).map(function(g, i) { return { g: g, i: i }; })
     .sort(function(a, b) { return (rankFund(a.g) - rankFund(b.g)) || (a.i - b.i); }).map(function(x) { return x.g; });
   var fundTodos = fundOrd.concat(apresPlanoFundGrupo(), budget);
+  // Bloco 2 (pedido do Vinicius): sai o slide "Prescrição — marcas-chave do distrito" e o
+  // "Market share — cota e market share por setor" vem logo depois do atingimento por representante
+  prod = prod.filter(function(g) { return !/^prescrição — marcas-chave do distrito/i.test(g.nome); });
+  var msSetor = prod.filter(function(g) { return /^market share — cota e market share por setor/i.test(g.nome); });
+  if (msSetor.length) {
+    prod = prod.filter(function(g) { return msSetor.indexOf(g) < 0; });
+    var posRep = -1;
+    prod.forEach(function(g, k) { if (/^atingimento por produto — representante/i.test(g.nome)) posRep = k; });
+    Array.prototype.splice.apply(prod, [posRep + 1, 0].concat(msSetor));
+  }
   apresMarcasGrupos().forEach(function(g) {
     prod.push(g);
     prod.push(apresPlanoMarcaGrupo(g.planoMarca.marca, g.planoMarca.chave, g.planoMarca.problema));
@@ -8496,7 +8506,7 @@ function renderConcorrentes(cod, linhaFiltro, mostrarLinha) {
     var rxB = mkRxConcBloco(mkRxConcDados(rxL, marca, nivel, cod, ciclo), cod ? [{ rot: 'Regional', d: mkRxConcDados(rxL, marca, 'REGIONAL', null, ciclo) }] : [], marca, '');
     if (rxB.tabela) {
       cardsRx += '<div class="mkc-card">' + cab + '</div>' +
-        '<div class="mkc-bloco rx"><div class="mkc-bloco-t">' + rxB.titulo + '</div><div class="mkc-insight">' + rxB.frase + '</div>' + rxB.tabela + '</div></div>';
+        '<div class="mkc-bloco rx"><div class="mkc-bloco-t">' + rxB.titulo + '</div>' + rxB.tabela + '</div></div>';
     }
 
     // ── DEMANDA · MARKET SHARE: ranking das marcas na venda (genérico entra no tamanho, fora da disputa)
