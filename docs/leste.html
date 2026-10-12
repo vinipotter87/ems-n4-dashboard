@@ -3469,10 +3469,12 @@ function renderCycleBar(meses, mesAtual) {
     '<button class="cycle-btn apres-btn" onclick="apresAbrir()" title="Mostra as seções do distrito uma por tela">▶ Apresentação N4</button>' +
     '<button class="cycle-btn gov-btn" onclick="window.location.href=\'planos-spi.html?regional=LESTE\'" title="Todos os planos dos GDs preenchidos na apresentação">📋 Planos Leste</button>' +
     '<button class="cycle-btn gov-btn" onclick="window.location.href=\'atas-n4.html?regional=LESTE\'" title="Atas completas das N4 anexadas na apresentação">📄 Atas de N4</button>';
+  var rps =
+    '<button class="cycle-btn gov-btn" onclick="window.location.href=\'rps.html?regional=LESTE\'" title="Apresentação da RPS do GD com o time">📅 Copiloto de RPS</button>';
   var gestao =
     '<button class="cycle-btn budget-btn" onclick="window.location.href=\'budget.html?regional=LESTE\'">💰 Budget</button>';
   bar.innerHTML = faixa('Mês', btns) + faixa('Análises', analises) +
-    '<div class="cb-row">' + grupo('N4', 'g-n4', n4) + grupo('Gestão', 'g-ges', gestao) + '</div>';
+    '<div class="cb-row">' + grupo('N4', 'g-n4', n4) + grupo('RPS', 'g-rps', rps) + grupo('Gestão', 'g-ges', gestao) + '</div>';
   atualizarVisibilidadeFiltroDistrito();
 }
 
