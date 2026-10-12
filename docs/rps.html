@@ -742,10 +742,13 @@ function iProdutos(){
       '<td>' + (cr === null ? '—' : (cr > 0 ? '+' : '') + cr.toFixed(1).replace('.', ',') + '%') + '</td><td>' + posicao(mk) + '</td></tr>';
   }
   M.marcas.forEach(function(mk){ linhas += linha(mk, true); });
-  linhas += '<tr class="tot"><td>Soma das marcas-chave</td><td>' + brl(M.eu.cota) + '</td><td>' + brl(M.eu.real) + '</td><td>' + (M.eu.gap > 0 ? brl(M.eu.gap) : '—') + '</td><td>' + barra(M.eu.cob, cls(M.eu.cob)) + '</td><td></td><td></td></tr>';
   var demais = pr.map(function(x){ return norm(x.produto); }).filter(function(mk, i, a){ return M.marcas.indexOf(mk) < 0 && a.indexOf(mk) === i; })
     .sort(function(a, b){ function cb(mk){ var x = pr.filter(function(y){ return norm(y.produto) === mk; })[0], c = num(x.cota); return c ? num(x.realizado) / c * 100 : 999; } return cb(a) - cb(b); });
   demais.forEach(function(mk){ linhas += linha(mk, false); });
+  // rodapé: total do setor em todos os produtos com cota no mês
+  var tC = 0, tR = 0; pr.forEach(function(x){ var c = num(x.cota); if (c){ tC += c; tR += num(x.realizado) || 0; } });
+  var tCob = tC ? tR / tC * 100 : null;
+  linhas += '<tr class="tot"><td>Total do setor — todos os produtos</td><td>' + brl(tC) + '</td><td>' + brl(tR) + '</td><td>' + (tC - tR > 0 ? brl(tC - tR) : '—') + '</td><td>' + barra(tCob, cls(tCob)) + '</td><td></td><td></td></tr>';
   var h = '<div class="card"><h3>Cobertura da cota do setor — todos os produtos <small>★ marcas-chave primeiro; demais produtos do menor para o maior</small></h3><table><thead><tr><th>Produto</th><th>Cota</th><th>Realizado</th><th>Falta</th><th>Cobertura</th><th>Crescimento</th><th>Posição no distrito</th></tr></thead><tbody>' + linhas + '</tbody></table>' +
     '<div class="nota">Cobertura = realizado ÷ cota do mês (demanda). Verde ≥ 100% · amarelo 80–99% · vermelho &lt; 80%. Posição no distrito = lugar do setor entre os representantes do distrito na cobertura do produto.</div></div>';
   return { nome: 'Cobertura da cota — todos os produtos', msg: M.eu.abaixo.length ? M.eu.abaixo.length + ' marca(s)-chave abaixo de 100% — faltam ' + brl(M.eu.gap) : 'Todas as marcas-chave em 100% ou mais', html: h };
@@ -1337,19 +1340,30 @@ function iFundamentos(){
 }
 function iMarcasDesvio(){
   var M = marcasRep(), out = [], serie = ST.d.hist.concat([{ mes: ST.mes, pr: ST.d.pr }]);
-  M.eu.abaixo.slice().sort(function(a, b){ return b.falta - a.falta; }).forEach(function(d){
-    var mk = d.m, x = M.eu.m[mk], ch = 'marca-' + mk.replace(/[^A-Z0-9]+/g, '_');
+  // todas as marcas-chave com cota para o setor: primeiro as abaixo de 100% (da maior falta para a menor), depois as demais
+  var lista = M.marcas.filter(function(mk){ var x = M.eu.m[mk]; return x && x.cob !== null; })
+    .sort(function(a, b){ var xa = M.eu.m[a], xb = M.eu.m[b], da = xa.cob < 100, db = xb.cob < 100; return da !== db ? (da ? -1 : 1) : (xb.cota - xb.real) - (xa.cota - xa.real); });
+  lista.forEach(function(mk){
+    var x = M.eu.m[mk], ch = 'marca-' + mk.replace(/[^A-Z0-9]+/g, '_'), desvio = x.cob < 100;
     var ord = M.todos.filter(function(r){ return r.m[mk] && r.m[mk].cob !== null; }).sort(function(a, b){ return b.m[mk].cob - a.m[mk].cob; });
-    var h = '<div class="kpis" style="grid-template-columns:repeat(4,minmax(0,1fr))"><div class="kpi ' + cls(x.cob) + '"><div class="l">Cobertura da cota</div><div class="v">' + p1(x.cob) + '</div><div class="s">realizado ÷ cota do setor</div></div>' +
-      '<div class="kpi"><div class="l">Cota</div><div class="v">' + brl(x.cota) + '</div><div class="s">' + ST.mes + '/2026</div></div><div class="kpi"><div class="l">Realizado</div><div class="v">' + brl(x.real) + '</div><div class="s">faltam ' + brl(x.cota - x.real) + '</div></div>' +
+    // consolidado do distrito no produto (soma dos setores) e quanto o representante pesa nele
+    var dC = 0, dR = 0; ord.forEach(function(r){ dC += r.m[mk].cota || 0; dR += r.m[mk].real || 0; });
+    var dCob = dC ? dR / dC * 100 : null, pesoC = dC ? x.cota / dC * 100 : null, pesoR = dR ? x.real / dR * 100 : null;
+    function pc(v){ return v === null ? '—' : v.toFixed(1).replace('.', ',') + '%'; }
+    var h = '<div class="kpis" style="grid-template-columns:repeat(5,minmax(0,1fr))"><div class="kpi ' + cls(x.cob) + '"><div class="l">Cobertura da cota</div><div class="v">' + p1(x.cob) + '</div><div class="s">distrito ' + p1(dCob) + '</div></div>' +
+      '<div class="kpi"><div class="l">Cota</div><div class="v">' + brl(x.cota) + '</div><div class="s">' + ST.mes + '/2026</div></div><div class="kpi"><div class="l">Realizado</div><div class="v">' + brl(x.real) + '</div><div class="s">' + (x.cota - x.real > 0 ? 'faltam ' + brl(x.cota - x.real) : 'cota batida') + '</div></div>' +
+      '<div class="kpi"><div class="l">Representatividade no distrito</div><div class="v">' + pc(pesoC) + '</div><div class="s">da cota do distrito · ' + pc(pesoR) + ' do realizado</div></div>' +
       '<div class="kpi"><div class="l">Posição no distrito</div><div class="v">' + (ord.map(function(r){ return r.setor; }).indexOf(ST.setor) + 1) + 'º de ' + ord.length + '</div><div class="s">em cobertura de ' + mk + '</div></div></div>';
-    h += '<div class="card"><h3>' + mk + ' — o setor e o distrito</h3><table><thead><tr><th>Representante</th><th>Cota</th><th>Realizado</th><th>Cobertura</th></tr></thead><tbody>' + ord.map(function(r){ var y = r.m[mk];
-      return '<tr' + (r.setor === ST.setor ? ' style="background:#eff6ff"' : '') + '><td class="n">' + esc(r.nome) + (r.setor === ST.setor ? ' ◀' : '') + '</td><td>' + brl(y.cota) + '</td><td>' + brl(y.real) + '</td><td>' + barra(y.cob, cls(y.cob)) + '</td></tr>'; }).join('') + '</tbody></table>' +
+    h += '<div class="card"><h3>' + mk + ' — o setor e o distrito <small>% do distrito = quanto cada representante pesa na cota e no realizado do distrito</small></h3><table><thead><tr><th>Representante</th><th>Cota</th><th>% da cota do distrito</th><th>Realizado</th><th>% do realizado do distrito</th><th>Cobertura</th></tr></thead><tbody>' + ord.map(function(r){ var y = r.m[mk];
+      return '<tr' + (r.setor === ST.setor ? ' style="background:#eff6ff;font-weight:700"' : '') + '><td class="n">' + esc(r.nome) + (r.setor === ST.setor ? ' ◀' : '') + '</td><td>' + brl(y.cota) + '</td><td>' + pc(dC ? y.cota / dC * 100 : null) + '</td><td>' + brl(y.real) + '</td><td>' + pc(dR ? y.real / dR * 100 : null) + '</td><td>' + barra(y.cob, cls(y.cob)) + '</td></tr>'; }).join('') +
+      '<tr class="tot"><td>Distrito — ' + mk + '</td><td>' + brl(dC) + '</td><td>100%</td><td>' + brl(dR) + '</td><td>100%</td><td>' + barra(dCob, cls(dCob)) + '</td></tr></tbody></table>' +
       '<div class="nota">Histórico do setor em ' + mk + ': ' + serie.map(function(s){ var r = s.pr.filter(function(p){ return p.setor_id === ST.setor && norm(p.produto) === mk; })[0]; return s.mes + ' ' + (r && num(r.cota) ? p1(num(r.realizado) / num(r.cota) * 100) : '—'); }).join(' · ') + '</div></div>';
     var prob = mk + ' em ' + p1(x.cob) + ' de cobertura da cota no setor — faltam ' + brl(x.cota - x.real) + '.';
-    PLANOS.push({ chave: ch, titulo: mk, kpis: [], problema: prob });
-    out.push({ nome: 'Marca-chave — ' + mk, msg: 'Cobertura de ' + p1(x.cob) + ' — faltam ' + brl(x.cota - x.real) + ' para a cota', html: h });
-    out.push({ nome: 'Plano — ' + mk, msg: prob, html: '<div class="plano" id="plano-' + ch + '"></div>', plano: ch });
+    out.push({ nome: 'Marca-chave — ' + mk, msg: 'Cobertura de ' + p1(x.cob) + (desvio ? ' — faltam ' + brl(x.cota - x.real) + ' para a cota' : ' — cota batida') + ' · ' + pc(pesoC) + ' da cota do distrito', html: h });
+    if (desvio){ // plano só para marca abaixo de 100%
+      PLANOS.push({ chave: ch, titulo: mk, kpis: [], problema: prob });
+      out.push({ nome: 'Plano — ' + mk, msg: prob, html: '<div class="plano" id="plano-' + ch + '"></div>', plano: ch });
+    }
   });
   return out;
 }
