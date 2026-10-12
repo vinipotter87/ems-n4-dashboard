@@ -9460,7 +9460,8 @@ function renderConcorrentes(cod, linhaFiltro, mostrarLinha) {
 
     // ── PRESCRIÇÃO: share de receitas das marcas do mesmo mercado (o distrito contra a regional, quando há distrito)
     var rxL = MERCADO.rxc.filter(function(r) { return r.regional === MERCADO_REGIONAL && r.linha === linha; });
-    var rxB = mkRxConcBloco(mkRxConcDados(rxL, marca, nivel, cod, ciclo), cod ? [{ rot: 'Regional', d: mkRxConcDados(rxL, marca, 'REGIONAL', null, ciclo) }] : [], marca, '');
+    var dRx = mkRxConcDados(rxL, marca, nivel, cod, ciclo);
+    var rxB = mkRxConcBloco(dRx, cod ? [{ rot: 'Regional', d: mkRxConcDados(rxL, marca, 'REGIONAL', null, ciclo) }] : [], marca, '');
     if (rxB.tabela) {
       // prescription share da marca nos últimos 3 ciclos (aba mercado_rx): linha cheia = recorte, tracejada = regional
       var mesesRx = {};
@@ -9474,9 +9475,16 @@ function renderConcorrentes(cod, linhaFiltro, mostrarLinha) {
       if (mRx.length > 1) {
         var serRx = [{ nome: 'Prescription share · ' + (cod ? 'distrito' : 'regional'), cor: '#0d9488', pts: mRx.map(function(m) { return shRx(m, nivel, cod); }) }];
         if (cod) serRx.push({ nome: 'Prescription share · regional', cor: '#0d9488', ref: true, pts: mRx.map(function(m) { return shRx(m, 'REGIONAL'); }) });
-        grafRx = '<div class="mkc-graf"><div class="mk-sub-lbl" style="margin:8px 0 2px">' + marca + ' · prescription share nos últimos ' + mRx.length + ' meses</div>' + mkGrafico(mRx, serRx) +
+        // concorrentes: os 3 maiores nas receitas do recorte; a base de concorrentes traz só o ciclo atual e o mês anterior
+        var CORES_RX = ['#dc2626', '#7c3aed', '#f59e0b'], legConc = '';
+        (dRx.lista || []).filter(function(p) { return !p.ems; }).slice(0, 3).forEach(function(p, i) {
+          serRx.push({ nome: p.produto, cor: CORES_RX[i], semRotulo: true, pts: mRx.map(function(m) { return m === dRx.mes ? p.share : (m === dRx.ant ? p.ant : null); }) });
+          legConc += '<span><i style="background:' + CORES_RX[i] + '"></i>' + p.produto.replace(/\s*\([^)]*\)\s*$/, '') + '</span>';
+        });
+        grafRx = '<div class="mkc-graf"><div class="mk-sub-lbl" style="margin:8px 0 2px">' + marca + ' × concorrentes · share de receitas nos últimos ' + mRx.length + ' meses</div>' + mkGrafico(mRx, serRx) +
           '<div class="mk-leg" style="margin-top:2px"><span><i style="background:#0d9488"></i>' + (cod ? 'Distrito' : 'Regional') + '</span>' +
-          (cod ? '<span><i style="background:repeating-linear-gradient(90deg,#0d9488 0 4px,transparent 4px 7px)"></i>Regional</span>' : '') + '</div></div>';
+          (cod ? '<span><i style="background:repeating-linear-gradient(90deg,#0d9488 0 4px,transparent 4px 7px)"></i>Regional</span>' : '') + legConc + '</div>' +
+          (legConc ? '<div style="font-size:10.5px;color:var(--gray);margin-top:2px">Concorrentes: base de receitas por concorrente só tem ' + (dRx.ant ? dRx.ant + ' e ' : '') + dRx.mes + ' por enquanto.</div>' : '') + '</div>';
       }
       var cardRx = '<div class="mkc-card">' + cab + '</div>' +
         '<div class="mkc-bloco rx"><div class="mkc-bloco-t">' + rxB.titulo + '</div>' + rxB.tabela + grafRx + '</div></div>';
