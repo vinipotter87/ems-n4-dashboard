@@ -9346,6 +9346,8 @@ function mkGrafico(labels, series){
   var o = '<svg viewBox="0 0 ' + W + ' ' + H + '" class="mk-svg" role="img">';
   for (var g = 0; g <= topo + 1e-9; g += passo) o += '<line x1="' + mL + '" x2="' + (W - mR) + '" y1="' + Y(g) + '" y2="' + Y(g) + '" stroke="#e5e7eb"/><text x="' + (mL - 5) + '" y="' + (Y(g) + 3.5) + '" class="mk-eixo" text-anchor="end">' + g + '%</text>';
   labels.forEach(function(l, i){ o += '<text x="' + X(i) + '" y="' + (H - 7) + '" class="mk-eixo' + (i === n - 1 ? ' atual' : '') + '" text-anchor="middle">' + l + '</text>'; });
+  // rótulos: um por ponto (a referência tracejada só no último); os que caem no mesmo mês são afastados para não se sobreporem
+  var rot = [];
   series.forEach(function(s){
     var d = '', novo = true;
     s.pts.forEach(function(v, i){ if (v === null || isNaN(v)){ novo = true; return; } d += (novo ? 'M' : 'L') + X(i).toFixed(1) + ' ' + Y(v).toFixed(1) + ' '; novo = false; });
@@ -9354,9 +9356,23 @@ function mkGrafico(labels, series){
       if (v === null || isNaN(v)) return;
       o += '<circle cx="' + X(i).toFixed(1) + '" cy="' + Y(v).toFixed(1) + '" r="' + (s.ref ? 2.4 : 3.6) + '" fill="' + (s.ref ? '#fff' : s.cor) + '" stroke="' + s.cor + '" stroke-width="1.8"><title>' + s.nome + ' · ' + labels[i] + ': ' + mkPct(v) + '</title></circle>';
       if (s.semRotulo) return;
-      if (s.ref){ if (i === n - 1) o += '<text x="' + (X(i) + 6).toFixed(1) + '" y="' + (Y(v) + 3.5).toFixed(1) + '" class="mk-val ref" fill="' + s.cor + '">' + mkPct(v) + '</text>'; }
-      else o += '<text x="' + X(i).toFixed(1) + '" y="' + (Y(v) - 7).toFixed(1) + '" class="mk-val" fill="' + s.cor + '" text-anchor="middle">' + mkPct(v) + '</text>';
+      if (s.ref && i !== n - 1) return;
+      rot.push({ i: i, x: s.ref ? X(i) + 6 : X(i), y: s.ref ? Y(v) + 3.5 : Y(v) - 7, txt: mkPct(v), cor: s.cor, ref: !!s.ref });
     });
+  });
+  var porX = {};
+  rot.forEach(function(r){ (porX[r.i] = porX[r.i] || []).push(r); });
+  Object.keys(porX).forEach(function(k){
+    var grp = porX[k].sort(function(a, b){ return a.y - b.y; });
+    for (var j = 1; j < grp.length; j++) if (grp[j].y - grp[j - 1].y < 11) grp[j].y = grp[j - 1].y + 11;
+    var excesso = grp.length ? grp[grp.length - 1].y - (H - mB - 2) : 0;
+    if (excesso > 0) grp.forEach(function(r){ r.y -= excesso; });
+    for (var q = grp.length - 2; q >= 0; q--) if (grp[q + 1].y - grp[q].y < 11) grp[q].y = grp[q + 1].y - 11;
+  });
+  rot.forEach(function(r){
+    var anc = r.ref ? 'start' : (r.i === 0 && n > 1 ? 'start' : (r.i === n - 1 && n > 1 ? 'end' : 'middle'));
+    var dx = (!r.ref && r.i === 0 && n > 1) ? -4 : ((!r.ref && r.i === n - 1 && n > 1) ? 4 : 0);
+    o += '<text x="' + (r.x + dx).toFixed(1) + '" y="' + r.y.toFixed(1) + '" class="mk-val' + (r.ref ? ' ref' : '') + '" fill="' + r.cor + '" text-anchor="' + anc + '">' + r.txt + '</text>';
   });
   return o + '</svg>';
 }
@@ -9478,7 +9494,7 @@ function renderConcorrentes(cod, linhaFiltro, mostrarLinha) {
         // concorrentes: os 3 maiores nas receitas do recorte; a base de concorrentes traz só o ciclo atual e o mês anterior
         var CORES_RX = ['#dc2626', '#7c3aed', '#f59e0b'], legConc = '';
         (dRx.lista || []).filter(function(p) { return !p.ems; }).slice(0, 3).forEach(function(p, i) {
-          serRx.push({ nome: p.produto, cor: CORES_RX[i], semRotulo: true, pts: mRx.map(function(m) { return m === dRx.mes ? p.share : (m === dRx.ant ? p.ant : null); }) });
+          serRx.push({ nome: p.produto, cor: CORES_RX[i], pts: mRx.map(function(m) { return m === dRx.mes ? p.share : (m === dRx.ant ? p.ant : null); }) });
           legConc += '<span><i style="background:' + CORES_RX[i] + '"></i>' + p.produto.replace(/\s*\([^)]*\)\s*$/, '') + '</span>';
         });
         grafRx = '<div class="mkc-graf"><div class="mk-sub-lbl" style="margin:8px 0 2px">' + marca + ' × concorrentes · share de receitas nos últimos ' + mRx.length + ' meses</div>' + mkGrafico(mRx, serRx) +
