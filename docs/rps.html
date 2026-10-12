@@ -105,6 +105,9 @@ tr.tot td{background:#f3f4f6;font-weight:800}
 .mk-tarja{font-size:11px;font-weight:800;letter-spacing:.3px;color:#1e3a8a;background:#eff4ff;border:1px solid #c7d7fe;padding:3px 12px;border-radius:6px;white-space:nowrap}
 .mk-tarja.atraso{color:#fff;background:#b45309;border-color:#b45309}
 .mk-wrap{overflow-x:auto}
+.cp-tbl th,.cp-tbl td{white-space:nowrap;text-align:center}.cp-tbl th:first-child,.cp-tbl td:first-child{text-align:left}
+.cp-tbl th.cp-ch{background:#fef3c7;color:#78350f}.cp-tbl td.cp-ch{background:#fffdf5}
+.cp-tbl tr.cp-dist td{border-top:2px solid #dbe3f5;font-weight:800;background:#f8fafc}
 .mkt td,.mkt th{white-space:nowrap;padding:8px 6px}
 .mkt td{font-size:14px;text-align:right}
 .mkt th{font-size:9.5px;line-height:1.2;text-align:right}
@@ -379,7 +382,7 @@ async function distritosDe(mes){ return (await ultimaAba(function(m){ return 'di
 var FONTE_NOME = { mercado: 'Dados de mercado (Raio X)', reps: 'Produtividade e coberturas (MDV, Q1 a Q4 e painel)', prod: 'Produtos (cota e realizado)', pex: 'PEX', freq: 'Frequência de visitação', sob: 'Sobreposição' };
 function fontesDe(nome){
   if (nome === 'Fechamento do mês') return ST.modelo === 'individual' ? ['reps', 'prod', 'pex', 'freq', 'sob'] : ['reps', 'prod', 'pex'];
-  if (nome === 'Marcas-chave' || nome === 'Demais produtos' || nome === 'Prioridades do mês' || /^Marca-chave — /.test(nome)) return ['prod'];
+  if (nome === 'Marcas-chave' || nome === 'Cobertura da cota — todos os produtos' || nome === 'Demais produtos' || nome === 'Prioridades do mês' || /^Marca-chave — /.test(nome)) return ['prod'];
   if (/^Mercado — /.test(nome)) return ['prod', 'mercado'];
   if (nome === 'Produtividade') return ['reps'];
   if (nome === 'Frequência e sobreposição') return ['freq', 'sob'];
@@ -884,6 +887,34 @@ function sEvolucao(){
   ch.forEach(function(mk){ linha(mk, serie.map(function(s){ return cob(s.pd, mk); })); });
   h += '</tbody></table><div class="nota">Cobertura da cota por marca-chave e MDV do distrito em cada mês. "—" = sem dado do distrito naquele mês.</div></div>';
   return { nome: 'Evolução', msg: serie.map(function(s){ return s.mes; }).join(' → '), html: h };
+}
+// Cobertura da cota por representante em TODOS os produtos (marcas-chave primeiro, destacadas) —
+// substitui os slides "Marcas-chave" e "Demais produtos" da coletiva (pedido do Vinicius)
+function sCoberturaProdutos(){
+  var D = ST.d, c = coberturaMarcas(), ch = c.marcas, outros = {}, porRep = {};
+  D.pr.forEach(function(r){
+    var mk = norm(r.produto), ct = num(r.cota), re = num(r.realizado);
+    if (ch.indexOf(mk) < 0) outros[mk] = 1;
+    (porRep[r.setor_id] = porRep[r.setor_id] || {})[mk] = ct ? re / ct * 100 : null;
+  });
+  var demais = Object.keys(outros).sort(), prods = ch.concat(demais);
+  var reps = c.reps.slice().sort(function(a, b){ return (a.cob === null ? 999 : a.cob) - (b.cob === null ? 999 : b.cob); });
+  function cel(v, chave){ return '<td' + (chave ? ' class="cp-ch"' : '') + '><span class="cel ' + cls(v) + '">' + p1(v) + '</span></td>'; }
+  var h = '<div class="card"><h3>Cobertura da cota por representante — todos os produtos <small>do menor para o maior na soma das marcas-chave</small></h3><div class="mk-wrap"><table class="cp-tbl"><thead><tr><th>Representante</th>' +
+    prods.map(function(m, i){ return '<th' + (i < ch.length ? ' class="cp-ch"' : '') + '>' + (i < ch.length ? '★ ' : '') + m + '</th>'; }).join('') + '<th>Marcas-chave (soma)</th><th>Em 100%</th></tr></thead><tbody>';
+  reps.forEach(function(r){
+    var ok = 0, tot = 0, v = porRep[r.setor] || {};
+    h += '<tr><td class="n">' + esc(r.nome) + '</td>' + prods.map(function(m, i){ var x = v[m] === undefined ? null : v[m]; if (i < ch.length && x !== null){ tot++; if (x >= 100) ok++; } return cel(x, i < ch.length); }).join('') +
+      '<td>' + barra(r.cob, cls(r.cob)) + '</td><td><b>' + ok + '/' + tot + '</b></td></tr>';
+  });
+  // linha do distrito, com a cobertura de cada produto no distrito
+  var dist = {}; D.pd.forEach(function(x){ var ct = num(x.cota), re = num(x.realizado); dist[norm(x.produto)] = ct ? re / ct * 100 : null; });
+  var cT = 0, rT = 0; reps.forEach(function(r){ cT += r.cota || 0; rT += r.real || 0; });
+  var somaD = cT ? rT / cT * 100 : null;
+  h += '<tr class="cp-dist"><td class="n">Distrito</td>' + prods.map(function(m, i){ return cel(dist[m] === undefined ? null : dist[m], i < ch.length); }).join('') + '<td>' + barra(somaD, cls(somaD)) + '</td><td></td></tr>';
+  h += '</tbody></table></div><div class="nota">Cobertura = realizado ÷ cota do mês (demanda). ★ = marca-chave. Verde ≥ 100% · amarelo 80–99% · vermelho &lt; 80% · “—” = sem cota no mês.</div></div>';
+  var nAb = reps.filter(function(r){ return r.cob !== null && r.cob < 100; }).length;
+  return { nome: 'Cobertura da cota — todos os produtos', msg: nAb + ' de ' + reps.length + ' representantes abaixo de 100% na soma das marcas-chave', html: h };
 }
 function demaisSlide(linhasPr, escopo){
   var ch = marcas(ST.d.dist.linha, ST.mes), pr = linhasPr.filter(function(x){ return ch.indexOf(norm(x.produto)) < 0; }).map(function(x){ var c = num(x.cota), r = num(x.realizado); return { p: norm(x.produto), c: c, r: r, cob: c ? r / c * 100 : null, cr: num(x.crescimento) }; })
@@ -1650,10 +1681,10 @@ function montar(){
   var fim = TEMAS.map(sTitulo).concat([sPrioridades(), { nome: 'Ata desta reunião', msg: ' ', html: '<div id="ata-nova"></div>' }]); fim[0].fim1 = true;
   var lista = [{ nome: 'Combinados anteriores', msg: ' ', html: '<div id="ata"></div>' }, sFechamento(),
       // mesma lógica da Apresentação N4 (ver comentário na individual)
-      sDivisor('Bloco 1', 'Fundamentos', 'Execução do distrito: jornada, PEX, produtividade, frequência e sobreposição e evolução.'),
-      sJornadaPex(), sProd(), sFreqSobrep(), sEvolucao(),
-      sDivisor('Bloco 2', 'Produtos', 'Resultado das marcas: atingimento por representante, demais produtos, cota × mercado e concorrentes por marca.'),
-      sMarcas(), demaisSlide(ST.d.pd, 'distrito'), sMercadoSetores(), sMercadoDistrito()].concat(sConcorrentes(), fim);
+      sDivisor('Bloco 1', 'Fundamentos', 'Execução do distrito: jornada, PEX, produtividade e frequência e sobreposição.'),
+      sJornadaPex(), sProd(), sFreqSobrep(),
+      sDivisor('Bloco 2', 'Produtos', 'Resultado dos produtos: cobertura da cota por representante, cota × mercado e concorrentes por marca.'),
+      sCoberturaProdutos(), sMercadoSetores(), sMercadoDistrito()].concat(sConcorrentes(), fim);
   var h = '<div class="slide">' + sCapa(lista) + '</div>';
   lista.forEach(function(s){ h += slideHtml(s); });
   $('stage').innerHTML = h;
