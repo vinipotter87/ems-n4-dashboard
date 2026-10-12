@@ -104,6 +104,16 @@ html.embed .main{padding-top:14px}
 .error-card{background:#fff;border-radius:12px;padding:28px;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,.08)}
 .error-title{font-size:15px;font-weight:800;margin-bottom:6px}
 .error-sub{font-size:13px;color:var(--gray)}
+.mk-secao{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:26px 0 0;padding:10px 16px;border-radius:12px 12px 0 0;border-left:6px solid}
+.mk-secao.rx{border-color:#0d9488;background:#e6f6f4}.mk-secao.dem{border-color:#2563eb;background:#e8effd}
+.mk-secao-tag{font-size:14px;font-weight:900;letter-spacing:.8px;text-transform:uppercase}
+.mk-secao.rx .mk-secao-tag{color:#0f766e}.mk-secao.dem .mk-secao-tag{color:#1d4ed8}
+.mk-secao-sub{font-size:11px;color:#4b5563;font-weight:600}
+.mk-secao-box{border-left:6px solid;padding:2px 0 14px 16px;border-radius:0 0 0 12px}
+.mk-secao-box.rx{border-color:#0d9488}.mk-secao-box.dem{border-color:#2563eb}
+.card.rx{border-top-color:#0d9488}
+.share-bar.rx i{background:#5eead4}tr.marca .share-bar.rx i{background:#0d9488}
+.mk-secao-box.rx tr.marca td{background:#e6f6f4}
 @media(max-width:700px){.hdr-inner,.bar,.main{padding-left:16px;padding-right:16px}.card-v{font-size:24px}}
 </style>
 </head>
@@ -117,7 +127,7 @@ html.embed .main{padding-top:14px}
     <div class="hdr-sep"></div>
     <div class="hdr-text">
       <h1>📊 Dados de Mercado — Marcas-Chave</h1>
-      <p>Prescription Share · Market Share · Concorrentes · fonte: Power BI Raio X</p>
+      <p>Prescrição (receitas) e Demanda · Market share (venda) em blocos separados · fonte: Power BI Raio X</p>
     </div>
     <div class="hdr-pills">
       <span class="hpill hi" id="pill-mes">—</span>
@@ -147,7 +157,7 @@ html.embed .main{padding-top:14px}
 var CONFIG = {};
 var TODOS_MESES = ["JAN","FEV","MAR","ABR","MAI","JUN","JUL","AGO","SET","OUT","NOV","DEZ"];
 var REG_LABEL = { SPI: 'SPI OESTE', LESTE: 'LESTE' };
-var STATE = { rx: [], dem: [], mes: null, regional: null, marcaKey: null, distrito: '', sort: { col: 'rxMercado', dir: -1 } };
+var STATE = { rx: [], dem: [], mes: null, regional: null, marcaKey: null, distrito: '', sort: { rx: { col: 'rxMercado', dir: -1 }, dem: { col: 'demTotal', dir: -1 } } };
 // Modo embutido (dentro do dashboard): sem cabeçalho próprio, estado inicial pela URL e altura avisada ao pai
 var PARAMS = new URLSearchParams(location.search);
 var EMBED = PARAMS.get('embed') === '1';
@@ -325,79 +335,49 @@ function graficoLinhas(labels, series, estimado) {
 function mesAnterior(m) { var i = TODOS_MESES.indexOf(m); return TODOS_MESES[(i + 11) % 12]; }
 
 // ── Render ───────────────────────────────────────────────────────────────────
+// A página tem dois blocos que nunca se misturam:
+//   PRESCRIÇÃO (verde)  = receitas dos médicos do painel · Raio X › Prescrição
+//   DEMANDA · MARKET SHARE (azul) = venda em R$ a preço fábrica · Raio X › Demanda
+function secao(tipo) {
+  var rx = tipo === 'rx';
+  return '<div class="mk-secao ' + (rx ? 'rx' : 'dem') + '"><span class="mk-secao-tag">' + (rx ? 'Prescrição' : 'Demanda · Market share') + '</span>' +
+    '<span class="mk-secao-sub">' + (rx ? 'receitas dos médicos do painel · fonte: Raio X › Prescrição | Análise de Performance e de Concorrentes' : 'venda em R$ a preço fábrica · fonte: Raio X › Demanda | Análise de Concorrentes') + '</span></div>';
+}
+
 function render() {
   var marca = STATE.marcaKey.split('|')[1], linha = STATE.marcaKey.split('|')[0];
   var noDistrito = !!STATE.distrito;
   var rxEsc = noDistrito ? rxDe('DISTRITO', STATE.distrito)[0] : rxDe('REGIONAL')[0];
   var demEsc = resumoDem(noDistrito ? demDe('DISTRITO', STATE.distrito) : demDe('REGIONAL'));
   var nomeEsc = noDistrito ? ('Distrito ' + primeiroNome((rxEsc || demDe('DISTRITO', STATE.distrito)[0] || {}).nome)) : ('Regional ' + (REG_LABEL[STATE.regional] || STATE.regional));
+  var nomeReg = 'Regional ' + (REG_LABEL[STATE.regional] || STATE.regional);
 
   document.getElementById('pill-mes').textContent = STATE.mes + '/2026';
   document.getElementById('pill-escopo').textContent = marca + ' · ' + nomeEsc;
 
   var rxShare = rxEsc ? n(rxEsc.share) : null;
-  var gap = (rxShare !== null && demEsc.marcaShare !== null) ? rxShare - demEsc.marcaShare : null;
   // Referência da regional (aparece quando um distrito está selecionado)
   var rxReg = rxDe('REGIONAL')[0], demReg = resumoDem(demDe('REGIONAL'));
   var rxShareReg = rxReg ? n(rxReg.share) : null;
-  var gapReg = (rxShareReg !== null && demReg.marcaShare !== null) ? rxShareReg - demReg.marcaShare : null;
   function pp(v) { return Math.abs(v).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' pp'; }
-  function refReg(v, vr, ehPP) {
+  function refReg(v, vr) {
     if (!noDistrito || vr === null || vr === undefined) return '';
     var d = (v !== null && v !== undefined) ? Math.round((v - vr) * 10) / 10 : null;
-    var txtReg = ehPP ? ((vr > 0 ? '+' : (vr < 0 ? '-' : '')) + pp(vr)) : fmtPct(vr);
-    return '<div class="ref-reg">Regional: <b>' + txtReg + '</b>' + (d === null ? '' : (d === 0 ? ' · distrito igual' : ' · distrito <b class="' + (d > 0 ? 'acima' : 'abaixo') + '">' + pp(d) + (d > 0 ? ' acima' : ' abaixo') + '</b>')) + '</div>';
+    return '<div class="ref-reg">Regional: <b>' + fmtPct(vr) + '</b>' + (d === null ? '' : (d === 0 ? ' · distrito igual' : ' · distrito <b class="' + (d > 0 ? 'acima' : 'abaixo') + '">' + pp(d) + (d > 0 ? ' acima' : ' abaixo') + '</b>')) + '</div>';
   }
   function difReg(v, vr) {
     if (v === null || v === undefined || vr === null || vr === undefined) return '—';
     var d = Math.round((v - vr) * 10) / 10 || 0;
     return '<span class="tr ' + (d > 0 ? 'up' : (d < 0 ? 'down' : 'flat')) + '">' + (d > 0 ? '+' : (d < 0 ? '-' : '')) + pp(d) + '</span>';
   }
-  var html = '';
+  function u(v) { return v === undefined ? null : v; }
 
-  // 0. Resumo de todas as marcas da regional
+  // dados comuns: lista de marcas, histórico de ciclos, setores e distritos
   var chaves = {};
   STATE.rx.concat(STATE.dem).forEach(function(r) { if (r.mes === STATE.mes && r.regional === STATE.regional) chaves[r.linha + '|' + r.marca] = 1; });
   var listaChaves = Object.keys(chaves).sort();
-  if (listaChaves.length > 1) {
-    var chaveAtual = STATE.marcaKey;
-    html += '<div class="sec-hdr">Todas as marcas-chave <small>Regional ' + esc(REG_LABEL[STATE.regional] || STATE.regional) + ' · ' + STATE.mes + '/2026 · clique para abrir a marca</small></div>';
-    html += '<div class="box"><div class="box-scroll"><table><thead><tr><th class="l" rowspan="2">Marca</th><th class="grp" colspan="2">Prescrição</th><th class="grp" colspan="3">Demanda (mercado total)</th><th class="grp" colspan="3">Disputa entre marcas</th><th class="grp" colspan="2">Genérico</th><th rowspan="2">GAP PX vs DEM</th></tr>' +
-      '<tr><th>Presc. share</th><th>Penetração</th><th>Mercado</th><th>Market share</th><th>Penetração</th><th>Share entre marcas</th><th>Penetração</th><th class="l">Principal concorrente</th><th>Peso</th><th>Penetração</th></tr></thead><tbody>';
-    listaChaves.forEach(function(k) {
-      STATE.marcaKey = k;
-      var rx = rxDe('REGIONAL')[0], d = resumoDem(demDe('REGIONAL'));
-      var s = rx ? n(rx.share) : null, p = k.split('|');
-      html += '<tr class="clicavel' + (k === chaveAtual ? ' marca' : '') + '" data-marca="' + esc(k) + '"><td class="l"><b>' + esc(p[1]) + '</b><br><span class="sub">' + esc(p[0]) + '</span></td>' +
-        '<td><b>' + fmtPct(s) + '</b></td><td>' + trend(rx ? n(rx.var_pp) : null, ' pp') + '</td>' +
-        '<td>' + fmtRS(d.total) + '</td><td><b>' + fmtPct(d.marcaShare) + '</b></td><td>' + trend(d.marcaVar, ' pp') + '</td>' +
-        '<td><b>' + fmtPct(d.shareMarcas) + '</b></td><td>' + trend(d.shareMarcasVar, ' pp') + '</td>' +
-        '<td class="l">' + (d.concorrente ? esc(d.concorrente.produto) + '<br><span class="sub">' + fmtPct(d.concorrenteShareMarcas) + ' entre marcas</span>' : '—') + '</td>' +
-        '<td>' + (d.genValor > 0 ? fmtPct(d.genShare) : '<span class="sub">sem genérico</span>') + '</td><td>' + (d.genValor > 0 ? trend(d.genVar, ' pp') : '') + '</td>' +
-        '<td>' + gapHtml(s !== null && d.marcaShare !== null ? s - d.marcaShare : null) + '</td></tr>';
-    });
-    STATE.marcaKey = chaveAtual;
-    html += '</tbody></table></div></div>';
-  }
+  var chaveAtual = STATE.marcaKey;
 
-  // 1. Cartões
-  html += '<div class="sec-hdr">' + esc(marca) + ' <small>' + esc(linha) + ' · ' + esc(nomeEsc) + ' · ' + STATE.mes + '/2026 · penetração vs mês anterior</small></div>';
-  html += '<div class="card-grid">';
-  html += '<div class="card"><div class="card-t">Prescription Share</div><div class="card-v">' + fmtPct(rxShare) + trend(rxEsc ? n(rxEsc.var_pp) : null, ' pp') + '</div>' +
-    '<div class="card-f">' + refReg(rxShare, rxShareReg) + '<b>Penetração:</b> ' + penTxt(rxEsc ? n(rxEsc.var_pp) : null) + '<br>Fatia das receitas do mercado que saem com a marca.<br>' + fmtInt(rxEsc ? n(rxEsc.rx_mercado) : null) + ' Rx no mercado · painel de ' + fmtInt(rxEsc ? n(rxEsc.painel) : null) + ' médicos</div></div>';
-  html += '<div class="card"><div class="card-t">Market Share (demanda)</div><div class="card-v">' + fmtPct(demEsc.marcaShare) + trend(demEsc.marcaVar, ' pp') + '</div>' +
-    '<div class="card-f">' + refReg(demEsc.marcaShare, demReg.marcaShare) + '<b>Penetração:</b> ' + penTxt(demEsc.marcaVar) + '<br>Fatia da venda do mercado em preço fábrica.<br>' + fmtRS(demEsc.marcaValor) + ' da marca' + (demEsc.marcaCresc !== null ? ' · ' + (demEsc.marcaCresc > 0 ? '+' : '') + fmtPct(demEsc.marcaCresc) + ' vs mês anterior' : '') + '</div></div>';
-  html += '<div class="card gap"><div class="card-t">GAP PX vs DEM</div><div class="card-v">' + gapHtml(gap) + '</div>' +
-    '<div class="card-f">' + refReg(gap, gapReg, true) + (gap === null ? 'Sem os dois indicadores neste recorte.' : (gap > 0 ? 'O médico prescreve mais do que a marca vende: parte da receita é trocada no balcão.' : 'A marca vende acima da fatia de receita.')) + '</div></div>';
-  html += '<div class="card"><div class="card-t">Share entre marcas</div><div class="card-v">' + fmtPct(demEsc.shareMarcas) + trend(demEsc.shareMarcasVar, ' pp') + '</div>' +
-    '<div class="card-f">' + refReg(demEsc.shareMarcas, demReg.shareMarcas) + '<b>Penetração:</b> ' + penTxt(demEsc.shareMarcasVar) + '<br>Fatia da marca tirando o genérico da conta. ' + (demEsc.posMarcas ? demEsc.posMarcas + 'ª de ' + demEsc.marcas.length + ' marcas.' : '') + '</div></div>';
-  html += '<div class="card conc"><div class="card-t">Principal concorrente</div><div class="card-v" style="font-size:19px">' + (demEsc.concorrente ? esc(demEsc.concorrente.produto) : '—') + '</div>' +
-    '<div class="card-f">' + (demEsc.concorrente ? fmtPct(demEsc.concorrenteShareMarcas) + ' entre marcas · ' + fmtRS(n(demEsc.concorrente.valor)) + '<br><b>Penetração:</b> ' + penTxt(n(demEsc.concorrente.var_pp)) : 'Sem marca concorrente neste recorte.') + '</div></div>';
-  html += '<div class="card gen"><div class="card-t">Tamanho do mercado</div><div class="card-v">' + fmtRS(demEsc.total) + trend(demEsc.cresc, '%') + '</div>' +
-    '<div class="card-f">' + (demEsc.genValor > 0 ? 'Genérico: ' + fmtRS(demEsc.genValor) + ' (' + fmtPct(demEsc.genShare) + ')<br>Marcas: ' + fmtRS(demEsc.marcasValor) + ' (' + fmtPct(100 - demEsc.genShare) + ')' : 'Mercado sem genérico: 100% marcas.') + '</div></div>';
-  html += '</div>';
-
-  // 1b. Evolução mês a mês (logo abaixo dos cartões)
   var meses = mesesDisponiveis();
   var mesSel = STATE.mes;
   var hist = meses.map(function(m) {
@@ -406,54 +386,194 @@ function render() {
     return { mes: m, rx: rx, d: resumoDem(noDistrito ? demDe('DISTRITO', STATE.distrito) : demDe('REGIONAL')), rxR: rxDe('REGIONAL')[0], dR: resumoDem(demDe('REGIONAL')) };
   });
   STATE.mes = mesSel;
-  var labels = [], estimado = [], pRx = [], pDem = [], pEntre = [], pGen = [];
-  hist.forEach(function(h) {
-    labels.push(h.mes); estimado.push(false);
-    pRx.push(h.rx ? n(h.rx.share) : null); pDem.push(h.d.marcaShare); pEntre.push(h.d.shareMarcas); pGen.push(h.d.genShare);
-  });
-  // Marcas: as 5 maiores do último ciclo, share entre marcas em cada mês
-  var ult = hist[hist.length - 1];
-  var top = ult ? ult.d.marcas.slice(0, 5) : [];
-  if (ult && ult.d.marcas.indexOf(ult.d.marcas.filter(function(r) { return r.eh_marca === '1'; })[0]) >= 5) top.push(ult.d.marcas.filter(function(r) { return r.eh_marca === '1'; })[0]);
-  var seriesMarcas = top.map(function(t, k) {
-    var pts = [];
-    hist.forEach(function(h) {
-      var r = h.d.marcas.filter(function(x) { return x.produto === t.produto; })[0];
-      pts.push(r && h.d.marcasValor > 0 ? (n(r.valor) || 0) / h.d.marcasValor * 100 : null);
-    });
-    return { nome: t.produto, pontos: pts, destaque: t.eh_marca === '1', cor: t.eh_marca === '1' ? '#2563eb' : ['#7c3aed', '#0d9488', '#d97706', '#64748b', '#be123c'][k % 5] };
-  });
-  var seriesMarca = [
-    { nome: 'Prescription share', pontos: pRx, cor: '#0d9488' },
-    { nome: 'Market share (mercado total)', pontos: pDem, cor: '#2563eb', destaque: true },
-    { nome: 'Share entre marcas', pontos: pEntre, cor: '#7c3aed' }
-  ];
-  // o peso do genérico fica só na tabela: na mesma escala ele achata as linhas da marca
-  if (noDistrito) {
-    seriesMarca.push({ nome: 'Regional · prescription share', pontos: hist.map(function(h) { return h.rxR ? n(h.rxR.share) : null; }), cor: '#0d9488', tracejado: true, referencia: true });
-    seriesMarca.push({ nome: 'Regional · market share', pontos: hist.map(function(h) { return h.dR.marcaShare; }), cor: '#2563eb', tracejado: true, referencia: true });
-    seriesMarca.push({ nome: 'Regional · share entre marcas', pontos: hist.map(function(h) { return h.dR.shareMarcas; }), cor: '#7c3aed', tracejado: true, referencia: true });
-    seriesMarcas.push({ nome: marca + ' na regional', pontos: hist.map(function(h) { return h.dR.shareMarcas; }), cor: '#2563eb', tracejado: true, referencia: true });
+  var labels = meses.slice(), estimado = meses.map(function() { return false; });
+
+  var cods = {};
+  if (!noDistrito) {
+    rxDe('DISTRITO').forEach(function(r) { cods[r.codigo] = r.nome; });
+    demDe('DISTRITO').forEach(function(r) { cods[r.codigo] = cods[r.codigo] || r.nome; });
   }
 
-  html += '<div class="sec-hdr">Evolução mês a mês <small>' + esc(marca) + ' · ' + esc(nomeEsc) + '</small></div>';
-  html += '<div class="graf-grid">' +
-    '<div class="box graf-box"><div class="graf-t">Indicadores da marca' + (noDistrito ? ' <span class="sub">linha cheia = distrito · tracejada = regional</span>' : '') + '</div>' + graficoLinhas(labels, seriesMarca, estimado) + '</div>' +
-    '<div class="box graf-box"><div class="graf-t">Disputa entre marcas <span class="sub">share entre marcas, sem o genérico' + (noDistrito ? ' · tracejada = marca na regional' : '') + '</span></div>' + graficoLinhas(labels, seriesMarcas, estimado) + '</div>' +
-    '</div>';
-  html += '<div class="nota" style="margin-top:8px">Cada ponto é um ciclo lido do Raio X com o filtro Período no mês. O Raio X libera cada mês com cerca de 45 dias de defasagem; um ciclo novo publicado entra como mais um ponto.</div>';
+  function thS(tab, col, txt) {
+    var sc = STATE.sort[tab];
+    return '<th class="sortable" data-sort="' + tab + ':' + col + '">' + txt + (sc.col === col ? (sc.dir < 0 ? ' ▼' : ' ▲') : '') + '</th>';
+  }
+  function ordenar(lista, tab) {
+    var sc = STATE.sort[tab];
+    lista.sort(function(a, b) {
+      var x = a[sc.col], y = b[sc.col];
+      if (typeof x === 'string' || typeof y === 'string') return String(x || '').localeCompare(String(y || '')) * sc.dir;
+      if (x === null || x === undefined) return 1;
+      if (y === null || y === undefined) return -1;
+      return (x - y) * sc.dir;
+    });
+    return lista;
+  }
 
-  html += '<div class="box" style="margin-top:12px"><div class="box-scroll"><table><thead><tr><th class="l">Ciclo</th><th>Presc. share</th><th>Penetração</th><th>Market share</th><th>Penetração</th><th>Share entre marcas</th><th>Genérico</th><th>GAP PX vs DEM</th><th>Mercado</th><th>Marca R$</th>' + (noDistrito ? '<th class="reg">Presc. share regional</th><th class="reg">Market share regional</th><th class="reg">Entre marcas regional</th>' : '') + '</tr></thead><tbody>';
+  var html = '<div class="sec-hdr" style="margin-top:0">' + esc(marca) + ' <small>' + esc(linha) + ' · ' + esc(nomeEsc) + ' · ' + STATE.mes + '/2026 · penetração = mudança do share contra o mês anterior</small></div>';
+
+  // ═════════════════════════════ BLOCO 1 — PRESCRIÇÃO ═════════════════════════════
+  var rxH = '';
+  if (listaChaves.length > 1) {
+    rxH += '<div class="sec-hdr">Todas as marcas-chave <small>' + esc(nomeReg) + ' · ' + STATE.mes + '/2026 · clique para abrir a marca</small></div>';
+    rxH += '<div class="box"><div class="box-scroll"><table><thead><tr><th class="l">Marca</th><th>Rx mercado</th><th>Presc. share</th><th>Penetração</th></tr></thead><tbody>';
+    listaChaves.forEach(function(k) {
+      STATE.marcaKey = k;
+      var rx = rxDe('REGIONAL')[0], p = k.split('|');
+      rxH += '<tr class="clicavel' + (k === chaveAtual ? ' marca' : '') + '" data-marca="' + esc(k) + '"><td class="l"><b>' + esc(p[1]) + '</b><br><span class="sub">' + esc(p[0]) + '</span></td>' +
+        '<td>' + fmtInt(rx ? n(rx.rx_mercado) : null) + '</td><td><b>' + fmtPct(rx ? n(rx.share) : null) + '</b></td><td>' + trend(rx ? n(rx.var_pp) : null, ' pp') + '</td></tr>';
+    });
+    STATE.marcaKey = chaveAtual;
+    rxH += '</tbody></table></div></div>';
+  }
+
+  // posição nas receitas (Prescrição | Análise de Concorrentes), ciclo mais recente até o mês escolhido
+  var MS = TODOS_MESES;
+  var baseC = (STATE.rxc || []).filter(function(r) { return r.regional === STATE.regional && r.linha === linha && r.marca === marca && MS.indexOf(r.mes) <= MS.indexOf(STATE.mes); });
+  var mesRx = baseC.map(function(r) { return r.mes; }).sort(function(a, b) { return MS.indexOf(a) - MS.indexOf(b); }).pop();
+  function concDe(nivel, cod) { return baseC.filter(function(r) { return r.mes === mesRx && r.nivel === nivel && (!cod || r.codigo === cod); }).sort(function(a, b) { return (n(b.share) || 0) - (n(a.share) || 0); }); }
+  var listaC = mesRx ? (noDistrito ? concDe('DISTRITO', STATE.distrito) : concDe('REGIONAL')) : [];
+  var regC = (mesRx && noDistrito) ? concDe('REGIONAL') : [];
+  var nossaC = listaC.filter(function(p) { return p.eh_marca === '1'; })[0];
+
+  rxH += '<div class="sec-hdr">Indicadores de prescrição <small>' + esc(nomeEsc) + ' · ' + STATE.mes + '/2026</small></div><div class="card-grid">';
+  rxH += '<div class="card rx"><div class="card-t">Prescription share</div><div class="card-v">' + fmtPct(rxShare) + trend(rxEsc ? n(rxEsc.var_pp) : null, ' pp') + '</div>' +
+    '<div class="card-f">' + refReg(rxShare, rxShareReg) + '<b>Penetração:</b> ' + penTxt(rxEsc ? n(rxEsc.var_pp) : null) + '<br>Fatia das receitas do mercado que saem com a marca.</div></div>';
+  rxH += '<div class="card rx"><div class="card-t">Rx mercado</div><div class="card-v">' + fmtInt(rxEsc ? n(rxEsc.rx_mercado) : null) + '</div>' +
+    '<div class="card-f">Receitas do mercado no painel' + (rxEsc && n(rxEsc.painel) !== null ? ' de ' + fmtInt(n(rxEsc.painel)) + ' médicos' : '') + '.' + (noDistrito && rxReg ? '<br>Regional: ' + fmtInt(n(rxReg.rx_mercado)) + ' Rx' : '') + '</div></div>';
+  if (listaC.length) {
+    var liderC = listaC[0];
+    rxH += '<div class="card rx"><div class="card-t">Posição nas receitas</div><div class="card-v" style="font-size:22px">' + (nossaC ? (listaC.indexOf(nossaC) + 1) + 'ª de ' + listaC.length : '—') + '</div>' +
+      '<div class="card-f">' + (nossaC && listaC.indexOf(nossaC) === 0 ? 'A marca lidera as receitas.' : 'Líder: <b>' + esc(liderC.produto) + '</b> (' + fmtPct(n(liderC.share)) + ').') + '<br>Ciclo ' + mesRx + '/2026' + (mesRx !== STATE.mes ? ' (mais recente disponível)' : '') + '.</div></div>';
+  }
+  rxH += '</div>';
+
+  var sRx = [{ nome: 'Prescription share', pontos: hist.map(function(h) { return h.rx ? n(h.rx.share) : null; }), cor: '#0d9488', destaque: true }];
+  if (noDistrito) sRx.push({ nome: 'Regional · prescription share', pontos: hist.map(function(h) { return h.rxR ? n(h.rxR.share) : null; }), cor: '#0d9488', tracejado: true, referencia: true });
+  rxH += '<div class="sec-hdr">Evolução mês a mês <small>prescription share · ' + esc(nomeEsc) + '</small></div>';
+  rxH += '<div class="graf-grid"><div class="box graf-box"><div class="graf-t">Prescription share' + (noDistrito ? ' <span class="sub">linha cheia = distrito · tracejada = regional</span>' : '') + '</div>' + graficoLinhas(labels, sRx, estimado) + '</div>';
+  rxH += '<div class="box"><div class="box-scroll"><table><thead><tr><th class="l">Ciclo</th><th>Presc. share</th><th>Penetração</th><th>Rx mercado</th>' + (noDistrito ? '<th class="reg">Presc. share regional</th>' : '') + '</tr></thead><tbody>';
   hist.forEach(function(h) {
-    var sh = h.rx ? n(h.rx.share) : null;
-    html += '<tr class="' + (h.mes === mesSel ? 'marca' : '') + '"><td class="l">' + h.mes + '/2026</td><td>' + fmtPct(sh) + '</td><td>' + trend(h.rx ? n(h.rx.var_pp) : null, ' pp') + '</td><td>' + fmtPct(h.d.marcaShare) + '</td><td>' + trend(h.d.marcaVar, ' pp') + '</td><td>' + fmtPct(h.d.shareMarcas) + '</td><td>' + (h.d.genValor > 0 ? fmtPct(h.d.genShare) : '—') + '</td><td>' + gapHtml(sh !== null && h.d.marcaShare !== null ? sh - h.d.marcaShare : null) + '</td><td>' + fmtRS(h.d.total) + '</td><td>' + fmtRS(h.d.marcaValor) + '</td>' + (noDistrito ? '<td class="reg">' + fmtPct(h.rxR ? n(h.rxR.share) : null) + '</td><td class="reg">' + fmtPct(h.dR.marcaShare) + '</td><td class="reg">' + fmtPct(h.dR.shareMarcas) + '</td>' : '') + '</tr>';
+    rxH += '<tr class="' + (h.mes === mesSel ? 'marca' : '') + '"><td class="l">' + h.mes + '/2026</td><td>' + fmtPct(h.rx ? n(h.rx.share) : null) + '</td><td>' + trend(h.rx ? n(h.rx.var_pp) : null, ' pp') + '</td><td>' + fmtInt(h.rx ? n(h.rx.rx_mercado) : null) + '</td>' +
+      (noDistrito ? '<td class="reg">' + fmtPct(h.rxR ? n(h.rxR.share) : null) + '</td>' : '') + '</tr>';
   });
-  html += '</tbody></table></div></div>';
+  rxH += '</tbody></table></div></div></div>';
 
-  // 2. Composição do mercado + disputa entre marcas
-  html += '<div class="sec-hdr">Composição do mercado <small>' + esc(nomeEsc) + ' · demanda em preço fábrica</small></div>';
+  // Disputa nas receitas: share de prescrição de cada marca do mercado
+  if (listaC.length) {
+    var ant = MS[MS.indexOf(mesRx) - 1] || 'mês anterior';
+    var maxS = Math.max.apply(null, listaC.map(function(p) { return n(p.share) || 0; }).concat([1]));
+    rxH += '<div class="sec-hdr">Disputa nas receitas <small>share de receitas de cada marca do mercado · ' + esc(nomeEsc) + ' · ' + mesRx + '/2026' + (mesRx !== STATE.mes ? ' (mais recente disponível)' : '') + '</small></div>';
+    rxH += '<div class="box"><div class="box-scroll"><table><thead><tr><th class="l">#</th><th class="l">Marca</th><th style="width:34%">Share de receitas</th>' +
+      (noDistrito ? '<th class="reg">Regional</th><th class="reg">Distrito vs regional</th>' : '') + '<th>' + ant + '</th><th>Penetração</th></tr></thead><tbody>';
+    listaC.forEach(function(p, i) {
+      var sh = n(p.share), r = regC.filter(function(x) { return x.produto === p.produto; })[0], shR = r ? n(r.share) : null;
+      rxH += '<tr class="' + (p.eh_marca === '1' ? 'marca' : '') + '"><td class="l">' + (i + 1) + '</td><td class="l">' + esc(p.produto) + '</td>' +
+        '<td><div class="share-cell"><div class="share-bar rx"><i style="width:' + Math.max(0, (sh || 0) / maxS * 100).toFixed(1) + '%"></i></div><span class="share-n">' + fmtPct(sh) + '</span></div></td>' +
+        (noDistrito ? '<td class="reg">' + fmtPct(shR) + '</td><td class="reg">' + difReg(sh, shR) + '</td>' : '') +
+        '<td>' + fmtPct(n(p.share_ant)) + '</td><td>' + trend(n(p.var_pp), ' pp') + '</td></tr>';
+    });
+    rxH += '</tbody></table></div></div>';
+  }
+
+  function refRx(nome, sub, rx, comPainel) {
+    return '<tr class="ref"><td class="l"><b>' + esc(nome) + '</b><br><span class="sub">' + esc(sub) + '</span></td>' +
+      (comPainel ? '<td>' + fmtInt(rx ? n(rx.painel) : null) + '</td>' : '') +
+      '<td>' + fmtInt(rx ? n(rx.rx_mercado) : null) + '</td><td><b>' + fmtPct(rx ? n(rx.share) : null) + '</b></td><td>' + trend(rx ? n(rx.var_pp) : null, ' pp') + '</td></tr>';
+  }
+  if (!noDistrito && Object.keys(cods).length) {
+    rxH += '<div class="sec-hdr">Por distrito <small>prescrição · clique em um distrito para abrir</small></div>';
+    rxH += '<div class="box"><div class="box-scroll"><table><thead><tr><th class="l">Distrito (GD)</th><th>Rx mercado</th><th>Presc. share</th><th>Penetração</th></tr></thead><tbody>';
+    Object.keys(cods).sort().forEach(function(c) {
+      var rx = rxDe('DISTRITO', c)[0];
+      rxH += '<tr class="clicavel" data-distrito="' + c + '"><td class="l"><b>' + esc(cods[c]) + '</b><br><span class="sub">' + c + '</span></td>' +
+        '<td>' + fmtInt(rx ? n(rx.rx_mercado) : null) + '</td><td><b>' + fmtPct(rx ? n(rx.share) : null) + '</b></td><td>' + trend(rx ? n(rx.var_pp) : null, ' pp') + '</td></tr>';
+    });
+    rxH += refRx(nomeReg, 'total da regional', rxReg, false) + '</tbody></table></div></div>';
+  }
+
+  var setRx = [];
+  rxDe('SETOR').forEach(function(r) {
+    if (noDistrito && r.distrito !== STATE.distrito) return;
+    setRx.push({ codigo: r.codigo, nome: r.nome, painel: n(r.painel), rxMercado: n(r.rx_mercado), rxShare: n(r.share), rxVar: n(r.var_pp) });
+  });
+  if (setRx.length) {
+    ordenar(setRx, 'rx');
+    rxH += '<div class="sec-hdr">Por setor <small>prescrição · ' + setRx.length + ' setores' + (noDistrito ? ' do distrito' : '') + ' · clique no cabeçalho para ordenar</small></div>';
+    rxH += '<div class="box"><div class="box-scroll"><table><thead><tr><th class="l">Setor</th>' + thS('rx', 'painel', 'Painel') + thS('rx', 'rxMercado', 'Rx mercado') + thS('rx', 'rxShare', 'Presc. share') + thS('rx', 'rxVar', 'Penetração') + '</tr></thead><tbody>';
+    rxH += refRx(nomeReg, 'referência', rxReg, true);
+    if (noDistrito) rxH += refRx(nomeEsc, 'total do distrito', rxEsc, true);
+    setRx.forEach(function(l) {
+      rxH += '<tr><td class="l"><b>' + esc(l.nome) + '</b><br><span class="sub">' + l.codigo + '</span></td><td>' + fmtInt(l.painel) + '</td><td>' + fmtInt(l.rxMercado) + '</td><td><b>' + fmtPct(l.rxShare) + '</b></td><td>' + trend(l.rxVar, ' pp') + '</td></tr>';
+    });
+    rxH += '</tbody></table></div></div>';
+  }
+  rxH += '<div class="nota"><b>Prescrição:</b> receitas que os médicos do painel fizeram no mercado da marca. Prescription share = Rx da marca ÷ Rx do mercado. No distrito e na regional cada médico conta uma vez, por isso o total não é a soma dos setores; o share por setor vem do Raio X sem casa decimal.</div>';
+  html += secao('rx') + '<div class="mk-secao-box rx">' + rxH + '</div>';
+
+  // ═════════════════════════ BLOCO 2 — DEMANDA · MARKET SHARE ═════════════════════════
+  var dH = '';
+  if (listaChaves.length > 1) {
+    dH += '<div class="sec-hdr">Todas as marcas-chave <small>' + esc(nomeReg) + ' · ' + STATE.mes + '/2026 · clique para abrir a marca</small></div>';
+    dH += '<div class="box"><div class="box-scroll"><table><thead><tr><th class="l" rowspan="2">Marca</th><th class="grp" colspan="3">Mercado total</th><th class="grp" colspan="3">Disputa entre marcas</th><th class="grp" colspan="2">Genérico</th></tr>' +
+      '<tr><th>Mercado</th><th>Market share</th><th>Penetração</th><th>Share entre marcas</th><th>Penetração</th><th class="l">Principal concorrente</th><th>Peso</th><th>Penetração</th></tr></thead><tbody>';
+    listaChaves.forEach(function(k) {
+      STATE.marcaKey = k;
+      var d = resumoDem(demDe('REGIONAL')), p = k.split('|');
+      dH += '<tr class="clicavel' + (k === chaveAtual ? ' marca' : '') + '" data-marca="' + esc(k) + '"><td class="l"><b>' + esc(p[1]) + '</b><br><span class="sub">' + esc(p[0]) + '</span></td>' +
+        '<td>' + fmtRS(d.total) + '</td><td><b>' + fmtPct(d.marcaShare) + '</b></td><td>' + trend(d.marcaVar, ' pp') + '</td>' +
+        '<td><b>' + fmtPct(d.shareMarcas) + '</b></td><td>' + trend(d.shareMarcasVar, ' pp') + '</td>' +
+        '<td class="l">' + (d.concorrente ? esc(d.concorrente.produto) + '<br><span class="sub">' + fmtPct(d.concorrenteShareMarcas) + ' entre marcas</span>' : '—') + '</td>' +
+        '<td>' + (d.genValor > 0 ? fmtPct(d.genShare) : '<span class="sub">sem genérico</span>') + '</td><td>' + (d.genValor > 0 ? trend(d.genVar, ' pp') : '') + '</td></tr>';
+    });
+    STATE.marcaKey = chaveAtual;
+    dH += '</tbody></table></div></div>';
+  }
+
+  dH += '<div class="sec-hdr">Indicadores de demanda <small>' + esc(nomeEsc) + ' · ' + STATE.mes + '/2026</small></div><div class="card-grid">';
+  dH += '<div class="card"><div class="card-t">Market share</div><div class="card-v">' + fmtPct(demEsc.marcaShare) + trend(demEsc.marcaVar, ' pp') + '</div>' +
+    '<div class="card-f">' + refReg(demEsc.marcaShare, demReg.marcaShare) + '<b>Penetração:</b> ' + penTxt(demEsc.marcaVar) + '<br>Fatia da venda do mercado em preço fábrica.<br>' + fmtRS(demEsc.marcaValor) + ' da marca' + (demEsc.marcaCresc !== null ? ' · ' + (demEsc.marcaCresc > 0 ? '+' : '') + fmtPct(demEsc.marcaCresc) + ' vs mês anterior' : '') + '</div></div>';
+  dH += '<div class="card"><div class="card-t">Share entre marcas</div><div class="card-v">' + fmtPct(demEsc.shareMarcas) + trend(demEsc.shareMarcasVar, ' pp') + '</div>' +
+    '<div class="card-f">' + refReg(demEsc.shareMarcas, demReg.shareMarcas) + '<b>Penetração:</b> ' + penTxt(demEsc.shareMarcasVar) + '<br>Fatia da marca tirando o genérico da conta. ' + (demEsc.posMarcas ? demEsc.posMarcas + 'ª de ' + demEsc.marcas.length + ' marcas.' : '') + '</div></div>';
+  dH += '<div class="card conc"><div class="card-t">Principal concorrente</div><div class="card-v" style="font-size:19px">' + (demEsc.concorrente ? esc(demEsc.concorrente.produto) : '—') + '</div>' +
+    '<div class="card-f">' + (demEsc.concorrente ? fmtPct(demEsc.concorrenteShareMarcas) + ' entre marcas · ' + fmtRS(n(demEsc.concorrente.valor)) + '<br><b>Penetração:</b> ' + penTxt(n(demEsc.concorrente.var_pp)) : 'Sem marca concorrente neste recorte.') + '</div></div>';
+  dH += '<div class="card gen"><div class="card-t">Tamanho do mercado</div><div class="card-v">' + fmtRS(demEsc.total) + trend(demEsc.cresc, '%') + '</div>' +
+    '<div class="card-f">' + (demEsc.genValor > 0 ? 'Genérico: ' + fmtRS(demEsc.genValor) + ' (' + fmtPct(demEsc.genShare) + ')<br>Marcas: ' + fmtRS(demEsc.marcasValor) + ' (' + fmtPct(100 - demEsc.genShare) + ')' : 'Mercado sem genérico: 100% marcas.') + '</div></div>';
+  dH += '</div>';
+
+  // Evolução: market share e share entre marcas; ao lado, a disputa entre as 5 maiores marcas
+  var ult = hist[hist.length - 1];
+  var top = ult ? ult.d.marcas.slice(0, 5) : [];
+  var nossaUlt = ult ? ult.d.marcas.filter(function(r) { return r.eh_marca === '1'; })[0] : null;
+  if (nossaUlt && top.indexOf(nossaUlt) < 0) top.push(nossaUlt);
+  var seriesMarcas = top.map(function(t, k) {
+    return { nome: t.produto, destaque: t.eh_marca === '1', cor: t.eh_marca === '1' ? '#2563eb' : ['#7c3aed', '#0891b2', '#d97706', '#64748b', '#be123c'][k % 5],
+      pontos: hist.map(function(h) { var r = h.d.marcas.filter(function(x) { return x.produto === t.produto; })[0]; return r && h.d.marcasValor > 0 ? (n(r.valor) || 0) / h.d.marcasValor * 100 : null; }) };
+  });
+  var sDem = [
+    { nome: 'Market share (mercado total)', pontos: hist.map(function(h) { return h.d.marcaShare; }), cor: '#2563eb', destaque: true },
+    { nome: 'Share entre marcas', pontos: hist.map(function(h) { return h.d.shareMarcas; }), cor: '#7c3aed' }
+  ];
+  if (noDistrito) {
+    sDem.push({ nome: 'Regional · market share', pontos: hist.map(function(h) { return h.dR.marcaShare; }), cor: '#2563eb', tracejado: true, referencia: true });
+    sDem.push({ nome: 'Regional · share entre marcas', pontos: hist.map(function(h) { return h.dR.shareMarcas; }), cor: '#7c3aed', tracejado: true, referencia: true });
+    seriesMarcas.push({ nome: marca + ' na regional', pontos: hist.map(function(h) { return h.dR.shareMarcas; }), cor: '#2563eb', tracejado: true, referencia: true });
+  }
+  dH += '<div class="sec-hdr">Evolução mês a mês <small>demanda · ' + esc(nomeEsc) + '</small></div>';
+  dH += '<div class="graf-grid">' +
+    '<div class="box graf-box"><div class="graf-t">Market share' + (noDistrito ? ' <span class="sub">linha cheia = distrito · tracejada = regional</span>' : '') + '</div>' + graficoLinhas(labels, sDem, estimado) + '</div>' +
+    '<div class="box graf-box"><div class="graf-t">Disputa entre marcas <span class="sub">share entre marcas, sem o genérico' + (noDistrito ? ' · tracejada = marca na regional' : '') + '</span></div>' + graficoLinhas(labels, seriesMarcas, estimado) + '</div></div>';
+  dH += '<div class="box" style="margin-top:12px"><div class="box-scroll"><table><thead><tr><th class="l">Ciclo</th><th>Market share</th><th>Penetração</th><th>Share entre marcas</th><th>Genérico</th><th>Mercado</th><th>Marca R$</th>' + (noDistrito ? '<th class="reg">Market share regional</th><th class="reg">Entre marcas regional</th>' : '') + '</tr></thead><tbody>';
+  hist.forEach(function(h) {
+    dH += '<tr class="' + (h.mes === mesSel ? 'marca' : '') + '"><td class="l">' + h.mes + '/2026</td><td>' + fmtPct(h.d.marcaShare) + '</td><td>' + trend(h.d.marcaVar, ' pp') + '</td><td>' + fmtPct(h.d.shareMarcas) + '</td><td>' + (h.d.genValor > 0 ? fmtPct(h.d.genShare) : '—') + '</td><td>' + fmtRS(h.d.total) + '</td><td>' + fmtRS(h.d.marcaValor) + '</td>' +
+      (noDistrito ? '<td class="reg">' + fmtPct(h.dR.marcaShare) + '</td><td class="reg">' + fmtPct(h.dR.shareMarcas) + '</td>' : '') + '</tr>';
+  });
+  dH += '</tbody></table></div></div>';
+
+  // Composição do mercado
+  dH += '<div class="sec-hdr">Composição do mercado <small>' + esc(nomeEsc) + ' · venda em preço fábrica</small></div>';
   var pg = demEsc.genShare || 0, pm = demEsc.marcaShare || 0, po = Math.max(0, 100 - pg - pm);
-  html += '<div class="box" style="padding:16px 18px"><div class="comp-bar">' +
+  dH += '<div class="box" style="padding:16px 18px"><div class="comp-bar">' +
     (pg > 0 ? '<i class="c-gen" style="width:' + pg.toFixed(1) + '%"></i>' : '') +
     '<i class="c-out" style="width:' + po.toFixed(1) + '%"></i><i class="c-ems" style="width:' + pm.toFixed(1) + '%"></i></div>' +
     '<div class="comp-leg">' +
@@ -462,8 +582,9 @@ function render() {
     '<span><i class="c-ems"></i>' + esc(marca) + ' <b>' + fmtPct(pm) + '</b> · ' + fmtRS(demEsc.marcaValor) + ' ' + trend(demEsc.marcaVar, ' pp') + '</span>' +
     '</div></div>';
 
-  html += '<div class="sec-hdr">Market share — disputa entre marcas <small>demanda · ranking sem o genérico · ' + esc(nomeEsc) + '</small></div>';
-  html += '<div class="box"><div class="box-scroll"><table><thead><tr><th class="l">#</th><th class="l">Marca</th><th>Valor</th><th>Cresc.</th><th style="width:30%">Share entre marcas</th>' + (noDistrito ? '<th class="reg">Regional</th><th class="reg">Distrito vs regional</th>' : '') + '<th>Share no mercado total</th><th>Penetração</th></tr></thead><tbody>';
+  // Disputa entre marcas na venda
+  dH += '<div class="sec-hdr">Disputa entre marcas na venda <small>ranking sem o genérico · ' + esc(nomeEsc) + '</small></div>';
+  dH += '<div class="box"><div class="box-scroll"><table><thead><tr><th class="l">#</th><th class="l">Marca</th><th>Valor</th><th>Cresc.</th><th style="width:30%">Share entre marcas</th>' + (noDistrito ? '<th class="reg">Regional</th><th class="reg">Distrito vs regional</th>' : '') + '<th>Share no mercado total</th><th>Penetração</th></tr></thead><tbody>';
   function colReg(produto, sm) {
     if (!noDistrito) return '';
     var r = demReg.marcas.filter(function(x) { return x.produto === produto; })[0];
@@ -474,123 +595,60 @@ function render() {
   var maxSM = Math.max.apply(null, demEsc.marcas.map(function(p) { return n(p.valor) || 0; }).concat([1]));
   demEsc.marcas.forEach(function(p, i) {
     var v = n(p.valor) || 0, sm = demEsc.marcasValor > 0 ? v / demEsc.marcasValor * 100 : 0;
-    html += '<tr class="' + (p.eh_marca === '1' ? 'marca' : '') + '"><td class="l">' + (i + 1) + '</td><td class="l">' + esc(p.produto) + (p === demEsc.concorrente ? ' <span class="tag-conc">principal concorrente</span>' : '') + '</td><td>' + fmtRS(v) + '</td><td>' + trend(n(p.cresc_pct), '%') + '</td>' +
+    dH += '<tr class="' + (p.eh_marca === '1' ? 'marca' : '') + '"><td class="l">' + (i + 1) + '</td><td class="l">' + esc(p.produto) + (p === demEsc.concorrente ? ' <span class="tag-conc">principal concorrente</span>' : '') + '</td><td>' + fmtRS(v) + '</td><td>' + trend(n(p.cresc_pct), '%') + '</td>' +
       '<td><div class="share-cell"><div class="share-bar"><i style="width:' + Math.max(0, v / maxSM * 100).toFixed(1) + '%"></i></div><span class="share-n">' + fmtPct(sm) + '</span></div></td>' + colReg(p.produto, sm) + '<td>' + fmtPct(n(p.share)) + '</td><td>' + trend(n(p.var_pp), ' pp') + '</td></tr>';
   });
-  html += '<tr class="tot"><td class="l"></td><td class="l">Total das marcas</td><td>' + fmtRS(demEsc.marcasValor) + '</td><td>' + trend(demEsc.marcasCresc, '%') + '</td><td></td>' + vazioReg + '<td>' + fmtPct(100 - pg) + '</td><td></td></tr>';
+  dH += '<tr class="tot"><td class="l"></td><td class="l">Total das marcas</td><td>' + fmtRS(demEsc.marcasValor) + '</td><td>' + trend(demEsc.marcasCresc, '%') + '</td><td></td>' + vazioReg + '<td>' + fmtPct(100 - pg) + '</td><td></td></tr>';
   demEsc.genericos.forEach(function(p) {
-    html += '<tr class="gen-row"><td class="l"></td><td class="l">' + esc(p.produto) + ' <span class="sub">fora do ranking</span></td><td>' + fmtRS(n(p.valor)) + '</td><td>' + trend(n(p.cresc_pct), '%') + '</td><td></td>' + (noDistrito ? '<td class="reg">' + fmtPct(demReg.genShare) + ' <span class="sub">do mercado</span></td><td class="reg">' + difReg(n(p.share), demReg.genShare) + '</td>' : '') + '<td>' + fmtPct(n(p.share)) + '</td><td>' + trend(n(p.var_pp), ' pp') + '</td></tr>';
+    dH += '<tr class="gen-row"><td class="l"></td><td class="l">' + esc(p.produto) + ' <span class="sub">fora do ranking</span></td><td>' + fmtRS(n(p.valor)) + '</td><td>' + trend(n(p.cresc_pct), '%') + '</td><td></td>' + (noDistrito ? '<td class="reg">' + fmtPct(demReg.genShare) + ' <span class="sub">do mercado</span></td><td class="reg">' + difReg(n(p.share), demReg.genShare) + '</td>' : '') + '<td>' + fmtPct(n(p.share)) + '</td><td>' + trend(n(p.var_pp), ' pp') + '</td></tr>';
   });
-  html += '<tr class="tot"><td class="l"></td><td class="l">Total do mercado</td><td>' + fmtRS(demEsc.total) + '</td><td>' + trend(demEsc.cresc, '%') + '</td><td></td>' + vazioReg + '<td>100%</td><td></td></tr>';
-  html += '</tbody></table></div></div>';
+  dH += '<tr class="tot"><td class="l"></td><td class="l">Total do mercado</td><td>' + fmtRS(demEsc.total) + '</td><td>' + trend(demEsc.cresc, '%') + '</td><td></td>' + vazioReg + '<td>100%</td><td></td></tr>';
+  dH += '</tbody></table></div></div>';
 
-  // 2b. Disputa nas receitas: share de prescrição de cada marca do mercado (Raio X, Prescrição | Análise de Concorrentes).
-  // Chega por regional e por distrito; usa o ciclo mais recente publicado até o mês escolhido.
-  (function() {
-    var MS = ["JAN","FEV","MAR","ABR","MAI","JUN","JUL","AGO","SET","OUT","NOV","DEZ"];
-    var base = (STATE.rxc || []).filter(function(r) { return r.regional === STATE.regional && r.linha === linha && r.marca === marca && MS.indexOf(r.mes) <= MS.indexOf(STATE.mes); });
-    if (!base.length) return;
-    var mesRx = base.map(function(r) { return r.mes; }).sort(function(a, b) { return MS.indexOf(a) - MS.indexOf(b); }).pop(), ant = MS[MS.indexOf(mesRx) - 1] || 'mês anterior';
-    function de(nivel, cod) { return base.filter(function(r) { return r.mes === mesRx && r.nivel === nivel && (!cod || r.codigo === cod); }).sort(function(a, b) { return (n(b.share) || 0) - (n(a.share) || 0); }); }
-    var lista = noDistrito ? de('DISTRITO', STATE.distrito) : de('REGIONAL'), reg = noDistrito ? de('REGIONAL') : [];
-    if (!lista.length) return;
-    var maxS = Math.max.apply(null, lista.map(function(p) { return n(p.share) || 0; }).concat([1]));
-    html += '<div class="sec-hdr">Prescrição — disputa nas receitas <small>share de receitas de cada marca · ' + esc(nomeEsc) + ' · ' + mesRx + '/2026' + (mesRx !== STATE.mes ? ' (mais recente disponível)' : '') + '</small></div>';
-    html += '<div class="box"><div class="box-scroll"><table><thead><tr><th class="l">#</th><th class="l">Marca</th><th style="width:34%">Share de receitas</th>' +
-      (noDistrito ? '<th class="reg">Regional</th><th class="reg">Distrito vs regional</th>' : '') + '<th>' + ant + '</th><th>Penetração</th></tr></thead><tbody>';
-    lista.forEach(function(p, i) {
-      var sh = n(p.share), r = reg.filter(function(x) { return x.produto === p.produto; })[0], shR = r ? n(r.share) : null;
-      html += '<tr class="' + (p.eh_marca === '1' ? 'marca' : '') + '"><td class="l">' + (i + 1) + '</td><td class="l">' + esc(p.produto) + '</td>' +
-        '<td><div class="share-cell"><div class="share-bar"><i style="width:' + Math.max(0, (sh || 0) / maxS * 100).toFixed(1) + '%"></i></div><span class="share-n">' + fmtPct(sh) + '</span></div></td>' +
-        (noDistrito ? '<td class="reg">' + fmtPct(shR) + '</td><td class="reg">' + difReg(sh, shR) + '</td>' : '') +
-        '<td>' + fmtPct(n(p.share_ant)) + '</td><td>' + trend(n(p.var_pp), ' pp') + '</td></tr>';
-    });
-    html += '</tbody></table></div></div>';
-  })();
-
-  function linhaRef(nome, sub, rx, d, comPainel) {
-    var sh = rx ? n(rx.share) : null;
+  function refDem(nome, sub, d, extra) {
     return '<tr class="ref"><td class="l"><b>' + esc(nome) + '</b><br><span class="sub">' + esc(sub) + '</span></td>' +
-      (comPainel ? '<td>' + fmtInt(rx ? n(rx.painel) : null) + '</td>' : '') +
-      '<td>' + fmtInt(rx ? n(rx.rx_mercado) : null) + '</td><td><b>' + fmtPct(sh) + '</b></td><td>' + trend(rx ? n(rx.var_pp) : null, ' pp') + '</td>' +
       '<td>' + fmtRS(d.total) + '</td><td>' + fmtRS(d.marcaValor) + '</td><td><b>' + fmtPct(d.marcaShare) + '</b></td><td>' + trend(d.marcaVar, ' pp') + '</td>' +
-      (comPainel ? '<td>' + fmtPct(d.shareMarcas) + '</td><td>' + fmtPct(d.genShare) + '</td>' : '') +
-      '<td>' + gapHtml(sh !== null && d.marcaShare !== null ? sh - d.marcaShare : null) + '</td>' +
-      (comPainel ? '<td class="l"><span class="sub">' + esc(d.concorrente ? d.concorrente.produto : '') + '</span></td>' : '') + '</tr>';
+      (extra ? '<td>' + fmtPct(d.shareMarcas) + '</td><td>' + fmtPct(d.genShare) + '</td><td class="l"><span class="sub">' + esc(d.concorrente ? d.concorrente.produto : '') + '</span></td>' : '') + '</tr>';
   }
-
-  // 3. Distritos (só na visão regional)
-  if (!noDistrito) {
-    var cods = {};
-    rxDe('DISTRITO').forEach(function(r) { cods[r.codigo] = r.nome; });
-    demDe('DISTRITO').forEach(function(r) { cods[r.codigo] = cods[r.codigo] || r.nome; });
-    html += '<div class="sec-hdr">Por distrito <small>clique em um distrito para abrir os setores e os concorrentes dele</small></div>';
-    html += '<div class="box"><div class="box-scroll"><table><thead><tr><th class="l" rowspan="2">Distrito (GD)</th><th class="grp" colspan="3">Prescrição</th><th class="grp" colspan="4">Demanda</th><th rowspan="2">GAP PX vs DEM</th></tr>' +
-      '<tr><th>Rx mercado</th><th>Presc. share</th><th>Penetração</th><th>Mercado</th><th>Marca</th><th>Market share</th><th>Penetração</th></tr></thead><tbody>';
+  if (!noDistrito && Object.keys(cods).length) {
+    dH += '<div class="sec-hdr">Por distrito <small>demanda · clique em um distrito para abrir</small></div>';
+    dH += '<div class="box"><div class="box-scroll"><table><thead><tr><th class="l">Distrito (GD)</th><th>Mercado</th><th>Marca</th><th>Market share</th><th>Penetração</th></tr></thead><tbody>';
     Object.keys(cods).sort().forEach(function(c) {
-      var rx = rxDe('DISTRITO', c)[0], d = resumoDem(demDe('DISTRITO', c));
-      var s = rx ? n(rx.share) : null;
-      html += '<tr class="clicavel" data-distrito="' + c + '"><td class="l"><b>' + esc(cods[c]) + '</b><br><span class="sub">' + c + '</span></td>' +
-        '<td>' + fmtInt(rx ? n(rx.rx_mercado) : null) + '</td><td><b>' + fmtPct(s) + '</b></td><td>' + trend(rx ? n(rx.var_pp) : null, ' pp') + '</td>' +
-        '<td>' + fmtRS(d.total) + '</td><td>' + fmtRS(d.marcaValor) + '</td><td><b>' + fmtPct(d.marcaShare) + '</b></td><td>' + trend(d.marcaVar, ' pp') + '</td>' +
-        '<td>' + gapHtml(s !== null && d.marcaShare !== null ? s - d.marcaShare : null) + '</td></tr>';
+      var d = resumoDem(demDe('DISTRITO', c));
+      dH += '<tr class="clicavel" data-distrito="' + c + '"><td class="l"><b>' + esc(cods[c]) + '</b><br><span class="sub">' + c + '</span></td>' +
+        '<td>' + fmtRS(d.produtos.length ? d.total : null) + '</td><td>' + fmtRS(d.produtos.length ? d.marcaValor : null) + '</td><td><b>' + fmtPct(d.marcaShare) + '</b></td><td>' + trend(d.marcaVar, ' pp') + '</td></tr>';
     });
     var nv = resumoDem(demDe('NAO_VISITADO'));
     if (nv.produtos.length) {
-      html += '<tr><td class="l"><b>Não visitado</b><br><span class="sub">demanda fora dos setores da linha</span></td><td>—</td><td>—</td><td></td>' +
-        '<td>' + fmtRS(nv.total) + '</td><td>' + fmtRS(nv.marcaValor) + '</td><td><b>' + fmtPct(nv.marcaShare) + '</b></td><td>' + trend(nv.marcaVar, ' pp') + '</td><td>—</td></tr>';
+      dH += '<tr><td class="l"><b>Não visitado</b><br><span class="sub">demanda fora dos setores da linha</span></td><td>' + fmtRS(nv.total) + '</td><td>' + fmtRS(nv.marcaValor) + '</td><td><b>' + fmtPct(nv.marcaShare) + '</b></td><td>' + trend(nv.marcaVar, ' pp') + '</td></tr>';
     }
-    html += linhaRef('Regional ' + (REG_LABEL[STATE.regional] || STATE.regional), 'total da regional', rxReg, demReg, false);
-    html += '</tbody></table></div></div>';
+    dH += refDem(nomeReg, 'total da regional', demReg, false) + '</tbody></table></div></div>';
   }
 
-  // 4. Setores
-  var linhasSetor = {};
-  rxDe('SETOR').forEach(function(r) {
-    if (noDistrito && r.distrito !== STATE.distrito) return;
-    linhasSetor[r.codigo] = { codigo: r.codigo, nome: r.nome, distrito: r.distrito, painel: n(r.painel), rxMercado: n(r.rx_mercado), rxShare: n(r.share), rxVar: n(r.var_pp) };
-  });
-  var demPorSetor = {};
+  var porSetor = {};
   demDe('SETOR').forEach(function(r) {
     if (noDistrito && r.distrito !== STATE.distrito) return;
-    (demPorSetor[r.codigo] = demPorSetor[r.codigo] || []).push(r);
+    (porSetor[r.codigo] = porSetor[r.codigo] || []).push(r);
   });
-  Object.keys(demPorSetor).forEach(function(c) {
-    var d = resumoDem(demPorSetor[c]);
-    var l = linhasSetor[c] = linhasSetor[c] || { codigo: c, nome: demPorSetor[c][0].nome, distrito: demPorSetor[c][0].distrito, painel: null, rxMercado: null, rxShare: null, rxVar: null };
-    l.demTotal = d.total; l.demMarca = d.marcaValor; l.demShare = d.marcaShare; l.demVar = d.marcaVar; l.lider = d.concorrente ? d.concorrente.produto : ''; l.shareMarcas = d.shareMarcas; l.genShare = d.genShare;
+  var setDem = Object.keys(porSetor).map(function(c) {
+    var d = resumoDem(porSetor[c]);
+    return { codigo: c, nome: porSetor[c][0].nome, demTotal: d.total, demMarca: d.marcaValor, demShare: d.marcaShare, demVar: d.marcaVar, shareMarcas: d.shareMarcas, genShare: d.genShare, lider: d.concorrente ? d.concorrente.produto : '' };
   });
-  var setores = Object.keys(linhasSetor).map(function(c) {
-    var l = linhasSetor[c];
-    l.gap = (l.rxShare !== null && l.demShare !== null && l.demShare !== undefined) ? l.rxShare - l.demShare : null;
-    return l;
-  });
-  var sc = STATE.sort;
-  setores.sort(function(a, b) {
-    var x = a[sc.col], y = b[sc.col];
-    if (typeof x === 'string' || typeof y === 'string') return String(x || '').localeCompare(String(y || '')) * sc.dir;
-    if (x === null || x === undefined) return 1;
-    if (y === null || y === undefined) return -1;
-    return (x - y) * sc.dir;
-  });
-  function th(col, txt, cls) { return '<th class="sortable ' + (cls || '') + '" data-sort="' + col + '">' + txt + (sc.col === col ? (sc.dir < 0 ? ' ▼' : ' ▲') : '') + '</th>'; }
-  html += '<div class="sec-hdr">Por setor <small>' + setores.length + ' setores' + (noDistrito ? ' do distrito' : '') + ' · clique no cabeçalho para ordenar</small></div>';
-  html += '<div class="box"><div class="box-scroll"><table><thead><tr><th class="l" rowspan="2">Setor</th><th class="grp" colspan="4">Prescrição</th><th class="grp" colspan="6">Demanda</th><th rowspan="2" class="sortable" data-sort="gap">GAP PX vs DEM' + (sc.col === 'gap' ? (sc.dir < 0 ? ' ▼' : ' ▲') : '') + '</th><th class="l" rowspan="2">Principal concorrente</th></tr><tr>' +
-    th('painel', 'Painel') + th('rxMercado', 'Rx mercado') + th('rxShare', 'Presc. share') + th('rxVar', 'Penetração') +
-    th('demTotal', 'Mercado') + th('demMarca', 'Marca') + th('demShare', 'Market share') + th('demVar', 'Penetração') + th('shareMarcas', 'Entre marcas') + th('genShare', 'Genérico') + '</tr></thead><tbody>';
-  html += linhaRef('Regional ' + (REG_LABEL[STATE.regional] || STATE.regional), 'referência', rxReg, demReg, true);
-  if (noDistrito) html += linhaRef(nomeEsc, 'total do distrito', rxEsc, demEsc, true);
-  setores.forEach(function(l) {
-    html += '<tr><td class="l"><b>' + esc(l.nome) + '</b><br><span class="sub">' + l.codigo + '</span></td>' +
-      '<td>' + fmtInt(l.painel) + '</td><td>' + fmtInt(l.rxMercado) + '</td><td><b>' + fmtPct(l.rxShare) + '</b></td><td>' + trend(l.rxVar, ' pp') + '</td>' +
-      '<td>' + fmtRS(l.demTotal === undefined ? null : l.demTotal) + '</td><td>' + fmtRS(l.demMarca === undefined ? null : l.demMarca) + '</td><td><b>' + fmtPct(l.demShare === undefined ? null : l.demShare) + '</b></td><td>' + trend(l.demVar === undefined ? null : l.demVar, ' pp') + '</td>' +
-      '<td>' + fmtPct(l.shareMarcas === undefined ? null : l.shareMarcas) + '</td><td>' + fmtPct(l.genShare === undefined ? null : l.genShare) + '</td>' +
-      '<td>' + gapHtml(l.gap) + '</td><td class="l"><span class="sub">' + esc(l.lider || '') + '</span></td></tr>';
-  });
-  html += '</tbody></table></div></div>';
-
-  html += '<div class="nota"><b>Como ler:</b> Prescription Share vem da página "Prescrição | Análise de Performance" do Raio X (receitas dos médicos do painel). Market Share vem de "Demanda | Análise de Concorrentes" (venda em preço fábrica). ' +
-    'Penetração é a coluna de mesmo nome do Raio X: quanto o share mudou contra o mês anterior, em pontos percentuais (positivo = ganhando mercado). Genérico entra no tamanho do mercado, mas fica fora do ranking: share entre marcas e principal concorrente consideram só produtos de marca. Com um distrito selecionado, a referência da regional aparece nos cartões, como linha tracejada nos gráficos e em colunas ou linhas próprias nas tabelas; é o indicador da regional inteira, não a média simples dos distritos. O GAP PX vs DEM é o prescription share menos o market share (mercado total), em pontos percentuais. Na prescrição, o total do distrito e da regional conta cada médico uma vez, por isso não é a soma dos setores.</div>';
+  if (setDem.length) {
+    ordenar(setDem, 'dem');
+    dH += '<div class="sec-hdr">Por setor <small>demanda · ' + setDem.length + ' setores' + (noDistrito ? ' do distrito' : '') + ' · clique no cabeçalho para ordenar</small></div>';
+    dH += '<div class="box"><div class="box-scroll"><table><thead><tr><th class="l">Setor</th>' + thS('dem', 'demTotal', 'Mercado') + thS('dem', 'demMarca', 'Marca') + thS('dem', 'demShare', 'Market share') + thS('dem', 'demVar', 'Penetração') + thS('dem', 'shareMarcas', 'Entre marcas') + thS('dem', 'genShare', 'Genérico') + '<th class="l">Principal concorrente</th></tr></thead><tbody>';
+    dH += refDem(nomeReg, 'referência', demReg, true);
+    if (noDistrito) dH += refDem(nomeEsc, 'total do distrito', demEsc, true);
+    setDem.forEach(function(l) {
+      dH += '<tr><td class="l"><b>' + esc(l.nome) + '</b><br><span class="sub">' + l.codigo + '</span></td><td>' + fmtRS(u(l.demTotal)) + '</td><td>' + fmtRS(u(l.demMarca)) + '</td><td><b>' + fmtPct(u(l.demShare)) + '</b></td><td>' + trend(u(l.demVar), ' pp') + '</td>' +
+        '<td>' + fmtPct(u(l.shareMarcas)) + '</td><td>' + fmtPct(u(l.genShare)) + '</td><td class="l"><span class="sub">' + esc(l.lider || '') + '</span></td></tr>';
+    });
+    dH += '</tbody></table></div></div>';
+  }
+  dH += '<div class="nota"><b>Demanda:</b> venda em R$ a preço fábrica. Market share = venda da marca ÷ venda do mercado (com o genérico no total). Genérico entra no tamanho do mercado, mas fica fora do ranking: share entre marcas e principal concorrente consideram só produtos de marca. ' +
+    'Com um distrito selecionado, a referência da regional aparece nos cartões, como linha tracejada nos gráficos e em colunas ou linhas próprias nas tabelas; é o indicador da regional inteira, não a média simples dos distritos.</div>';
+  html += secao('dem') + '<div class="mk-secao-box dem">' + dH + '</div>';
 
   document.getElementById('main').innerHTML = html;
 }
@@ -646,7 +704,8 @@ document.addEventListener('click', function(e) {
   else if (t.dataset.reg) { STATE.regional = t.dataset.reg; STATE.distrito = ''; }
   else if (t.dataset.distrito) { STATE.distrito = t.dataset.distrito; window.scrollTo({ top: 0, behavior: 'smooth' }); }
   else if (t.dataset.sort) {
-    if (STATE.sort.col === t.dataset.sort) STATE.sort.dir *= -1; else STATE.sort = { col: t.dataset.sort, dir: -1 };
+    var ps = t.dataset.sort.split(':'), sc = STATE.sort[ps[0]];
+    if (sc.col === ps[1]) sc.dir *= -1; else STATE.sort[ps[0]] = { col: ps[1], dir: -1 };
   }
   atualizar();
 });
