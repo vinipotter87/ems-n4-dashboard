@@ -531,6 +531,10 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
 .ap-fit .mkc-lab{font-size:11.5px}.ap-fit .mkc-tbl .mk-chip{font-size:12px}
 .ap-fit .mkc-tbl tr.mkc-resto td{font-size:13px}
 .ap-fit .mk-leg{font-size:12.5px}
+/* no slide: o título do bloco já está no cabeçalho do slide; no 2×2 de prescrição o rótulo do quadro também sai, para sobrar altura */
+.ap-fit .dd-section-lbl.mk-lbl{display:none}
+.ap-fit .mkc-bloco.rx .mkc-bloco-t{display:none}.ap-fit .mkc-bloco.rx{margin-top:4px;padding-top:4px}
+.ap-fit .mkc-card{padding:8px 12px}.ap-fit .mkc-hdr{margin-bottom:2px}.ap-fit .mkc-grid{gap:12px}
 .mk-sub-lbl{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--gray);margin:14px 0 6px}
 .mk-grafs{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-top:6px}
 .mk-graf{border:1px solid #e5e7eb;border-radius:10px;padding:8px 10px 4px;background:#fff}
@@ -9561,7 +9565,9 @@ function renderConcorrentesDistrito(distritoId, linha, tipo) {
   var corpo = tipo === 'rx' ? c.rx : c.ms;
   if (!corpo) return '';
   // no slide os cartões ficam lado a lado numa linha só; o quadro .mks-wrap é reduzido até caber na largura
-  corpo = '<div class="mks-wrap" style="overflow-x:auto">' + corpo.replace('<div class="mkc-grid">', '<div class="mkc-grid" style="--n:' + (corpo.split('class="mkc-card"').length - 1) + '">') + '</div>';
+  // prescrição: grade 2×2 (2 cartões em cima, 2 embaixo) para preencher o slide 16:9; market share segue lado a lado
+  var nCards = corpo.split('class="mkc-card"').length - 1;
+  corpo = '<div class="mks-wrap" style="overflow-x:auto">' + corpo.replace('<div class="mkc-grid">', '<div class="mkc-grid" style="--n:' + (tipo === 'rx' ? Math.min(2, nCards) : nCards) + '">') + '</div>';
   return '<div class="dd-section-lbl mk-lbl ' + (tipo === 'rx' ? 'rx' : 'dem') + '" style="margin-top:18px">' + (tipo === 'rx' ? 'Prescrição — concorrentes nas receitas' : 'Market share — concorrentes na venda') + ' · distrito × regional</div>' +
     '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 10px">' + mkTarjaMercado(ciclo) + '</div>' + corpo + (tipo === 'rx' ? MKC_NOTA_RX : MKC_NOTA_MS);
 }
