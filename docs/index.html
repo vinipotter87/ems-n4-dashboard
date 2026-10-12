@@ -518,6 +518,8 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
 .mkc-bloco .mkc-insight{background:#fff}
 .mkc-bloco.rx .mkc-insight{border-left-color:#0d9488}.mkc-bloco.ms .mkc-insight{border-left-color:#2563eb}
 .mkc-bloco.ms .mkc-tbl tr.nossa .mkc-bar{background:#2563eb}
+.mkc-tipo{font-size:10px;font-weight:900;letter-spacing:.5px;text-transform:uppercase;padding:2px 9px;border-radius:10px;color:#fff;white-space:nowrap}
+.mkc-tipo.rx{background:#0d9488}.mkc-tipo.ms{background:#2563eb}
 .mkc-graf{max-width:430px;margin:8px auto 0}
 .ap-fit .mkc-grid{grid-template-columns:repeat(var(--n,3),minmax(410px,1fr))}
 .ap-fit .mkc-card{overflow:visible}
@@ -9626,21 +9628,24 @@ function renderConcorrentesDistrito(distritoId, linha, tipo) {
   var ciclo = mkCicloPara(MES_ATUAL);
   if (!ciclo) return '';
   var c = renderConcorrentes(distritoId.substring(0, 6) + '00', linha, false);
-  // 2 marcas por slide, nos dois quadros (prescrição e market share): pares definidos pelo Vinicius;
-  // o que sobrar vai de 2 em 2, em ordem alfabética
-  var PARES = [['LINADIB', 'LINADIB DUO'], ['BUPIUM XL', 'OZIVY']];
-  var cards = tipo === 'rx' ? c.rxCards : c.msCards;
-  if (!cards || !cards.length) return '';
-  var porMarca = {}; cards.forEach(function(x) { porMarca[x.marca] = x.html; });
-  var resto = cards.map(function(x) { return x.marca; }), grupos = [];
-  PARES.forEach(function(p) { if (p.every(function(m) { return resto.indexOf(m) >= 0; })) { grupos.push(p); resto = resto.filter(function(m) { return p.indexOf(m) < 0; }); } });
-  for (var gi = 0; gi < resto.length; gi += 2) grupos.push(resto.slice(gi, gi + 2));
-  var titulo = tipo === 'rx' ? 'Prescrição — concorrentes nas receitas' : 'Market share — concorrentes na venda';
-  return grupos.map(function(par) {
-    var nomeSl = titulo + ' · ' + par.join(' e ');
-    return '<div class="dd-section-lbl mk-lbl ' + (tipo === 'rx' ? 'rx' : 'dem') + '" data-slide-nome="' + nomeSl + '" style="margin-top:18px">' + nomeSl + ' · distrito × regional</div>' +
+  // Um slide por marca-chave (pedido do Vinicius): à esquerda o cartão de market share (demanda),
+  // à direita o de prescription share da mesma marca. Sai tudo na chamada 'dem'; a 'rx' não gera slide.
+  if (tipo === 'rx') return '';
+  var ORDEM = ['LINADIB', 'LINADIB DUO', 'BUPIUM XL', 'OZIVY'];
+  var ms = {}, rx = {}, marcas = [];
+  (c.msCards || []).forEach(function(x) { ms[x.marca] = x.html; if (marcas.indexOf(x.marca) < 0) marcas.push(x.marca); });
+  (c.rxCards || []).forEach(function(x) { rx[x.marca] = x.html; if (marcas.indexOf(x.marca) < 0) marcas.push(x.marca); });
+  if (!marcas.length) return '';
+  marcas.sort(function(a, b) { var ia = ORDEM.indexOf(a), ib = ORDEM.indexOf(b); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.localeCompare(b); });
+  return marcas.map(function(m) {
+    var nomeSl = 'Concorrentes · ' + m + ' — market share e prescription share';
+    // etiqueta no cabeçalho de cada cartão dizendo qual medida ele mostra
+    function etiqueta(h, cls, txt) { return h ? h.replace('</span>', '</span><span class="mkc-tipo ' + cls + '">' + txt + '</span>') : ''; }
+    var cards = etiqueta(ms[m], 'ms', 'Market share · demanda') + etiqueta(rx[m], 'rx', 'Prescription share · receitas');
+    return '<div class="dd-section-lbl mk-lbl dem" data-slide-nome="' + nomeSl + '" style="margin-top:18px">' + nomeSl + ' · distrito × regional</div>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 10px">' + mkTarjaMercado(ciclo) + '</div>' +
-      '<div class="mks-wrap" style="overflow-x:auto"><div class="mkc-grid mkc-par" style="--n:2">' + par.map(function(m) { return porMarca[m]; }).join('') + '</div></div>' + (tipo === 'rx' ? MKC_NOTA_RX : MKC_NOTA_MS);
+      '<div class="mks-wrap" style="overflow-x:auto"><div class="mkc-grid mkc-par" style="--n:' + ((ms[m] ? 1 : 0) + (rx[m] ? 1 : 0)) + '">' + cards + '</div></div>' +
+      (ms[m] ? MKC_NOTA_MS : '') + (rx[m] ? MKC_NOTA_RX : '');
   }).join('');
 }
 
