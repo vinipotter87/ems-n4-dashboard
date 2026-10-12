@@ -534,7 +534,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
 /* no slide: o título do bloco já está no cabeçalho do slide; no 2×2 de prescrição o rótulo do quadro também sai, para sobrar altura */
 .ap-fit .dd-section-lbl.mk-lbl{display:none}
 .ap-fit .mkc-bloco.rx .mkc-bloco-t{display:none}.ap-fit .mkc-bloco.rx{margin-top:4px;padding-top:4px}
-.ap-fit .mkc-card{padding:8px 12px}.ap-fit .mkc-hdr{margin-bottom:2px}.ap-fit .mkc-grid{gap:12px}
+.ap-fit .mkc-card{padding:8px 12px}.ap-fit .mkc-par .mkc-graf{max-width:none}.ap-fit .mkc-par .mk-svg{max-height:230px}.ap-fit .mkc-hdr{margin-bottom:2px}.ap-fit .mkc-grid{gap:12px}
 .mk-sub-lbl{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--gray);margin:14px 0 6px}
 .mk-grafs{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-top:6px}
 .mk-graf{border:1px solid #e5e7eb;border-radius:10px;padding:8px 10px 4px;background:#fff}
@@ -3030,13 +3030,13 @@ function apresGrupos(limite) {
             var pgs = [];
             [].slice.call(det.children).forEach(function(b) {
               if (b.classList.contains('dd-hdr')) return;
-              if (b.classList.contains('dd-section-lbl') || !pgs.length) pgs.push({ nome: b.textContent.trim(), nodes: [] });
+              if (b.classList.contains('dd-section-lbl') || !pgs.length) pgs.push({ nome: b.textContent.trim(), fixo: b.getAttribute('data-slide-nome'), nodes: [] });
               pgs[pgs.length - 1].nodes.push(b);
             });
             pgs.forEach(function(pg) {
               var casca = det.cloneNode(false); casca.removeAttribute('id');
               pg.nodes.forEach(function(b) { casca.appendChild(b); });
-              var nm = pg.nome.charAt(0) + pg.nome.slice(1).toLowerCase();
+              var nm = pg.fixo || (pg.nome.charAt(0) + pg.nome.slice(1).toLowerCase());
               grupos.push({ chave: /^equipe/i.test(nm) ? 'equipe' : '', nome: nm.replace(/nexus|vital/gi, function(x){ return x.toUpperCase(); }), nodes: [casca] });
             });
           }
@@ -9433,7 +9433,7 @@ function mkRxConcBloco(d, refs, marca, rotulo) {
 // cod = código do distrito no Raio X (8 dígitos) ou null para a regional; linhaFiltro = 'NEXUS' | 'VITAL' | null
 // Devolve dois quadros separados: { rx: concorrentes nas receitas (prescrição), ms: concorrentes na venda (demanda) }
 function renderConcorrentes(cod, linhaFiltro, mostrarLinha) {
-  var vazio = { rx: '', ms: '' };
+  var vazio = { rx: '', ms: '', rxCards: [] };
   if (!MERCADO.ok) return vazio;
   var ciclo = mkCicloPara(MES_ATUAL);
   if (!ciclo) return vazio;
@@ -9450,7 +9450,7 @@ function renderConcorrentes(cod, linhaFiltro, mostrarLinha) {
   var meses = Object.keys(disp).filter(function(m) { return MK_MESES.indexOf(m) <= MK_MESES.indexOf(ciclo); })
     .sort(function(x, y) { return MK_MESES.indexOf(x) - MK_MESES.indexOf(y); }).slice(-3);
   var nivel = cod ? 'DISTRITO' : 'REGIONAL', CORES = ['#dc2626', '#7c3aed', '#f59e0b'];
-  var cardsRx = '', cardsMs = '';
+  var cardsRx = '', cardsMs = '', listaRx = [];
   Object.keys(chaves).sort().forEach(function(k) {
     var linha = k.split('|')[0], marca = k.split('|')[1];
     var cab = '<div class="mkc-hdr"><span class="mkc-marca">★ ' + marca + '</span>' +
@@ -9460,8 +9460,26 @@ function renderConcorrentes(cod, linhaFiltro, mostrarLinha) {
     var rxL = MERCADO.rxc.filter(function(r) { return r.regional === MERCADO_REGIONAL && r.linha === linha; });
     var rxB = mkRxConcBloco(mkRxConcDados(rxL, marca, nivel, cod, ciclo), cod ? [{ rot: 'Regional', d: mkRxConcDados(rxL, marca, 'REGIONAL', null, ciclo) }] : [], marca, '');
     if (rxB.tabela) {
-      cardsRx += '<div class="mkc-card">' + cab + '</div>' +
-        '<div class="mkc-bloco rx"><div class="mkc-bloco-t">' + rxB.titulo + '</div>' + rxB.tabela + '</div></div>';
+      // prescription share da marca nos últimos 3 ciclos (aba mercado_rx): linha cheia = recorte, tracejada = regional
+      var mesesRx = {};
+      MERCADO.rx.forEach(function(r) { if (r.regional === MERCADO_REGIONAL && r.linha === linha && r.marca === marca && MK_MESES.indexOf(r.mes) <= MK_MESES.indexOf(ciclo)) mesesRx[r.mes] = 1; });
+      var mRx = Object.keys(mesesRx).sort(function(x, y) { return MK_MESES.indexOf(x) - MK_MESES.indexOf(y); }).slice(-3);
+      function shRx(m, nv, c) {
+        var r = MERCADO.rx.filter(function(x) { return x.mes === m && x.regional === MERCADO_REGIONAL && x.linha === linha && x.marca === marca && x.nivel === nv && (!c || x.codigo === c); })[0];
+        return r ? mkNum(r.share) : null;
+      }
+      var grafRx = '';
+      if (mRx.length > 1) {
+        var serRx = [{ nome: 'Prescription share · ' + (cod ? 'distrito' : 'regional'), cor: '#0d9488', pts: mRx.map(function(m) { return shRx(m, nivel, cod); }) }];
+        if (cod) serRx.push({ nome: 'Prescription share · regional', cor: '#0d9488', ref: true, pts: mRx.map(function(m) { return shRx(m, 'REGIONAL'); }) });
+        grafRx = '<div class="mkc-graf"><div class="mk-sub-lbl" style="margin:8px 0 2px">' + marca + ' · prescription share nos últimos ' + mRx.length + ' meses</div>' + mkGrafico(mRx, serRx) +
+          '<div class="mk-leg" style="margin-top:2px"><span><i style="background:#0d9488"></i>' + (cod ? 'Distrito' : 'Regional') + '</span>' +
+          (cod ? '<span><i style="background:repeating-linear-gradient(90deg,#0d9488 0 4px,transparent 4px 7px)"></i>Regional</span>' : '') + '</div></div>';
+      }
+      var cardRx = '<div class="mkc-card">' + cab + '</div>' +
+        '<div class="mkc-bloco rx"><div class="mkc-bloco-t">' + rxB.titulo + '</div>' + rxB.tabela + grafRx + '</div></div>';
+      cardsRx += cardRx;
+      listaRx.push({ marca: marca, html: cardRx });
     }
 
     // ── DEMANDA · MARKET SHARE: ranking das marcas na venda (genérico entra no tamanho, fora da disputa)
@@ -9547,6 +9565,7 @@ function renderConcorrentes(cod, linhaFiltro, mostrarLinha) {
   });
   return {
     rx: cardsRx ? '<div class="mkc-grid">' + cardsRx + '</div>' : '',
+    rxCards: listaRx,
     ms: cardsMs ? '<div class="mkc-grid">' + cardsMs + '</div>' : ''
   };
 }
@@ -9562,7 +9581,21 @@ function renderConcorrentesDistrito(distritoId, linha, tipo) {
   var ciclo = mkCicloPara(MES_ATUAL);
   if (!ciclo) return '';
   var c = renderConcorrentes(distritoId.substring(0, 6) + '00', linha, false);
-  var corpo = tipo === 'rx' ? c.rx : c.ms;
+  if (tipo === 'rx') {
+    // prescrição: 2 marcas por slide (pares definidos pelo Vinicius; o que sobrar vai de 2 em 2, em ordem alfabética)
+    var PARES = [['LINADIB', 'LINADIB DUO'], ['BUPIUM XL', 'OZIVY']];
+    var porMarca = {}; c.rxCards.forEach(function(x) { porMarca[x.marca] = x.html; });
+    var resto = c.rxCards.map(function(x) { return x.marca; }), grupos = [];
+    PARES.forEach(function(p) { if (p.every(function(m) { return resto.indexOf(m) >= 0; })) { grupos.push(p); resto = resto.filter(function(m) { return p.indexOf(m) < 0; }); } });
+    for (var gi = 0; gi < resto.length; gi += 2) grupos.push(resto.slice(gi, gi + 2));
+    return grupos.map(function(par) {
+      var nomeSl = 'Prescrição — concorrentes nas receitas · ' + par.join(' e ');
+      return '<div class="dd-section-lbl mk-lbl rx" data-slide-nome="' + nomeSl + '" style="margin-top:18px">' + nomeSl + ' · distrito × regional</div>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 10px">' + mkTarjaMercado(ciclo) + '</div>' +
+        '<div class="mks-wrap" style="overflow-x:auto"><div class="mkc-grid mkc-par" style="--n:2">' + par.map(function(m) { return porMarca[m]; }).join('') + '</div></div>' + MKC_NOTA_RX;
+    }).join('');
+  }
+  var corpo = c.ms;
   if (!corpo) return '';
   // no slide os cartões ficam lado a lado numa linha só; o quadro .mks-wrap é reduzido até caber na largura
   // prescrição: grade 2×2 (2 cartões em cima, 2 embaixo) para preencher o slide 16:9; market share segue lado a lado
