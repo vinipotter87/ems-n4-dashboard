@@ -1428,10 +1428,32 @@ async function andRevisar(id){ var o = andPlano(id), inp = $('and-rev-' + id); i
 async function andEncerrar(id, resultado){ var o = andPlano(id); if (!o) return;
   if (!window.confirm('Encerrar este plano como "' + (resultado === 'atingido' ? 'objetivo atingido' : 'não atingido') + '"? Ele deixa de voltar nas próximas RPS e fica guardado no Histórico do time.')) return;
   o.p.encerrado = { data: ST.data, resultado: resultado }; if (await gravarLinha(o.reg, o.p)) andRedesenhar(); }
+// Os planos em andamento abrem cada bloco da RPS individual (pedido do Vinicius): os de Fundamentos
+// logo depois do divisor do Bloco 1 e os de produto logo depois do divisor do Bloco 2, até
+// AND_POR_SLIDE planos de produto por slide para a letra ficar legível.
+var AND_POR_SLIDE = 2;
+function andGrupos(){
+  var ab = planosAbertos(ST.setor), fund = ab.filter(function(o){ return /^fund/.test(o.ch); }), prod = ab.filter(function(o){ return !/^fund/.test(o.ch); }), pag = [];
+  for (var i = 0; i < prod.length; i += AND_POR_SLIDE) pag.push(prod.slice(i, i + AND_POR_SLIDE));
+  if (!pag.length) pag.push([]);
+  return { fund: fund, prod: pag };
+}
+function andSlides(tipo){ // slides (ainda vazios) de planos em andamento de um bloco; desenharAndamento preenche
+  if (tipo === 'fund') return [{ nome: 'Planos em andamento — Fundamentos', msg: ' ', html: '<div id="andamento-fund"></div>' }];
+  var n = andGrupos().prod.length, out = [];
+  for (var i = 0; i < n; i++) out.push({ nome: 'Planos em andamento — Produtos' + (n > 1 ? ' (' + (i + 1) + '/' + n + ')' : ''), msg: ' ', html: '<div id="andamento-prod-' + i + '"></div>' });
+  return out;
+}
 function desenharAndamento(){
-  var box = $('andamento'); if (!box) return;
-  var pode = !!(CONFIG.budget_webapp_url && CONFIG.budget_token), ab = planosAbertos(ST.setor), h = '';
-  if (!ab.length) h = '<div class="vazio"><b>Nenhum plano em andamento</b>Os planos salvos para este representante voltam aqui a cada RPS, até serem encerrados.</div>';
+  var g = andGrupos();
+  desenharAndamentoEm($('andamento-fund'), g.fund, 'de fundamentos');
+  for (var i = 0; ; i++){ var b = $('andamento-prod-' + i); if (!b) break; desenharAndamentoEm(b, g.prod[i] || [], 'de produto'); }
+  if (ST.slides.length) ajustar();
+}
+function desenharAndamentoEm(box, ab, qual){
+  if (!box) return;
+  var pode = !!(CONFIG.budget_webapp_url && CONFIG.budget_token), h = '';
+  if (!ab.length) h = '<div class="vazio"><b>Nenhum plano ' + qual + ' em andamento</b>Os planos salvos para este representante voltam aqui a cada RPS, até serem encerrados.</div>';
   ab.forEach(function(o){ var p = o.p, id = o.reg.id, evs = evolDados(o.ch, p, medir(o.ch)), feitas = (p.acoes || []).filter(function(a){ return a.status === 'Concluída'; }).length;
     h += '<div class="plano" style="margin-bottom:12px"><div class="ph">🧭 ' + esc(planoTitulo(o.ch)) + ' <span>criado em ' + dataBr(criadoDe(o.reg)) + ' · dados de ' + o.mes + '/2026' + (p.revisoes && p.revisoes.length ? ' · revisado em ' + p.revisoes.map(function(d){ return dataBr(d).slice(0, 5); }).join(', ') : '') + '</span><span style="margin-left:auto">' + revisaoTag(p, ST.data) + '</span></div>' +
       '<div class="pcols" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)"><div class="pp" style="margin:0"><b>Problema</b>' + esc(p.problema) + '</div><div class="pv raiz" style="margin:0"><i>Causa raiz</i>' + esc(raizDe(p) || '—') + '</div></div>' +
@@ -1446,8 +1468,7 @@ function desenharAndamento(){
         '<button class="b2" onclick="andEncerrar(\'' + id + '\',\'atingido\')">Encerrar — objetivo atingido</button><button class="b2" onclick="andEncerrar(\'' + id + '\',\'nao\')">Encerrar — não atingido</button></div>' : '') + '</div>'; });
   box.innerHTML = h;
   var s = box.closest('.slide'), msg = s && s.querySelector('.hdr span'), venc = ab.filter(function(o){ return o.p.revisao && o.p.revisao <= ST.data; }).length;
-  if (msg) msg.textContent = ab.length ? ab.length + ' plano(s) em andamento' + (venc ? ' · ' + venc + ' com revisão para esta RPS' : '') : 'Nenhum plano em andamento para este representante';
-  if (ST.slides.length) ajustar();
+  if (msg) msg.textContent = ab.length ? ab.length + ' plano(s) ' + qual + ' em andamento' + (venc ? ' · ' + venc + ' com revisão para esta RPS' : '') : 'Nenhum plano ' + qual + ' em andamento para este representante';
 }
 
 function raizDe(p){ return (p && p.raiz) || (p && p.porques && p.porques[p.porques.length - 1]) || ''; } // planos antigos não têm o campo: vale o último por quê
@@ -1530,14 +1551,15 @@ function planoFinal(){ var box = $('plano-final'); if (!box) return; var ls = ''
 
 function montarIndividual(){
   PLANOS = [];
-  var r = repSel(), lista = [{ nome: 'Combinados anteriores', msg: ' ', html: '<div id="ata"></div>' }, { nome: 'Planos em andamento', msg: ' ', html: '<div id="andamento"></div>' }, iRetrato(),
+  var r = repSel(), lista = [{ nome: 'Combinados anteriores', msg: ' ', html: '<div id="ata"></div>' }, iRetrato(),
       // abertura → Fundamentos (fecha com o quadro de desvios e o plano) → Produtos (fecha com as marcas em desvio e seus planos) → fechamento
       // mesma lógica da Apresentação N4: Bloco 1 = jornada e PEX → produtividade → frequência → evolução → fundamentos e plano;
       // Bloco 2 = atingimento das marcas → demais produtos → cota × mercado → um slide de concorrentes por marca → marcas em desvio e planos
-      sDivisor('Bloco 1', 'Fundamentos', 'Execução do setor: jornada, PEX, produtividade, frequência, evolução e plano de fundamentos.'),
-      sJornadaPex(ST.setor), iProd(), iFreq(), iEvolucao()].concat(iFundamentos(),
-      [sDivisor('Bloco 2', 'Produtos', 'Resultado das marcas: atingimento, cota × mercado, concorrentes por marca e planos das marcas em desvio.'),
-       iMarcas(), iDemais(), iMercado()], iConcorrentes(), iMarcasDesvio());
+      // cada bloco abre com os planos em andamento dele e só depois mostra os dados
+      sDivisor('Bloco 1', 'Fundamentos', 'Planos de fundamentos em andamento e a execução do setor: jornada, PEX, produtividade, frequência e evolução.')].concat(andSlides('fund'),
+      [sJornadaPex(ST.setor), iProd(), iFreq(), iEvolucao()], iFundamentos(),
+      [sDivisor('Bloco 2', 'Produtos', 'Planos de produto em andamento e o resultado das marcas: atingimento, cota × mercado e concorrentes por marca.')], andSlides('prod'),
+      [iMarcas(), iDemais(), iMercado()], iConcorrentes(), iMarcasDesvio());
   var fim = TEMAS.map(sTitulo).concat([{ nome: 'Plano de ação do setor', msg: ' ', html: '<div id="plano-final"></div>' }]); fim[0].fim1 = true;
   lista = lista.concat(fim);
   lista.push({ nome: 'Ata desta reunião', msg: ' ', html: '<div id="ata-nova"></div>' });
