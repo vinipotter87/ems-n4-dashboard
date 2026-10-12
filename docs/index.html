@@ -3821,6 +3821,15 @@ function apresMontar() {
     prod.forEach(function(g, k) { if (/^atingimento por produto — representante/i.test(g.nome)) posRep = k; });
     Array.prototype.splice.apply(prod, [posRep + 1, 0].concat(msSetor));
   }
+  // "Atingimento por Produto" (visão do distrito) vem logo depois do atingimento por representante,
+  // antes dos slides de mercado (pedido do Vinicius)
+  var atDist = prod.filter(function(g) { return g.chave === 'produto' || /^atingimento por produto( \(\d+\/\d+\))?$/i.test(g.nome); });
+  if (atDist.length) {
+    prod = prod.filter(function(g) { return atDist.indexOf(g) < 0; });
+    var posRep2 = -1;
+    prod.forEach(function(g, k) { if (/^atingimento por produto — representante/i.test(g.nome)) posRep2 = k; });
+    Array.prototype.splice.apply(prod, [posRep2 + 1, 0].concat(atDist));
+  }
   apresMarcasGrupos().forEach(function(g) {
     prod.push(g);
     prod.push(apresPlanoMarcaGrupo(g.planoMarca.marca, g.planoMarca.chave, g.planoMarca.problema));
