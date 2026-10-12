@@ -121,6 +121,9 @@ tr.tot td{background:#f3f4f6;font-weight:800}
 .mkt tr.mk-ref:first-of-type td{border-top:2px solid #dbe3f5}
 .mkt td.mk-top{background:#fef3c7;font-weight:800;color:#78350f}
 .mkt td.mk-vazio{color:#cbd5e1}
+.mkt.mk3 td{font-size:16px;padding:12px 8px}.mkt.mk3 th{font-size:10.5px}
+.mkt th.mk-rxc{color:#0f766e;background:#e6f6f4}.mkt td.mk-rxc{background:#f3fbfa}
+tr.ip-ch td{background:#fffdf5}tr.ip-ch td.n{font-weight:800;color:#78350f}
 .mk-rank{display:inline-block;font-size:9px;font-weight:800;color:#fff;background:#b45309;border-radius:8px;padding:0 5px;margin-right:4px;vertical-align:1px}
 .mk-rank.p1{background:#15693A}.mk-rank.p2{background:#2563eb}.mk-rank.p3{background:#b45309}.mk-rank.p4{background:#6B7280}
 .mk-reg{display:block;font-size:10px;color:var(--gray);font-weight:500;margin-top:1px;white-space:nowrap}
@@ -723,35 +726,60 @@ function mkGrafico(labels, series){
 }
 
 // RPS individual: o setor do representante contra o distrito e a regional
+// RPS individual: cobertura da cota de todos os produtos do setor num slide só (marcas-chave primeiro,
+// destacadas) — substitui "Marcas-chave" + "Demais produtos" (pedido do Vinicius)
+function iProdutos(){
+  var M = marcasRep(), D = ST.d, pr = D.pr.filter(function(x){ return x.setor_id === ST.setor; }), linhas = '';
+  function posicao(mk){ // posição do setor no distrito, pela cobertura do produto
+    var ord = D.pr.filter(function(x){ return norm(x.produto) === mk && num(x.cota); }).map(function(x){ return { s: x.setor_id, c: num(x.realizado) / num(x.cota) * 100 }; }).sort(function(a, b){ return b.c - a.c; });
+    var i = ord.map(function(o){ return o.s; }).indexOf(ST.setor); return i < 0 ? '—' : (i + 1) + 'º de ' + ord.length;
+  }
+  function linha(mk, chave){
+    var row = pr.filter(function(x){ return norm(x.produto) === mk; })[0], c = row ? num(row.cota) : null, r = row ? num(row.realizado) : null;
+    if (!row || !c) return '<tr' + (chave ? ' class="ip-ch"' : '') + '><td class="n">' + (chave ? '★ ' : '') + mk + '</td><td colspan="6" style="color:#9ca3af;text-align:left">sem cota no mês</td></tr>';
+    var cob = r / c * 100, cr = num(row.crescimento);
+    return '<tr' + (chave ? ' class="ip-ch"' : '') + '><td class="n">' + (chave ? '★ ' : '') + mk + '</td><td>' + brl(c) + '</td><td>' + brl(r) + '</td><td>' + (c - r > 0 ? '<b style="color:#b91c1c">' + brl(c - r) + '</b>' : '—') + '</td><td>' + barra(cob, cls(cob)) + '</td>' +
+      '<td>' + (cr === null ? '—' : (cr > 0 ? '+' : '') + cr.toFixed(1).replace('.', ',') + '%') + '</td><td>' + posicao(mk) + '</td></tr>';
+  }
+  M.marcas.forEach(function(mk){ linhas += linha(mk, true); });
+  linhas += '<tr class="tot"><td>Soma das marcas-chave</td><td>' + brl(M.eu.cota) + '</td><td>' + brl(M.eu.real) + '</td><td>' + (M.eu.gap > 0 ? brl(M.eu.gap) : '—') + '</td><td>' + barra(M.eu.cob, cls(M.eu.cob)) + '</td><td></td><td></td></tr>';
+  var demais = pr.map(function(x){ return norm(x.produto); }).filter(function(mk, i, a){ return M.marcas.indexOf(mk) < 0 && a.indexOf(mk) === i; })
+    .sort(function(a, b){ function cb(mk){ var x = pr.filter(function(y){ return norm(y.produto) === mk; })[0], c = num(x.cota); return c ? num(x.realizado) / c * 100 : 999; } return cb(a) - cb(b); });
+  demais.forEach(function(mk){ linhas += linha(mk, false); });
+  var h = '<div class="card"><h3>Cobertura da cota do setor — todos os produtos <small>★ marcas-chave primeiro; demais produtos do menor para o maior</small></h3><table><thead><tr><th>Produto</th><th>Cota</th><th>Realizado</th><th>Falta</th><th>Cobertura</th><th>Crescimento</th><th>Posição no distrito</th></tr></thead><tbody>' + linhas + '</tbody></table>' +
+    '<div class="nota">Cobertura = realizado ÷ cota do mês (demanda). Verde ≥ 100% · amarelo 80–99% · vermelho &lt; 80%. Posição no distrito = lugar do setor entre os representantes do distrito na cobertura do produto.</div></div>';
+  return { nome: 'Cobertura da cota — todos os produtos', msg: M.eu.abaixo.length ? M.eu.abaixo.length + ' marca(s)-chave abaixo de 100% — faltam ' + brl(M.eu.gap) : 'Todas as marcas-chave em 100% ou mais', html: h };
+}
 function iMercado(){
-  var nome = 'Mercado — marcas-chave do setor', D = ST.d;
+  var nome = 'Mercado — cota e market share do setor · com prescription share', D = ST.d;
   if (!D.mk.ciclo) return mkSemDados(nome);
   var ch = marcas(D.dist.linha, D.mk.ciclo), cod = mkCodDistrito(), setor = ST.setor, acima = 0, tot = 0;
-  function cmp(v, dv, rv, fmt){ return '<b>' + fmt(v) + '</b><span class="mk-reg">distrito ' + fmt(dv) + ' · regional ' + fmt(rv) + '</span>'; }
-  var h = mkTarjas() + '<div class="card"><h3>Marcas-chave do setor — cota × mercado <small>valor do setor em destaque; distrito e regional embaixo</small></h3><div class="mk-wrap"><table class="mkt mkd"><thead><tr><th>Marca-chave</th>' +
-    '<th>Cobertura<br>da cota</th><th>Presc.<br>share</th><th>Penetração</th><th>Mercado (R$)<br>e tamanho no distrito</th><th>Marca<br>(R$)</th><th>Market<br>share</th><th>Penetração</th><th>Entre<br>marcas</th><th>Principal<br>concorrente</th><th>Genérico</th><th>GAP<br>PX vs DEM</th></tr></thead><tbody>';
-  ch.forEach(function(mk){
-    var cob = mkCob(D.pr.filter(function(x){ return norm(x.produto) === mk && x.setor_id === setor; })[0]), cobD = mkCob(D.pd.filter(function(x){ return norm(x.produto) === mk; })[0]), cobR = mkCob((D.pReg || []).filter(function(x){ return norm(x.produto) === mk; })[0]);
+  // mesmo quadro da Apresentação N4 ("cota e market share por setor · com prescription share"),
+  // com três linhas: o setor do representante, o distrito e a regional
+  var rep = repSel();
+  function share(v, pen, base){ if (v === null || v === undefined) return '<td class="mk-vazio">—</td>'; var c = base === null || base === undefined ? '' : (v > base + 0.05 ? 'mk-up' : (v < base - 0.05 ? 'mk-dn' : '')); return '<td><b class="' + c + '">' + mkPct(v) + '</b>' + mkSeta(pen) + '</td>'; }
+  function rs(v){ return v === null || v === undefined ? '<td class="mk-vazio">—</td>' : '<td>' + mkCurto(v) + '</td>'; }
+  var blocos = ch.map(function(mk){
     var rx = mkRx(mk, 'SETOR', setor), rxD = mkRx(mk, 'DISTRITO', cod), rxR = mkRx(mk, 'REGIONAL');
     var d = mkDem(mk, 'SETOR', setor), dD = mkDem(mk, 'DISTRITO', cod), dR = mkDem(mk, 'REGIONAL');
-    var sh = rx ? mkN(rx.share) : null, shD = rxD ? mkN(rxD.share) : null, shR = rxR ? mkN(rxR.share) : null;
-    var gap = (sh !== null && d.tem && d.share !== null) ? sh - d.share : null, gapD = (shD !== null && dD.share !== null) ? shD - dD.share : null, gapR = (shR !== null && dR.share !== null) ? shR - dR.share : null;
+    var sh = rx ? mkN(rx.share) : null, shD = rxD ? mkN(rxD.share) : null;
     if (sh !== null && shD !== null){ tot++; if (sh >= shD) acima++; }
-    var porS = {}; D.mk.dem.forEach(function(r){ if (r.marca === mk && r.nivel === 'SETOR' && r.distrito === cod) porS[r.codigo] = (porS[r.codigo] || 0) + (mkN(r.valor) || 0); });
-    var rk = Object.keys(porS).sort(function(x, y){ return porS[y] - porS[x]; }), pos = rk.indexOf(setor) + 1;
-    var pctD = (d.tem && dD.tem && dD.total > 0) ? d.total / dD.total * 100 : null;
-    h += '<tr><td class="n">' + mk + '</td>' +
-      '<td><span class="cel ' + cls(cob) + '">' + p1(cob) + '</span><span class="mk-reg">distrito ' + p1(cobD) + ' · regional ' + p1(cobR) + '</span></td>' +
-      '<td>' + cmp(sh, shD, shR, mkPct) + '</td><td>' + mkPen(rx ? mkN(rx.var_pp) : null) + '</td>' +
-      '<td><b>' + (d.tem ? mkRS(d.total) : '—') + '</b>' + (pos ? '<span class="mk-reg"><span class="mk-rank p' + Math.min(pos, 4) + '">' + pos + 'º de ' + rk.length + '</span>' + (pctD !== null ? '<b>' + mkPct(pctD) + '</b> do distrito' : '') + '</span>' : '') + '<span class="mk-reg">distrito ' + (dD.tem ? mkRS(dD.total) : '—') + '</span></td>' +
-      '<td>' + (d.tem ? mkRS(d.marcaValor) : '—') + '<span class="mk-reg">distrito ' + (dD.tem ? mkRS(dD.marcaValor) : '—') + '</span></td>' +
-      '<td>' + cmp(d.tem ? d.share : null, dD.share, dR.share, mkPct) + '</td><td>' + mkPen(d.pen) + '</td>' +
-      '<td>' + cmp(d.tem ? d.shareMarcas : null, dD.shareMarcas, dR.shareMarcas, mkPct) + '</td>' +
-      '<td class="mk-esq">' + (d.conc ? esc(d.conc) + '<span class="mk-reg">' + mkPct(d.concShare) + ' entre marcas</span>' : '—') + '</td>' +
-      '<td>' + (d.temGen ? mkPct(d.genShare) : '<span class="mk-reg">sem genérico</span>') + '</td>' +
-      '<td>' + mkGap(gap) + (gap !== null ? ' pp' : '') + '<span class="mk-reg">distrito ' + (gapD !== null ? mkPP(gapD) : '—') + ' · regional ' + (gapR !== null ? mkPP(gapR) : '—') + '</span></td></tr>';
+    function cel(cob, dm, r, baseMs, baseRx){
+      return '<td class="mk-g1"><span class="cel ' + cls(cob) + '">' + p1(cob) + '</span></td>' + rs(dm.tem ? dm.total : null) + rs(dm.tem ? dm.marcaValor : null) +
+        share(dm.tem ? dm.share : null, dm.pen, baseMs) + share(r ? mkN(r.share) : null, r ? mkN(r.var_pp) : null, baseRx).replace('<td>', '<td class="mk-rxc">');
+    }
+    return {
+      setor: cel(mkCob(D.pr.filter(function(x){ return norm(x.produto) === mk && x.setor_id === setor; })[0]), d, rx, dD.tem ? dD.share : null, shD),
+      dist: cel(mkCob(D.pd.filter(function(x){ return norm(x.produto) === mk; })[0]), dD, rxD, null, null),
+      reg: cel(mkCob((D.pReg || []).filter(function(x){ return norm(x.produto) === mk; })[0]), dR, rxR, null, null)
+    };
   });
-  h += '</tbody></table></div>';
+  var h = mkTarjas() + '<div class="card"><h3>Cota e market share do setor — com prescription share <small>setor, distrito e regional</small></h3><div class="mk-wrap"><table class="mkt mk3"><thead><tr><th rowspan="2">Recorte</th>' +
+    ch.map(function(mk){ return '<th colspan="5" class="mk-grp">★ ' + mk + '</th>'; }).join('') + '</tr><tr>' +
+    ch.map(function(){ return '<th class="mk-g1">Ating.<br>cota</th><th>Mercado<br>R$</th><th>Marca<br>R$</th><th>Market<br>share</th><th class="mk-rxc">Presc.<br>share</th>'; }).join('') + '</tr></thead><tbody>' +
+    '<tr><td class="n"><b>' + esc(rep.nome) + '</b><span class="mk-reg">setor ' + setor + '</span></td>' + blocos.map(function(x){ return x.setor; }).join('') + '</tr>' +
+    '<tr class="mk-ref"><td class="n">Distrito</td>' + blocos.map(function(x){ return x.dist; }).join('') + '</tr>' +
+    '<tr class="mk-ref"><td class="n">Regional</td>' + blocos.map(function(x){ return x.reg; }).join('') + '</tr></tbody></table></div>';
   // Evolução dos últimos 3 ciclos: setor (linha cheia) contra a regional (tracejada)
   if (D.mk.meses.length > 1){
     h += '<h3 style="margin-top:14px">Desempenho nos últimos ' + D.mk.meses.length + ' meses <small>' + D.mk.meses.join(' · ') + ' · linha cheia = setor · tracejada = regional</small></h3><div class="mk-grafs">';
@@ -769,8 +797,8 @@ function iMercado(){
     h += '</div><div class="mk-leg"><span><i style="background:#0d9488"></i>Prescription share do setor</span><span><i style="background:#2563eb"></i>Market share do setor</span>' +
       '<span><i style="background:repeating-linear-gradient(90deg,#0d9488 0 4px,transparent 4px 7px)"></i>Prescription share da regional</span><span><i style="background:repeating-linear-gradient(90deg,#2563eb 0 4px,transparent 4px 7px)"></i>Market share da regional</span></div>';
   }
-  h += '<div class="nota">Cobertura da cota = realizado ÷ cota do mês (parcial enquanto o mês não fecha). Penetração = mudança do share contra o mês anterior, em pontos percentuais. ' +
-    'Entre marcas e principal concorrente desconsideram o genérico. GAP PX vs DEM = prescription share − market share. Tamanho no distrito: posição do mercado do setor entre os setores do distrito e quanto ele representa do mercado do distrito. O prescription share por setor vem do Raio X sem casa decimal.</div></div>';
+  h += '<div class="nota">Share do setor em <b class="mk-up">verde</b> = acima do distrito; em <b class="mk-dn">vermelho</b> = abaixo. ▲▼ = penetração (ganhando ou perdendo share contra o mês anterior). Atingimento da cota = realizado ÷ cota do mês (parcial enquanto o mês não fecha). ' +
+    'Mercado e Marca em R$ a preço fábrica. Presc. share (coluna verde) = fatia das receitas do mercado nos médicos do painel; por setor vem do Raio X sem casa decimal.</div></div>';
   return { nome: nome, msg: tot ? acima + ' de ' + tot + ' marcas-chave com prescription share igual ou acima do distrito' : 'Prescription share e market share do setor', html: h };
 }
 
@@ -1569,7 +1597,7 @@ function montarIndividual(){
       sDivisor('Bloco 1', 'Fundamentos', 'Planos de fundamentos em andamento e a execução do setor: jornada, PEX, produtividade, frequência e evolução.')].concat(andSlides('fund'),
       [sJornadaPex(ST.setor), iProd(), iFreq(), iEvolucao()], iFundamentos(),
       [sDivisor('Bloco 2', 'Produtos', 'Planos de produto em andamento e o resultado das marcas: atingimento, cota × mercado e concorrentes por marca.')], andSlides('prod'),
-      [iMarcas(), iDemais(), iMercado()], iConcorrentes(), iMarcasDesvio());
+      [iProdutos(), iMercado()], iConcorrentes(), iMarcasDesvio());
   // plano que já está em andamento aparece só no slide "Planos em andamento" do bloco (com Editar lá);
   // o slide "Plano — X" fica para quem ainda não tem plano, que é onde ele é criado
   ST.planoAqui = {};
