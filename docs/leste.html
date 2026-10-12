@@ -3147,10 +3147,16 @@ function apresMontar() {
     if (g.chave === 'geral') abre.push(g);
     else if (g.chave === 'equipe') equipe.push(g);
     else if (g.chave === 'budget') budget.push(g);
-    else if (g.chave === 'produto' || g.chave === 'diag' || /marcas?-chave|concorrentes|atingimento por produto/i.test(g.nome)) prod.push(g);
+    else if (g.chave === 'produto' || g.chave === 'diag' || /marcas?-chave|concorrentes|atingimento por produto|^prescrição|^market share/i.test(g.nome)) prod.push(g);
     else fund.push(g);
   });
-  var fundTodos = equipe.concat(fund, apresPlanoFundGrupo(), budget);
+  // ordem do Bloco 1 definida pelo Vinicius: Jornada de Evolução → PEX → Equipe & jornada →
+  // Frequência → Sobreposição → Matriz → Visitas GD e CRM; o que não estiver na lista vem depois, na ordem da página
+  var ORDEM_FUND = [/^jornada de evolu/i, /^pex/i, /^equipe/i, /^frequ/i, /^sobreposi/i, /^matriz/i, /^visitas/i];
+  function rankFund(g) { for (var r = 0; r < ORDEM_FUND.length; r++) if (ORDEM_FUND[r].test(g.nome)) return r; return ORDEM_FUND.length; }
+  var fundOrd = equipe.concat(fund).map(function(g, i) { return { g: g, i: i }; })
+    .sort(function(a, b) { return (rankFund(a.g) - rankFund(b.g)) || (a.i - b.i); }).map(function(x) { return x.g; });
+  var fundTodos = fundOrd.concat(apresPlanoFundGrupo(), budget);
   apresMarcasGrupos().forEach(function(g) {
     prod.push(g);
     prod.push(apresPlanoMarcaGrupo(g.planoMarca.marca, g.planoMarca.chave, g.planoMarca.problema));
