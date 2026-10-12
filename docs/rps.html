@@ -1303,7 +1303,7 @@ function iFundamentos(){
   // Fundamentos aceita no máximo 2 planos em andamento por representante: "fund" e "fund2".
   // Um plano novo só abre em uma vaga depois que o plano anterior dela foi encerrado.
   PLANOS.push({ chave: 'fund2', titulo: 'Fundamentos — 2º plano', kpis: [], todos: inds.map(function(i){ return i.nome; }), problema: '', opcional: true });
-  return [{ nome: 'Fundamentos', msg: desv.length + ' de ' + inds.length + ' indicadores de execução em desvio', html: h + '<div class="nota" style="background:#fff;border:1px dashed var(--border);border-radius:10px;padding:10px 14px">Os planos de fundamentos estão nos próximos slides (máximo de 2 em andamento por representante).</div>' },
+  return [{ nome: 'Fundamentos', msg: desv.length + ' de ' + inds.length + ' indicadores de execução em desvio', html: h + '<div class="nota" style="background:#fff;border:1px dashed var(--border);border-radius:10px;padding:10px 14px">Plano de fundamentos em andamento: está no slide que abre este bloco. Sem plano em andamento: o plano é criado no próximo slide (máximo de 2 em andamento por representante).</div>' },
           { nome: 'Plano — Fundamentos', msg: 'Em desvio: ' + desv.map(function(i){ return i.nome + ' ' + i.valor; }).join(' · '), html: '<div class="plano" id="plano-fund"></div>', plano: 'fund' },
           { nome: 'Plano — Fundamentos (2º plano)', msg: 'Opcional · máximo de 2 planos de fundamentos em andamento', html: '<div class="plano" id="plano-fund2"></div>', plano: 'fund2' }];
 }
@@ -1444,6 +1444,11 @@ function andSlides(tipo){ // slides (ainda vazios) de planos em andamento de um 
   for (var i = 0; i < n; i++) out.push({ nome: 'Planos em andamento — Produtos' + (n > 1 ? ' (' + (i + 1) + '/' + n + ')' : ''), msg: ' ', html: '<div id="andamento-prod-' + i + '"></div>' });
   return out;
 }
+function andEditar(ch){ // abre o formulário do plano no lugar do cartão de acompanhamento
+  var box = $('plano-' + ch), card = $('and-card-' + ch); if (!box) return;
+  if (card) card.style.display = 'none';
+  box.style.display = ''; planoDesenhar(ch, true); if (ST.slides.length) ajustar();
+}
 function desenharAndamento(){
   var g = andGrupos();
   desenharAndamentoEm($('andamento-fund'), g.fund, 'de fundamentos');
@@ -1455,7 +1460,9 @@ function desenharAndamentoEm(box, ab, qual){
   var pode = !!(CONFIG.budget_webapp_url && CONFIG.budget_token), h = '';
   if (!ab.length) h = '<div class="vazio"><b>Nenhum plano ' + qual + ' em andamento</b>Os planos salvos para este representante voltam aqui a cada RPS, até serem encerrados.</div>';
   ab.forEach(function(o){ var p = o.p, id = o.reg.id, evs = evolDados(o.ch, p, medir(o.ch)), feitas = (p.acoes || []).filter(function(a){ return a.status === 'Concluída'; }).length;
-    h += '<div class="plano" style="margin-bottom:12px"><div class="ph">🧭 ' + esc(planoTitulo(o.ch)) + ' <span>criado em ' + dataBr(criadoDe(o.reg)) + ' · dados de ' + o.mes + '/2026' + (p.revisoes && p.revisoes.length ? ' · revisado em ' + p.revisoes.map(function(d){ return dataBr(d).slice(0, 5); }).join(', ') : '') + '</span><span style="margin-left:auto">' + revisaoTag(p, ST.data) + '</span></div>' +
+    // plano que não tem mais o slide "Plano — X" (já está em andamento): a edição acontece aqui mesmo
+    var edita = pode && ST.planoAqui && ST.planoAqui[o.ch] && planoInfo(o.ch);
+    h += '<div class="plano" id="and-card-' + o.ch + '" style="margin-bottom:12px"><div class="ph">🧭 ' + esc(planoTitulo(o.ch)) + ' <span>criado em ' + dataBr(criadoDe(o.reg)) + ' · dados de ' + o.mes + '/2026' + (p.revisoes && p.revisoes.length ? ' · revisado em ' + p.revisoes.map(function(d){ return dataBr(d).slice(0, 5); }).join(', ') : '') + '</span><span style="margin-left:auto">' + (edita ? '<button class="b2" style="margin-right:8px" onclick="andEditar(\'' + o.ch + '\')">✏️ Editar plano</button>' : '') + revisaoTag(p, ST.data) + '</span></div>' +
       '<div class="pcols" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)"><div class="pp" style="margin:0"><b>Problema</b>' + esc(p.problema) + '</div><div class="pv raiz" style="margin:0"><i>Causa raiz</i>' + esc(raizDe(p) || '—') + '</div></div>' +
       (evs.length ? '<b class="psub" style="margin-top:10px">Evolução desde o plano</b><table class="wt ver"><thead><tr><th>' + (/^fund/.test(o.ch) ? 'Indicador acompanhado' : 'Métrica') + '</th><th>Linha do tempo</th><th>Variação (atual − base)</th></tr></thead><tbody>' +
         evs.map(function(l){ return '<tr><td><b>' + esc(l.nome) + '</b></td><td>' + evolChips(l.pontos) + '</td><td>' + l.delta + '</td></tr>'; }).join('') + '</tbody></table>' : '') +
@@ -1465,7 +1472,8 @@ function desenharAndamentoEm(box, ab, qual){
           (pode ? '<select class="st ' + ACAO_COR[st] + '" onchange="andStatus(\'' + id + '\',' + k + ',this)">' + ACAO_ST.map(function(s){ return '<option' + (s === st ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' : st) + '</td></tr>'; }).join('') + '</tbody></table>' +
       (pode ? '<div class="pf"><span style="font-weight:700;color:var(--text)">Próxima revisão:</span><input type="date" id="and-rev-' + id + '" value="' + maisDias(ST.data, 7) + '" style="border:1.5px solid var(--border);border-radius:7px;padding:5px 8px;font-size:12.5px">' +
         '<button class="b1" onclick="andRevisar(\'' + id + '\')">✓ Registrar revisão de ' + dataBr(ST.data).slice(0, 5) + '</button><span style="flex:1"></span>' +
-        '<button class="b2" onclick="andEncerrar(\'' + id + '\',\'atingido\')">Encerrar — objetivo atingido</button><button class="b2" onclick="andEncerrar(\'' + id + '\',\'nao\')">Encerrar — não atingido</button></div>' : '') + '</div>'; });
+        '<button class="b2" onclick="andEncerrar(\'' + id + '\',\'atingido\')">Encerrar — objetivo atingido</button><button class="b2" onclick="andEncerrar(\'' + id + '\',\'nao\')">Encerrar — não atingido</button></div>' : '') + '</div>' +
+      (edita ? '<div class="plano" id="plano-' + o.ch + '" data-inline="1" style="display:none;margin-bottom:12px"></div>' : ''); });
   box.innerHTML = h;
   var s = box.closest('.slide'), msg = s && s.querySelector('.hdr span'), venc = ab.filter(function(o){ return o.p.revisao && o.p.revisao <= ST.data; }).length;
   if (msg) msg.textContent = ab.length ? ab.length + ' plano(s) ' + qual + ' em andamento' + (venc ? ' · ' + venc + ' com revisão para esta RPS' : '') : 'Nenhum plano ' + qual + ' em andamento para este representante';
@@ -1491,6 +1499,8 @@ function planoAcao(ch, delta, idx){ var p = planoLer(ch), box = $('plano-' + ch)
   if (delta > 0) ls.push({}); else ls.splice(idx, 1); p.acoes = ls.length ? ls : [{}]; planoDesenhar(ch, true, p); }
 function planoDesenhar(ch, editar, rasc){
   var box = $('plano-' + ch), info = planoInfo(ch); if (!box || !info) return;
+  if (box.getAttribute('data-inline') && editar !== true){ // edição embutida no slide de planos em andamento: fecha e volta o cartão
+    box.style.display = 'none'; box.innerHTML = ''; var cd = $('and-card-' + ch); if (cd) cd.style.display = ''; if (ST.slides.length) ajustar(); return; }
   var pode = !!(CONFIG.budget_webapp_url && CONFIG.budget_token), reg = planoReg(ch), salvo = planoDados(ch), ed = pode && (editar === true || (!salvo && !info.opcional)), q = "'" + ch + "'", h = '';
   if (ed){
     var p = rasc || salvo || { problema: info.problema, kpis: info.kpis.slice(), porques: [], acoes: [{}] }; if (!p.acoes || !p.acoes.length) p.acoes = [{}];
@@ -1560,6 +1570,10 @@ function montarIndividual(){
       [sJornadaPex(ST.setor), iProd(), iFreq(), iEvolucao()], iFundamentos(),
       [sDivisor('Bloco 2', 'Produtos', 'Planos de produto em andamento e o resultado das marcas: atingimento, cota × mercado e concorrentes por marca.')], andSlides('prod'),
       [iMarcas(), iDemais(), iMercado()], iConcorrentes(), iMarcasDesvio());
+  // plano que já está em andamento aparece só no slide "Planos em andamento" do bloco (com Editar lá);
+  // o slide "Plano — X" fica para quem ainda não tem plano, que é onde ele é criado
+  ST.planoAqui = {};
+  lista = lista.filter(function(sl){ if (sl.plano && planoDados(sl.plano)){ ST.planoAqui[sl.plano] = 1; return false; } return true; });
   var fim = TEMAS.map(sTitulo).concat([{ nome: 'Plano de ação do setor', msg: ' ', html: '<div id="plano-final"></div>' }]); fim[0].fim1 = true;
   lista = lista.concat(fim);
   lista.push({ nome: 'Ata desta reunião', msg: ' ', html: '<div id="ata-nova"></div>' });
