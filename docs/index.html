@@ -3830,6 +3830,14 @@ function apresMontar() {
     prod.forEach(function(g, k) { if (/^atingimento por produto — representante/i.test(g.nome)) posRep2 = k; });
     Array.prototype.splice.apply(prod, [posRep2 + 1, 0].concat(atDist));
   }
+  // os concorrentes nas receitas (prescrição) vêm depois dos concorrentes na venda (market share) — pedido do Vinicius
+  var rxConc = prod.filter(function(g) { return /^prescrição — concorrentes/i.test(g.nome); });
+  if (rxConc.length) {
+    prod = prod.filter(function(g) { return rxConc.indexOf(g) < 0; });
+    var posMs = prod.length - 1;
+    prod.forEach(function(g, k) { if (/^market share — concorrentes/i.test(g.nome)) posMs = k; });
+    Array.prototype.splice.apply(prod, [posMs + 1, 0].concat(rxConc));
+  }
   apresMarcasGrupos().forEach(function(g) {
     prod.push(g);
     prod.push(apresPlanoMarcaGrupo(g.planoMarca.marca, g.planoMarca.chave, g.planoMarca.problema));
