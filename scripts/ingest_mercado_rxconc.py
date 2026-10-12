@@ -56,8 +56,13 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--mes", required=True)
     ap.add_argument("--dry-run", action="store_true", dest="dry")
+    ap.add_argument("--derivar", action="store_true",
+                    help="monta o mês a partir da coluna 'M. Share Anterior' das tabelas do mês seguinte "
+                         "(e do share do mês anterior, se lido) — evita ler o Raio X mês a mês")
     a = ap.parse_args()
     mes = a.mes.upper()
+    if a.derivar:
+        return derivar(mes, a.dry)
 
     registros, arquivos = [], sorted(PASTA.glob(f"RXC_*_{mes}.json"))
     if not arquivos:
@@ -94,6 +99,56 @@ def main():
     gc, sh = ingest.conectar_sheets() if hasattr(ingest, "conectar_sheets") else (None, None)
     ingest.anexar_aba_por_mes(gc, sh, "mercado_rx_conc", registros, mes)
     print(f"Prescrição por concorrente {mes} publicada.")
+
+
+MESES = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"]
+
+
+def derivar(mes, dry):
+    """Cada tabela do Raio X traz o share do mês e o do mês anterior. Com o mês seguinte lido, o share
+    deste mês já está lá (coluna anterior); o 'share_ant' vem do share do mês anterior, quando lido."""
+    i = MESES.index(mes)
+    seg, ant = MESES[i + 1], MESES[i - 1]
+    arquivos = sorted(PASTA.glob(f"RXC_*_{seg}.json"))
+    if not arquivos:
+        sys.exit(f"Nenhum arquivo RXC_*_{seg}.json em {PASTA} para derivar {mes}")
+    registros = []
+    for arq in arquivos:
+        m = re.match(rf"RXC_(.+)_(NEXUS|VITAL)_(SPI|LESTE)_(REGIONAL|\d{{8}})_{seg}$", arq.stem)
+        if not m:
+            continue
+        marca, linha, regional, escopo = m.group(1).replace("_", " "), m.group(2), m.group(3), m.group(4)
+        antes = {}
+        arq_ant = arq.with_name(arq.name.replace(f"_{seg}.json", f"_{ant}.json"))
+        if arq_ant.exists():
+            for cels in json.loads(arq_ant.read_text(encoding="utf-8"))["rows"]:
+                if cels[0].strip() != "Total":
+                    produto, _, atual, _ = linha_para_registro(cels)
+                    antes[produto] = atual
+        for cels in json.loads(arq.read_text(encoding="utf-8"))["rows"]:
+            if cels[0].strip() == "Total":
+                continue
+            produto, share, _, _ = linha_para_registro(cels)   # o "anterior" do mês seguinte é o share deste mês
+            if not share:
+                continue                                         # produto que só entrou no mês seguinte
+            s_ant = antes.get(produto, 0.0 if antes else None)
+            registros.append({
+                "mes": mes, "regional": regional, "linha": linha, "marca": marca,
+                "nivel": "REGIONAL" if escopo == "REGIONAL" else "DISTRITO",
+                "codigo": "" if escopo == "REGIONAL" else escopo,
+                "produto": produto, "eh_marca": "1" if produto.upper() == f"{marca} (EMS)" else "0",
+                "share": share,
+                "share_ant": "" if s_ant is None else s_ant,
+                "var_pp": "" if s_ant is None else round(share - s_ant, 1),
+            })
+    print(f"Total {mes} (derivado de {seg}{' + ' + ant if any(PASTA.glob(f'RXC_*_{ant}.json')) else ''}): {len(registros)} linhas")
+    if dry:
+        for r in registros[:4]:
+            print("   ", r)
+        return
+    gc, sh = ingest.conectar_sheets() if hasattr(ingest, "conectar_sheets") else (None, None)
+    ingest.anexar_aba_por_mes(gc, sh, "mercado_rx_conc", registros, mes)
+    print(f"Prescrição por concorrente {mes} publicada (derivada).")
 
 
 if __name__ == "__main__":
