@@ -9451,7 +9451,7 @@ function mkRxConcBloco(d, refs, marca, rotulo) {
 // cod = código do distrito no Raio X (8 dígitos) ou null para a regional; linhaFiltro = 'NEXUS' | 'VITAL' | null
 // Devolve dois quadros separados: { rx: concorrentes nas receitas (prescrição), ms: concorrentes na venda (demanda) }
 function renderConcorrentes(cod, linhaFiltro, mostrarLinha) {
-  var vazio = { rx: '', ms: '', rxCards: [] };
+  var vazio = { rx: '', ms: '', rxCards: [], msCards: [] };
   if (!MERCADO.ok) return vazio;
   var ciclo = mkCicloPara(MES_ATUAL);
   if (!ciclo) return vazio;
@@ -9468,7 +9468,7 @@ function renderConcorrentes(cod, linhaFiltro, mostrarLinha) {
   var meses = Object.keys(disp).filter(function(m) { return MK_MESES.indexOf(m) <= MK_MESES.indexOf(ciclo); })
     .sort(function(x, y) { return MK_MESES.indexOf(x) - MK_MESES.indexOf(y); }).slice(-3);
   var nivel = cod ? 'DISTRITO' : 'REGIONAL', CORES = ['#dc2626', '#7c3aed', '#f59e0b'];
-  var cardsRx = '', cardsMs = '', listaRx = [];
+  var cardsRx = '', cardsMs = '', listaRx = [], listaMs = [];
   Object.keys(chaves).sort().forEach(function(k) {
     var linha = k.split('|')[0], marca = k.split('|')[1];
     var cab = '<div class="mkc-hdr"><span class="mkc-marca">★ ' + marca + '</span>' +
@@ -9588,10 +9588,12 @@ function renderConcorrentes(cod, linhaFiltro, mostrarLinha) {
       h += '<div class="mkc-graf">' + mkGrafico(meses, series) + '<div class="mk-leg" style="margin-top:2px">' + leg + '</div></div>';
     }
     cardsMs += h + '</div></div>';
+    listaMs.push({ marca: marca, html: h + '</div></div>' });
   });
   return {
     rx: cardsRx ? '<div class="mkc-grid">' + cardsRx + '</div>' : '',
     rxCards: listaRx,
+    msCards: listaMs,
     ms: cardsMs ? '<div class="mkc-grid">' + cardsMs + '</div>' : ''
   };
 }
@@ -9607,28 +9609,22 @@ function renderConcorrentesDistrito(distritoId, linha, tipo) {
   var ciclo = mkCicloPara(MES_ATUAL);
   if (!ciclo) return '';
   var c = renderConcorrentes(distritoId.substring(0, 6) + '00', linha, false);
-  if (tipo === 'rx') {
-    // prescrição: 2 marcas por slide (pares definidos pelo Vinicius; o que sobrar vai de 2 em 2, em ordem alfabética)
-    var PARES = [['LINADIB', 'LINADIB DUO'], ['BUPIUM XL', 'OZIVY']];
-    var porMarca = {}; c.rxCards.forEach(function(x) { porMarca[x.marca] = x.html; });
-    var resto = c.rxCards.map(function(x) { return x.marca; }), grupos = [];
-    PARES.forEach(function(p) { if (p.every(function(m) { return resto.indexOf(m) >= 0; })) { grupos.push(p); resto = resto.filter(function(m) { return p.indexOf(m) < 0; }); } });
-    for (var gi = 0; gi < resto.length; gi += 2) grupos.push(resto.slice(gi, gi + 2));
-    return grupos.map(function(par) {
-      var nomeSl = 'Prescrição — concorrentes nas receitas · ' + par.join(' e ');
-      return '<div class="dd-section-lbl mk-lbl rx" data-slide-nome="' + nomeSl + '" style="margin-top:18px">' + nomeSl + ' · distrito × regional</div>' +
-        '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 10px">' + mkTarjaMercado(ciclo) + '</div>' +
-        '<div class="mks-wrap" style="overflow-x:auto"><div class="mkc-grid mkc-par" style="--n:2">' + par.map(function(m) { return porMarca[m]; }).join('') + '</div></div>' + MKC_NOTA_RX;
-    }).join('');
-  }
-  var corpo = c.ms;
-  if (!corpo) return '';
-  // no slide os cartões ficam lado a lado numa linha só; o quadro .mks-wrap é reduzido até caber na largura
-  // prescrição: grade 2×2 (2 cartões em cima, 2 embaixo) para preencher o slide 16:9; market share segue lado a lado
-  var nCards = corpo.split('class="mkc-card"').length - 1;
-  corpo = '<div class="mks-wrap" style="overflow-x:auto">' + corpo.replace('<div class="mkc-grid">', '<div class="mkc-grid" style="--n:' + (tipo === 'rx' ? Math.min(2, nCards) : nCards) + '">') + '</div>';
-  return '<div class="dd-section-lbl mk-lbl ' + (tipo === 'rx' ? 'rx' : 'dem') + '" style="margin-top:18px">' + (tipo === 'rx' ? 'Prescrição — concorrentes nas receitas' : 'Market share — concorrentes na venda') + ' · distrito × regional</div>' +
-    '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 10px">' + mkTarjaMercado(ciclo) + '</div>' + corpo + (tipo === 'rx' ? MKC_NOTA_RX : MKC_NOTA_MS);
+  // 2 marcas por slide, nos dois quadros (prescrição e market share): pares definidos pelo Vinicius;
+  // o que sobrar vai de 2 em 2, em ordem alfabética
+  var PARES = [['LINADIB', 'LINADIB DUO'], ['BUPIUM XL', 'OZIVY']];
+  var cards = tipo === 'rx' ? c.rxCards : c.msCards;
+  if (!cards || !cards.length) return '';
+  var porMarca = {}; cards.forEach(function(x) { porMarca[x.marca] = x.html; });
+  var resto = cards.map(function(x) { return x.marca; }), grupos = [];
+  PARES.forEach(function(p) { if (p.every(function(m) { return resto.indexOf(m) >= 0; })) { grupos.push(p); resto = resto.filter(function(m) { return p.indexOf(m) < 0; }); } });
+  for (var gi = 0; gi < resto.length; gi += 2) grupos.push(resto.slice(gi, gi + 2));
+  var titulo = tipo === 'rx' ? 'Prescrição — concorrentes nas receitas' : 'Market share — concorrentes na venda';
+  return grupos.map(function(par) {
+    var nomeSl = titulo + ' · ' + par.join(' e ');
+    return '<div class="dd-section-lbl mk-lbl ' + (tipo === 'rx' ? 'rx' : 'dem') + '" data-slide-nome="' + nomeSl + '" style="margin-top:18px">' + nomeSl + ' · distrito × regional</div>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 10px">' + mkTarjaMercado(ciclo) + '</div>' +
+      '<div class="mks-wrap" style="overflow-x:auto"><div class="mkc-grid mkc-par" style="--n:2">' + par.map(function(m) { return porMarca[m]; }).join('') + '</div></div>' + (tipo === 'rx' ? MKC_NOTA_RX : MKC_NOTA_MS);
+  }).join('');
 }
 
 // Marcas-chave do distrito (visão consolidada), com a regional como referência.
