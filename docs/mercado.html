@@ -462,7 +462,7 @@ function render() {
     '<span><i class="c-ems"></i>' + esc(marca) + ' <b>' + fmtPct(pm) + '</b> · ' + fmtRS(demEsc.marcaValor) + ' ' + trend(demEsc.marcaVar, ' pp') + '</span>' +
     '</div></div>';
 
-  html += '<div class="sec-hdr">Disputa entre marcas <small>ranking sem o genérico · ' + esc(nomeEsc) + '</small></div>';
+  html += '<div class="sec-hdr">Market share — disputa entre marcas <small>demanda · ranking sem o genérico · ' + esc(nomeEsc) + '</small></div>';
   html += '<div class="box"><div class="box-scroll"><table><thead><tr><th class="l">#</th><th class="l">Marca</th><th>Valor</th><th>Cresc.</th><th style="width:30%">Share entre marcas</th>' + (noDistrito ? '<th class="reg">Regional</th><th class="reg">Distrito vs regional</th>' : '') + '<th>Share no mercado total</th><th>Penetração</th></tr></thead><tbody>';
   function colReg(produto, sm) {
     if (!noDistrito) return '';
@@ -495,7 +495,7 @@ function render() {
     var lista = noDistrito ? de('DISTRITO', STATE.distrito) : de('REGIONAL'), reg = noDistrito ? de('REGIONAL') : [];
     if (!lista.length) return;
     var maxS = Math.max.apply(null, lista.map(function(p) { return n(p.share) || 0; }).concat([1]));
-    html += '<div class="sec-hdr">Disputa nas receitas <small>prescrição · share de receitas de cada marca · ' + esc(nomeEsc) + ' · ' + mesRx + '/2026' + (mesRx !== STATE.mes ? ' (mais recente disponível)' : '') + '</small></div>';
+    html += '<div class="sec-hdr">Prescrição — disputa nas receitas <small>share de receitas de cada marca · ' + esc(nomeEsc) + ' · ' + mesRx + '/2026' + (mesRx !== STATE.mes ? ' (mais recente disponível)' : '') + '</small></div>';
     html += '<div class="box"><div class="box-scroll"><table><thead><tr><th class="l">#</th><th class="l">Marca</th><th style="width:34%">Share de receitas</th>' +
       (noDistrito ? '<th class="reg">Regional</th><th class="reg">Distrito vs regional</th>' : '') + '<th>' + ant + '</th><th>Penetração</th></tr></thead><tbody>';
     lista.forEach(function(p, i) {
