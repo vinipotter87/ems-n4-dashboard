@@ -162,6 +162,9 @@ tr.tot td{background:#f3f4f6;font-weight:800}
 .mkc-bloco .mkc-insight{background:#fff}
 .mkc-bloco.rx .mkc-insight{border-left-color:#0d9488}.mkc-bloco.ms .mkc-insight{border-left-color:#2563eb}
 .mkc-bloco.ms .mkc-tbl tr.nossa .mkc-bar{background:#2563eb}
+.mkc-tipo{font-size:10px;font-weight:900;letter-spacing:.5px;text-transform:uppercase;padding:2px 9px;border-radius:10px;color:#fff;white-space:nowrap}
+.mkc-tipo.rx{background:#0d9488}.mkc-tipo.ms{background:#2563eb}
+.mkc-par .mkc-graf{max-width:560px}
 .mkc-graf{max-width:430px;margin:8px auto 0}
 .mk-nota-top{font-size:11.5px;color:#5b4300;background:#fffbeb;border:1px solid #f3d98b;border-radius:8px;padding:8px 12px;margin-top:10px;line-height:1.6}
 .nota{font-size:11px;color:var(--gray);line-height:1.5;margin-top:8px}
@@ -506,7 +509,8 @@ function mkRxConcBloco(d, refs, marca, rotulo) {
 
 function mkConcHtml(nivel, cod, refs){
   var D = ST.d, meses = D.mk.meses, ciclo = D.mk.ciclo, CORES = ['#dc2626', '#7c3aed', '#f59e0b'], cards = 0;
-  var ch = marcas(D.dist.linha, ciclo), h = '<div class="mk-wrap"><div class="mkc-grid" style="--n:' + ch.length + '">';
+  // devolve um item por marca-chave: cartão de market share (demanda) à esquerda e de prescription share à direita
+  var ch = marcas(D.dist.linha, ciclo), slides = [];
   ch.forEach(function(marca){
     var hist = meses.map(function(m){ return mkConcDados(marca, nivel, cod, m); }), at = hist[hist.length - 1], ini = hist[0];
     if (!at || !at.tem || !at.lista.length) return;
@@ -533,8 +537,8 @@ function mkConcHtml(nivel, cod, refs){
     var rxN = nivel === 'SETOR' ? 'DISTRITO' : nivel, rxC = nivel === 'SETOR' ? mkCodDistrito() : cod;
     var rxB = mkRxConcBloco(mkRxConcDados(D.mk.rxc || [], marca, rxN, rxC, ciclo), rxN === 'DISTRITO' ? [{ rot: 'Regional', d: mkRxConcDados(D.mk.rxc || [], marca, 'REGIONAL', null, ciclo) }] : [], marca, nivel === 'SETOR' ? 'dado do distrito' : '');
     cards++;
-    h += '<div class="mkc-card"><div class="mkc-hdr"><span class="mkc-marca">★ ' + marca + '</span><span class="mkc-meta">Mercado <b>' + mkRS(at.total) + '</b> · entre marcas <b>' + mkRS(at.marcas) + '</b> · ' + (at.temGen ? 'genérico <b>' + mkPct(at.genShare) + '</b>' : 'sem genérico') + '</span></div>' +
-      (rxB.tabela ? '<div class="mkc-bloco rx"><div class="mkc-bloco-t">' + rxB.titulo + '</div><div class="mkc-insight">' + rxB.frase + '</div>' + rxB.tabela + '</div>' : '') + '<div class="mkc-bloco ms"><div class="mkc-bloco-t">Market share <small>demanda · venda em preço fábrica · ' + ciclo + '/2026</small></div><div class="mkc-insight">' + frase + '</div>' + '<table class="mkc-tbl"><thead><tr><th>#</th><th>Marca</th><th>Venda R$</th><th>Share marcas</th>' + rf.map(function(r){ return '<th>' + r.rot + '</th>'; }).join('') +
+    var h = '<div class="mkc-card"><div class="mkc-hdr"><span class="mkc-marca">★ ' + marca + '</span><span class="mkc-tipo ms">Market share · demanda</span><span class="mkc-meta">Mercado <b>' + mkRS(at.total) + '</b> · entre marcas <b>' + mkRS(at.marcas) + '</b> · ' + (at.temGen ? 'genérico <b>' + mkPct(at.genShare) + '</b>' : 'sem genérico') + '</span></div>' +
+      '<div class="mkc-bloco ms"><div class="mkc-bloco-t">Market share <small>demanda · venda em preço fábrica · ' + ciclo + '/2026</small></div><div class="mkc-insight">' + frase + '</div>' + '<table class="mkc-tbl"><thead><tr><th>#</th><th>Marca</th><th>Venda R$</th><th>Share marcas</th>' + rf.map(function(r){ return '<th>' + r.rot + '</th>'; }).join('') +
       (meses.length > 1 ? '<th>Desde ' + meses[0] + '</th>' : '') + '<th>Cresc. mês</th></tr></thead><tbody>';
     top.forEach(function(p){
       var d = delta(p), m = /^(.*?)\s*\(([^)]*)\)\s*$/.exec(p.produto), bom = d === null ? '' : cor(p.ems ? d : -d);
@@ -555,20 +559,41 @@ function mkConcHtml(nivel, cod, refs){
       h += '<div class="mkc-graf">' + mkGrafico(meses, series) + '<div class="mk-leg" style="margin-top:2px">' + leg + '</div></div>';
     }
     h += '</div></div>';
+    // cartão de prescrição: ranking das receitas + prescription share da marca nos últimos ciclos
+    var hr = '';
+    if (rxB.tabela){
+      var gr = '';
+      if (meses.length > 1){
+        var rxH = function(m, nv, c){ var r = D.mk.hrx.filter(function(x){ return x.mes === m && x.marca === marca && x.nivel === nv && (!c || x.codigo === c); })[0]; return r ? mkN(r.share) : null; };
+        var rot = nivel === 'SETOR' ? 'setor' : 'distrito', sr = [{ nome: 'Prescription share · ' + rot, cor: '#0d9488', pts: meses.map(function(m){ return rxH(m, nivel, cod); }) }];
+        var lg = '<span><i style="background:#0d9488"></i><b>' + marca + ' · ' + rot + '</b></span>';
+        if (nivel === 'SETOR'){ sr.push({ nome: 'Prescription share · distrito', cor: '#7c3aed', semRotulo: true, pts: meses.map(function(m){ return rxH(m, 'DISTRITO', mkCodDistrito()); }) }); lg += '<span><i style="background:#7c3aed"></i>distrito</span>'; }
+        sr.push({ nome: 'Prescription share · regional', cor: '#0d9488', ref: true, pts: meses.map(function(m){ return rxH(m, 'REGIONAL'); }) });
+        lg += '<span><i style="background:repeating-linear-gradient(90deg,#0d9488 0 4px,transparent 4px 7px)"></i>regional</span>';
+        gr = '<div class="mkc-sub">' + marca + ' · prescription share nos últimos ' + meses.length + ' ciclos</div><div class="mkc-graf">' + mkGrafico(meses, sr) + '<div class="mk-leg" style="margin-top:2px">' + lg + '</div></div>';
+      }
+      hr = '<div class="mkc-card"><div class="mkc-hdr"><span class="mkc-marca">★ ' + marca + '</span><span class="mkc-tipo rx">Prescription share · receitas</span></div>' +
+        '<div class="mkc-bloco rx"><div class="mkc-bloco-t">' + rxB.titulo + '</div><div class="mkc-insight">' + rxB.frase + '</div>' + rxB.tabela + gr + '</div></div>';
+    }
+    slides.push({ marca: marca, html: '<div class="mk-wrap"><div class="mkc-grid mkc-par" style="--n:' + (hr ? 2 : 1) + '">' + h + hr + '</div></div>' + MKC_NOTA_RPS });
   });
-  return cards ? h + '</div></div><div class="nota"><b>Prescrição</b> (quadro verde) = share de receitas de cada marca no mercado, com o share do mês anterior ao lado (Raio X, Prescrição | Análise de Concorrentes); a sigla ao lado do nome é o laboratório, como aparece no Raio X. <b>Market share</b> (quadro azul) = demanda: share entre marcas = venda da marca ÷ venda de todas as marcas do mercado (preço fábrica), sem o genérico. “Desde” = mudança desse share contra o primeiro ciclo do gráfico: verde é bom para nós (nossa marca ganhou ou o concorrente perdeu), vermelho é ruim. Cresc. mês = venda contra o mês anterior. Fonte: Raio X, Demanda | Análise de Concorrentes.</div>' : '';
+  return slides;
+}
+var MKC_NOTA_RPS = '<div class="nota"><b>Prescrição</b> (quadro verde) = share de receitas de cada marca no mercado, com o share do mês anterior ao lado (Raio X, Prescrição | Análise de Concorrentes); a sigla ao lado do nome é o laboratório, como aparece no Raio X. <b>Market share</b> (quadro azul) = demanda: share entre marcas = venda da marca ÷ venda de todas as marcas do mercado (preço fábrica), sem o genérico. “Desde” = mudança desse share contra o primeiro ciclo do gráfico: verde é bom para nós (nossa marca ganhou ou o concorrente perdeu), vermelho é ruim. Cresc. mês = venda contra o mês anterior. Fonte: Raio X, Demanda | Análise de Concorrentes.</div>';
+// um slide por marca-chave, na mesma ordem da Apresentação N4
+function mkConcSlides(itens, onde){
+  var ORDEM = ['LINADIB', 'LINADIB DUO', 'BUPIUM XL', 'OZIVY'], nome = 'Mercado — concorrentes';
+  if (!itens.length) return [mkSemDados(nome)];
+  itens.sort(function(a, b){ var ia = ORDEM.indexOf(a.marca), ib = ORDEM.indexOf(b.marca); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.marca.localeCompare(b.marca); });
+  return itens.map(function(x){ return { nome: nome + ' · ' + x.marca, msg: 'Market share e prescription share ' + onde + ', lado a lado', html: mkTarjas() + x.html }; });
 }
 function sConcorrentes(){ // coletiva: distrito contra a regional
-  var nome = 'Mercado — concorrentes por marca-chave';
-  if (!ST.d.mk.ciclo) return mkSemDados(nome);
-  var c = mkConcHtml('DISTRITO', mkCodDistrito(), [{ rot: 'Regional', nivel: 'REGIONAL', cod: null }]);
-  return c ? { nome: nome, msg: 'Quem disputa cada mercado no distrito e como o share mudou', html: mkTarjas() + c } : mkSemDados(nome);
+  if (!ST.d.mk.ciclo) return [mkSemDados('Mercado — concorrentes')];
+  return mkConcSlides(mkConcHtml('DISTRITO', mkCodDistrito(), [{ rot: 'Regional', nivel: 'REGIONAL', cod: null }]), 'do distrito');
 }
 function iConcorrentes(){ // individual: setor contra o distrito e a regional
-  var nome = 'Mercado — concorrentes por marca-chave';
-  if (!ST.d.mk.ciclo) return mkSemDados(nome);
-  var c = mkConcHtml('SETOR', ST.setor, [{ rot: 'Distrito', nivel: 'DISTRITO', cod: mkCodDistrito() }, { rot: 'Regional', nivel: 'REGIONAL', cod: null }]);
-  return c ? { nome: nome, msg: 'Quem disputa cada mercado no setor e como o share mudou', html: mkTarjas() + c } : mkSemDados(nome);
+  if (!ST.d.mk.ciclo) return [mkSemDados('Mercado — concorrentes')];
+  return mkConcSlides(mkConcHtml('SETOR', ST.setor, [{ rot: 'Distrito', nivel: 'DISTRITO', cod: mkCodDistrito() }, { rot: 'Regional', nivel: 'REGIONAL', cod: null }]), 'do setor');
 }
 // Slide divisor de bloco (Fundamentos / Produtos)
 function sDivisor(k, titulo, sub){ return { nome: k + ' — ' + titulo, msg: '', divisor: { k: k, t: titulo, sub: sub } }; }
@@ -1476,10 +1501,12 @@ function montarIndividual(){
   PLANOS = [];
   var r = repSel(), lista = [{ nome: 'Combinados anteriores', msg: ' ', html: '<div id="ata"></div>' }, { nome: 'Planos em andamento', msg: ' ', html: '<div id="andamento"></div>' }, iRetrato(),
       // abertura → Fundamentos (fecha com o quadro de desvios e o plano) → Produtos (fecha com as marcas em desvio e seus planos) → fechamento
-      sDivisor('Bloco 1', 'Fundamentos', 'Execução do setor: produtividade, evolução, frequência, jornada, PEX e plano de fundamentos.'),
-      iProd(), iEvolucao(), iFreq(), sJornadaPex(ST.setor)].concat(iFundamentos(),
-      [sDivisor('Bloco 2', 'Produtos', 'Resultado das marcas: cota, mercado, concorrentes e planos das marcas em desvio.'),
-       iMarcas(), iMercado(), iConcorrentes(), iDemais()], iMarcasDesvio());
+      // mesma lógica da Apresentação N4: Bloco 1 = jornada e PEX → produtividade → frequência → evolução → fundamentos e plano;
+      // Bloco 2 = atingimento das marcas → demais produtos → cota × mercado → um slide de concorrentes por marca → marcas em desvio e planos
+      sDivisor('Bloco 1', 'Fundamentos', 'Execução do setor: jornada, PEX, produtividade, frequência, evolução e plano de fundamentos.'),
+      sJornadaPex(ST.setor), iProd(), iFreq(), iEvolucao()].concat(iFundamentos(),
+      [sDivisor('Bloco 2', 'Produtos', 'Resultado das marcas: atingimento, cota × mercado, concorrentes por marca e planos das marcas em desvio.'),
+       iMarcas(), iDemais(), iMercado()], iConcorrentes(), iMarcasDesvio());
   var fim = TEMAS.map(sTitulo).concat([{ nome: 'Plano de ação do setor', msg: ' ', html: '<div id="plano-final"></div>' }]); fim[0].fim1 = true;
   lista = lista.concat(fim);
   lista.push({ nome: 'Ata desta reunião', msg: ' ', html: '<div id="ata-nova"></div>' });
@@ -1622,10 +1649,11 @@ function montar(){
   // abertura → Fundamentos → Produtos → fechamento (mesma sequência da individual; só o bloco final muda)
   var fim = TEMAS.map(sTitulo).concat([sPrioridades(), { nome: 'Ata desta reunião', msg: ' ', html: '<div id="ata-nova"></div>' }]); fim[0].fim1 = true;
   var lista = [{ nome: 'Combinados anteriores', msg: ' ', html: '<div id="ata"></div>' }, sFechamento(),
-      sDivisor('Bloco 1', 'Fundamentos', 'Execução do distrito: produtividade, evolução, frequência e sobreposição, jornada e PEX.'),
-      sProd(), sEvolucao(), sFreqSobrep(), sJornadaPex(),
-      sDivisor('Bloco 2', 'Produtos', 'Resultado das marcas: cota, mercado, concorrentes, setores e demais produtos.'),
-      sMarcas(), sMercadoDistrito(), sConcorrentes(), sMercadoSetores(), demaisSlide(ST.d.pd, 'distrito')].concat(fim);
+      // mesma lógica da Apresentação N4 (ver comentário na individual)
+      sDivisor('Bloco 1', 'Fundamentos', 'Execução do distrito: jornada, PEX, produtividade, frequência e sobreposição e evolução.'),
+      sJornadaPex(), sProd(), sFreqSobrep(), sEvolucao(),
+      sDivisor('Bloco 2', 'Produtos', 'Resultado das marcas: atingimento por representante, demais produtos, cota × mercado e concorrentes por marca.'),
+      sMarcas(), demaisSlide(ST.d.pd, 'distrito'), sMercadoSetores(), sMercadoDistrito()].concat(sConcorrentes(), fim);
   var h = '<div class="slide">' + sCapa(lista) + '</div>';
   lista.forEach(function(s){ h += slideHtml(s); });
   $('stage').innerHTML = h;
