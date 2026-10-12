@@ -484,6 +484,30 @@ function render() {
   html += '<tr class="tot"><td class="l"></td><td class="l">Total do mercado</td><td>' + fmtRS(demEsc.total) + '</td><td>' + trend(demEsc.cresc, '%') + '</td><td></td>' + vazioReg + '<td>100%</td><td></td></tr>';
   html += '</tbody></table></div></div>';
 
+  // 2b. Disputa nas receitas: share de prescrição de cada marca do mercado (Raio X, Prescrição | Análise de Concorrentes).
+  // Chega por regional e por distrito; usa o ciclo mais recente publicado até o mês escolhido.
+  (function() {
+    var MS = ["JAN","FEV","MAR","ABR","MAI","JUN","JUL","AGO","SET","OUT","NOV","DEZ"];
+    var base = (STATE.rxc || []).filter(function(r) { return r.regional === STATE.regional && r.linha === linha && r.marca === marca && MS.indexOf(r.mes) <= MS.indexOf(STATE.mes); });
+    if (!base.length) return;
+    var mesRx = base.map(function(r) { return r.mes; }).sort(function(a, b) { return MS.indexOf(a) - MS.indexOf(b); }).pop(), ant = MS[MS.indexOf(mesRx) - 1] || 'mês anterior';
+    function de(nivel, cod) { return base.filter(function(r) { return r.mes === mesRx && r.nivel === nivel && (!cod || r.codigo === cod); }).sort(function(a, b) { return (n(b.share) || 0) - (n(a.share) || 0); }); }
+    var lista = noDistrito ? de('DISTRITO', STATE.distrito) : de('REGIONAL'), reg = noDistrito ? de('REGIONAL') : [];
+    if (!lista.length) return;
+    var maxS = Math.max.apply(null, lista.map(function(p) { return n(p.share) || 0; }).concat([1]));
+    html += '<div class="sec-hdr">Disputa nas receitas <small>prescrição · share de receitas de cada marca · ' + esc(nomeEsc) + ' · ' + mesRx + '/2026' + (mesRx !== STATE.mes ? ' (mais recente disponível)' : '') + '</small></div>';
+    html += '<div class="box"><div class="box-scroll"><table><thead><tr><th class="l">#</th><th class="l">Marca</th><th style="width:34%">Share de receitas</th>' +
+      (noDistrito ? '<th class="reg">Regional</th><th class="reg">Distrito vs regional</th>' : '') + '<th>' + ant + '</th><th>Penetração</th></tr></thead><tbody>';
+    lista.forEach(function(p, i) {
+      var sh = n(p.share), r = reg.filter(function(x) { return x.produto === p.produto; })[0], shR = r ? n(r.share) : null;
+      html += '<tr class="' + (p.eh_marca === '1' ? 'marca' : '') + '"><td class="l">' + (i + 1) + '</td><td class="l">' + esc(p.produto) + '</td>' +
+        '<td><div class="share-cell"><div class="share-bar"><i style="width:' + Math.max(0, (sh || 0) / maxS * 100).toFixed(1) + '%"></i></div><span class="share-n">' + fmtPct(sh) + '</span></div></td>' +
+        (noDistrito ? '<td class="reg">' + fmtPct(shR) + '</td><td class="reg">' + difReg(sh, shR) + '</td>' : '') +
+        '<td>' + fmtPct(n(p.share_ant)) + '</td><td>' + trend(n(p.var_pp), ' pp') + '</td></tr>';
+    });
+    html += '</tbody></table></div></div>';
+  })();
+
   function linhaRef(nome, sub, rx, d, comPainel) {
     var sh = rx ? n(rx.share) : null;
     return '<tr class="ref"><td class="l"><b>' + esc(nome) + '</b><br><span class="sub">' + esc(sub) + '</span></td>' +
@@ -638,8 +662,8 @@ async function init() {
     CONFIG = await res.json();
     if (!CONFIG.spreadsheet_id || !CONFIG.api_key) throw new Error('SPREADSHEET_ID ou API_KEY não configurados em config.json.');
     txt.textContent = 'Carregando dados de mercado…';
-    var abas = await Promise.all([fetchAba('mercado_rx').catch(function() { return []; }), fetchAba('mercado_demanda').catch(function() { return []; })]);
-    STATE.rx = abas[0]; STATE.dem = abas[1];
+    var abas = await Promise.all([fetchAba('mercado_rx').catch(function() { return []; }), fetchAba('mercado_demanda').catch(function() { return []; }), fetchAba('mercado_rx_conc').catch(function() { return []; })]);
+    STATE.rx = abas[0]; STATE.dem = abas[1]; STATE.rxc = abas[2];
     if (!STATE.rx.length && !STATE.dem.length) {
       document.getElementById('main').innerHTML = '<div class="error-card"><div class="error-title">Ainda não há dados publicados</div>' +
         '<div class="error-sub">As abas <code>mercado_rx</code> e <code>mercado_demanda</code> estão vazias. Rode <code>python scripts/ingest_mercado.py --mes MES</code>.</div></div>';
