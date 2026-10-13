@@ -1021,7 +1021,7 @@ async function lerAta(buffer){
   for (var p = 1; p <= pdf.numPages && !fim; p++){
     var pg = await pdf.getPage(p), alt = pg.view[3], tc = await pg.getTextContent(), yCab = null;
     var ts = tc.items.filter(function(i){ return i.str && i.str.trim(); }).map(function(i){ return { s: i.str.trim(), x: i.transform[4], y: i.transform[5], w: i.width || 0 }; });
-    if (p === 1){ var tt = ts.map(function(i){ return i.s; }).join(' '); titulo = (tt.match(/Ata RPS(?: coletiva| individual)?\s*[-–]\s*[^|]{5,90}?(?= Data| Metadad| Hor[áa]rio| Regional| REGIONAL| EMS \||$)/i) || [''])[0].trim(); dataAta = (tt.match(/\d{2}[\/-]\d{2}[\/-]\d{4}/) || [''])[0]; }
+    if (p === 1){ var tt = ts.map(function(i){ return i.s; }).join(' '); titulo = (tt.match(/Ata RPS(?: coletiva| individual)?\s*[-–]\s*[^|]{5,170}?(?= Data| Metadad| Hor[áa]rio| Regional| REGIONAL| EMS \||$)/i) || [''])[0].trim(); dataAta = (tt.match(/\d{2}[\/-]\d{2}[\/-]\d{4}/) || [''])[0]; }
     for (var k = 0; k < ts.length && !fim; k++){
       var it = ts[k];
       if (/^Plano de a[çc][ãa]o consolidado/i.test(it.s)){ dentro = true; continue; }
@@ -1163,6 +1163,18 @@ async function ataStatus(n, s){
   var a = ataDados(); if (!a) return; a.itens.forEach(function(i){ if (i.n === n) i.status = s; }); if (await ataGravar(a, false)) desenharAta();
 }
 function desenharAta(){ desenharAtaDe('ant'); desenharAtaDe('atual'); ajustar(); }
+// Prompt oficial da ata de RPS (docs/prompt-ata-rps.txt): o GD copia, cola no Claude com a transcrição e exporta o PDF.
+async function copiarPromptAta(btn){
+  var rot = btn.textContent;
+  try {
+    var r = await fetch('prompt-ata-rps.txt?t=' + Date.now(), { cache: 'no-store' }); if (!r.ok) throw new Error('HTTP ' + r.status);
+    var txt = await r.text();
+    try { await navigator.clipboard.writeText(txt); }
+    catch(e){ var ta = document.createElement('textarea'); ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+    btn.textContent = '✓ Prompt copiado';
+  } catch(e){ btn.textContent = 'Não foi possível copiar — abra em Atas de RPS'; }
+  setTimeout(function(){ btn.textContent = rot; }, 3500);
+}
 function desenharAtaDe(alvo){
   var box = ataBox(alvo); if (!box) return;
   var pode = !!(CONFIG.budget_webapp_url && CONFIG.budget_token), reg = ataRegDe(alvo), salva = null; if (reg) try { salva = JSON.parse(reg.acao); } catch(e){}
@@ -1170,10 +1182,11 @@ function desenharAtaDe(alvo){
   var up = '<input type="file" accept="application/pdf,.pdf" style="display:none" onchange="' + A + 'ataArquivo(this)">';
   var digitar = '<button class="b2" style="padding:8px 14px" onclick="' + A + 'ST.edit={titulo:\'' + (alvo === 'atual' ? 'Combinados da RPS de ' + dataBr(ST.data) : 'Combinados da RPS anterior') + '\',data:\'\',itens:[{n:1,texto:\'\',resp:\'\',prazo:\'\',status:\'Pendente\'}]};desenharAta()">Digitar os combinados</button>';
   var quem = ST.modelo === 'individual' ? ' deste representante' : ' do distrito';
+  var promptBtn = '<button class="b2" style="padding:8px 14px" onclick="copiarPromptAta(this)" title="Copia o prompt oficial: cole no Claude junto com a transcrição da reunião">📋 Copiar prompt da ata</button>';
   if (!ata){
     h = alvo === 'atual'
-      ? '<div class="vazio"><div style="font-size:34px">📎</div><b>Anexe a ata desta reunião — RPS de ' + dataBr(ST.data) + '</b><p>Terminou a reunião e a ata está pronta? Anexe o PDF aqui. A página lê a tabela "Plano de ação consolidado", salva a ata completa (todas as seções) no histórico do time e, na próxima RPS' + quem + ', os combinados já aparecem no slide 2 ("Combinados anteriores"), prontos para a cobrança.</p>' +
-        (pode ? '<label class="b1">Escolher PDF da ata' + up + '</label> ' + digitar : '<p>Gravação indisponível nesta página.</p>') + '<div id="ata-st-atual"></div></div>'
+      ? '<div class="vazio"><div style="font-size:34px">📎</div><b>Anexe a ata desta reunião — RPS de ' + dataBr(ST.data) + '</b><p>Ainda não gerou a ata? Use "Copiar prompt da ata", cole no Claude junto com a transcrição e exporte a resposta em PDF. Com a ata pronta, anexe o PDF aqui. A página lê a tabela "Plano de ação consolidado", salva a ata completa (todas as seções) no histórico do time e, na próxima RPS' + quem + ', os combinados já aparecem no slide 2 ("Combinados anteriores"), prontos para a cobrança.</p>' +
+        (pode ? '<label class="b1">Escolher PDF da ata' + up + '</label> ' + digitar + ' ' + promptBtn : '<p>Gravação indisponível nesta página.</p>' + promptBtn) + '<div id="ata-st-atual"></div></div>'
       : '<div class="vazio"><div style="font-size:34px">📋</div><b>Nenhuma ata de RPS anterior' + quem + '</b><p>Os combinados aparecem aqui sozinhos quando a ata da reunião anterior foi anexada no último slide ("Ata desta reunião"). Se a ata anterior ainda não foi anexada, dá para anexar agora.</p>' +
         (pode ? '<label class="b2" style="padding:8px 14px">Anexar a ata da reunião anterior' + up + '</label> ' + digitar : '') + '<div id="ata-st-ant"></div></div>';
   } else {

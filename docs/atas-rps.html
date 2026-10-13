@@ -50,11 +50,19 @@ td{padding:8px 9px;border-bottom:1px solid var(--border);vertical-align:top;line
 .st{display:inline-block;font-size:11.5px;font-weight:800;border-radius:8px;padding:3px 9px;border:1.5px solid;white-space:nowrap}
 .st.Pendente{color:#b45309;border-color:#fcd34d;background:#fffbeb}.st.Em{color:#1d4ed8;border-color:#93c5fd;background:#eff6ff}
 .st.Resolvido{color:#15803d;border-color:#86efac;background:#f0fdf4}.st.Nao{color:#b91c1c;border-color:#fca5a5;background:#fef2f2}
+.prompt{background:#fff;border-bottom:1px solid var(--border);padding:0 28px;flex:none}
+.prompt summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;padding:10px 0;flex-wrap:wrap}
+.prompt summary::-webkit-details-marker{display:none}
+.prompt summary b{font-size:13.5px;color:var(--brand-d)}
+.prompt summary span{font-size:12px;color:var(--gray);flex:1;min-width:260px;line-height:1.45}
+.prompt summary em{font-style:normal;font-size:12px;font-weight:700;color:var(--brand)}
+.prompt button{background:var(--brand);color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:12.5px;font-weight:800;cursor:pointer;white-space:nowrap}
+.prompt pre{white-space:pre-wrap;font-family:inherit;font-size:12.5px;line-height:1.55;background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin:0 0 14px;max-height:46vh;overflow:auto}
 .aviso{background:#fef9c3;color:#854d0e;font-size:12.5px;font-weight:700;padding:10px 14px;border-radius:8px;margin-bottom:14px;line-height:1.5}
 .vazio{text-align:center;color:var(--gray);padding:60px 20px;line-height:1.7}
 .vazio b{display:block;font-size:16px;color:var(--text)}
 @media(max-width:1000px){body{display:block;height:auto}.cols{grid-template-columns:1fr}.lista{max-height:320px}}
-@media print{.hdr a,.bar,.lista,.doc .cab button{display:none}.cols{display:block;padding:0}.doc{box-shadow:none;overflow:visible;padding:0}body{background:#fff;display:block}}
+@media print{.hdr a,.bar,.prompt,.lista,.doc .cab button{display:none}.cols{display:block;padding:0}.doc{box-shadow:none;overflow:visible;padding:0}body{background:#fff;display:block}}
 </style>
 </head>
 <body>
@@ -74,6 +82,16 @@ td{padding:8px 9px;border-bottom:1px solid var(--border);vertical-align:top;line
   <button id="btn-atualizar">🔄 Atualizar</button>
 </div>
 
+<details class="prompt" id="prompt">
+  <summary>
+    <b>📋 Prompt para gerar a ata</b>
+    <span>Copie, cole no Claude junto com a transcrição da RPS (coletiva ou individual), exporte a resposta em PDF e anexe no Copiloto de RPS.</span>
+    <em id="prompt-ver">ver o prompt ▾</em>
+    <button type="button" id="btn-prompt">Copiar prompt</button>
+  </summary>
+  <pre id="prompt-txt">Carregando…</pre>
+</details>
+
 <div class="cols">
   <div class="lista" id="lista"><div class="vazio">Carregando atas…</div></div>
   <div class="doc" id="doc"><div class="vazio"><b>Escolha uma ata na lista</b>O texto completo aparece aqui.</div></div>
@@ -92,6 +110,29 @@ var CONFIG = {}, ATAS = [], GDS = {}, SEL = null;
 var TOPO = /^(Metadados da reuni[ãa]o|Objetivo da reuni[ãa]o|Resumo executivo|Blocos da diretriz RPS|Plano de a[çc][ãa]o consolidado|Combinado para alavancar|Pend[êe]ncias|Texto curto para registro)/i;
 
 function $(id){ return document.getElementById(id); }
+// ── Prompt oficial da ata (docs/prompt-ata-rps.txt) ──
+var PROMPT_ATA = null;
+async function promptAta(){
+  if (PROMPT_ATA !== null) return PROMPT_ATA;
+  var r = await fetch('prompt-ata-rps.txt?t=' + Date.now(), { cache: 'no-store' }); if (!r.ok) throw new Error('HTTP ' + r.status);
+  PROMPT_ATA = await r.text(); return PROMPT_ATA;
+}
+document.addEventListener('DOMContentLoaded', function(){
+  var det = $('prompt'), btn = $('btn-prompt'), pre = $('prompt-txt');
+  function mostrar(){ promptAta().then(function(t){ pre.textContent = t; }).catch(function(){ pre.textContent = 'Não foi possível carregar o prompt. Atualize a página.'; }); }
+  det.addEventListener('toggle', function(){ $('prompt-ver').textContent = det.open ? 'fechar ▴' : 'ver o prompt ▾'; if (det.open) mostrar(); });
+  btn.addEventListener('click', async function(ev){
+    ev.preventDefault(); ev.stopPropagation();
+    try {
+      var t = await promptAta();
+      try { await navigator.clipboard.writeText(t); }
+      catch(e){ var ta = document.createElement('textarea'); ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+      btn.textContent = '✓ Copiado';
+    } catch(e){ btn.textContent = 'Erro ao copiar'; }
+    setTimeout(function(){ btn.textContent = 'Copiar prompt'; }, 3000);
+  });
+  if (location.hash === '#prompt'){ det.open = true; }
+});
 function esc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function dataBr(iso){ var x = String(iso || '').split('-'); return x.length === 3 ? x[2] + '/' + x[1] + '/' + x[0] : ''; }
 function norm(s){ return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); }
