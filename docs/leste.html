@@ -8801,6 +8801,18 @@ function renderConcorrentes(cod, linhaFiltro, mostrarLinha) {
     cardsMs += h + '</div></div>';
     listaMs.push({ marca: marca, html: h + '</div></div>' });
   });
+  // Marca co-promovida pelas duas linhas (OZIVY): a venda regional é a mesma em NEXUS e VITAL, então
+  // os dois cartões de market share sairiam idênticos — fica um só, com as duas linhas no cabeçalho.
+  // (Na prescrição os números diferem, porque o painel de médicos de cada linha é outro.)
+  if (mostrarLinha) {
+    var RE_LINHA = /<span class="crm-linha-badge [a-z]+">[A-Z]+<\/span>/, vistosMs = {}, unicosMs = [];
+    listaMs.forEach(function(c) {
+      var k = c.html.replace(RE_LINHA, ''), ja = vistosMs[k];
+      if (ja) { var selo = (c.html.match(RE_LINHA) || [''])[0]; ja.html = ja.html.replace(RE_LINHA, function(t) { return t + ' ' + selo; }); return; }
+      vistosMs[k] = c; unicosMs.push(c);
+    });
+    if (unicosMs.length < listaMs.length) { listaMs = unicosMs; cardsMs = unicosMs.map(function(c) { return c.html; }).join(''); }
+  }
   return {
     rx: cardsRx ? '<div class="mkc-grid">' + cardsRx + '</div>' : '',
     rxCards: listaRx,
