@@ -753,6 +753,14 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
 .prod-total-row td{background:var(--light);font-weight:800;border-top:2px solid var(--border)}
 .prod-total-row .prod-nome{text-transform:uppercase;font-size:11px;letter-spacing:.4px;color:var(--dark)}
 /* ── Modo apresentação ── */
+/* plano: métrica, prazo e objetivo de cada mês */
+.ap-pmeta{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,2fr);gap:12px;margin-top:6px;background:#f8fafc;border:1px solid var(--border);border-radius:9px;padding:2px 12px 10px}
+.ap-pmeta select,.ap-pobj input{width:100%;border:1.5px solid var(--border);border-radius:7px;padding:6px 8px;font-size:12.5px;background:#fffef7;font-family:inherit}
+.ap-pobj{display:flex;gap:8px}.ap-pobj span{flex:1;min-width:0}.ap-pobj i{display:block;font-style:normal;font-size:10px;font-weight:800;color:var(--brand-d);letter-spacing:.5px}
+.ap-pobj-v{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.ap-pobj-v .c{background:#f3f4f6;border-radius:9px;padding:6px 12px;font-size:13.5px;font-weight:800;line-height:1.3}
+.ap-pobj-v .c i{display:block;font-style:normal;font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--gray)}
+.ap-pobj-v .c.ok{background:#dcfce7;color:#166534}.ap-pobj-v .c.crit{background:#fee2e2;color:#991b1b}
 .cycle-btn.apres-btn{border-color:var(--brand);color:var(--brand);font-weight:800}
 body.apres-on{overflow:hidden}
 #apres{position:fixed;inset:0;z-index:6000;background:#0b1f3f;display:none;flex-direction:column}
@@ -2508,10 +2516,79 @@ function apresEsc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').
 // data local (toISOString usa UTC e vira o dia à noite no Brasil)
 function apresHoje() { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
 function apresDataBr(iso) { var x = String(iso || '').split('-'); return x.length === 3 ? x[2] + '/' + x[1] + '/' + x[0] : ''; }
-function apresPlanoReg(chave) {
-  var gd = 'N4:' + DISTRITO_FILTRO, k = chave + '|' + MES_ATUAL;
-  var regs = (BUDGET_LANC || []).filter(function(l) { return l.produto === APRES_PLANO_PROD && l.gd === gd && l.crm === k; });
-  return regs.length ? regs[regs.length - 1] : null;
+// ── Planos: último mês fechado, métrica e objetivo por mês ──────
+// Os planos da N4 partem sempre dos KPIs do último mês FECHADO (o mês anterior ao do
+// calendário): a N4 da primeira semana de outubro trabalha o fechamento de setembro. É com
+// esse mês que se decide se há desvio, qual é a base do plano e de onde contam os meses do
+// objetivo — o mês escolhido no dashboard continua valendo para os demais slides. Cada plano
+// tem UMA métrica, um prazo de 1 a 3 meses e um objetivo para cada mês do prazo ("objetivos":
+// [{mes, alvo}], a partir do mês seguinte ao da base, "mesBase"). Enquanto o prazo não acaba, o
+// mesmo plano volta nas N4 seguintes (não se abre outro) e o realizado de cada mês fechado é
+// gravado sozinho em "resultados". O mesmo modelo vale para os planos do Copiloto de RPS.
+function apresMesFechado() { var i = new Date().getMonth(); return MES_ORDER[i > 0 ? i - 1 : 0]; }
+function apresBaseOk() { var c = DADOS_CACHE[apresMesFechado()]; return !!(c && (c.distritos || []).length); }
+function apresMesPlano() { return apresBaseOk() ? apresMesFechado() : MES_ATUAL; }
+function apresDadosPlano() { return apresBaseOk() && apresMesFechado() !== MES_ATUAL && DISTRITO_FILTRO ? filtrarDadosPorDistrito(DADOS_CACHE[apresMesFechado()], DISTRITO_FILTRO) : (window._D || {}); }
+function apresMesesObjetivo(base, n) { var i = MES_ORDER.indexOf(base), out = []; for (var k = 1; k <= n && i + k < 12; k++) out.push(MES_ORDER[i + k]); return out; }
+function apresMetInv(nome) { return /^Sobreposi|^PEX/.test(nome); } // quanto menor, melhor
+function apresFmtMet(nome, v) { if (v === null || v === undefined || isNaN(v)) return '—'; return /^PEX/.test(nome) ? Math.round(v) + ' rep' + (Math.round(v) === 1 ? '' : 's') : (+v).toFixed(1).replace('.', ',') + '%'; }
+function apresMetricaValor(info, nome) { // valor numérico da métrica nos dados do mês-base
+  var i = (info.inds || []).filter(function(x) { return x.nome === nome; })[0];
+  if (i) return i.n === undefined ? null : i.n;
+  return info.kpiNum && info.kpiNum[nome] !== undefined ? info.kpiNum[nome] : null;
+}
+function apresPlanoVencido(p) { var o = p.objetivos || []; return !!(o.length && !p.encerrado && MES_ORDER.indexOf(apresMesFechado()) >= MES_ORDER.indexOf(o[o.length - 1].mes)); }
+function apresPlanoMetaForm(chave, info, p) { // bloco do formulário: métrica, prazo e objetivo de cada mês
+  var base = p.mesBase || apresMesPlano(), ms = apresMesesObjetivo(base, 3), n = Math.min(Math.max((p.objetivos && p.objetivos.length) || 1, 1), ms.length || 1), q = "'" + chave + "'";
+  var opcoes = (info.todos || info.kpis || []).slice(), sel = p.metrica || (p.kpis && p.kpis.length === 1 ? p.kpis[0] : '') || (info.kpisPadrao || info.kpis || [])[0] || '';
+  if (p.metrica && opcoes.indexOf(p.metrica) < 0) opcoes.push(p.metrica); // métrica gravada que saiu da lista continua disponível
+  function rot(k) { var i = (info.inds || []).filter(function(x) { return x.nome === k; })[0];
+    return apresEsc(k) + (i ? ' — ' + base + ': ' + i.valor + ' · meta ' + i.meta : (info.kpiVal && info.kpiVal[k] ? ' — ' + base + ': ' + info.kpiVal[k] : '')); }
+  var h = '<div class="ap-pmeta"><div><label class="ap-plano-l">Métrica do plano <small>uma só, com o valor de ' + base + '/2026 (último mês fechado)</small></label><select data-f="metrica"><option value="">Escolha a métrica…</option>' +
+    opcoes.map(function(k) { return '<option value="' + apresEsc(k) + '"' + (k === sel ? ' selected' : '') + '>' + rot(k) + '</option>'; }).join('') + '</select></div>';
+  h += '<div><label class="ap-plano-l">Prazo <small>máximo de 3 meses</small></label><select data-f="prazo" onchange="apresPlanoPrazo(' + q + ')">' + ms.map(function(m, k) { return '<option value="' + (k + 1) + '"' + (k + 1 === n ? ' selected' : '') + '>' + (k + 1) + (k ? ' meses' : ' mês') + ' — até ' + m + '/2026</option>'; }).join('') + '</select></div>';
+  h += '<div><label class="ap-plano-l">Objetivo de cada mês <small>na unidade da métrica</small></label><div class="ap-pobj">' + ms.map(function(m, k) { var o = (p.objetivos || [])[k];
+    return '<span data-objbox="' + k + '"' + (k < n ? '' : ' style="display:none"') + '><i>' + m + '</i><input type="number" step="0.1" data-obj="' + k + '" data-mes="' + m + '" value="' + (o && o.alvo !== undefined && o.alvo !== null ? o.alvo : '') + '" placeholder="objetivo"></span>'; }).join('') + '</div></div>';
+  return h + '<input type="hidden" data-f="mesBase" value="' + base + '"></div>';
+}
+function apresPlanoPrazo(chave) {
+  var box = document.getElementById('ap-plano-' + chave), n = +box.querySelector('[data-f="prazo"]').value;
+  [].forEach.call(box.querySelectorAll('[data-objbox]'), function(s) { s.style.display = +s.getAttribute('data-objbox') < n ? '' : 'none'; });
+}
+function apresPlanoObjetivoHtml(p) { // no plano salvo: métrica, base e objetivo × realizado de cada mês
+  if (!p.metrica || !(p.objetivos || []).length) return '<div class="ap-fund-nota" style="margin-top:10px">Este plano ainda não tem métrica e objetivo por mês — use "Editar" para definir.</div>';
+  var inv = apresMetInv(p.metrica);
+  var h = '<div class="ap-pobj-v"><span class="c"><i>Métrica' + (inv ? ' · quanto menor, melhor' : '') + '</i>' + apresEsc(p.metrica) + '</span><span class="c"><i>Base · ' + (p.mesBase || '') + '/2026</i>' + apresFmtMet(p.metrica, p.base) + '</span>';
+  p.objetivos.forEach(function(o) { var r = (p.resultados || {})[o.mes], bateu = r ? (inv ? r.v <= o.alvo : r.v >= o.alvo) : null;
+    h += '<span class="c' + (r ? (bateu ? ' ok' : ' crit') : '') + '"><i>' + o.mes + ' · objetivo ' + apresFmtMet(p.metrica, o.alvo) + '</i>' + (r ? apresFmtMet(p.metrica, r.v) + (bateu ? ' ✓ atingiu' : ' ✗ não atingiu') : 'aguardando o fechamento') + '</span>'; });
+  if (apresPlanoVencido(p)) h += '<span class="c crit"><i>Prazo</i>encerrado em ' + p.objetivos[p.objetivos.length - 1].mes + ' — abrir novo plano</span>';
+  return h + '</div>';
+}
+async function apresPlanoResultados() { // grava o realizado do mês fechado nos planos em vigor que têm objetivo para ele
+  if (!(CONFIG && CONFIG.budget_webapp_url && CONFIG.budget_token)) return;
+  var mp = apresMesPlano(), mudou = false;
+  for (var i = 0; i < APRES_PLANOS.length; i++) {
+    var info = APRES_PLANOS[i], reg = apresPlanoReg(info.chave), p = apresPlanoDados(info.chave);
+    if (!reg || !p || !p.metrica || !(p.objetivos || []).some(function(o) { return o.mes === mp; })) continue;
+    var v = apresMetricaValor(info, p.metrica); if (v === null || v === undefined || isNaN(v)) continue;
+    v = Math.round(v * 100) / 100; p.resultados = p.resultados || {};
+    if (p.resultados[mp] && Math.abs(p.resultados[mp].v - v) < 0.005) continue;
+    p.resultados[mp] = { v: v, data: apresHoje() };
+    var env = { token: CONFIG.budget_token, acao: 'edit', id: reg.id, gd: reg.gd, linha: reg.linha, produto: reg.produto, crm: reg.crm, medico: reg.medico, valor: 0, acao_lancamento: JSON.stringify(p), data: reg.data, criadoEm: reg.criadoEm };
+    try { await apresAtaEnviar(env); apresEspelhar(env); mudou = true; } catch (e) { console.warn('Resultado do plano não foi gravado.', e.message); }
+  }
+  if (mudou) APRES_PLANOS.forEach(function(pl) { apresPlanoDesenhar(pl.chave, false); });
+}
+function apresPlanoReg(chave) { // plano do mês-base ou plano de mês anterior ainda dentro do prazo
+  var gd = 'N4:' + DISTRITO_FILTRO, mp = apresMesPlano(), im = MES_ORDER.indexOf(mp), achou = null, ia = -1;
+  (BUDGET_LANC || []).forEach(function(l) {
+    if (l.produto !== APRES_PLANO_PROD || l.gd !== gd) return;
+    var x = String(l.crm).split('|'); if (x[0] !== chave) return;
+    var ib = MES_ORDER.indexOf(x[1]), ok = x[1] === mp;
+    if (!ok && ib >= 0 && ib < im) { try { var p = JSON.parse(l.acao), o = p.objetivos || []; ok = !p.encerrado && o.length > 0 && im <= MES_ORDER.indexOf(o[o.length - 1].mes); } catch (e) {} }
+    if (ok && ib >= ia) { achou = l; ia = ib; }
+  });
+  return achou;
 }
 function apresPlanoDados(chave) {
   var reg = apresPlanoReg(chave);
@@ -2522,10 +2599,10 @@ function apresPlanoInfo(chave) { return APRES_PLANOS.filter(function(p) { return
 
 // Indicadores de execução do distrito e se cada um está em desvio
 function apresFundamentos() {
-  var D = window._D || {}, d = (D.distritos || [])[0] || {}, out = [];
+  var D = apresDadosPlano(), mesP = apresMesPlano(), d = (D.distritos || [])[0] || {}, out = [];
   function n(v) { var x = parseFloat(v); return isNaN(x) ? null : x; }
   function p1(v) { return v.toFixed(1).replace('.', ',') + '%'; }
-  function add(nome, v, meta, desvio, extra) { out.push({ nome: nome, valor: v === null ? '—' : p1(v), meta: meta, desvio: v !== null && desvio, sem: v === null, extra: extra || '' }); }
+  function add(nome, v, meta, desvio, extra) { out.push({ nome: nome, valor: v === null ? '—' : p1(v), meta: meta, desvio: v !== null && desvio, sem: v === null, extra: extra || '', n: v }); }
   var reps = (D.reps || []).filter(function(r) { return r.vago !== 'True' && n(r.prod) !== null; });
   function media(campo) { var vs = reps.map(function(r) { return n(r[campo]); }).filter(function(x) { return x !== null; }); return vs.length ? vs.reduce(function(a, b) { return a + b; }, 0) / vs.length : null; }
   var prod = n(d.prod); if (prod !== null && prod < 5) prod *= 100;
@@ -2540,16 +2617,16 @@ function apresFundamentos() {
   if (crm && cr === null) cr = 0;
   add('CRM Chave', cr, '≥ 100%', cr < 100, crm ? (n(crm.real_interacoes) === null ? 0 : Math.round(n(crm.real_interacoes))) + ' de ' + Math.round(n(crm.obj_interacoes)) + ' interações' : '');
   var prefixo = DISTRITO_FILTRO.substring(0, 6);
-  var fD = FREQ_SETORES_RAW[MES_ATUAL] ? freqDistritos(MES_ATUAL, prefixo) : [], fr = fD.length ? freqSoma(fD).cob : null;
+  var fD = FREQ_SETORES_RAW[mesP] ? freqDistritos(mesP, prefixo) : [], fr = fD.length ? freqSoma(fD).cob : null;
   add('Frequência de visitação', fr, '≥ 75%', fr < 75, 'Freq 80 + 100 ÷ painel');
-  var sb = typeof SOBREP_DIST !== 'undefined' && SOBREP_DIST[MES_ATUAL] ? SOBREP_DIST[MES_ATUAL].find(function(x) { return x.id === prefixo; }) : null;
+  var sb = typeof SOBREP_DIST !== 'undefined' && SOBREP_DIST[mesP] ? SOBREP_DIST[mesP].find(function(x) { return x.id === prefixo; }) : null;
   var sv = sb && sb.painel ? sb.nv / sb.painel * 100 : null;
   add('Sobreposição Nexus × Vital', sv, '≤ 10%', sv > 10, '% do painel');
   // PEX entra só quando há representante em ATENÇÃO ou CRÍTICO (aí conta como desvio)
   var risco = (D.pex || []).filter(function(r) { return /ATEN|CR[IÍ]T/i.test(r.medalha || ''); });
   if (risco.length) out.push({
-    nome: 'PEX — atenção ou crítico', valor: risco.length + ' rep' + (risco.length > 1 ? 's' : ''), meta: 'nenhum rep abaixo de bronze', desvio: true, sem: false,
-    extra: risco.map(function(r) { return r.nome.split(' ').slice(0, 2).join(' ') + ' (' + r.pts + ')'; }).join(', ') + (NOTAS_PEX_POR_MES[MES_ATUAL] ? ' · simulado' : '')
+    nome: 'PEX — atenção ou crítico', valor: risco.length + ' rep' + (risco.length > 1 ? 's' : ''), meta: 'nenhum rep abaixo de bronze', desvio: true, sem: false, n: risco.length,
+    extra: risco.map(function(r) { return r.nome.split(' ').slice(0, 2).join(' ') + ' (' + r.pts + ')'; }).join(', ') + (NOTAS_PEX_POR_MES[mesP] ? ' · simulado' : '')
   });
   return out;
 }
@@ -2563,14 +2640,15 @@ function apresPlanoFundGrupo() {
       '<div class="s">meta ' + i.meta + (i.extra ? ' · ' + i.extra : '') + '</div><div class="t">' + (i.sem ? 'sem dado' : (i.desvio ? '● em desvio' : '✓ dentro da meta')) + '</div></div>';
   }).join('') + '</div>';
   var el = document.createElement('div');
-  if (!desv.length) {
+  h = '<div class="ap-fund-nota" style="margin:0 0 10px">📌 Planos usam os KPIs do último mês fechado: <b>' + apresMesPlano() + '/2026</b>.</div>' + h;
+  if (!desv.length && !apresPlanoReg('fund')) {
     el.innerHTML = h + '<div class="ap-plano-ok">✓ Nenhum indicador de execução em desvio — plano de fundamentos não é necessário neste mês.</div>';
     return [{ chave: '', nome: 'Fundamentos', nodes: [el], msg: 'Todos os indicadores de execução dentro da meta' }];
   }
-  APRES_PLANOS.push({ chave: 'fund', titulo: 'Fundamentos', kpis: desv.map(function(i) { return i.nome; }),
+  APRES_PLANOS.push({ chave: 'fund', titulo: 'Fundamentos', kpis: desv.map(function(i) { return i.nome; }), todos: inds.map(function(i) { return i.nome; }), inds: inds,
     problema: 'Indicadores de execução em desvio: ' + desv.map(function(i) { return i.nome + ' em ' + i.valor + ' (meta ' + i.meta + ')'; }).join('; ') + '.' });
   // slide 1: só os números; slide 2 (seguinte): o plano, onde o GD marca qual indicador direciona
-  el.innerHTML = h + '<div class="ap-fund-nota">O plano de fundamentos está no próximo slide: nele o GD indica qual destes indicadores em desvio direciona o plano.</div>';
+  el.innerHTML = h + '<div class="ap-fund-nota">O plano de fundamentos está no próximo slide: nele o GD escolhe a métrica, o prazo (até 3 meses) e o objetivo de cada mês.</div>';
   var pl = document.createElement('div');
   pl.innerHTML = '<div class="ap-plano" id="ap-plano-fund"></div>';
   return [
@@ -2580,9 +2658,10 @@ function apresPlanoFundGrupo() {
 }
 function apresPlanoMarcaGrupo(marca, chave, problema, metricas) {
   var ks = (metricas || []).map(function(k) { return k.nome; }), vals = {};
-  (metricas || []).forEach(function(k) { vals[k.nome] = k.val; });
+  var nums = {};
+  (metricas || []).forEach(function(k) { vals[k.nome] = k.val; nums[k.nome] = k.num; });
   // plano de produto: o GD escolhe o que vai acompanhar (distrito ou setores); começa marcado no distrito
-  APRES_PLANOS.push({ chave: chave, titulo: marca, problema: problema, kpis: ks, kpisPadrao: ks.slice(0, 1), kpiVal: vals,
+  APRES_PLANOS.push({ chave: chave, titulo: marca, problema: problema, kpis: ks, kpisPadrao: ks.slice(0, 1), kpiVal: vals, kpiNum: nums,
     rotuloKpi: 'Métrica que vamos acompanhar neste plano:' });
   var el = document.createElement('div');
   el.innerHTML = '<div class="ap-plano" id="ap-plano-' + chave + '"></div>';
@@ -2598,6 +2677,10 @@ function apresPlanoLer(chave) {
   [].forEach.call(box.querySelectorAll('[data-kpi]'), function(c) { if (c.checked) plano.kpis.push(c.getAttribute('data-kpi')); });
   [].forEach.call(box.querySelectorAll('[data-pq]'), function(i) { if (i.value.trim()) plano.porques.push(i.value.trim()); });
   plano.raiz = v('[data-f="raiz"]');
+  plano.metrica = v('[data-f="metrica"]'); plano.mesBase = v('[data-f="mesBase"]') || apresMesPlano();
+  var nObj = +(v('[data-f="prazo"]') || 1); plano.objetivos = [];
+  [].forEach.call(box.querySelectorAll('[data-obj]'), function(i) { if (+i.getAttribute('data-obj') < nObj) plano.objetivos.push({ mes: i.getAttribute('data-mes'), alvo: i.value === '' ? null : parseFloat(i.value) }); });
+  if (box.querySelector('[data-f="metrica"]')) plano.kpis = plano.metrica ? [plano.metrica] : [];
   [].forEach.call(box.querySelectorAll('[data-acao]'), function(tr) {
     var a = {}, tem = false;
     APRES_W.forEach(function(w) { a[w[0]] = tr.querySelector('[data-w="' + w[0] + '"]').value.trim(); if (a[w[0]]) tem = true; });
@@ -2638,11 +2721,7 @@ function apresPlanoDesenhar(chave, editar, rascunho) {
     if (!p.acoes || !p.acoes.length) p.acoes = [{}];
     h += '<div class="ap-plano-h">🧭 Plano — ' + info.titulo + ' <span>5 porquês + 5W2H · preencha antes da reunião</span></div>';
     h += '<label class="ap-plano-l">Problema</label><textarea data-f="problema" rows="2">' + apresEsc(p.problema) + '</textarea>';
-    // métricas já gravadas que não estão mais na lista (ex.: setor que voltou a 100%) continuam aparecendo, marcadas
-    var opcoes = info.kpis.concat(p.kpis.filter(function(k) { return info.kpis.indexOf(k) < 0; }));
-    if (opcoes.length) h += '<div class="ap-plano-kpis"><span>' + (info.rotuloKpi || 'Indicador que direciona este plano:') + '</span>' + opcoes.map(function(k) {
-      return '<label><input type="checkbox" data-kpi="' + apresEsc(k) + '"' + (p.kpis.indexOf(k) >= 0 ? ' checked' : '') + '> ' + apresEsc(k) + (info.kpiVal && info.kpiVal[k] ? ' <small>(' + info.kpiVal[k] + ')</small>' : '') + '</label>';
-    }).join('') + '</div>';
+    h += apresPlanoMetaForm(chave, info, p);
     h += '<label class="ap-plano-l">5 porquês <small>mínimo 3</small></label><div class="ap-pqs">';
     for (var i = 0; i < 5; i++) h += '<div class="ap-pq"><b>' + (i + 1) + 'º por quê?</b><input type="text" data-pq="' + i + '" value="' + apresEsc(p.porques[i] || '') + '" oninput="apresPlanoPorques(' + q + ')" placeholder="' + (i === 0 ? 'Por que o problema acontece?' : 'Por que isso acontece?') + '"></div>';
     h += '</div><label class="ap-plano-l">Causa raiz <small>síntese dos porquês — o que o plano precisa atacar</small></label><textarea data-f="raiz" rows="2" placeholder="Escreva a causa raiz com suas palavras, a partir dos porquês acima.">' + apresEsc(p.raiz || '') + '</textarea>' +
@@ -2669,7 +2748,7 @@ function apresPlanoDesenhar(chave, editar, rascunho) {
     h += '</div><div class="ap-plano-w"><b class="ap-plano-sub">Plano de ação — 5W2H</b><div class="visitas-table-wrap"><table class="visitas-table ap-w-tb ver"><thead><tr>' +
       APRES_W.map(function(w) { return '<th>' + w[1] + '</th>'; }).join('') + '</tr></thead><tbody>';
     salvo.acoes.forEach(function(a) { h += '<tr>' + APRES_W.map(function(w) { return '<td>' + (apresEsc(a[w[0]]) || '—') + '</td>'; }).join('') + '</tr>'; });
-    h += '</tbody></table></div></div></div><div class="ap-diag-f"><span id="ap-plano-st-' + chave + '">Salvo em ' + apresDataBr(reg.data) + '</span></div>';
+    h += '</tbody></table></div></div></div>' + apresPlanoObjetivoHtml(salvo) + '<div class="ap-diag-f"><span id="ap-plano-st-' + chave + '">Salvo em ' + apresDataBr(reg.data) + ' · base ' + (salvo.mesBase || String(reg.crm).split('|')[1]) + '/2026</span></div>';
   } else {
     h += '<div class="ap-plano-h">🧭 Plano — ' + info.titulo + '</div><div class="ap-diag-f"><span>Plano ainda não preenchido — gravação indisponível nesta página.</span></div>';
   }
@@ -2683,7 +2762,7 @@ async function apresPlanoEnviar(chave, plano, apagar) {
   var payload = {
     token: CONFIG.budget_token, acao: apagar ? 'delete' : (reg ? 'edit' : 'add'),
     id: reg ? reg.id : 'n4p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-    gd: 'N4:' + DISTRITO_FILTRO, linha: d.linha || '', produto: APRES_PLANO_PROD, crm: chave + '|' + MES_ATUAL,
+    gd: 'N4:' + DISTRITO_FILTRO, linha: d.linha || '', produto: APRES_PLANO_PROD, crm: reg ? reg.crm : chave + '|' + apresMesPlano(),
     medico: d.nm || '', valor: 0, acao_lancamento: plano ? JSON.stringify(plano) : '',
     data: apresHoje(), criadoEm: reg ? reg.criadoEm : Date.now().toString()
   };
@@ -2693,7 +2772,7 @@ async function apresPlanoEnviar(chave, plano, apagar) {
     var resp = JSON.parse(await r.text());
     if (!resp.ok) throw new Error(resp.erro || 'falha desconhecida');
   } catch (e) { if (st) st.textContent = 'Não foi possível salvar: ' + e.message; return false; }
-  await carregarBudget();
+  await carregarBudget(); apresEspelhar(payload);
   return true;
 }
 async function apresPlanoSalvar(chave) {
@@ -2703,6 +2782,13 @@ async function apresPlanoSalvar(chave) {
   if (plano.porques.length < 3) return erro('Preencha pelo menos 3 porquês.');
   if (!plano.raiz) return erro('Escreva a causa raiz, sintetizando os porquês.');
   if (!plano.acoes.some(function(a) { return a.oque && a.quando && a.quem; })) return erro('Inclua pelo menos uma ação com O quê, Quando e Quem.');
+  if (!plano.metrica) return erro('Escolha a métrica do plano.');
+  if (!plano.objetivos.length || plano.objetivos.some(function(o) { return o.alvo === null || isNaN(o.alvo); })) return erro('Informe o objetivo de cada mês do prazo.');
+  var ant = apresPlanoDados(chave), infoP = apresPlanoInfo(chave);
+  // a base é o valor da métrica no mês fechado; só muda se a métrica mudar
+  plano.base = ant && ant.metrica === plano.metrica && ant.base !== undefined && ant.base !== null ? ant.base : apresMetricaValor(infoP, plano.metrica);
+  if (ant && ant.resultados && ant.metrica === plano.metrica) plano.resultados = ant.resultados;
+  if (ant && ant.encerrado) plano.encerrado = ant.encerrado;
   st.style.color = '';
   if (await apresPlanoEnviar(chave, plano, false)) { apresPlanoDesenhar(chave, false); apresPlanoFinalDesenhar(); }
 }
@@ -2739,7 +2825,7 @@ function apresPlanoFinalDesenhar() {
 // números do distrito e a abertura por representante; o slide seguinte é o
 // plano da marca (5 porquês + 5W2H).
 function apresMarcasGrupos() {
-  var D = window._D || {}, d = (D.distritos || [])[0];
+  var D = apresDadosPlano(), mesP = apresMesPlano(), d = (D.distritos || [])[0];
   if (!d) return [];
   function n(v) { var x = parseFloat(v); return isNaN(x) ? null : x; }
   function p1(v) { return v === null ? '—' : v.toFixed(1).replace('.', ',') + '%'; }
@@ -2749,12 +2835,12 @@ function apresMarcasGrupos() {
   var vital = d.linha === 'VITAL';
   var dist = (vital ? D.prodDistVit : D.prodDistNex) || [], reps = (vital ? D.prodRepVit : D.prodRepNex) || [];
   var grupos = [];
-  marcasChaveDoMes(d.linha, MES_ATUAL).forEach(function(marca) {
+  marcasChaveDoMes(d.linha, mesP).forEach(function(marca) {
     var m = normProd(marca);
     var linhaD = dist.filter(function(r) { return r.distrito_id === d.distrito_id && normProd(r.produto) === m; })[0];
     if (!linhaD) return;
     var cota = n(linhaD.cota), real = n(linhaD.realizado), cob = cota ? real / cota * 100 : null;
-    if (cob === null || cob >= 100) return; // só entra marca-chave abaixo de 100%
+    if (cob === null || (cob >= 100 && !apresPlanoReg('marca-' + m.replace(/[^A-Z0-9]+/g, '_')))) return; // marca-chave abaixo de 100%, ou com plano ainda em vigor
     var rs = reps.filter(function(r) { return r.distrito_id === d.distrito_id && normProd(r.produto) === m; })
       .map(function(r) { var c = n(r.cota), re = n(r.realizado); return { nome: r.nome, cota: c, real: re, cob: c ? re / c * 100 : null, cresc: n(r.crescimento) }; })
       .sort(function(a, b) { return (a.cob === null ? 999 : a.cob) - (b.cob === null ? 999 : b.cob); });
@@ -2762,7 +2848,7 @@ function apresMarcasGrupos() {
 
     var h = '<div class="kpi-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:14px">' +
       kpiCard(cob >= 80 ? 'o' : 'r', 'COBERTURA DA COTA', p1(cob), 'realizado ÷ cota do distrito') +
-      kpiCard('n', 'COTA', brl(cota), 'demanda · ' + MES_ATUAL + '/2026') +
+      kpiCard('n', 'COTA', brl(cota), 'demanda · ' + mesP + '/2026') +
       kpiCard('n', 'REALIZADO', brl(real), 'faltam ' + brl(cota - real) + ' para a cota') +
       kpiCard(abaixo ? 'r' : 'g', 'REPS ABAIXO DE 100%', abaixo + ' de ' + rs.length, 'na marca ' + marca) + '</div>';
     h += '<div class="visitas-chart-wrap"><h3>' + marca + ' — cobertura por representante</h3>' +
@@ -2782,8 +2868,8 @@ function apresMarcasGrupos() {
       planoMarca: { marca: marca, chave: 'marca-' + m.replace(/[^A-Z0-9]+/g, '_'),
         problema: marca + ' em ' + p1(cob) + ' de cobertura da cota no distrito — faltam ' + brl(cota - real) + '; ' + abaixo + ' de ' + rs.length + ' representantes abaixo de 100%.',
         // métricas que o plano pode acompanhar: a cobertura do distrito ou a de cada setor abaixo de 100%
-        kpis: [{ nome: 'Cobertura da cota do distrito', val: p1(cob) }].concat(rs.filter(function(r) { return r.cob !== null && r.cob < 100; })
-          .map(function(r) { return { nome: 'Setor — ' + r.nome, val: p1(r.cob) }; })) }
+        kpis: [{ nome: 'Cobertura da cota do distrito', val: p1(cob), num: cob }].concat(rs.filter(function(r) { return r.cob !== null && r.cob < 100; })
+          .map(function(r) { return { nome: 'Setor — ' + r.nome, val: p1(r.cob), num: r.cob }; })) }
     });
   });
   return grupos;
@@ -3122,6 +3208,7 @@ async function apresAbrir() {
   await apresCredenciais();
   if (VIEW_ATUAL !== 'principal') await trocarMes(MES_ATUAL);
   await apresCarregarAlloc();
+  try { await carregarMes(apresMesFechado()); } catch (e) { console.warn('Mês fechado indisponível — planos usam o mês da tela.', e.message); } // base dos planos
   var raiz = apresRaiz(), stage = document.getElementById('ap-stage');
   APRES.scrollY = window.scrollY;
   raiz.classList.add('on'); document.body.classList.add('apres-on');
@@ -3261,6 +3348,7 @@ function apresMontar() {
 
   apresAtaDesenhar();
   APRES_PLANOS.forEach(function(pl) { apresPlanoDesenhar(pl.chave, false); });
+  apresPlanoResultados();
   apresPlanoFinalDesenhar();
   document.getElementById('ap-dots').innerHTML = APRES.slides.map(function(s, k) {
     return '<button onclick="apresIr(' + k + ')" title="' + s.nome + '">' + (k + 1) + '</button>';

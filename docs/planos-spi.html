@@ -108,6 +108,14 @@ function esc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace
 function dataBr(iso){ var x = String(iso || '').split('-'); return x.length === 3 ? x[2] + '/' + x[1] + '/' + x[0] : ''; }
 // A mesma página serve às duas regionais: planos-spi.html (SPI Oeste) e planos-spi.html?regional=LESTE (Leste)
 var REGIONAL_LESTE = /[?&]regional=leste(&|$)/i.test(window.location.search);
+// métrica, base e objetivo × realizado de cada mês do plano (gravados pela apresentação N4)
+function fmtMet(nome, v){ if (v === null || v === undefined || isNaN(v)) return '—'; return /^PEX/.test(nome) ? Math.round(v) + ' rep' + (Math.round(v) === 1 ? '' : 's') : (+v).toFixed(1).replace('.', ',') + '%'; }
+function metaHtml(p){
+  if (!p.metrica || !p.objetivos.length) return '<div class="nota" style="margin-top:8px">Sem métrica e objetivo por mês — plano anterior a esse recurso.</div>';
+  var inv = /^Sobreposi|^PEX/.test(p.metrica);
+  return '<div class="kp" style="margin-top:8px"><span style="background:#e0f2fe;color:#075985">Base ' + esc(p.mesBase) + ': ' + fmtMet(p.metrica, p.base) + '</span>' + p.objetivos.map(function(o){ var r = p.resultados[o.mes], bateu = r ? (inv ? r.v <= o.alvo : r.v >= o.alvo) : null;
+    return '<span style="background:' + (r ? (bateu ? '#dcfce7;color:#166534' : '#fee2e2;color:#991b1b') : '#f3f4f6;color:#374151') + '">' + esc(o.mes) + ': objetivo ' + fmtMet(p.metrica, o.alvo) + (r ? ' · realizado ' + fmtMet(p.metrica, r.v) + (bateu ? ' ✓' : ' ✗') : ' · aguardando') + '</span>'; }).join('') + '</div>';
+}
 function ehSpi(distrito){ return (REGIONAL_LESTE ? /^(1105|1165)/ : /^(1103|1163)/).test(distrito); }
 if (REGIONAL_LESTE){ document.title = 'EMS | Planos Leste'; $('pg-tit').textContent = '📋 Planos Leste'; $('pg-reg').textContent = 'Regional Leste'; $('pg-volta').href = 'leste.html'; }
 
@@ -135,7 +143,7 @@ function lerPlanos(linhas){
     out.push({
       distrito: distrito, gd: l.medico || distrito, linha: (l.linha || '').toUpperCase(), mes: mes, tipo: fund ? 'fund' : 'marca',
       titulo: fund ? 'Fundamentos' : chave.replace(/^marca-/, '').replace(/_/g, ' '),
-      problema: p.problema || '', kpis: p.kpis || [], porques: p.porques || [], raiz: p.raiz || (p.porques || [])[(p.porques || []).length - 1] || '', raizPropria: !!p.raiz, acoes: p.acoes || [], data: l.data,
+      problema: p.problema || '', kpis: p.kpis || [], porques: p.porques || [], raiz: p.raiz || (p.porques || [])[(p.porques || []).length - 1] || '', raizPropria: !!p.raiz, acoes: p.acoes || [], data: l.data, metrica: p.metrica || '', mesBase: p.mesBase || '', base: p.base, objetivos: p.objetivos || [], resultados: p.resultados || {},
       reg: l, bruto: p // linha original e JSON completo, para regravar o status
     });
     out[out.length - 1].acoes.forEach(function(a){ if (STATUS.indexOf(a.status) < 0) a.status = 'Pendente'; });
@@ -260,7 +268,7 @@ function render(){
   ps.forEach(function(p){
     h += '<details class="plano"><summary><b>' + esc(p.gd) + '</b><span class="tag ' + p.linha + '">' + p.linha + '</span><span class="tag ' + p.tipo + '">' + esc(p.titulo) + '</span>' +
       '<span class="raiz"><i>Causa raiz:</i> ' + esc(p.raiz || '—') + '</span><span class="nota">' + p.mes + '/2026 · salvo em ' + dataBr(p.data) + ' · ' + p.acoes.length + ' ação(ões)</span></summary>' +
-      '<div class="corpo"><div class="prob"><span class="sub">Problema</span>' + esc(p.problema) + (p.kpis.length ? '<div class="kp">' + p.kpis.map(function(k){ return '<span>' + esc(k) + '</span>'; }).join('') + '</div>' : '') + '</div>' +
+      '<div class="corpo"><div class="prob"><span class="sub">Problema</span>' + esc(p.problema) + (p.kpis.length ? '<div class="kp">' + p.kpis.map(function(k){ return '<span>' + esc(k) + '</span>'; }).join('') + '</div>' : '') + metaHtml(p) + '</div>' +
       '<div><span class="sub">5 porquês</span>' + p.porques.map(function(t, k){ var r = !p.raizPropria && k === p.porques.length - 1; return '<div class="pq' + (r ? ' raiz' : '') + '"><i>' + (r ? 'Causa raiz' : (k + 1) + 'º por quê') + '</i>' + esc(t) + '</div>'; }).join('') + (p.raizPropria ? '<div class="pq raiz"><i>Causa raiz</i>' + esc(p.raiz) + '</div>' : '') + '</div>' +
       '<div><span class="sub">Plano de ação — 5W2H</span><table><thead><tr>' + W.map(function(w){ return '<th>' + w[1] + '</th>'; }).join('') + '<th>Status</th></tr></thead><tbody>' +
       p.acoes.map(function(a){ return '<tr>' + W.map(function(w){ return '<td>' + (esc(a[w[0]]) || '—') + '</td>'; }).join('') + '<td><span class="st ' + COR[a.status] + '">' + a.status + '</span></td></tr>'; }).join('') + '</tbody></table></div></div></details>';
