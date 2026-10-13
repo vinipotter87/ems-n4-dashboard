@@ -131,3 +131,61 @@ body{font-family:'Sora',system-ui,-apple-system,'Segoe UI',Arial,sans-serif;back
 .jpcol.start .jpcol-hdr{background:var(--azul);color:var(--navy)}
 .jpcol.start .jpcol-hdr::after{background:var(--navy);opacity:.06}
 .jpcol-count{z-index:1}
+
+/* ── KPIs: topo uniforme em azul claro; o status vira um ponto discreto ao lado do rótulo ── */
+.kpi{border-top-color:var(--azul)!important}
+.kpi-lbl{display:flex;align-items:center;gap:6px}
+.kpi.r .kpi-lbl::before,.kpi.g .kpi-lbl::before,.kpi.o .kpi-lbl::before,.kpi.n .kpi-lbl::before{content:"";flex:none;width:7px;height:7px;border-radius:50%}
+.kpi.r .kpi-lbl::before{background:#D9596B}
+.kpi.g .kpi-lbl::before{background:#3FA57C}
+.kpi.o .kpi-lbl::before{background:#E9A23B}
+.kpi.n .kpi-lbl::before{background:var(--nexus)}
+.kpi a[href="budget.html"]{color:var(--navy)!important}
+
+/* ── PEX: mantém a cor de cada medalha, mas em versão suave (fundo claro + faixa no topo + texto escuro) ── */
+.pexcol-hdr{border-top:4px solid;color:var(--navy)}
+.pexcol-label,.pexcol-range{opacity:.8}
+.pexcol.ouro    .pexcol-hdr{background:#FBF4DC;border-top-color:#D4A017;color:#6E520A}
+.pexcol.prata   .pexcol-hdr{background:#EEF1F5;border-top-color:#8B95A5;color:#374151}
+.pexcol.bronze  .pexcol-hdr{background:#F8ECE1;border-top-color:#C4803F;color:#6B3A1F}
+.pexcol.atencao .pexcol-hdr{background:#FDEEDD;border-top-color:#EC8A3A;color:#8A4310}
+.pexcol.critico .pexcol-hdr{background:#FBE6E8;border-top-color:#D9596B;color:#8B1A2B}
+
+/* ── Cartões de distrito: mesma receita suave do PEX (fundo claro da linha + faixa no topo) ── */
+.nc .dcard-hd{background:var(--nexus-l);color:var(--nexus-d);border-top:4px solid var(--nexus)}
+.vc .dcard-hd{background:var(--red-l);color:var(--red-d);border-top:4px solid var(--red)}
+.dcard-hd::after{display:none}
+.dcard-linha{opacity:.85}.dcard-cod{opacity:.7}
+.dcard-hd .prod-badge,.dcard-hd .prod-badge.pb-alt{background:#fff;border:1.5px solid currentColor}
+.dcard-hd .pb-n{color:inherit}.dcard-hd .pb-l{color:inherit;opacity:.75}
+
+/* ── Botões ativos que ainda usavam azul/teal/roxo fixos ── */
+.mtz-ytd-btn.active,.crmp-mes-btn.active,.gap-tab.mtz-all-tab.active{background:var(--navy);border-color:var(--navy);color:#fff}
+.gap-tab.mtz-all-tab{border-color:var(--border);color:var(--aco)}
+.gloss-card .gc-abbr{background:var(--navy)}
+
+/* ── Modo apresentação: capa e índice na paleta (navy + azul claro), sem o azul vivo ── */
+#apres{background:#17233A}
+.ap-capa{background:
+  radial-gradient(560px 560px at 90% -6%,rgba(87,135,162,.42) 0%,rgba(87,135,162,0) 62%),
+  radial-gradient(420px 420px at 2% 104%,rgba(182,228,250,.13) 0%,rgba(182,228,250,0) 60%),
+  var(--navy)}
+.ap-capa-k:after{background:linear-gradient(90deg,var(--azul),rgba(182,228,250,.12))}
+.ap-capa h2{font-weight:800;text-shadow:none}
+.ap-capa h2 span{background:none;-webkit-background-clip:border-box;background-clip:border-box;color:var(--azul);font-weight:200}
+.ap-indice button,.ap-escolha button{background:rgba(182,228,250,.07);border:1px solid rgba(182,228,250,.26)}
+.ap-indice button:hover,.ap-escolha button:hover{background:rgba(182,228,250,.16);border-color:var(--azul);box-shadow:none}
+.ap-ind-t,.ap-escolha small{color:var(--azul-txt)}
+.ap-indice b,.ap-escolha i{background:var(--azul);color:var(--navy);box-shadow:none}
+.ap-escolha i svg{stroke:var(--navy)}
+.ap-escolha button.atual{background:rgba(182,228,250,.2);border-color:var(--azul);box-shadow:0 0 0 1px var(--azul)}
+.ap-btn{border-color:var(--aco);border-radius:999px;background:transparent;color:var(--azul-txt)}
+.ap-btn:hover:not(:disabled){background:rgba(182,228,250,.16)}
+.ap-dots button.on{background:var(--azul);color:var(--navy)}
+.ap-hdr h2{color:var(--navy)}
+
+/* ── Apresentação · cartões de Fundamentos: mesmas faixas suaves dos KPIs ── */
+.ap-fund-c{border-top-color:#3FA57C;border-radius:12px}
+.ap-fund-c.desvio{border-top-color:#D9596B;background:#FFFAFA}
+.ap-fund-c.sem{border-top-color:var(--border)}
+.ap-diag{border-left-color:var(--aco)}

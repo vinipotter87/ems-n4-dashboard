@@ -1472,7 +1472,7 @@ function buildVisitasChart(canvasId, meses, distritos) {
   if (!ctx) return;
   if (VISITAS_CHART) { VISITAS_CHART.destroy(); VISITAS_CHART = null; }
 
-  var NEX_COLORS = ['#1e3a8a','#2563eb','#38bdf8','#06b6d4'];
+  var NEX_COLORS = ['#12735A','#2FA37C','#84CFA9','#0F9D8A'];
   var VIT_COLORS = ['#7f1d1d','#b91c1c','#f43f5e','#fb7185'];
   var nexDists = distritos.filter(function(d){ return d.linha === 'NEXUS'; });
   var vitDists = distritos.filter(function(d){ return d.linha === 'VITAL'; });
@@ -3133,7 +3133,7 @@ async function apresAbrir() {
 }
 
 // fundo decorativo das capas (mesmo visual da entrada do Copiloto de RPS)
-var APRES_DECO = '<svg class="ap-deco" viewBox="0 0 1330 750" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs><linearGradient id="apdg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2f9bff" stop-opacity="0"/><stop offset="1" stop-color="#4fc3ff" stop-opacity=".9"/></linearGradient><pattern id="apdp" width="9" height="9" patternUnits="userSpaceOnUse"><circle cx="1.5" cy="1.5" r="1.1" fill="#6fb6ff" opacity=".35"/></pattern></defs><path d="M0 60 C120 10 240 -10 360 0 L0 0Z" fill="#0d4fc4" opacity=".35"/><path d="M-20 250 C40 120 180 30 420 -10" fill="none" stroke="#3aa0ff" stroke-opacity=".35" stroke-width="1.5"/><path d="M1330 0 C1160 90 1050 240 1040 470 C1034 600 1120 700 1330 750Z" fill="#0a3aa6" opacity=".4"/><path d="M1010 -10 C760 120 620 300 560 520" fill="none" stroke="#3aa0ff" stroke-opacity=".28" stroke-width="1.5"/><path d="M0 600 C200 520 380 640 600 690 C820 740 1080 640 1330 700 L1330 750 L0 750Z" fill="#0b55d2" opacity=".35"/><path d="M0 640 C220 580 420 700 640 720 C860 740 1100 690 1330 730" fill="none" stroke="#2f9bff" stroke-opacity=".5" stroke-width="2"/><g fill="#3d8bff" opacity=".2"><rect x="1018" y="216" width="28" height="24"/><rect x="1068" y="188" width="28" height="52"/><rect x="1118" y="158" width="28" height="82"/><rect x="1168" y="126" width="30" height="114"/><rect x="1228" y="142" width="30" height="98"/></g><path d="M1010 236 C1100 232 1200 180 1285 68" fill="none" stroke="url(#apdg)" stroke-width="2.5"/><circle cx="1285" cy="67" r="13" fill="#2f9bff" opacity=".3"/><circle cx="1285" cy="67" r="7" fill="#35a8ff"/><rect x="930" y="170" width="150" height="110" fill="url(#apdp)"/><rect x="0" y="640" width="150" height="100" fill="url(#apdp)"/></svg>';
+var APRES_DECO = '<svg class="ap-deco" viewBox="0 0 1330 750" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs><linearGradient id="apdg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#B6E4FA" stop-opacity="0"/><stop offset="1" stop-color="#B6E4FA" stop-opacity=".9"/></linearGradient><pattern id="apdp" width="9" height="9" patternUnits="userSpaceOnUse"><circle cx="1.5" cy="1.5" r="1.1" fill="#BFE3F8" opacity=".35"/></pattern></defs><path d="M0 60 C120 10 240 -10 360 0 L0 0Z" fill="#2E4560" opacity=".35"/><path d="M-20 250 C40 120 180 30 420 -10" fill="none" stroke="#B6E4FA" stroke-opacity=".35" stroke-width="1.5"/><path d="M1330 0 C1160 90 1050 240 1040 470 C1034 600 1120 700 1330 750Z" fill="#26374F" opacity=".4"/><path d="M1010 -10 C760 120 620 300 560 520" fill="none" stroke="#B6E4FA" stroke-opacity=".28" stroke-width="1.5"/><path d="M0 600 C200 520 380 640 600 690 C820 740 1080 640 1330 700 L1330 750 L0 750Z" fill="#34506B" opacity=".35"/><path d="M0 640 C220 580 420 700 640 720 C860 740 1100 690 1330 730" fill="none" stroke="#B6E4FA" stroke-opacity=".5" stroke-width="2"/><g fill="#5787A2" opacity=".2"><rect x="1018" y="216" width="28" height="24"/><rect x="1068" y="188" width="28" height="52"/><rect x="1118" y="158" width="28" height="82"/><rect x="1168" y="126" width="30" height="114"/><rect x="1228" y="142" width="30" height="98"/></g><path d="M1010 236 C1100 232 1200 180 1285 68" fill="none" stroke="url(#apdg)" stroke-width="2.5"/><circle cx="1285" cy="67" r="13" fill="#B6E4FA" opacity=".3"/><circle cx="1285" cy="67" r="7" fill="#B6E4FA"/><rect x="930" y="170" width="150" height="110" fill="url(#apdp)"/><rect x="0" y="640" width="150" height="100" fill="url(#apdp)"/></svg>';
 // Tela de escolha do GD — usada na entrada sem filtro e pelo botão "Trocar GD"
 function apresMostrarEscolha() {
   var ds = (DADOS_CACHE[MES_ATUAL] || {}).distritos || [];
@@ -7961,7 +7961,7 @@ function renderEvolucaoDiag(meses) {
     '</div>';
 
   // ── Gráficos Chart.js ────────────────────────────────────────
-  var NEX_PALETTE = ['#1e3a8a','#2563eb','#38bdf8','#06b6d4'];
+  var NEX_PALETTE = ['#12735A','#2FA37C','#84CFA9','#0F9D8A'];
   var VIT_PALETTE = ['#7f1d1d','#b91c1c','#f43f5e','#fb7185'];
 
   function buildTrendChart(canvasId, lista, palette) {
