@@ -6862,7 +6862,9 @@ function renderTudo(dados, mes) {
   html += renderProdutoAtingimento(dados);
 
   // 6.5 DADOS DE MERCADO (prescription share, market share e principal concorrente por marca-chave)
-  html += renderMercadoMes(mes);
+  // com um GD filtrado, os dados de mercado do distrito já estão no painel de detalhe dele
+  // (prescrição, market share, concorrentes e setores) — o panorama repetiria os mesmos números
+  if (!DISTRITO_FILTRO) html += renderMercadoMes(mes);
 
   // 7. Chart
   html += renderChartProdutividade(distritos, mes);
