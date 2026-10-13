@@ -7,7 +7,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 :root{--red:#C8102E;--red-d:#8B0B1F;--red-l:#fce8ec;--orange:#E87722;--orange-l:#FFF3E0;
---nexus:#1A3A6B;--nexus-l:#EEF2FA;--green:#15693A;--green-l:#E8F5EE;
+--nexus:#12735A;--nexus-l:#EEF2FA;--green:#15693A;--green-l:#E8F5EE;
 --yellow:#9C6D00;--yellow-l:#FFF7E0;--dark:#111827;--gray:#6B7280;
 --light:#F3F4F6;--border:#E5E7EB;--white:#FFFFFF;
 --brand:#0057B8;--brand-d:#003D82;--brand-hi:#1874D9}
@@ -77,7 +77,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
 .dcard:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.12);border-color:var(--red)}
 .dcard.ativo{border-color:var(--red);box-shadow:0 4px 16px rgba(200,16,46,.2)}
 .dcard-hd{padding:14px 16px 12px;color:#fff;position:relative}
-.nc .dcard-hd{background:linear-gradient(135deg,#152E58,#1A3A6B)}
+.nc .dcard-hd{background:linear-gradient(135deg,#152E58,#12735A)}
 .vc .dcard-hd{background:linear-gradient(135deg,#7A0A1C,#C8102E)}
 .dcard-linha{font-size:9px;font-weight:700;letter-spacing:1.5px;opacity:.7;margin-bottom:3px}
 .dcard-nome{font-size:13px;font-weight:700;line-height:1.3}
@@ -896,6 +896,7 @@ body.apres-on{overflow:hidden}
 #ap-cnt{font-size:12px;font-weight:700;opacity:.8;min-width:54px;text-align:right}
 .cycle-btn.gov-btn{border-color:var(--border);color:var(--gray)}
 </style>
+<link rel="stylesheet" href="tema-ems.css">
 </head>
 <body>
 
@@ -906,7 +907,7 @@ body.apres-on{overflow:hidden}
 
 <div class="hdr">
   <div class="hdr-inner">
-    <div class="logo">EMS</div>
+    <div class="logo"><img src="assets/logo-grupo-ems.png" alt="Grupo EMS"></div>
     <select class="regional-select" id="regional-select" onchange="if(this.value==='SPI')location.href='index.html'">
       <option value="SPI">Regional SPI</option>
       <option value="LESTE" selected>Regional LESTE</option>
@@ -961,9 +962,9 @@ var VIEW_ATUAL = 'principal'; // 'principal' | 'analise'
 // Jornada stages — cores e ordem de hierarquia
 var JORNADA_ORDER = ['Destaque','Performance','Start'];
 var JORNADA_CFG = {
-  'Destaque':    {bg:'#D1FAE5', color:'#065f46', border:'#6EE7B7', cls:'destaque',    icon:'⭐', sub:'Sênior'},
-  'Performance': {bg:'#FEF3C7', color:'#78350F', border:'#FCD34D', cls:'performance', icon:'📈', sub:'Pleno'},
-  'Start':       {bg:'#FEE2E2', color:'#7f1d1d', border:'#FCA5A5', cls:'start',       icon:'🌱', sub:'Júnior'}
+  'Destaque':    {bg:'#1F2D44', color:'#FFFFFF', border:'#1F2D44', cls:'destaque',    icon:'⭐', sub:'Sênior'},
+  'Performance': {bg:'#5787A2', color:'#FFFFFF', border:'#5787A2', cls:'performance', icon:'📈', sub:'Pleno'},
+  'Start':       {bg:'#DFF1FB', color:'#1F2D44', border:'#B6E4FA', cls:'start',       icon:'🌱', sub:'Júnior'}
 };
 
 // Ordem dos meses para navegação e comparação
@@ -1408,7 +1409,7 @@ function renderBudgetPorGd() {
   [['NEXUS', '1105'], ['VITAL', '1165']].forEach(function(par) {
     var ks = chaves.filter(function(k){ return k.substring(0, 4) === par[1]; });
     if (!ks.length) return;
-    html += '<tr class="row-sep"><td colspan="5">' + (par[0] === 'NEXUS' ? '🔵 NEXUS' : '🔴 VITAL') + '</td></tr>';
+    html += '<tr class="row-sep"><td colspan="5">' + (par[0] === 'NEXUS' ? '🟢 NEXUS' : '🔴 VITAL') + '</td></tr>';
     var linV = 0, linU = 0;
     ks.forEach(function(k) {
       var g = BUDGET_VERBA_GD[k], u = usadoDe(g.gd);
@@ -1574,7 +1575,7 @@ function renderVisitasTable(meses, distritos) {
   }
 
   // Separador NEXUS
-  html += '<tr class="row-sep"><td colspan="' + (1 + nMeses * 4) + '">🔵 NEXUS</td></tr>';
+  html += '<tr class="row-sep"><td colspan="' + (1 + nMeses * 4) + '">🟢 NEXUS</td></tr>';
   nexDists.forEach(function(d){ html += buildRow(d, 'NEXUS', 'row-nexus'); });
 
   // Separador VITAL
@@ -1621,7 +1622,7 @@ function renderVisitasMes(dados, mes, distritos) {
   html += '<div class="visitas-table-wrap"><table class="visitas-table"><thead>';
   html += '<tr><th class="th-gd">GD</th><th class="th-mes">Obj</th><th class="th-mes">Real</th><th class="th-mes">Cob%</th><th class="th-mes">Dias</th></tr>';
   html += '</thead><tbody>';
-  html += '<tr class="row-sep"><td colspan="5">🔵 NEXUS</td></tr>';
+  html += '<tr class="row-sep"><td colspan="5">🟢 NEXUS</td></tr>';
   html += buildRows(nexDists, 'NEXUS', visitasNex);
   html += '<tr class="row-sep"><td colspan="5">🔴 VITAL</td></tr>';
   html += buildRows(vitDists, 'VITAL', visitasVit);
@@ -1756,7 +1757,7 @@ function renderCrmAnual(meses, distritos) {
   html += '</tr><tr>';
   meses.forEach(function() { html += '<th class="th-mes">Obj</th><th class="th-mes">Real</th><th class="th-mes">Cob%</th>'; });
   html += '</tr></thead><tbody>';
-  html += '<tr class="row-sep"><td colspan="' + totalCols + '">🔵 NEXUS</td></tr>';
+  html += '<tr class="row-sep"><td colspan="' + totalCols + '">🟢 NEXUS</td></tr>';
   nexDists.forEach(function(d){ html += buildRow(d, 'row-nexus'); });
   html += '<tr class="row-sep"><td colspan="' + totalCols + '">🔴 VITAL</td></tr>';
   vitDists.forEach(function(d){ html += buildRow(d, 'row-vital'); });
@@ -2029,7 +2030,7 @@ function renderFrequenciaDistTable(dist, distAnt, cicloAnt) {
   ['NEXUS', 'VITAL'].forEach(function(linha) {
     var rows = dist.filter(function(d) { return d.linha === linha; });
     if (!rows.length) return; // linha ausente com filtro de distrito ativo — não mostra grupo vazio
-    html += '<tr class="row-sep"><td colspan="' + nCols + '">' + (linha === 'NEXUS' ? '🔵 NEXUS' : '🔴 VITAL') + '</td></tr>';
+    html += '<tr class="row-sep"><td colspan="' + nCols + '">' + (linha === 'NEXUS' ? '🟢 NEXUS' : '🔴 VITAL') + '</td></tr>';
     rows.forEach(function(d) {
       html += '<tr class="' + (linha === 'NEXUS' ? 'row-nexus' : 'row-vital') + '">';
       html += '<td class="td-gd">' + d.gd + '</td><td>' + d.setores + '</td><td>' + freqFmt(d.painel) + '</td>';
@@ -2099,7 +2100,7 @@ function renderFrequenciaEvolucao(prefixo) {
   } else {
     var distCiclo = ciclos.map(function(c) { return freqDistritos(c); });
     ['NEXUS', 'VITAL'].forEach(function(linha) {
-      html += '<tr class="row-sep"><td colspan="' + nCols + '">' + (linha === 'NEXUS' ? '🔵 NEXUS' : '🔴 VITAL') + '</td></tr>';
+      html += '<tr class="row-sep"><td colspan="' + nCols + '">' + (linha === 'NEXUS' ? '🟢 NEXUS' : '🔴 VITAL') + '</td></tr>';
       distCiclo[distCiclo.length - 1].filter(function(d) { return d.linha === linha; }).forEach(function(d) {
         var cobs = distCiclo.map(function(lst) { var x = lst.find(function(y) { return y.distrito_id === d.distrito_id; }); return x ? x.cob : null; });
         html += linhaHtml(linha === 'NEXUS' ? 'row-nexus' : 'row-vital', '', d.gd, cobs);
@@ -4481,7 +4482,7 @@ function getCellPexRegional(mes) {
 
 // ── Visão Anual — gráficos interativos ──────────────────────────
 
-var ANUAL_NEXUS_COLORS = ['#1e3a8a','#2563eb','#38bdf8','#06b6d4'];
+var ANUAL_NEXUS_COLORS = ['#12735A','#2FA37C','#84CFA9','#0F9D8A'];
 var ANUAL_VITAL_COLORS = ['#7f1d1d','#b91c1c','#f43f5e','#fb7185'];
 
 function buildAnualDatasets(meses, distritos, getRegional, getLinha, getDist) {
@@ -4502,7 +4503,7 @@ function buildAnualDatasets(meses, distritos, getRegional, getLinha, getDist) {
   datasets.push({
     label: 'NEXUS média',
     data: meses.map(function(m){ return getLinha(m, 'NEXUS'); }),
-    borderColor: '#1A3A6B', backgroundColor: 'transparent',
+    borderColor: '#12735A', backgroundColor: 'transparent',
     borderWidth: 2.5, borderDash: [8,4],
     pointRadius: 4, pointHoverRadius: 6,
     tension: .35, fill: false, _group: 'nexus-avg'
@@ -4686,7 +4687,7 @@ function buildAnualFilterBar(chartId, distritos) {
   html += '<button class="afbtn afbtn-vital" onclick="anualFilter(\'' + chartId + '\',\'vital\',this)">VITAL</button>';
   html += '<span class="anual-filter-sep"></span>';
   html += '<span class="aleg"><span class="aleg-line" style="background:#111827"></span>Regional</span>';
-  html += '<span class="aleg"><span class="aleg-line aleg-dashed" style="border-top-color:#1A3A6B"></span>NEXUS méd.</span>';
+  html += '<span class="aleg"><span class="aleg-line aleg-dashed" style="border-top-color:#12735A"></span>NEXUS méd.</span>';
   html += '<span class="aleg"><span class="aleg-line aleg-dashed" style="border-top-color:#7A0A1C"></span>VITAL méd.</span>';
   html += '</div>';
 
@@ -4757,7 +4758,7 @@ function buildMarcaChaveDatasets(meses) {
     datasets.push({
       label: marca + ' (N)',
       data: meses.map(function(m){ return getCellMarcaRegional(m, marca, 'NEXUS'); }),
-      borderColor: MARCA_NEXUS_COLORS[marca] || '#1e3a8a',
+      borderColor: MARCA_NEXUS_COLORS[marca] || '#12735A',
       backgroundColor: 'transparent',
       borderWidth: 2.2, pointRadius: 4, pointHoverRadius: 6,
       tension: .35, fill: false, _group: 'nexus', _marca: marca
@@ -4802,7 +4803,7 @@ function buildMarcaFilterBar(chartId) {
   html += '<div class="anual-filter-dists">';
   html += '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)">Marcas:</span>';
   marcasChaveUniao('NEXUS').forEach(function(marca) {
-    var c = MARCA_NEXUS_COLORS[marca] || '#1e3a8a';
+    var c = MARCA_NEXUS_COLORS[marca] || '#12735A';
     html += '<button class="adtbtn active" data-marca="' + marca + '" style="--dt-color:' + c + '"' +
       ' onclick="anualToggleMarca(\'' + chartId + '\',\'' + marca + '\',this)">' +
       '<span class="adt-dot" style="background:' + c + '"></span>' + marca + '</button>';
@@ -4914,7 +4915,7 @@ function buildMarcaDistFilterBar() {
   html += '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)">Marca:</span>';
   var uniaoNexus = marcasChaveUniao('NEXUS');
   uniaoNexus.forEach(function(marca) {
-    var c = MARCA_NEXUS_COLORS[marca] || '#1e3a8a';
+    var c = MARCA_NEXUS_COLORS[marca] || '#12735A';
     var isFirst = marca === uniaoNexus[0];
     html += '<button class="adtbtn mcd-brand-btn' + (isFirst ? ' active' : '') + '" data-marca="' + marca + '"' +
       ' style="--dt-color:' + c + ';font-size:10px" onclick="switchMarcaDist(\'' + marca + '\',\'NEXUS\')">' +
@@ -5101,11 +5102,11 @@ function cotaSeries() {
   var dist = cotaDistFiltro();
   if (dist) return [
     { label: cotaDistNome(dist), key: 'DIST', color: '#111827', width: 3, dash: [] },
-    { label: dist.linha + ' regional', key: dist.linha, color: dist.linha === 'NEXUS' ? '#1A3A6B' : '#b91c1c', width: 2.2, dash: [8,4] }
+    { label: dist.linha + ' regional', key: dist.linha, color: dist.linha === 'NEXUS' ? '#12735A' : '#b91c1c', width: 2.2, dash: [8,4] }
   ];
   return [
     { label: 'Total Regional', key: 'TOTAL', color: '#111827', width: 3,   dash: [] },
-    { label: 'NEXUS',          key: 'NEXUS', color: '#1A3A6B', width: 2.2, dash: [8,4] },
+    { label: 'NEXUS',          key: 'NEXUS', color: '#12735A', width: 2.2, dash: [8,4] },
     { label: 'VITAL',          key: 'VITAL', color: '#b91c1c', width: 2.2, dash: [8,4] }
   ];
 }
@@ -5883,12 +5884,12 @@ function renderEvolucaoCota(meses, distritos) {
   var ytdHtml = dist
     ? '<div class="cota-ytd-row" style="grid-template-columns:repeat(2,1fr)">' +
         renderCotaYTDCard('🎯 ' + distNome, '#111827', meses, 'DIST') +
-        renderCotaYTDCard((dist.linha === 'NEXUS' ? '🔵 ' : '🔴 ') + dist.linha + ' regional · referência',
-          dist.linha === 'NEXUS' ? '#1A3A6B' : '#b91c1c', meses, dist.linha) +
+        renderCotaYTDCard((dist.linha === 'NEXUS' ? '🟢 ' : '🔴 ') + dist.linha + ' regional · referência',
+          dist.linha === 'NEXUS' ? '#12735A' : '#b91c1c', meses, dist.linha) +
       '</div>'
     : '<div class="cota-ytd-row">' +
         renderCotaYTDCard('📍 Total Regional', '#111827', meses, null) +
-        renderCotaYTDCard('🔵 NEXUS', '#1A3A6B', meses, 'NEXUS') +
+        renderCotaYTDCard('🟢 NEXUS', '#12735A', meses, 'NEXUS') +
         renderCotaYTDCard('🔴 VITAL', '#b91c1c', meses, 'VITAL') +
       '</div>';
 

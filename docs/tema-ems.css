@@ -1,0 +1,133 @@
+/* Tema Grupo EMS — camada de identidade visual do slide kit (navy + azul claro, fonte Sora).
+   Carregado DEPOIS do <style> de index.html / leste.html: só sobrescreve cor, fonte e acabamento.
+   Linhas: NEXUS = verde (--nexus), VITAL = vermelho (--red). Cores de status não são alteradas aqui. */
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@200;300;400;500;600;700;800&display=swap');
+
+:root{
+  /* Paleta do slide kit Grupo EMS (mesma do dash-focus) */
+  --navy:#1F2D44; --navy-2:#1C2D46; --azul:#B6E4FA; --azul-txt:#BFE3F8; --gelo:#DFF1FB; --aco:#5787A2;
+  /* Neutros do dashboard remapeados para a paleta */
+  --bg:#F3F9FD; --text:#1F2D44; --dark:#1F2D44; --gray:#4E7A94; --light:#EEF6FB; --border:#D6E6F0;
+  --nexus:#12735A; --nexus-d:#0B5241; --nexus-l:#E3F4EE; /* linha NEXUS = verde; VITAL segue em --red */
+  --brand:#1F2D44; --brand-d:#1C2D46; --brand-hi:#5787A2;
+}
+
+body{font-family:'Sora',system-ui,-apple-system,'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--text)}
+.num,table td,.kpi-val{font-variant-numeric:tabular-nums}
+
+/* ── Cabeçalho: navy com as "moléculas" do slide kit ── */
+.hdr{background:var(--navy);overflow:hidden;box-shadow:0 2px 14px rgba(31,45,68,.28)}
+.hdr::before,.hdr::after{content:"";position:absolute;border-radius:50%;background:var(--navy-2);filter:brightness(1.35);opacity:.55;pointer-events:none}
+.hdr::before{width:260px;height:260px;right:-60px;top:-150px}
+.hdr::after{width:150px;height:150px;right:150px;top:-30px}
+.hdr-inner{position:relative;z-index:1;padding:14px 28px;gap:18px}
+.hdr .logo{background:none;padding:0;border-radius:0;display:flex;align-items:center}
+.hdr .logo img{height:20px;display:block}
+.hdr-sep{background:var(--aco);height:38px}
+.hdr-text h1{font-size:17px;font-weight:700;letter-spacing:-.2px}
+.hdr-text p{color:var(--gelo);font-size:11px;font-weight:300}
+.regional-select{background:transparent;border:1px solid var(--aco);color:var(--azul-txt);border-radius:999px;padding:6px 14px 6px 12px}
+.regional-select:hover{background:rgba(182,228,250,.12)}
+.regional-select:focus{border-color:var(--azul)}
+.hpill{background:transparent;border:1px solid var(--aco);color:var(--azul-txt);border-radius:999px;padding:5px 13px}
+.hpill.hi{background:var(--azul);border-color:var(--azul);color:var(--navy);font-weight:700}
+
+/* ── Menu (Mês · Análises · N4 | RPS | Gestão) ── */
+.cycle-bar{border-bottom:1px solid var(--border)}
+.cb-lbl{color:var(--aco);letter-spacing:1.2px;font-weight:700}
+.cycle-bar .cb-grp.g-n4 .cb-lbl,.cycle-bar .cb-grp.g-rps .cb-lbl,.cycle-bar .cb-grp.g-ges .cb-lbl{color:var(--navy)}
+.cycle-bar .cycle-btn{border:1px solid var(--border);border-radius:999px;color:var(--aco);font-weight:600;background:#fff}
+.cycle-bar .cb-grp .cycle-btn:not(.active):not(.apres-btn),
+.cycle-bar .cb-row .cycle-btn:not(.active):not(.apres-btn){border-color:var(--border);color:var(--aco)}
+.cycle-bar .cb-row .cycle-btn:hover:not(.active){border-color:var(--aco);color:var(--navy)}
+.cycle-bar .cb-row .cycle-btn.active,
+.cycle-bar .cb-grp .cycle-btn.active{background:var(--navy);border-color:var(--navy);color:#fff}
+.cycle-bar .cb-row .cycle-btn.apres-btn{background:var(--azul);border-color:var(--azul);color:var(--navy);font-weight:700}
+.cycle-bar .cb-row .cycle-btn.apres-btn:hover{background:var(--azul-txt);border-color:var(--aco)}
+.distrito-filtro-bar{background:#fff}
+.distrito-filtro-bar .df-label{color:var(--aco);font-size:10px;letter-spacing:1.2px;text-transform:uppercase}
+.distrito-filtro-bar select{border:1px solid var(--border);border-radius:999px;color:var(--navy);font-weight:600}
+.distrito-filtro-bar select:hover{border-color:var(--aco)}
+.distrito-filtro-bar select:focus{border-color:var(--navy)}
+
+/* ── Loading ── */
+.loading-overlay{background:rgba(243,249,253,.94)}
+.loading-spinner{border-color:var(--gelo);border-top-color:var(--navy)}
+
+/* ── Títulos de seção ── */
+.sec-title{color:var(--navy);letter-spacing:1.4px;font-size:11px}
+.cc-bar{background:var(--aco)}
+.badge.n{border-color:#A9D9C6}
+
+/* ── Cartões: borda fina no lugar de sombra pesada ── */
+.kpi,.prod-ating-card,.achados,.chart-card,.error-card,.analise-preview,.analise-page-hdr,.evo-card,.alertas-card,
+.anual-page-hdr,.anual-chart-card,.anual-table-wrap,.jpcol,.pexcol,.visitas-kpi,.visitas-chart-wrap{
+  border-radius:14px;box-shadow:0 1px 3px rgba(31,45,68,.05)}
+.kpi,.prod-ating-card,.achados,.chart-card,.error-card,.analise-page-hdr,.evo-card,.alertas-card,
+.anual-page-hdr,.anual-chart-card,.anual-table-wrap,.jpcol,.pexcol{border:1px solid var(--border)}
+.kpi{border-top:4px solid var(--azul)}
+.kpi-lbl{font-weight:700;letter-spacing:1px;color:var(--aco)}
+.kpi-sub{color:var(--gray)}
+.kpi-val{font-weight:700}
+
+/* ── Cartões de distrito ── */
+.dcard{border:1px solid var(--border);border-radius:14px;box-shadow:0 1px 3px rgba(31,45,68,.05)}
+.dcard:hover{border-color:var(--aco);box-shadow:0 8px 22px rgba(31,45,68,.12)}
+.dcard.ativo{border-color:var(--navy);box-shadow:0 0 0 2px var(--azul),0 6px 18px rgba(31,45,68,.14)}
+.dcard-hd{overflow:hidden}
+.nc .dcard-hd{background:linear-gradient(135deg,var(--nexus-d),var(--nexus))}
+.dcard-hd::after{content:"";position:absolute;width:150px;height:150px;border-radius:50%;right:-50px;top:-70px;background:#fff;opacity:.07;pointer-events:none}
+.prod-badges{z-index:1}
+.dcard-ft{background:var(--light)}
+.dcard-cta{color:var(--navy)}
+.distrito-detalhe{border:1px solid var(--navy);border-radius:14px;box-shadow:0 0 0 3px var(--gelo),0 6px 22px rgba(31,45,68,.12)}
+.dd-close:hover,.analise-back-btn:hover,.anual-back-btn:hover,.cota-back-btn:hover{background:var(--gelo);color:var(--navy);border-color:var(--aco)}
+.analise-back-btn,.anual-back-btn,.cota-back-btn{border-width:1px;border-radius:999px}
+.analise-preview{border:1px solid var(--border)}
+.analise-preview:hover{border-color:var(--aco);box-shadow:0 6px 20px rgba(31,45,68,.12)}
+.analise-preview-cta{color:var(--navy)}
+
+/* ── Abas e filtros internos ── */
+.ptab,.pdist-btn{border-width:1px;border-radius:999px;font-weight:600}
+.ptab:hover:not(.active),.pdist-btn:hover{border-color:var(--aco);color:var(--navy)}
+.pdist-btn.active{background:var(--gelo);border-color:var(--aco);color:var(--navy)}
+
+/* ── Tabelas ── */
+.dd-rep-table th,.prod-table th,.anual-table th{color:var(--aco);letter-spacing:.6px}
+.dd-rep-table tr:hover td,.prod-table tr:hover td,.anual-table .row-dist:hover td,.jrep2:hover,.pexrep:hover{background:#F7FBFE}
+.anual-table th.mes-col:hover{background:var(--gelo);color:var(--navy)}
+.anual-table .row-regional td{background:var(--light);border-bottom-color:var(--border)}
+.anual-table .row-linha td{background:var(--nexus-l);border-bottom-color:#A9D9C6}
+.anual-table .row-nexus-avg td{background:#F3FAF7}
+.jdist-hdr:hover{background:var(--gelo)}
+
+/* ── Modo apresentação ── */
+.ap-top{background:var(--navy)}
+.ap-top .logo{background:var(--azul);color:var(--navy)}
+.ap-slide{background:var(--bg)}
+.ap-hdr{border-bottom-color:var(--azul)}
+#ap-diag-full .ap-diag-h{border-bottom-color:var(--azul)}
+.ap-plano{border-left-color:var(--aco)}
+
+/* ── Linha NEXUS em verde (sobrescreve os azuis fixos do CSS original) ── */
+.cota-table .row-nexus td{background:var(--nexus-l)}
+.visitas-kpi.nexus,.gloss-card.nexus-accent{border-left-color:var(--nexus)}
+.visitas-table th.th-linha-nexus{background:var(--nexus-l);color:var(--nexus);border-left-color:var(--nexus)}
+.visitas-table tr.row-nexus td.td-gd{color:var(--nexus)}
+.gc-tag.t-nexus,.crm-linha-badge.nexus{background:var(--nexus-l);color:var(--nexus)}
+
+/* ── Abas neutras (não são de linha) seguem navy; abas NEXUS/VITAL mantêm a cor da linha ── */
+.ptab.active[onclick*="switchProdNivel"]{background:var(--navy);border-color:var(--navy);color:#fff}
+.afbtn,.cota-tab,.gap-tab,.mtz-p-tab{border-width:1px;border-radius:999px;font-weight:600}
+.afbtn:hover:not(.active),.mtz-p-tab:hover:not(.active){border-color:var(--aco);color:var(--navy)}
+.afbtn.active{background:var(--gelo);border-color:var(--aco);color:var(--navy)}
+.mtz-p-tab.active{background:var(--navy);border-color:var(--navy);color:#fff}
+
+/* ── Jornada de Evolução: degrau de senioridade na paleta (navy → aço → azul claro), sem verde/âmbar/vermelho ── */
+.jpcol-hdr{overflow:hidden}
+.jpcol-hdr::after{content:"";position:absolute;width:190px;height:190px;border-radius:50%;right:-60px;top:-95px;background:#fff;opacity:.07;pointer-events:none}
+.jpcol.destaque .jpcol-hdr{background:var(--navy)}
+.jpcol.performance .jpcol-hdr{background:var(--aco)}
+.jpcol.start .jpcol-hdr{background:var(--azul);color:var(--navy)}
+.jpcol.start .jpcol-hdr::after{background:var(--navy);opacity:.06}
+.jpcol-count{z-index:1}
