@@ -323,6 +323,20 @@ def processar_produtividade(xlsx_bytes: bytes, mes: str, regional: str = "SPI") 
     # Mapa: distrito_id → nome do GD extraído do arquivo do mês
     gd_nomes_mes: dict[str, str] = {}
 
+    # Escala dos percentuais decidida pela coluna inteira: o export do Power BI traz
+    # fração (0,83 = 83%) e, com o mês em andamento, a projeção passa de 150% (1,92).
+    # parse_pct sozinho leria 1,92 como 1,92%.
+    def pct_coluna(col):
+        if col not in df.columns:
+            return lambda v: None
+        nums = pd.to_numeric(df[col], errors="coerce").dropna()
+        fracao = pd.api.types.is_numeric_dtype(df[col]) and len(nums) > 0 and nums.max() <= 5
+        def conv(v):
+            p = parse_pct(v)
+            return round(float(v) * 100, 1) if fracao and p is not None else p
+        return conv
+    pct_de = {c: pct_coluna(c) for c in ("Q1", "Q2", "Q3", "Q4", "Q1-Q3", "Cob. Painel")}
+
     reps = []
     for _, row in df.iterrows():
         setor_raw = str(row.get(col_setor, ""))
@@ -350,11 +364,12 @@ def processar_produtividade(xlsx_bytes: bytes, mes: str, regional: str = "SPI") 
             "distrito_id":     did,
             "linha":           linha_fn(parsed["setor_id"]),
             "prod":            prod_pct,
-            "q1":              parse_pct(row.get("Q1")),
-            "q2":              parse_pct(row.get("Q2")),
-            "q3":              parse_pct(row.get("Q3")),
-            "q4":              parse_pct(row.get("Q4")),
-            "cob_painel":      parse_pct(row.get("Cob. Painel")),
+            "q1":              pct_de["Q1"](row.get("Q1")),
+            "q2":              pct_de["Q2"](row.get("Q2")),
+            "q3":              pct_de["Q3"](row.get("Q3")),
+            "q4":              pct_de["Q4"](row.get("Q4")),
+            "q1_q3":           pct_de["Q1-Q3"](row.get("Q1-Q3")),   # consolidado que pontua no PEX
+            "cob_painel":      pct_de["Cob. Painel"](row.get("Cob. Painel")),
             "dias_trabalhados": parse_float(row.get("Dias Trabalhados")),
         })
 
@@ -1307,6 +1322,7 @@ def criar_stubs_sem_produtividade(mes: str, rep_nex: list, rep_vit: list, region
                 "q2":               None,
                 "q3":               None,
                 "q4":               None,
+                "q1_q3":            None,
                 "cob_painel":       None,
                 "dias_trabalhados": None,
             }

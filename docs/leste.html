@@ -1032,6 +1032,8 @@ function pct(v) {
   return f !== null ? f.toFixed(1) + '%' : '—';
 }
 
+// Cor do Q1-Q3 (indicador do PEX) pela meta de 90%
+function q13Cor(v) { return v === null ? 'inherit' : v >= 90 ? '#059669' : v >= 80 ? '#d97706' : '#ef4444'; }
 function atClass(v) {
   var f = safeFloat(v);
   if (f === null) return '';
@@ -2528,6 +2530,7 @@ function apresFundamentos() {
   var prod = n(d.prod); if (prod !== null && prod < 5) prod *= 100;
   var abaixo = reps.filter(function(r) { return n(r.prod) < 100; }).length;
   add('Produtividade (MDV)', prod, '≥ 100%', prod < 100 || abaixo > 0, abaixo ? abaixo + ' de ' + reps.length + ' reps abaixo de 100%' : 'todos os reps em 100% ou mais');
+  var q13 = media('q1_q3'); add('Cobertura Q1-Q3 (PEX)', q13, '≥ 90%', q13 < 90, 'média dos reps · pontua no PEX');
   [['q1', 'Cobertura Q1'], ['q2', 'Cobertura Q2'], ['q3', 'Cobertura Q3']].forEach(function(q) { var v = media(q[0]); add(q[1], v, '≥ 90%', v < 90, 'média dos reps'); });
   var cp = media('cob_painel'); add('Cobertura de painel', cp, '≥ 90%', cp < 90, 'média dos reps');
   var vis = (D.visitasNex || []).concat(D.visitasVit || [])[0];
@@ -3971,6 +3974,7 @@ function mediaQDist(repsArr, distId, qKey) {
 // Grid de 8 distritos mostrando Q1-Q4 com delta vs mês anterior
 function buildEvoGridQ(dists, repsAtu, repsAnt) {
   var QS = [
+    { key:'q1_q3', label:'Q1-Q3', pex:true },
     { key:'q1', label:'Q1' }, { key:'q2', label:'Q2' },
     { key:'q3', label:'Q3' }, { key:'q4', label:'Q4' }
   ];
@@ -3988,11 +3992,12 @@ function buildEvoGridQ(dists, repsAtu, repsAnt) {
       var delCls  = del === null ? 'color:#aaa' : del >= 1 ? 'color:#059669' : del <= -1 ? 'color:#ef4444' : 'color:#d97706';
       var delIcon = del === null ? '' : del >= 1 ? '▲' : del <= -1 ? '▼' : '●';
       var delStr  = del !== null ? (del >= 0 ? '+' : '') + del.toFixed(1) + 'pp' : '—';
-      rows += '<div style="display:flex;align-items:center;gap:4px;font-size:11px;border-top:1px solid #f0f0f0;padding:3px 0">' +
-        '<span style="color:var(--gray);font-weight:700;min-width:18px">' + qItem.label + '</span>' +
+      // Q1-Q3 é o consolidado que pontua no PEX (meta 90%): linha em destaque, cor pela meta
+      rows += '<div style="display:flex;align-items:center;gap:4px;font-size:11px;' + (qItem.pex ? 'background:#eef2ff;border-radius:5px;padding:4px 5px;margin-bottom:2px' : 'border-top:1px solid #f0f0f0;padding:3px 0') + '"' + (qItem.pex ? ' title="Q1 a Q3 consolidado — indicador que pontua no PEX (meta 90%)"' : '') + '>' +
+        '<span style="color:' + (qItem.pex ? '#3730a3' : 'var(--gray)') + ';font-weight:' + (qItem.pex ? 800 : 700) + ';min-width:18px;white-space:nowrap">' + qItem.label + (qItem.pex ? ' <small style="font-size:8px;letter-spacing:.4px">PEX</small>' : '') + '</span>' +
         '<span style="color:#bbb;font-size:10px">' + (pAn !== null ? pAn.toFixed(1)+'%' : '—') + '</span>' +
         '<span style="color:#ddd;font-size:10px">→</span>' +
-        '<span style="font-weight:800;flex:1">' + (pAt !== null ? pAt.toFixed(1)+'%' : '—') + '</span>' +
+        '<span style="font-weight:800;flex:1' + (qItem.pex ? ';color:' + q13Cor(pAt) : '') + '">' + (pAt !== null ? pAt.toFixed(1)+'%' : '—') + '</span>' +
         '<span style="' + delCls + ';font-weight:700;font-size:10px;white-space:nowrap">' + delIcon + (del !== null ? ' '+delStr : '') + '</span>' +
       '</div>';
     });
@@ -4124,11 +4129,18 @@ function renderEvolucao(dados, dadosAnt, mes, mesAnt, distritos) {
     var qRegAn = avgQRegional(repsAntQ);
     var qRegDel = (qRegAt !== null && qRegAn !== null) ? qRegAt - qRegAn : null;
     var qRegB = evoBadge(qRegDel);
+    // Q1-Q3 (PEX): quando o mês traz o consolidado, o selo passa a mostrá-lo no lugar da média dos Qs
+    function avgCampo(repsArr, campo) {
+      var vals = repsArr.map(function(r){ return safeFloat(r[campo]); }).filter(function(v){ return v !== null; });
+      return vals.length ? vals.reduce(function(a,b){return a+b;},0)/vals.length : null;
+    }
+    var q13At = avgCampo(repsAtu, 'q1_q3'), q13An = avgCampo(repsAntQ, 'q1_q3');
+    if (q13At !== null) qRegB = evoBadge(q13An !== null ? q13At - q13An : null);
 
     html += '<div style="border-top:1px solid var(--border);margin:14px 0 10px"></div>';
     html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">' +
-      '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--gray)">📋 Bimestres (Q1 · Q2 · Q3 · Q4)</span>' +
-      '<span class="evo-regional-delta" style="' + qRegB.cls + ';background:' + qRegB.bg + '">' + qRegB.icon + qRegB.str + ' &nbsp;Média Qs ' + (DISTRITO_FILTRO ? 'Distrito' : 'Regional') + '</span>' +
+      '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--gray)">📋 Bimestres (Q1 · Q2 · Q3 · Q4)' + (q13At !== null ? ' <span style="text-transform:none;letter-spacing:0;font-weight:600;color:#3730a3">· Q1-Q3 pontua no PEX (meta 90%)</span>' : '') + '</span>' +
+      '<span class="evo-regional-delta" style="' + qRegB.cls + ';background:' + qRegB.bg + '">' + (q13At !== null ? 'Q1-Q3 ' + (DISTRITO_FILTRO ? 'Distrito' : 'Regional') + ' <b style="color:' + q13Cor(q13At) + '">' + q13At.toFixed(1) + '%</b> &nbsp;' + (q13An !== null ? qRegB.icon + qRegB.str : '') : qRegB.icon + qRegB.str + ' &nbsp;Média Qs ' + (DISTRITO_FILTRO ? 'Distrito' : 'Regional')) + '</span>' +
     '</div>';
     html += buildEvoGridQ(dists, repsAtu, repsAntQ);
   }
@@ -4246,6 +4258,9 @@ function renderAlertas(dados, dadosAnt, ativos, mes, mesAnt, distritos) {
       var wB = Math.min.apply(null, QS_ALERT.map(function(q){ var v = safeFloat(b[q]); return v !== null ? v : 999; }));
       return wA - wB;
     });
+    // Q1-Q3 (PEX): rep abaixo da meta de 90%
+    var repsQ13 = repsD.filter(function(r){ var v = safeFloat(r.q1_q3); return v !== null && v < 90; })
+      .sort(function(a,b){ return safeFloat(a.q1_q3) - safeFloat(b.q1_q3); });
     var repsQReg = [];
     if (repsAnt.length) {
       repsD.forEach(function(r){
@@ -4262,7 +4277,7 @@ function renderAlertas(dados, dadosAnt, ativos, mes, mesAnt, distritos) {
 
     // ── Guard: só exibe bloco se houver algo a mostrar ────────────
     var temBlocoMDV  = criticosMDV.length || regressoesMDV.length;
-    var temBlocoQ    = repsQCrit.length   || repsQReg.length;
+    var temBlocoQ    = repsQCrit.length   || repsQReg.length || repsQ13.length;
     var temBlocoProd = prodAbaixo80.length || regressoesProd.length || repsProdCrit.length;
     if (!temBlocoMDV && !temBlocoQ && !temBlocoProd) return;
     temAlerta = true;
@@ -4306,6 +4321,21 @@ function renderAlertas(dados, dadosAnt, ativos, mes, mesAnt, distritos) {
             '<span style="color:#ccc;font-size:10px">→</span>' +
             '<span style="font-weight:700">' + item.pAt.toFixed(1) + '%</span>' +
             '<span style="' + sev + ';font-weight:800">' + item.delta.toFixed(1) + 'pp</span>' +
+          '</span>' +
+        '</div>';
+      });
+    }
+
+    // ─── Q1-Q3 (PEX) alerts ──────────────────────────────────────
+    if (repsQ13.length) {
+      html += '<div class="alerta-subsec">🎯 Q1-Q3 (PEX) — Rep abaixo da meta de 90%</div>';
+      repsQ13.forEach(function(r){
+        var v = safeFloat(r.q1_q3);
+        html += '<div class="alerta-rep ' + (v < 80 ? 'r' : 'y') + '">' +
+          '<span class="alerta-rep-nome">' + (r.nome||r.setor_id) + '</span>' +
+          '<span class="alerta-rep-info">' +
+            '<span style="color:' + q13Cor(v) + ';font-weight:700">' + v.toFixed(1) + '%</span>' +
+            '<span style="color:#aaa;font-size:10px">' + (v-90).toFixed(1) + 'pp vs meta</span>' +
           '</span>' +
         '</div>';
       });
@@ -6093,7 +6123,7 @@ function abrirDistrito(distritoId) {
   html += '<div class="dd-section-lbl">Equipe &amp; Jornada da Evolução</div>';
   html += '<div style="overflow-x:auto"><table class="dd-rep-table"><thead><tr>' +
     '<th>Representante</th><th>Setor</th><th>Jornada</th>' +
-    '<th>Prod. %</th><th>Q1</th><th>Q2</th><th>Q3</th><th>Q4</th><th>Cob. Painel</th>' +
+    '<th>Prod. %</th><th title="Q1 a Q3 consolidado — pontua no PEX (meta 90%)">Q1-Q3 (PEX)</th><th>Q1</th><th>Q2</th><th>Q3</th><th>Q4</th><th>Cob. Painel</th>' +
     '</tr></thead><tbody>';
 
   repsD.forEach(function(r) {
@@ -6104,6 +6134,7 @@ function abrirDistrito(distritoId) {
       '<td style="color:var(--gray);font-size:11px">' + (r.setor_id || '—') + '</td>' +
       '<td>' + jornadaBadge(etapa) + '</td>' +
       '<td style="' + prodColor(prodPct) + ';font-weight:700">' + (prodPct !== null ? prodPct.toFixed(1) + '%' : '—') + '</td>' +
+      '<td style="font-weight:700;color:' + q13Cor(safeFloat(r.q1_q3)) + '">' + pct(r.q1_q3) + '</td>' +
       '<td class="' + atClass(safeFloat(r.q1)) + '">' + pct(r.q1) + '</td>' +
       '<td class="' + atClass(safeFloat(r.q2)) + '">' + pct(r.q2) + '</td>' +
       '<td class="' + atClass(safeFloat(r.q3)) + '">' + pct(r.q3) + '</td>' +
@@ -6639,6 +6670,7 @@ function _mtzPrincipalGrid(dados) {
         '<div class="mtz-rep-dist">' + (r._dist||'—') + ' · ' + (r.linha||'') + '</div>' +
         '<div class="mtz-rep-metrics">' +
           _mtzMetric('MDV',  r._mdv!==null ? r._mdv.toFixed(1)+'%' : '—', cotaPctClass(r._mdv)) +
+          _mtzMetric('Q1-Q3', _mtzPct(r.q1_q3)) +
           _mtzMetric('Q1',   _mtzPct(r.q1)) +
           _mtzMetric('Q2',   _mtzPct(r.q2)) +
           _mtzMetric('Q3',   _mtzPct(r.q3)) +
@@ -7212,6 +7244,7 @@ function _mtzBuildChart(reps) {
               return [
                 '  Distrito: ' + (r._dist||'—') + '  ·  ' + (r.linha||''),
                 '  MDV: '    + (r._mdv!==null ? r._mdv.toFixed(1)+'%' : '—'),
+                '  Q1-Q3 (PEX): ' + _mtzPct(r.q1_q3),
                 '  Q1: ' + _mtzPct(r.q1) + '   Q2: ' + _mtzPct(r.q2) + '   Q3: ' + _mtzPct(r.q3) + '   Q4: ' + _mtzPct(r.q4),
                 '  Cob. Painel: ' + _mtzPct(r.cob_painel),
                 '  Ating. Cota: ' + (r._at!==null ? r._at.toFixed(1)+'%' : '—'),
@@ -7260,6 +7293,7 @@ function _mtzBuildCards(reps) {
           '<div class="mtz-rep-dist">' + (r._dist||'—') + ' · ' + (r.linha||'') + '</div>' +
           '<div class="mtz-rep-metrics">' +
             _mtzMetric('MDV',         r._mdv!==null ? r._mdv.toFixed(1)+'%' : '—', cotaPctClass(r._mdv)) +
+            _mtzMetric('Q1-Q3 (PEX)', _mtzPct(r.q1_q3)) +
             _mtzMetric('Q1',          _mtzPct(r.q1)) +
             _mtzMetric('Q2',          _mtzPct(r.q2)) +
             _mtzMetric('Q3',          _mtzPct(r.q3)) +
@@ -8042,6 +8076,9 @@ function renderGlossario() {
       null, [T.prod]),
     card('Q3', 'Quadrante 3',
       'Médicos de <strong>médio potencial</strong> de prescrição. Visitados com frequência menor, mas presentes no painel ativo.',
+      null, [T.prod]),
+    card('Q1-Q3', 'Consolidado do PEX',
+      'Resultado somado dos quadrantes 1, 2 e 3. É o recorte que <strong>pontua no PEX</strong>, com meta de 90% — o Q4 não entra na pontuação.',
       null, [T.prod]),
     card('Q4', 'Quadrante 4',
       'Médicos de <strong>baixo potencial</strong> ou especialidades secundárias. Visitados de forma mais esporádica.',
