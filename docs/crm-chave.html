@@ -88,8 +88,9 @@ table.crm-tbl tbody tr:hover{background:#EEF6F5}
 
 .preview-tag{position:fixed;bottom:16px;right:16px;background:#111827;color:#fff;font-size:11px;font-weight:700;padding:8px 14px;border-radius:20px;box-shadow:0 4px 16px rgba(0,0,0,.25);z-index:600}
 </style>
+<link rel="stylesheet" href="tema-ems-sub.css">
 </head>
-<body>
+<body class="tema-claro">
 
 <div class="loading-overlay" id="loading">
   <div class="loading-spinner"></div>
@@ -98,7 +99,7 @@ table.crm-tbl tbody tr:hover{background:#EEF6F5}
 
 <div class="hdr">
   <div class="hdr-inner">
-    <div class="logo">EMS</div>
+    <div class="logo"><img src="assets/logo-grupo-ems.png" alt="Grupo EMS"></div>
     <div class="hdr-sep"></div>
     <div class="hdr-text">
       <h1>💊 CRM Chave — Prescrição por Marca</h1>
@@ -369,7 +370,7 @@ function renderPagina() {
 
   var html = '';
   if (temNexus) {
-    html += '<div class="linha-hdr">🔵 NEXUS</div><div class="card-grid">' +
+    html += '<div class="linha-hdr">🟢 NEXUS</div><div class="card-grid">' +
       cardsAtual.filter(function(c){return c.linha==='NEXUS';}).map(function(c) {
         var ant = cardsAnterior.filter(function(a){ return a.linha===c.linha && a.marca===c.marca; })[0];
         return cardHtml(c, ant);
