@@ -31,6 +31,14 @@ def num(txt):
         return None
 
 
+def nivel_do_escopo(escopo):
+    """REGIONAL, código de distrito (termina em 00, ex.: 11030100) ou código de setor (ex.: 11030102).
+    A leitura por setor usa o filtro Setor do bloco FILTRO do Raio X, um setor por vez."""
+    if escopo == "REGIONAL":
+        return "REGIONAL"
+    return "DISTRITO" if escopo.endswith("00") else "SETOR"
+
+
 def linha_para_registro(cels):
     """[produto, anterior, atual, penetração]; células vazias somem na leitura, então com 3
     células é preciso descobrir qual share faltou (a penetração é sempre a última, sem %)."""
@@ -81,7 +89,7 @@ def main():
             produto, ant, atual, pen = linha_para_registro(cels)
             registros.append({
                 "mes": mes, "regional": regional, "linha": linha, "marca": marca,
-                "nivel": "REGIONAL" if escopo == "REGIONAL" else "DISTRITO",
+                "nivel": nivel_do_escopo(escopo),
                 "codigo": "" if escopo == "REGIONAL" else escopo,
                 "produto": produto, "eh_marca": "1" if produto.upper() == f"{marca} (EMS)" else "0",
                 "share": "" if atual is None else atual,
@@ -134,7 +142,7 @@ def derivar(mes, dry):
             s_ant = antes.get(produto, 0.0 if antes else None)
             registros.append({
                 "mes": mes, "regional": regional, "linha": linha, "marca": marca,
-                "nivel": "REGIONAL" if escopo == "REGIONAL" else "DISTRITO",
+                "nivel": nivel_do_escopo(escopo),
                 "codigo": "" if escopo == "REGIONAL" else escopo,
                 "produto": produto, "eh_marca": "1" if produto.upper() == f"{marca} (EMS)" else "0",
                 "share": share,

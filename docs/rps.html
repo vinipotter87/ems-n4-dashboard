@@ -565,9 +565,17 @@ function mkConcHtml(nivel, cod, refs){
     rf.forEach(function(r){ var nr = r.d.lista.filter(function(p){ return p.nossa; })[0]; if (nr) frase += ' ' + r.rot + ': ' + nr.pos + 'ª, com ' + mkPct(nr.share) + '.'; });
     var top = at.lista.slice(0, 5); if (nossa && top.indexOf(nossa) < 0) top.push(nossa);
     var resto = at.lista.filter(function(p){ return top.indexOf(p) < 0; }), maxSh = Math.max.apply(null, top.map(function(p){ return p.share || 0; })) || 1;
-    // prescrição por concorrente só existe por distrito e regional: na individual o recorte é o distrito do representante
-    var rxN = nivel === 'SETOR' ? 'DISTRITO' : nivel, rxC = nivel === 'SETOR' ? mkCodDistrito() : cod;
-    var rxB = mkRxConcBloco(mkRxConcDados(D.mk.rxc || [], marca, rxN, rxC, ciclo), rxN === 'DISTRITO' ? [{ rot: 'Regional', d: mkRxConcDados(D.mk.rxc || [], marca, 'REGIONAL', null, ciclo) }] : [], marca, nivel === 'SETOR' ? 'dado do distrito' : '');
+    // prescrição por concorrente: usa a leitura do SETOR quando ela existe (filtro Setor do Raio X, lido um setor
+    // por vez); enquanto o setor não foi lido, mostra o distrito do representante e avisa no quadro
+    var rxN = nivel, rxC = cod, rxRot = '';
+    if (nivel === 'SETOR') {
+      if (mkRxConcDados(D.mk.rxc || [], marca, 'SETOR', cod, ciclo).tem) rxRot = 'dado do setor';
+      else { rxN = 'DISTRITO'; rxC = mkCodDistrito(); rxRot = 'dado do DISTRITO — setor ainda sem leitura'; }
+    }
+    var rxRefs = [];
+    if (rxN === 'SETOR') rxRefs.push({ rot: 'Distrito', d: mkRxConcDados(D.mk.rxc || [], marca, 'DISTRITO', mkCodDistrito(), ciclo) });
+    if (rxN !== 'REGIONAL') rxRefs.push({ rot: 'Regional', d: mkRxConcDados(D.mk.rxc || [], marca, 'REGIONAL', null, ciclo) });
+    var rxB = mkRxConcBloco(mkRxConcDados(D.mk.rxc || [], marca, rxN, rxC, ciclo), rxRefs, marca, rxRot);
     cards++;
     var h = '<div class="mkc-card"><div class="mkc-hdr"><span class="mkc-marca">★ ' + marca + '</span><span class="mkc-tipo ms">Market share · demanda</span><span class="mkc-meta">Mercado <b>' + mkRS(at.total) + '</b> · entre marcas <b>' + mkRS(at.marcas) + '</b> · ' + (at.temGen ? 'genérico <b>' + mkPct(at.genShare) + '</b>' : 'sem genérico') + '</span></div>' +
       '<div class="mkc-bloco ms"><div class="mkc-bloco-t">Market share <small>demanda · venda em preço fábrica · ' + ciclo + '/2026</small></div><div class="mkc-insight">' + frase + '</div>' + '<table class="mkc-tbl"><thead><tr><th>#</th><th>Marca</th><th>Venda R$</th><th>Share marcas</th>' + rf.map(function(r){ return '<th>' + r.rot + '</th>'; }).join('') +
