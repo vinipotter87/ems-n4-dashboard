@@ -315,8 +315,10 @@ function graficoLinhas(labels, series, estimado) {
   labels.forEach(function(l, i) {
     o += '<text x="' + X(i) + '" y="' + (H - 9) + '" class="g-eixo' + (i === nx - 1 ? ' g-atual' : '') + '" text-anchor="middle">' + esc(l) + (estimado[i] ? '*' : '') + '</text>';
   });
-  var rotular = nx <= 7;
+  // com muitas linhas, só a marca leva rótulo em todos os meses; as demais, só no último
+  var nCheias = series.filter(function(s) { return !s.referencia; }).length;
   series.forEach(function(s, k) {
+    var rotular = nx <= 7 && (nCheias <= 3 || s.destaque);
     var cor = s.cor || CORES[k % CORES.length], d = '', primeiro = true;
     s.pontos.forEach(function(v, i) {
       if (v === null || isNaN(v)) { primeiro = true; return; }
@@ -480,7 +482,22 @@ function render() {
   var sRx = [{ nome: 'Prescription share · ' + rotEsc, pontos: hist.map(function(h) { return h.rx ? n(h.rx.share) : null; }), cor: '#0d9488', destaque: true }];
   refs.forEach(function(rf, i) { sRx.push({ nome: rf.rot + ' · prescription share', pontos: hist.map(function(h) { var r = h.refs[i].rx; return r ? n(r.share) : null; }), cor: '#0d9488', tracejado: true, dash: rf.dash, referencia: true }); });
   rxH += '<div class="sec-hdr">Evolução mês a mês <small>prescription share · ' + esc(nomeEsc) + '</small></div>';
+  // concorrência nas receitas mês a mês: marca + 4 maiores concorrentes do ciclo mais recente, no mesmo recorte
+  var sConc = [];
+  if (listaC.length) {
+    var topC = listaC.filter(function(p) { return p.eh_marca !== '1'; }).slice(0, 4);
+    if (nossaC) topC.unshift(nossaC);
+    sConc = topC.map(function(t, k) {
+      return { nome: t.produto, destaque: t.eh_marca === '1', cor: t.eh_marca === '1' ? '#0d9488' : ['#7c3aed', '#d97706', '#be123c', '#64748b'][(k - (nossaC ? 1 : 0)) % 4],
+        pontos: meses.map(function(m) { var r = baseC.filter(function(x) { return x.mes === m && x.nivel === nivelEsc && (!codEsc || x.codigo === codEsc) && x.produto === t.produto; })[0]; return r ? n(r.share) : null; }) };
+    });
+    refs.forEach(function(rf) {
+      sConc.push({ nome: marca + ' · ' + rf.rot.toLowerCase(), cor: '#0d9488', tracejado: true, dash: rf.dash, referencia: true,
+        pontos: meses.map(function(m) { var r = baseC.filter(function(x) { return x.mes === m && x.nivel === rf.nivel && (!rf.cod || x.codigo === rf.cod) && x.eh_marca === '1'; })[0]; return r ? n(r.share) : null; }) });
+    });
+  }
   rxH += '<div class="graf-grid"><div class="box graf-box"><div class="graf-t">Prescription share' + (comRef ? ' <span class="sub">' + legRef + '</span>' : '') + '</div>' + graficoLinhas(labels, sRx, estimado) + '</div>';
+  if (sConc.length) rxH += '<div class="box graf-box"><div class="graf-t">Disputa nas receitas <span class="sub">share de receitas da marca e dos 4 maiores concorrentes' + (comRef ? ' · ' + (noSetor ? 'pontilhada/tracejada = marca no distrito/regional' : 'tracejada = marca na regional') : '') + '</span></div>' + graficoLinhas(labels, sConc, estimado) + '</div></div><div class="graf-grid" style="margin-top:12px">';
   rxH += '<div class="box"><div class="box-scroll"><table><thead><tr><th class="l">Ciclo</th><th>Presc. share</th><th>Penetração</th><th>Rx mercado</th>' + refs.map(function(rf) { return '<th class="reg">Presc. share ' + rf.rot.toLowerCase() + '</th>'; }).join('') + '</tr></thead><tbody>';
   hist.forEach(function(h) {
     rxH += '<tr class="' + (h.mes === mesSel ? 'marca' : '') + '"><td class="l">' + h.mes + '/2026</td><td>' + fmtPct(h.rx ? n(h.rx.share) : null) + '</td><td>' + trend(h.rx ? n(h.rx.var_pp) : null, ' pp') + '</td><td>' + fmtInt(h.rx ? n(h.rx.rx_mercado) : null) + '</td>' +
@@ -599,6 +616,11 @@ function render() {
     { nome: 'Market share (mercado total)', pontos: hist.map(function(h) { return h.d.marcaShare; }), cor: '#2563eb', destaque: true },
     { nome: 'Share entre marcas', pontos: hist.map(function(h) { return h.d.shareMarcas; }), cor: '#7c3aed' }
   ];
+  // concorrentes no mercado total (share da venda, com o genérico no total): os 3 maiores do ciclo mais recente
+  (ult ? ult.d.marcas.filter(function(r) { return !ehEms(r) && r.eh_marca !== '1'; }).slice(0, 3) : []).forEach(function(t, k) {
+    sDem.push({ nome: t.produto + ' · market share', cor: ['#d97706', '#be123c', '#64748b'][k],
+      pontos: hist.map(function(h) { var r = h.d.produtos.filter(function(x) { return x.produto === t.produto; })[0]; return r ? n(r.share) : null; }) });
+  });
   refs.forEach(function(rf, i) {
     sDem.push({ nome: rf.rot + ' · market share', pontos: hist.map(function(h) { return h.refs[i].d.marcaShare; }), cor: '#2563eb', tracejado: true, dash: rf.dash, referencia: true });
     sDem.push({ nome: rf.rot + ' · share entre marcas', pontos: hist.map(function(h) { return h.refs[i].d.shareMarcas; }), cor: '#7c3aed', tracejado: true, dash: rf.dash, referencia: true });
