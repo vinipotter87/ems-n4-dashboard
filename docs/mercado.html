@@ -81,6 +81,9 @@ svg.graf{width:100%;height:auto;display:block}
 .g-eixo{font-size:10px;fill:#6B7280}
 .g-atual{font-weight:800;fill:#111827}
 .g-val{font-size:10.5px;font-weight:700;paint-order:stroke;stroke:#fff;stroke-width:3px}
+.g-s{cursor:pointer;transition:opacity .15s}svg.graf.foco .g-s{opacity:.1}svg.graf.foco .g-s.on{opacity:1}
+.g-hid{display:none}svg.graf.foco .g-s.on .g-hid{display:inline}
+.g-leg span{cursor:pointer;padding:1px 4px;border-radius:4px;transition:opacity .15s}.g-leg span.apag{opacity:.35}.g-leg span.on{background:var(--light);color:var(--dark);font-weight:700}
 .g-leg{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--gray);margin-top:6px}
 .g-leg span{display:flex;align-items:center;gap:5px}
 .g-leg i{width:14px;height:3px;border-radius:2px;display:inline-block}
@@ -320,7 +323,7 @@ function graficoLinhas(labels, series, estimado) {
   var nx = labels.length;
   function X(i) { return nx === 1 ? mL + (W - mL - mR) / 2 : mL + i * (W - mL - mR) / (nx - 1); }
   function Y(v) { return mT + (1 - v / topo) * (H - mT - mB); }
-  var o = '<svg viewBox="0 0 ' + W + ' ' + H + '" class="graf" role="img">';
+  var o = '<div class="g-wrap"><svg viewBox="0 0 ' + W + ' ' + H + '" class="graf" role="img">';
   for (var g = 0; g <= topo + 1e-9; g += passo) {
     o += '<line x1="' + mL + '" x2="' + (W - mR) + '" y1="' + Y(g) + '" y2="' + Y(g) + '" class="g-grid"/>' +
       '<text x="' + (mL - 6) + '" y="' + (Y(g) + 3.5) + '" class="g-eixo" text-anchor="end">' + g + '%</text>';
@@ -328,7 +331,7 @@ function graficoLinhas(labels, series, estimado) {
   labels.forEach(function(l, i) {
     o += '<text x="' + X(i) + '" y="' + (H - 9) + '" class="g-eixo' + (i === nx - 1 ? ' g-atual' : '') + '" text-anchor="middle">' + esc(l) + (estimado[i] ? '*' : '') + '</text>';
   });
-  // com muitas linhas, só a marca leva rótulo em todos os meses; as demais, só no último
+  // com muitas linhas, só a marca leva rótulo em todos os meses; as demais, só no último (os outros aparecem ao destacar a linha)
   var nCheias = series.filter(function(s) { return !s.referencia; }).length;
   series.forEach(function(s, k) {
     var rotular = nx <= 7 && (nCheias <= 3 || s.destaque);
@@ -338,22 +341,43 @@ function graficoLinhas(labels, series, estimado) {
       d += (primeiro ? 'M' : 'L') + X(i).toFixed(1) + ' ' + Y(v).toFixed(1) + ' ';
       primeiro = false;
     });
+    o += '<g class="g-s" data-s="' + k + '"><path d="' + d + '" fill="none" stroke="transparent" stroke-width="14"/>';
     o += '<path d="' + d + '" fill="none" stroke="' + cor + '" stroke-opacity="' + (s.referencia ? 0.6 : 1) + '" stroke-width="' + (s.destaque ? 3 : (s.referencia ? 1.6 : 2)) + '" stroke-linejoin="round" stroke-linecap="round"' + (s.tracejado ? ' stroke-dasharray="' + (s.dash || '5 4') + '"' : '') + '/>';
     s.pontos.forEach(function(v, i) {
       if (v === null || isNaN(v)) return;
       o += '<circle cx="' + X(i).toFixed(1) + '" cy="' + Y(v).toFixed(1) + '" r="' + (s.destaque ? 4.5 : (s.referencia ? 2.6 : 3.5)) + '" fill="' + ((estimado[i] || s.referencia) ? '#fff' : cor) + '" stroke="' + cor + '" stroke-width="2"><title>' + esc(s.nome) + ' · ' + esc(labels[i]) + ': ' + fmtPct(v) + '</title></circle>';
-      if (s.referencia) { if (i !== nx - 1) return; }
-      if (rotular || i === nx - 1) {
-        o += '<text x="' + X(i).toFixed(1) + '" y="' + (Y(v) - 8).toFixed(1) + '" class="g-val" fill="' + cor + '" text-anchor="' + (i === 0 && nx > 1 ? 'start' : (i === nx - 1 && nx > 1 ? 'end' : 'middle')) + '">' + fmtPct(v) + '</text>';
-      }
+      var fixo = (s.referencia ? i === nx - 1 : (rotular || i === nx - 1));
+      o += '<text x="' + X(i).toFixed(1) + '" y="' + (Y(v) - 8).toFixed(1) + '" class="g-val' + (fixo ? '' : ' g-hid') + '" fill="' + cor + '" text-anchor="' + (i === 0 && nx > 1 ? 'start' : (i === nx - 1 && nx > 1 ? 'end' : 'middle')) + '">' + fmtPct(v) + '</text>';
     });
+    o += '</g>';
   });
   o += '</svg><div class="g-leg">';
   series.forEach(function(s, k) {
-    o += '<span><i style="' + (s.tracejado ? 'background:repeating-linear-gradient(90deg,' + (s.cor || CORES[k % CORES.length]) + ' 0 ' + (s.dash === '2 3' ? '2px,transparent 2px 4px' : '4px,transparent 4px 7px') + ')' : 'background:' + (s.cor || CORES[k % CORES.length])) + '"></i>' + esc(s.nome) + '</span>';
+    o += '<span data-s="' + k + '"><i style="' + (s.tracejado ? 'background:repeating-linear-gradient(90deg,' + (s.cor || CORES[k % CORES.length]) + ' 0 ' + (s.dash === '2 3' ? '2px,transparent 2px 4px' : '4px,transparent 4px 7px') + ')' : 'background:' + (s.cor || CORES[k % CORES.length])) + '"></i>' + esc(s.nome) + '</span>';
   });
-  return o + '</div>';
+  return o + '</div></div>';
 }
+// Gráfico interativo: passar o mouse numa linha ou na legenda destaca a série e apaga as outras;
+// clicar fixa o destaque (dá para fixar várias) e clicar de novo solta.
+function gAplica(w, sel) {
+  var svg = w.querySelector('svg.graf');
+  svg.classList.toggle('foco', sel.length > 0);
+  w.querySelectorAll('.g-s').forEach(function(g) { g.classList.toggle('on', sel.indexOf(g.getAttribute('data-s')) >= 0); });
+  w.querySelectorAll('.g-leg span').forEach(function(sp) { sp.classList.toggle('on', sel.indexOf(sp.getAttribute('data-s')) >= 0); sp.classList.toggle('apag', sel.length > 0 && sel.indexOf(sp.getAttribute('data-s')) < 0); });
+}
+function gFixos(w) { return (w.dataset.sel || '').split(',').filter(Boolean); }
+function gAlvo(el) {
+  var t = el && el.closest && el.closest('.g-wrap .g-s, .g-wrap .g-leg span');
+  return t ? { w: t.closest('.g-wrap'), s: t.getAttribute('data-s'), el: t } : null;
+}
+document.addEventListener('mouseover', function(e) { var a = gAlvo(e.target); if (a) { var f = gFixos(a.w); gAplica(a.w, f.indexOf(a.s) >= 0 ? f : f.concat([a.s])); } });
+document.addEventListener('mouseout', function(e) { var a = gAlvo(e.target); if (!a) return; var b = gAlvo(e.relatedTarget); if (!b || b.el !== a.el) gAplica(a.w, gFixos(a.w)); });
+document.addEventListener('click', function(e) {
+  var a = gAlvo(e.target); if (!a) return;
+  var f = gFixos(a.w), k = f.indexOf(a.s);
+  if (k >= 0) f.splice(k, 1); else f.push(a.s);
+  a.w.dataset.sel = f.join(','); gAplica(a.w, f);
+});
 function mesAnterior(m) { var i = TODOS_MESES.indexOf(m); return TODOS_MESES[(i + 11) % 12]; }
 
 // ── Render ───────────────────────────────────────────────────────────────────
@@ -828,7 +852,7 @@ function montarFiltros() {
   }).join('');
 }
 
-function irAoTopo() { setTimeout(function() { var m = document.getElementById('main'); var hd = document.querySelector('.hdr'); window.scrollTo({ top: Math.max(0, m.offsetTop - (hd ? hd.offsetHeight : 0) - 4), behavior: 'auto' }); }, 0); }
+function irAoTopo() { if (EMBED && window.parent !== window) window.parent.postMessage({ mercadoTopo: 1 }, location.origin); setTimeout(function() { var m = document.getElementById('main'); var hd = document.querySelector('.hdr'); window.scrollTo({ top: Math.max(0, m.offsetTop - (hd ? hd.offsetHeight : 0) - 4), behavior: 'auto' }); }, 0); }
 function atualizar() { montarFiltros(); render(); avisarAltura(); }
 
 document.addEventListener('click', function(e) {

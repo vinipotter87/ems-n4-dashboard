@@ -456,7 +456,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
 .mkp-hdr{display:flex;align-items:center;gap:14px;margin-bottom:14px;padding:16px 22px;background:#fff;border-radius:12px;box-shadow:0 1px 8px rgba(0,0,0,.07)}
 .mkp-back-btn{display:flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;border:2px solid var(--border);background:#fff;font-size:12px;font-weight:700;cursor:pointer;color:var(--gray);font-family:inherit;white-space:nowrap}
 .mkp-back-btn:hover{border-color:#1e3a8a;color:#1e3a8a;background:#eff4ff}
-.mkp-frame{width:100%;border:0;display:block;min-height:900px;border-radius:12px;background:transparent}
+.mkp-frame{width:100%;border:0;display:block;min-height:500px;border-radius:12px;background:transparent}
 .mk-ref{font-size:11px;font-weight:800;letter-spacing:.3px;color:#1e3a8a;background:#eff4ff;border:1px solid #c7d7fe;padding:3px 12px;border-radius:6px;white-space:nowrap}
 .mk-ref.atraso{color:#fff;background:#b45309;border-color:#b45309}
 .mk-aviso{font-size:12px;color:#7a5600;background:#FFF7E0;border:1px solid #f3d98b;border-radius:8px;padding:8px 12px;margin:0 0 12px}
@@ -10059,7 +10059,7 @@ function abrirMercado() {
   renderCycleBar(CONFIG._meses || [], null);
   atualizarVisibilidadeFiltroDistrito();
   var ciclo = mkCicloPara(MES_ATUAL) || '';
-  var src = 'mercado.html?embed=1&regional=' + MERCADO_REGIONAL + (ciclo ? '&mes=' + ciclo : '') + (distrito ? '&distrito=' + distrito : '');
+  var src = 'mercado.html?embed=1&regional=' + MERCADO_REGIONAL + (ciclo ? '&mes=' + ciclo : '') + (distrito ? '&distrito=' + distrito : '') + '&v=' + Date.now();
   document.getElementById('main-content').innerHTML =
     '<div class="mkp-wrap">' +
       '<div class="mkp-hdr">' +
@@ -10073,10 +10073,21 @@ function abrirMercado() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 // A página embutida avisa a própria altura para o quadro crescer junto com o conteúdo
+// O quadro ocupa no máximo a altura da tela e rola por dentro: assim a faixa de distritos/representantes fica fixa no topo
+var MKP_ALTURA = 0;
+function mkpAjustarAltura() {
+  var f = document.getElementById('mkp-frame'), h = document.querySelector('.hdr');
+  if (!f || !MKP_ALTURA) return;
+  var livre = window.innerHeight - (h ? h.offsetHeight : 0) - 16;
+  f.style.height = Math.min(Math.ceil(MKP_ALTURA), Math.max(500, livre)) + 'px';
+}
+window.addEventListener('resize', mkpAjustarAltura);
 window.addEventListener('message', function(e) {
-  if (e.origin !== location.origin || !e.data || !e.data.mercadoAltura) return;
+  if (e.origin !== location.origin || !e.data) return;
   var f = document.getElementById('mkp-frame');
-  if (f) f.style.height = Math.ceil(e.data.mercadoAltura) + 'px';
+  if (!f) return;
+  if (e.data.mercadoAltura) { MKP_ALTURA = e.data.mercadoAltura; mkpAjustarAltura(); }
+  if (e.data.mercadoTopo) { var h = document.querySelector('.hdr'); window.scrollTo({ top: Math.max(0, f.getBoundingClientRect().top + window.scrollY - (h ? h.offsetHeight : 0) - 8), behavior: 'smooth' }); }
 });
 
 init();
