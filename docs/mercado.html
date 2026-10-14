@@ -96,6 +96,19 @@ html.embed body{background:transparent;min-height:0}
 html.embed .bar{border-radius:10px;margin-bottom:8px;border:1px solid var(--border)}
 html.embed .bar,html.embed .main{padding-left:14px;padding-right:14px}
 html.embed .main{padding-top:14px}
+.nav-strip{position:sticky;top:0;z-index:40;background:var(--bg,#f4f6fb);margin:0 -4px 14px;padding:8px 4px 10px;border-bottom:1px solid var(--border)}
+.nav-t{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--gray);margin-bottom:6px;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.nav-t span{text-transform:none;letter-spacing:0;font-weight:600}
+.nav-row{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
+.nav-chip{flex:0 0 auto;min-width:138px;background:#fff;border:1.5px solid var(--border);border-left:4px solid #cbd5e1;border-radius:10px;padding:6px 10px;cursor:pointer;text-align:left;font-family:inherit;color:var(--dark)}
+.nav-chip:hover{border-color:#0d9488;border-left-color:#0d9488}
+.nav-chip.on{background:#0f766e;border-color:#0f766e;color:#fff}
+.nav-chip.on .nav-k{color:#d1fae5}
+.nav-chip.cima{border-left-color:var(--green)}.nav-chip.baixo{border-left-color:var(--red)}
+.nav-n{font-size:12px;font-weight:800;white-space:nowrap}
+.nav-k{font-size:10.5px;color:var(--gray);white-space:nowrap;margin-top:2px}
+.nav-k b{font-weight:800}
+.nav-chip.todo{border-left-color:var(--pri)}
 .rep-banner{background:#fff;border:1.5px solid #0d9488;border-radius:12px;padding:10px 14px;margin:0 0 6px;font-size:13px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .rep-banner .link-btn{margin-left:auto}
 .mk-up{color:var(--green)}.mk-dn{color:var(--red)}
@@ -353,6 +366,40 @@ function secao(tipo) {
     '<span class="mk-secao-sub">' + (rx ? 'receitas dos médicos do painel · fonte: Raio X › Prescrição | Análise de Performance e de Concorrentes' : 'venda em R$ a preço fábrica · fonte: Raio X › Demanda | Análise de Concorrentes') + '</span></div>';
 }
 
+// Faixa fixa de navegação: distritos (na regional) ou representantes do distrito (SPI).
+// Clicar num cartão abre o recorte logo abaixo, sem precisar descer até as tabelas.
+function navStrip(nomeReg, nomeDist) {
+  function sh(r) { return r ? n(r.share) : null; }
+  function chip(attrs, nome, px, ms, refPx, on, extra) {
+    var d = (px !== null && refPx !== null && refPx !== undefined) ? px - refPx : null;
+    return '<button class="nav-chip' + (on ? ' on' : '') + (extra || '') + (d === null || on ? '' : (d >= 0 ? ' cima' : ' baixo')) + '" ' + attrs + '>' +
+      '<div class="nav-n">' + nome + '</div><div class="nav-k">PX <b>' + fmtPct(px) + '</b> · MS <b>' + fmtPct(ms) + '</b></div></button>';
+  }
+  var o = '', rxReg = rxDe('REGIONAL')[0];
+  var dist = {};
+  rxDe('DISTRITO').forEach(function(r) { dist[r.codigo] = r.nome; });
+  demDe('DISTRITO').forEach(function(r) { dist[r.codigo] = dist[r.codigo] || r.nome; });
+  var setores = {};
+  if (STATE.regional === 'SPI' && STATE.distrito) rxDe('SETOR').concat(demDe('SETOR')).forEach(function(r) { if (r.distrito === STATE.distrito) setores[r.codigo] = setores[r.codigo] || r.nome; });
+  if (Object.keys(setores).length) {
+    var rxD = rxDe('DISTRITO', STATE.distrito)[0];
+    o += '<div class="nav-t">Representantes · ' + esc(nomeDist) + ' <span>clique no nome para ver os dados do representante · borda verde/vermelha = presc. share acima/abaixo do distrito</span></div><div class="nav-row">';
+    o += chip('data-distrito="' + STATE.distrito + '"', '◉ Distrito inteiro', sh(rxD), resumoDem(demDe('DISTRITO', STATE.distrito)).marcaShare, null, !STATE.setor, ' todo');
+    Object.keys(setores).sort().forEach(function(c) {
+      o += chip('data-setor="' + c + '" data-dist="' + STATE.distrito + '"', c.slice(-3) + ' · ' + esc(primeiroNome(setores[c])), sh(rxDe('SETOR', c)[0]), resumoDem(demDe('SETOR', c)).marcaShare, sh(rxD), c === STATE.setor);
+    });
+    o += '</div>';
+  } else if (Object.keys(dist).length) {
+    o += '<div class="nav-t">Distritos · ' + esc(nomeReg) + ' <span>clique para abrir o distrito' + (STATE.regional === 'SPI' ? ' e ver os representantes' : '') + ' · borda verde/vermelha = presc. share acima/abaixo da regional</span></div><div class="nav-row">';
+    o += chip('id="btn-limpar-nav" data-limpar="1"', '◉ Regional inteira', sh(rxReg), resumoDem(demDe('REGIONAL')).marcaShare, null, !STATE.distrito, ' todo');
+    Object.keys(dist).sort().forEach(function(c) {
+      o += chip('data-distrito="' + c + '"', esc(primeiroNome(dist[c])), sh(rxDe('DISTRITO', c)[0]), resumoDem(demDe('DISTRITO', c)).marcaShare, sh(rxReg), c === STATE.distrito);
+    });
+    o += '</div>';
+  }
+  return o ? '<div class="nav-strip">' + o + '</div>' : '';
+}
+
 function render() {
   var marca = STATE.marcaKey.split('|')[1], linha = STATE.marcaKey.split('|')[0];
   // escopo da página: regional inteira, um distrito ou um representante (setor — só SPI)
@@ -434,6 +481,7 @@ function render() {
   }
 
   var html = '<div class="sec-hdr" style="margin-top:0">' + esc(marca) + ' <small>' + esc(linha) + ' · ' + esc(nomeEsc) + ' · ' + STATE.mes + '/2026 · penetração = mudança do share contra o mês anterior</small></div>';
+  html = navStrip(nomeReg, nomeDist) + html;
   if (noSetor) html += '<div class="rep-banner">👤 <b>' + esc(linhaSet.nome || '') + '</b> · setor ' + STATE.setor + ' · ' + esc(nomeDist) + ' <span class="sub">— comparado ao distrito e à regional</span> <button class="link-btn" data-distrito="' + STATE.distrito + '">← voltar ao distrito</button></div>';
 
   // ═════════════════════════════ BLOCO 1 — PRESCRIÇÃO ═════════════════════════════
@@ -724,6 +772,8 @@ function render() {
   html += secao('dem') + '<div class="mk-secao-box dem">' + dH + '</div>';
 
   document.getElementById('main').innerHTML = html;
+  var ns = document.querySelector('.nav-strip'), hd = document.querySelector('.hdr');
+  if (ns) ns.style.top = (hd ? hd.offsetHeight : 0) + 'px'; // fica logo abaixo do cabeçalho fixo
 }
 
 function mesesDisponiveis() {
@@ -778,17 +828,18 @@ function montarFiltros() {
   }).join('');
 }
 
+function irAoTopo() { setTimeout(function() { var m = document.getElementById('main'); var hd = document.querySelector('.hdr'); window.scrollTo({ top: Math.max(0, m.offsetTop - (hd ? hd.offsetHeight : 0) - 4), behavior: 'auto' }); }, 0); }
 function atualizar() { montarFiltros(); render(); avisarAltura(); }
 
 document.addEventListener('click', function(e) {
-  var t = e.target.closest('[data-mes],[data-reg],[data-setor],[data-distrito],[data-sort],[data-marca],#btn-limpar');
+  var t = e.target.closest('[data-mes],[data-reg],[data-setor],[data-distrito],[data-sort],[data-marca],[data-limpar],#btn-limpar');
   if (!t) return;
-  if (t.id === 'btn-limpar') { STATE.distrito = ''; STATE.setor = ''; }
+  if (t.id === 'btn-limpar' || t.dataset.limpar) { STATE.distrito = ''; STATE.setor = ''; }
   else if (t.dataset.marca) { STATE.marcaKey = t.dataset.marca; STATE.distrito = ''; STATE.setor = ''; }
   else if (t.dataset.mes) { STATE.mes = t.dataset.mes; }
   else if (t.dataset.reg) { STATE.regional = t.dataset.reg; STATE.distrito = ''; STATE.setor = ''; }
-  else if (t.dataset.setor) { STATE.distrito = t.dataset.dist; STATE.setor = t.dataset.setor; window.scrollTo({ top: 0, behavior: 'smooth' }); }
-  else if (t.dataset.distrito) { STATE.distrito = t.dataset.distrito; STATE.setor = ''; window.scrollTo({ top: 0, behavior: 'smooth' }); }
+  else if (t.dataset.setor) { STATE.distrito = t.dataset.dist; STATE.setor = t.dataset.setor; irAoTopo(); }
+  else if (t.dataset.distrito) { STATE.distrito = t.dataset.distrito; STATE.setor = ''; irAoTopo(); }
   else if (t.dataset.sort) {
     var ps = t.dataset.sort.split(':'), sc = STATE.sort[ps[0]];
     if (sc.col === ps[1]) sc.dir *= -1; else STATE.sort[ps[0]] = { col: ps[1], dir: -1 };
