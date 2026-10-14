@@ -596,6 +596,10 @@ function mkConcHtml(nivel, cod, refs){
       if (nossa){ series.push({ nome: nossa.produto, cor: '#2563eb', pts: hist.map(function(x){ var p = x.por[nossa.produto]; return p ? p.share : null; }) }); leg += '<span><i style="background:#2563eb"></i><b>' + marca + '</b></span>'; }
       rivais.slice(0, 3).forEach(function(p, i){ series.push({ nome: p.produto, cor: CORES[i], semRotulo: true, pts: hist.map(function(x){ var q = x.por[p.produto]; return q ? q.share : null; }) });
         leg += '<span><i style="background:' + CORES[i] + '"></i>' + p.produto.replace(/\s*\([^)]*\)\s*$/, '') + '</span>'; });
+      // referência: a nossa marca no distrito e na regional (tracejadas)
+      if (nossa) mkRefs(nivel).forEach(function(rf){
+        series.push({ nome: marca + ' · ' + rf.rot, cor: '#2563eb', ref: true, dash: rf.dash, pts: meses.map(function(m){ var x = mkConcDados(marca, rf.nivel, rf.cod, m); var p = x && x.por ? x.por[nossa.produto] : null; return p ? p.share : null; }) });
+        leg += mkRefLeg('#2563eb', rf); });
       h += '<div class="mkc-graf">' + mkGrafico(meses, series) + '<div class="mk-leg" style="margin-top:2px">' + leg + '</div></div>';
     }
     h += '</div></div>';
@@ -613,6 +617,10 @@ function mkConcHtml(nivel, cod, refs){
         if (rxNossa){ sr.push({ nome: rxNossa.produto, cor: '#0d9488', pts: rxHist.map(function(x){ var p = x.por[rxNossa.produto]; return p ? p.share : null; }) }); lg += '<span><i style="background:#0d9488"></i><b>' + marca + '</b></span>'; }
         rxRivais.forEach(function(p, i){ sr.push({ nome: p.produto, cor: CORES[i], semRotulo: true, pts: rxHist.map(function(x){ var q = x.por[p.produto]; return q ? q.share : null; }) });
           lg += '<span><i style="background:' + CORES[i] + '"></i>' + p.produto.replace(/\s*\([^)]*\)\s*$/, '') + '</span>'; });
+        // referência: a nossa marca no distrito e na regional (tracejadas), da mesma fonte
+        if (rxNossa) mkRefs(rxN).forEach(function(rf){
+          sr.push({ nome: marca + ' · ' + rf.rot, cor: '#0d9488', ref: true, dash: rf.dash, pts: meses.map(function(m){ var d = mkRxConcDados(D.mk.rxc || [], marca, rf.nivel, rf.cod, m); var p = d.tem && d.mes === m ? d.por[rxNossa.produto] : null; return p ? p.share : null; }) });
+          lg += mkRefLeg('#0d9488', rf); });
         var rot = rxN === 'SETOR' ? 'setor' : (rxN === 'DISTRITO' ? 'distrito' : 'regional');
         if (sr.length) gr = '<div class="mkc-sub">' + marca + ' · share de receitas vs concorrentes nos últimos ' + meses.length + ' ciclos · ' + rot + '</div><div class="mkc-graf">' + mkGrafico(meses, sr) + '<div class="mk-leg" style="margin-top:2px">' + lg + '</div></div>';
       }
@@ -737,6 +745,18 @@ function sMercadoSetores(){
   return { nome: nome, msg: 'Cota, prescrição e mercado de cada marca-chave por representante', html: h };
 }
 
+// Linhas de referência dos gráficos de mercado: a nossa marca no distrito (pontilhada) e na regional (tracejada)
+function mkRefs(nivel){
+  var r = [];
+  if (nivel === 'SETOR') r.push({ rot: 'distrito', nivel: 'DISTRITO', cod: mkCodDistrito(), dash: '2 3' });
+  if (nivel !== 'REGIONAL') r.push({ rot: 'regional', nivel: 'REGIONAL', cod: null, dash: '6 4' });
+  return r;
+}
+function mkRefLeg(cor, rf){
+  var px = rf.dash.split(' ');
+  return '<span><i style="background:repeating-linear-gradient(90deg,' + cor + ' 0 ' + px[0] + 'px,transparent ' + px[0] + 'px ' + (+px[0] + +px[1]) + 'px)"></i>' + rf.rot + '</span>';
+}
+
 // Gráfico de linhas pequeno (SVG, sem biblioteca): série de referência sai tracejada e só rotula o último ponto
 function mkGrafico(labels, series){
   var W = 360, H = 190, mL = 34, mR = 34, mT = 16, mB = 24, vals = [];
@@ -751,7 +771,7 @@ function mkGrafico(labels, series){
   series.forEach(function(s){
     var d = '', novo = true;
     s.pts.forEach(function(v, i){ if (v === null || isNaN(v)){ novo = true; return; } d += (novo ? 'M' : 'L') + X(i).toFixed(1) + ' ' + Y(v).toFixed(1) + ' '; novo = false; });
-    o += '<path d="' + d + '" fill="none" stroke="' + s.cor + '" stroke-width="' + (s.ref ? 1.6 : 2.6) + '" stroke-opacity="' + (s.ref ? 0.65 : 1) + '"' + (s.ref ? ' stroke-dasharray="5 4"' : '') + ' stroke-linecap="round" stroke-linejoin="round"/>';
+    o += '<path d="' + d + '" fill="none" stroke="' + s.cor + '" stroke-width="' + (s.ref ? 1.6 : 2.6) + '" stroke-opacity="' + (s.ref ? 0.65 : 1) + '"' + (s.ref ? ' stroke-dasharray="' + (s.dash || '5 4') + '"' : '') + ' stroke-linecap="round" stroke-linejoin="round"/>';
     s.pts.forEach(function(v, i){
       if (v === null || isNaN(v)) return;
       o += '<circle cx="' + X(i).toFixed(1) + '" cy="' + Y(v).toFixed(1) + '" r="' + (s.ref ? 2.4 : 3.6) + '" fill="' + (s.ref ? '#fff' : s.cor) + '" stroke="' + s.cor + '" stroke-width="1.8"><title>' + s.nome + ' · ' + labels[i] + ': ' + mkPct(v) + '</title></circle>';
