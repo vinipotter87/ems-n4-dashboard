@@ -192,6 +192,10 @@ tr.ip-ch td{background:#fffdf5}tr.ip-ch td.n{font-weight:800;color:#78350f}
 .fc.desvio{border-top-color:#ef4444;background:#fff7f7}.fc.sem{border-top-color:#d1d5db}
 .fc .l{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)}.fc .v{font-size:20px;font-weight:800;line-height:1.2}.fc .s{font-size:10.5px;color:var(--gray)}
 .fc .t{font-size:10.5px;font-weight:800;margin-top:3px;color:#15803d}.fc.desvio .t{color:#b91c1c}.fc.sem .t{color:#9ca3af}
+.fc .dup{display:grid;grid-template-columns:1fr 1fr;gap:0;margin-top:5px}
+.fc .dup > div{padding:2px 8px 2px 0}.fc .dup > div + div{padding:2px 0 2px 9px;border-left:2px dashed #fdba74}
+.fc .dup .k{font-size:9.5px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:#14532d}.fc .dup > div + div .k{color:#c2410c}
+.fc .dup > div{min-width:0}.fc .dup .v{font-size:clamp(13px,1.15vw,20px);white-space:nowrap}.fc .dup .k{font-size:clamp(8px,.55vw,9.5px)}.fc .dup .t{font-size:10px;color:#15803d}.fc .dup .t.dv{color:#b91c1c}.fc .dup .t.sd{color:#9ca3af}
 .pok{background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;border-radius:10px;padding:16px 18px;font-size:14px;font-weight:700}
 .plano{background:#fff;border:1px solid var(--border);border-left:5px solid var(--brand);border-radius:10px;padding:12px 16px}
 .ph{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:800;color:var(--brand-d);margin-bottom:8px}.ph span{font-size:11px;font-weight:600;color:var(--gray)}
@@ -437,6 +441,7 @@ var MES_NOME = { JAN: 'JANEIRO', FEV: 'FEVEREIRO', MAR: 'MARÇO', ABR: 'ABRIL', 
 // selo forte no título do slide quando o dado de produto (ou de mercado) é de um mês anterior ao da reunião
 function seloMes(nome){
   var ref = (ST.d && ST.d.ref) || {}, fs = fontesDe(nome), o = '';
+  if (ST.modelo === 'individual' && nome === 'Fundamentos' && ST.fundParcial) return '<mark class="selo-mes fech">✔ ' + MES_NOME[MES_FECHADO] + '/2026 FECHADO</mark><mark class="selo-mes parc">⏳ ' + MES_NOME[ST.mes] + '/2026 PARCIAL</mark>';
   if (ST.modelo === 'individual' && ST.dF && (nome === 'Fundamentos' || /^Marca-chave — /.test(nome))) return '<mark class="selo-mes fech">✔ MÊS FECHADO: ' + MES_NOME[MES_FECHADO] + '/2026</mark>';
   if (/^Parcial /.test(nome)) return '<mark class="selo-mes parc">⏳ PARCIAL: ' + MES_NOME[ST.mes] + '/2026</mark>';
   if (fs.indexOf('prod') >= 0 && ref.prod && ref.prod !== ST.mes) o += '<mark class="selo-mes">📅 PRODUTOS: ' + MES_NOME[ref.prod] + '/2026</mark>';
@@ -1457,19 +1462,29 @@ function fundamentosRep(){
   else out.push({ nome: 'PEX', valor: '—', meta: 'bronze ou acima', desvio: false, sem: true, n: null, fonte: 'pex' });
   return out;
 }
-function fundCards(inds, semTxt){
+function fundCards(inds, semTxt, par){
+  if (par){ // um card por indicador, dividido: mês fechado à esquerda, parcial do mês da reunião à direita
+    var pm = {}; par.forEach(function(p){ pm[p.nome.replace(' (simulado)', '')] = p; });
+    function lado(i, rot, sem){ return '<div><div class="k">' + rot + '</div><div class="v">' + i.valor + '</div>' + (i.quad ? '<span class="tag ' + med(i.quad) + '" style="font-size:9.5px;padding:1px 7px">' + esc(i.quad) + '</span>' : '') + '<div class="t' + (i.sem ? ' sd' : (i.desvio ? ' dv' : '')) + '">' + (i.sem ? sem : (i.desvio ? '● em desvio' : '✓ na meta')) + '</div></div>'; }
+    return '<div class="fund">' + inds.map(function(i){ var p = pm[i.nome.replace(' (simulado)', '')] || { valor: '—', sem: true };
+      return '<div class="fc ' + (i.sem ? 'sem' : (i.desvio ? 'desvio' : 'ok')) + '"><div class="l">' + i.nome + '</div><div class="s">meta ' + i.meta + '</div><div class="dup">' + lado(i, '✔ ' + MES_FECHADO + ' fechado', 'sem dado') + lado(p, '⏳ ' + ST.mes + ' parcial', 'sem dado de ' + ST.mes) + '</div></div>'; }).join('') + '</div>';
+  }
   return '<div class="fund">' + inds.map(function(i){ return '<div class="fc ' + (i.sem ? 'sem' : (i.desvio ? 'desvio' : 'ok')) + '"><div class="l">' + i.nome + '</div><div class="v">' + i.valor + (i.quad ? ' <span class="tag ' + med(i.quad) + '" style="font-size:11px;vertical-align:middle">' + esc(i.quad) + '</span>' : '') + '</div><div class="s">meta ' + i.meta + '</div><div class="t">' + (i.sem ? (semTxt || 'sem dado') : (i.desvio ? '● em desvio' : '✓ dentro da meta')) + '</div></div>'; }).join('') + '</div>';
 }
 // parcial do mês da reunião: mesmos indicadores com o dado do mês atual; o que ainda não tem dado do mês fica em branco
+function fundParcialInds(){
+  var ref = ST.d.ref;
+  return fundamentosRep().map(function(i){ return (ref[i.fonte] || ST.mes) !== ST.mes ? { nome: i.nome.replace(' (simulado)', ''), valor: '—', meta: i.meta, sem: true, desvio: false, n: null } : i; });
+}
 function iFundamentosParcial(){
-  var ref = ST.d.ref, inds = fundamentosRep().map(function(i){ return (ref[i.fonte] || ST.mes) !== ST.mes ? { nome: i.nome.replace(' (simulado)', ''), valor: '—', meta: i.meta, sem: true, desvio: false, n: null } : i; });
+  var inds = fundParcialInds();
   var com = inds.filter(function(i){ return !i.sem; }), desv = com.filter(function(i){ return i.desvio; });
   return { nome: 'Parcial ' + ST.mes + '/2026 — Fundamentos', msg: com.length ? desv.length + ' de ' + com.length + ' indicadores com dado parcial em desvio' : 'Ainda sem dado parcial de ' + ST.mes,
     html: '<div class="aviso" style="background:#fff7ed;color:#9a3412">⏳ Parcial de ' + MES_NOME[ST.mes] + '/2026 — acompanhamento do mês em andamento. Indicador sem dado de ' + ST.mes + ' fica em branco (não usa mês anterior). Os planos seguem a base do mês fechado (' + MES_FECHADO + ').</div>' + fundCards(inds, 'sem dado de ' + ST.mes) };
 }
 function iFundamentos(){
   var inds = fundamentosRep(), desv = inds.filter(function(i){ return i.desvio; });
-  var h = fundCards(inds);
+  var h = ST.fundParcial ? '<div class="aviso" style="background:#f0fdf4;color:#14532d">✔ Esquerda: <b>' + MES_FECHADO + '/2026 fechado</b> — base dos planos e do desvio. <span style="color:#c2410c">⏳ Direita: <b>' + ST.mes + '/2026 parcial</b> — mês em andamento; sem dado do mês fica em branco.</span></div>' + fundCards(inds, null, ST.fundParcial) : fundCards(inds);
   if (!desv.length) return [{ nome: 'Fundamentos', msg: 'Todos os indicadores de execução dentro da meta', html: h + '<div class="pok">✓ Nenhum indicador de execução em desvio — plano de fundamentos não é necessário.</div>' }];
   PLANOS.push({ chave: 'fund', titulo: 'Fundamentos', kpis: desv.map(function(i){ return i.nome; }), todos: inds.map(function(i){ return i.nome; }), inds: inds, problema: 'Indicadores de execução em desvio: ' + desv.map(function(i){ return i.nome + ' em ' + i.valor + (i.quad ? ' — ' + String(i.quad).toLowerCase() : '') + ' (meta ' + i.meta + ')'; }).join('; ') + '.' });
   // Fundamentos aceita no máximo 2 planos em andamento por representante: "fund" e "fund2".
@@ -1832,6 +1847,8 @@ function planoFinal(){ var box = $('plano-final'); if (!box) return; var ls = ''
 
 function montarIndividual(){
   PLANOS = [];
+  // Fundamentos num slide só: mês fechado e parcial do mês da reunião lado a lado em cada indicador
+  ST.fundParcial = (ST.dF && ST.dF !== ST.d && ST.mes !== MES_FECHADO) ? fundParcialInds() : null;
   var r = repSel(), lista = [{ nome: 'Combinados anteriores', msg: ' ', html: '<div id="ata"></div>' }, iRetrato(),
       // abertura → Fundamentos (fecha com o quadro de desvios e o plano) → Produtos (fecha com as marcas em desvio e seus planos) → fechamento
       // mesma lógica da Apresentação N4: Bloco 1 = jornada e PEX → produtividade → frequência → evolução → fundamentos e plano;
@@ -1841,11 +1858,6 @@ function montarIndividual(){
       [sJornadaPex(ST.setor), iProd(), iFreq(), iEvolucao()], comDados(ST.dF, iFundamentos),
       [sDivisor('Bloco 2', 'Produtos', 'Planos de produto em andamento e o resultado das marcas: atingimento, cota × mercado e concorrentes por marca.')], andSlides('prod'),
       [iProdutos(), iMercado()], iConcorrentes(), comMarcasParciais(comDados(ST.dF, iMarcasDesvio)));
-  // Fundamentos: depois do slide do mês fechado vem o da parcial do mês da reunião
-  if (ST.dF && ST.dF !== ST.d && ST.mes !== MES_FECHADO){
-    var kf = lista.map(function(s){ return s.nome; }).indexOf('Fundamentos');
-    if (kf >= 0) lista.splice(kf + 1, 0, iFundamentosParcial());
-  }
   // plano que já está em andamento aparece só no slide "Planos em andamento" do bloco (com Editar lá);
   // o slide "Plano — X" fica para quem ainda não tem plano, que é onde ele é criado
   ST.planoAqui = {};
