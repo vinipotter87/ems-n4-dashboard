@@ -18,9 +18,12 @@ button,select,input,textarea{font-family:inherit}
 .stage{height:calc(100% - 48px - 46px);padding:12px 18px 6px}
 .slide{display:none;height:100%;background:#ECEDF0;border-radius:14px;overflow:hidden;flex-direction:column}
 .slide.on{display:flex}
-.hdr{flex:none;display:flex;align-items:baseline;gap:16px;background:#fff;padding:12px 24px;border-bottom:3px solid var(--brand)}
+.hdr{flex:none;display:flex;flex-wrap:wrap;row-gap:6px;align-items:baseline;gap:16px;background:#fff;padding:12px 24px;border-bottom:3px solid var(--brand)}
 .hdr h2{font-size:20px;font-weight:800;color:var(--brand-d);white-space:nowrap}
 .hdr span{font-size:14px;font-weight:600;color:var(--gray)}
+.hdr mark.selo-mes{align-self:center;flex:none;background:#c2410c;color:#fff;font-size:14px;font-weight:800;letter-spacing:.3px;padding:5px 14px;border-radius:999px;white-space:nowrap;box-shadow:0 2px 6px rgba(194,65,12,.35)}
+.hdr mark.selo-mes.merc{background:#fff7ed;color:#9a3412;border:2px solid #c2410c;box-shadow:none;font-size:12px}
+.aviso.prod-atraso{background:#c2410c;color:#fff;font-size:14px;padding:9px 14px}
 .body{flex:1;min-height:0;overflow:hidden;padding:14px 22px}
 .nav{height:46px;display:flex;align-items:center;gap:8px;padding:0 18px;color:#fff}
 .dots{flex:1;display:flex;justify-content:center;gap:5px;flex-wrap:wrap}
@@ -425,11 +428,20 @@ function avisoRef(nome){
     return '<div class="aviso" style="background:#eff6ff;color:#1e3a8a">📌 Planos usam os KPIs do último mês fechado: <b>' + MES_FECHADO + '/2026</b>' + (fora.length ? ' — ainda sem resultado desse mês em ' + fora.map(function(f){ return FONTE_NOME[f] + ' (exibindo ' + rf[f] + ')'; }).join(', ') : '') + '.</div>';
   }
   var ref = ST.d.ref, d = defasadas(fontesDe(nome)); if (!d.length) return '';
-  return '<div class="aviso">⚠️ Ainda sem resultado de ' + ST.mes + '/2026 — exibindo o último disponível: ' + d.map(function(f){ return '<b>' + FONTE_NOME[f] + ': ' + ref[f] + '/2026</b>'; }).join(' · ') + '.</div>';
+  var dp = d.indexOf('prod') >= 0;
+  return '<div class="aviso' + (dp ? ' prod-atraso' : '') + '">⚠️ ' + (dp ? 'PRODUTOS DE ' + MES_NOME[ref.prod] + '/2026 — ' + ST.mes + '/2026 ainda sem resultado de produto. ' : 'Ainda sem resultado de ' + ST.mes + '/2026 — ') + 'Exibindo o último disponível: ' + d.map(function(f){ return '<b>' + FONTE_NOME[f] + ': ' + ref[f] + '/2026</b>'; }).join(' · ') + '.</div>';
+}
+var MES_NOME = { JAN: 'JANEIRO', FEV: 'FEVEREIRO', MAR: 'MARÇO', ABR: 'ABRIL', MAI: 'MAIO', JUN: 'JUNHO', JUL: 'JULHO', AGO: 'AGOSTO', SET: 'SETEMBRO', OUT: 'OUTUBRO', NOV: 'NOVEMBRO', DEZ: 'DEZEMBRO' };
+// selo forte no título do slide quando o dado de produto (ou de mercado) é de um mês anterior ao da reunião
+function seloMes(nome){
+  var ref = (ST.d && ST.d.ref) || {}, fs = fontesDe(nome), o = '';
+  if (fs.indexOf('prod') >= 0 && ref.prod && ref.prod !== ST.mes) o += '<mark class="selo-mes">📅 PRODUTOS: ' + MES_NOME[ref.prod] + '/2026</mark>';
+  if (fs.indexOf('mercado') >= 0 && ref.mercado && ref.mercado !== ST.mes) o += '<mark class="selo-mes merc">MERCADO: ' + MES_NOME[ref.mercado] + '/2026</mark>';
+  return o;
 }
 function resumoRef(){ var ref = ST.d.ref, d = defasadas(['reps', 'prod', 'pex', 'freq', 'sob']); return d.length ? ' · último resultado disponível — ' + d.map(function(f){ return (f === 'reps' ? 'produtividade' : (f === 'prod' ? 'produtos' : (f === 'pex' ? 'PEX' : (f === 'freq' ? 'frequência' : 'sobreposição')))) + ': ' + ref[f]; }).join(', ') : ''; }
 function slideHtml(s){ if (s.divisor) return '<div class="slide"><div class="capa"><div class="k">' + s.divisor.k + '</div><h2>' + s.divisor.t + '</h2><div class="m">' + s.divisor.sub + '</div></div></div>';
-  return '<div class="slide"><div class="hdr"><h2>' + s.nome + '</h2><span>' + esc(s.msg) + '</span></div><div class="body"><div class="fit">' + avisoRef(s.nome) + s.html + '</div></div></div>'; }
+  return '<div class="slide"><div class="hdr"><h2>' + s.nome + '</h2>' + seloMes(s.nome) + '<span>' + esc(s.msg) + '</span></div><div class="body"><div class="fit">' + avisoRef(s.nome) + s.html + '</div></div></div>'; }
 
 // ── números derivados ──
 function prodDist(d){ var p = num(d.prod); return p !== null && p < 5 ? p * 100 : p; }
@@ -1329,7 +1341,7 @@ function telaReps(){
   $('b-trocar').style.display = ''; $('b-rep').style.display = 'none'; $('dots').innerHTML = ''; $('cnt').textContent = '';
   $('b-prev').disabled = $('b-next').disabled = true;
   $('stage').innerHTML = '<div class="slide on"><div class="capa"><div class="k">RPS individual · ' + esc(ST.d.dist.nm) + '</div><h2>Escolha o representante</h2>' +
-    '<div class="m">Ordenados pelo valor que falta nas marcas-chave em ' + ST.mes + '/2026. Os quatro primeiros são a prioridade do mês.</div><div class="grade" style="grid-template-columns:repeat(2,minmax(0,1fr))">' +
+    '<div class="m">Ordenados pelo valor que falta nas marcas-chave em ' + ST.d.ref.prod + '/2026' + (ST.d.ref.prod !== ST.mes ? ' <b style="background:#c2410c;color:#fff;padding:2px 10px;border-radius:999px">📅 PRODUTOS DE ' + MES_NOME[ST.d.ref.prod] + ' — ' + ST.mes + ' ainda sem resultado</b>' : '') + '. Os quatro primeiros são a prioridade do mês.</div><div class="grade" style="grid-template-columns:repeat(2,minmax(0,1fr))">' +
     reps.map(function(r, k){ var g = gap[r.setor_id]; return '<button onclick="abrirRep(\'' + r.setor_id + '\')"><b>' + (k < 4 && g && g.gap > 0 ? 'Prioridade' : r.setor_id.slice(-2)) + '</b><span style="flex:1">' + esc(r.nome) + (function(){ var ab = planosAbertos(r.setor_id); if (!ab.length) return ''; var v = ab.filter(function(o){ return o.p.revisao && o.p.revisao <= ST.data; }).length;
         return ' <span style="background:' + (v ? '#facc15;color:#422006' : 'rgba(255,255,255,.22);color:#fff') + ';border-radius:20px;padding:2px 9px;font-size:10.5px;font-weight:800;margin-left:6px;white-space:nowrap">' + (v ? '⏰ plano para revisar' : ab.length + ' plano(s) em andamento') + '</span>'; })() + '</span>' +
       '<span style="font-size:12px;opacity:.85">' + (g && g.gap > 0 ? 'faltam ' + brl(g.gap) : 'marcas-chave entregues') + '</span></button>'; }).join('') + '</div></div></div>';
