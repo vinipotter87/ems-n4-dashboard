@@ -604,13 +604,17 @@ function mkConcHtml(nivel, cod, refs){
     if (rxB.tabela){
       var gr = '';
       if (meses.length > 1){
-        var rxH = function(m, nv, c){ var r = D.mk.hrx.filter(function(x){ return x.mes === m && x.marca === marca && x.nivel === nv && (!c || x.codigo === c); })[0]; return r ? mkN(r.share) : null; };
-        var rot = nivel === 'SETOR' ? 'setor' : 'distrito', sr = [{ nome: 'Prescription share · ' + rot, cor: '#0d9488', pts: meses.map(function(m){ return rxH(m, nivel, cod); }) }];
-        var lg = '<span><i style="background:#0d9488"></i><b>' + marca + ' · ' + rot + '</b></span>';
-        if (nivel === 'SETOR'){ sr.push({ nome: 'Prescription share · distrito', cor: '#7c3aed', semRotulo: true, pts: meses.map(function(m){ return rxH(m, 'DISTRITO', mkCodDistrito()); }) }); lg += '<span><i style="background:#7c3aed"></i>distrito</span>'; }
-        sr.push({ nome: 'Prescription share · regional', cor: '#0d9488', ref: true, pts: meses.map(function(m){ return rxH(m, 'REGIONAL'); }) });
-        lg += '<span><i style="background:repeating-linear-gradient(90deg,#0d9488 0 4px,transparent 4px 7px)"></i>regional</span>';
-        gr = '<div class="mkc-sub">' + marca + ' · prescription share nos últimos ' + meses.length + ' ciclos</div><div class="mkc-graf">' + mkGrafico(meses, sr) + '<div class="mk-leg" style="margin-top:2px">' + lg + '</div></div>';
+        // mesmo recorte e mesma fonte da tabela do cartão (prescrição por concorrente): a nossa marca e os
+        // 3 maiores concorrentes do ciclo atual, mês a mês, como o gráfico de market share ao lado
+        var rxAt = mkRxConcDados(D.mk.rxc || [], marca, rxN, rxC, ciclo);
+        var rxHist = meses.map(function(m){ var d = mkRxConcDados(D.mk.rxc || [], marca, rxN, rxC, m); return d.tem && d.mes === m ? d : { por: {} }; });
+        var rxNossa = rxAt.lista.filter(function(p){ return p.nossa; })[0], rxRivais = rxAt.lista.filter(function(p){ return !p.ems; }).slice(0, 3);
+        var sr = [], lg = '';
+        if (rxNossa){ sr.push({ nome: rxNossa.produto, cor: '#0d9488', pts: rxHist.map(function(x){ var p = x.por[rxNossa.produto]; return p ? p.share : null; }) }); lg += '<span><i style="background:#0d9488"></i><b>' + marca + '</b></span>'; }
+        rxRivais.forEach(function(p, i){ sr.push({ nome: p.produto, cor: CORES[i], semRotulo: true, pts: rxHist.map(function(x){ var q = x.por[p.produto]; return q ? q.share : null; }) });
+          lg += '<span><i style="background:' + CORES[i] + '"></i>' + p.produto.replace(/\s*\([^)]*\)\s*$/, '') + '</span>'; });
+        var rot = rxN === 'SETOR' ? 'setor' : (rxN === 'DISTRITO' ? 'distrito' : 'regional');
+        if (sr.length) gr = '<div class="mkc-sub">' + marca + ' · share de receitas vs concorrentes nos últimos ' + meses.length + ' ciclos · ' + rot + '</div><div class="mkc-graf">' + mkGrafico(meses, sr) + '<div class="mk-leg" style="margin-top:2px">' + lg + '</div></div>';
       }
       hr = '<div class="mkc-card"><div class="mkc-hdr"><span class="mkc-marca">★ ' + marca + '</span><span class="mkc-tipo rx">Prescription share · receitas</span></div>' +
         '<div class="mkc-bloco rx"><div class="mkc-bloco-t">' + rxB.titulo + '</div><div class="mkc-insight">' + rxB.frase + '</div>' + rxB.tabela + gr + '</div></div>';
