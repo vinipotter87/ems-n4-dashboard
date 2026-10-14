@@ -22,6 +22,8 @@ button,select,input,textarea{font-family:inherit}
 .hdr h2{font-size:20px;font-weight:800;color:var(--brand-d);white-space:nowrap}
 .hdr span{font-size:14px;font-weight:600;color:var(--gray)}
 .hdr mark.selo-mes{align-self:center;flex:none;background:#c2410c;color:#fff;font-size:14px;font-weight:800;letter-spacing:.3px;padding:5px 14px;border-radius:999px;white-space:nowrap;box-shadow:0 2px 6px rgba(194,65,12,.35)}
+.hdr mark.selo-mes.fech{background:#14532d;box-shadow:0 2px 6px rgba(20,83,45,.3)}
+.hdr mark.selo-mes.parc{background:#fff7ed;color:#c2410c;border:2px solid #c2410c;box-shadow:none}
 .hdr mark.selo-mes.merc{background:#fff7ed;color:#9a3412;border:2px solid #c2410c;box-shadow:none;font-size:12px}
 .aviso.prod-atraso{background:#c2410c;color:#fff;font-size:14px;padding:9px 14px}
 .body{flex:1;min-height:0;overflow:hidden;padding:14px 22px}
@@ -435,6 +437,8 @@ var MES_NOME = { JAN: 'JANEIRO', FEV: 'FEVEREIRO', MAR: 'MARÇO', ABR: 'ABRIL', 
 // selo forte no título do slide quando o dado de produto (ou de mercado) é de um mês anterior ao da reunião
 function seloMes(nome){
   var ref = (ST.d && ST.d.ref) || {}, fs = fontesDe(nome), o = '';
+  if (ST.modelo === 'individual' && ST.dF && (nome === 'Fundamentos' || /^Marca-chave — /.test(nome))) return '<mark class="selo-mes fech">✔ MÊS FECHADO: ' + MES_NOME[MES_FECHADO] + '/2026</mark>';
+  if (/^Parcial /.test(nome)) return '<mark class="selo-mes parc">⏳ PARCIAL: ' + MES_NOME[ST.mes] + '/2026</mark>';
   if (fs.indexOf('prod') >= 0 && ref.prod && ref.prod !== ST.mes) o += '<mark class="selo-mes">📅 PRODUTOS: ' + MES_NOME[ref.prod] + '/2026</mark>';
   if (fs.indexOf('mercado') >= 0 && ref.mercado && ref.mercado !== ST.mes) o += '<mark class="selo-mes merc">MERCADO: ' + MES_NOME[ref.mercado] + '/2026</mark>';
   return o;
@@ -1453,9 +1457,19 @@ function fundamentosRep(){
   else out.push({ nome: 'PEX', valor: '—', meta: 'bronze ou acima', desvio: false, sem: true, n: null, fonte: 'pex' });
   return out;
 }
+function fundCards(inds, semTxt){
+  return '<div class="fund">' + inds.map(function(i){ return '<div class="fc ' + (i.sem ? 'sem' : (i.desvio ? 'desvio' : 'ok')) + '"><div class="l">' + i.nome + '</div><div class="v">' + i.valor + (i.quad ? ' <span class="tag ' + med(i.quad) + '" style="font-size:11px;vertical-align:middle">' + esc(i.quad) + '</span>' : '') + '</div><div class="s">meta ' + i.meta + '</div><div class="t">' + (i.sem ? (semTxt || 'sem dado') : (i.desvio ? '● em desvio' : '✓ dentro da meta')) + '</div></div>'; }).join('') + '</div>';
+}
+// parcial do mês da reunião: mesmos indicadores com o dado do mês atual; o que ainda não tem dado do mês fica em branco
+function iFundamentosParcial(){
+  var ref = ST.d.ref, inds = fundamentosRep().map(function(i){ return (ref[i.fonte] || ST.mes) !== ST.mes ? { nome: i.nome.replace(' (simulado)', ''), valor: '—', meta: i.meta, sem: true, desvio: false, n: null } : i; });
+  var com = inds.filter(function(i){ return !i.sem; }), desv = com.filter(function(i){ return i.desvio; });
+  return { nome: 'Parcial ' + ST.mes + '/2026 — Fundamentos', msg: com.length ? desv.length + ' de ' + com.length + ' indicadores com dado parcial em desvio' : 'Ainda sem dado parcial de ' + ST.mes,
+    html: '<div class="aviso" style="background:#fff7ed;color:#9a3412">⏳ Parcial de ' + MES_NOME[ST.mes] + '/2026 — acompanhamento do mês em andamento. Indicador sem dado de ' + ST.mes + ' fica em branco (não usa mês anterior). Os planos seguem a base do mês fechado (' + MES_FECHADO + ').</div>' + fundCards(inds, 'sem dado de ' + ST.mes) };
+}
 function iFundamentos(){
   var inds = fundamentosRep(), desv = inds.filter(function(i){ return i.desvio; });
-  var h = '<div class="fund">' + inds.map(function(i){ return '<div class="fc ' + (i.sem ? 'sem' : (i.desvio ? 'desvio' : 'ok')) + '"><div class="l">' + i.nome + '</div><div class="v">' + i.valor + (i.quad ? ' <span class="tag ' + med(i.quad) + '" style="font-size:11px;vertical-align:middle">' + esc(i.quad) + '</span>' : '') + '</div><div class="s">meta ' + i.meta + '</div><div class="t">' + (i.sem ? 'sem dado' : (i.desvio ? '● em desvio' : '✓ dentro da meta')) + '</div></div>'; }).join('') + '</div>';
+  var h = fundCards(inds);
   if (!desv.length) return [{ nome: 'Fundamentos', msg: 'Todos os indicadores de execução dentro da meta', html: h + '<div class="pok">✓ Nenhum indicador de execução em desvio — plano de fundamentos não é necessário.</div>' }];
   PLANOS.push({ chave: 'fund', titulo: 'Fundamentos', kpis: desv.map(function(i){ return i.nome; }), todos: inds.map(function(i){ return i.nome; }), inds: inds, problema: 'Indicadores de execução em desvio: ' + desv.map(function(i){ return i.nome + ' em ' + i.valor + (i.quad ? ' — ' + String(i.quad).toLowerCase() : '') + ' (meta ' + i.meta + ')'; }).join('; ') + '.' });
   // Fundamentos aceita no máximo 2 planos em andamento por representante: "fund" e "fund2".
@@ -1464,6 +1478,22 @@ function iFundamentos(){
   return [{ nome: 'Fundamentos', msg: desv.length + ' de ' + inds.length + ' indicadores de execução em desvio', html: h + '<div class="nota" style="background:#fff;border:1px dashed var(--border);border-radius:10px;padding:10px 14px">Plano de fundamentos em andamento: está no slide que abre este bloco. Sem plano em andamento: o plano é criado no próximo slide (máximo de 2 em andamento por representante).</div>' },
           { nome: 'Plano — Fundamentos', msg: 'Em desvio: ' + desv.map(function(i){ return i.nome + ' ' + i.valor; }).join(' · '), html: '<div class="plano" id="plano-fund"></div>', plano: 'fund' },
           { nome: 'Plano — Fundamentos (2º plano)', msg: 'Opcional · máximo de 2 planos de fundamentos em andamento', html: '<div class="plano" id="plano-fund2"></div>', plano: 'fund2' }];
+}
+// Marca-chave: cada slide do mês fechado é seguido do slide da parcial do mês da reunião (em branco sem dado)
+function comMarcasParciais(slides){
+  if (!(ST.dF && ST.dF !== ST.d && ST.mes !== MES_FECHADO)) return slides;
+  var par = {}, temProd = ST.d.ref.prod === ST.mes;
+  if (temProd){ var guarda = PLANOS.length; iMarcasDesvio().forEach(function(s){ if (/^Marca-chave — /.test(s.nome)) par[s.nome] = s; }); PLANOS.length = guarda; }
+  var out = [];
+  slides.forEach(function(s){
+    out.push(s);
+    if (!/^Marca-chave — /.test(s.nome)) return;
+    var mk = s.nome.replace(/^Marca-chave — /, ''), p = par[s.nome];
+    var aviso = '<div class="aviso" style="background:#fff7ed;color:#9a3412">⏳ Parcial de ' + MES_NOME[ST.mes] + '/2026 — acompanhamento do mês em andamento. Os planos seguem a base do mês fechado (' + MES_FECHADO + ').</div>';
+    out.push({ nome: 'Parcial ' + ST.mes + '/2026 — ' + mk, msg: p ? p.msg : 'Ainda sem resultado de produto de ' + ST.mes,
+      html: aviso + (p ? p.html : '<div class="card" style="text-align:center;padding:48px 20px;color:var(--gray)"><div style="font-size:40px">⏳</div><div style="font-size:18px;font-weight:800;color:var(--brand-d);margin:8px 0">Ainda sem resultado de produto de ' + MES_NOME[ST.mes] + '/2026</div><div>Este slide se preenche sozinho assim que a parcial de ' + ST.mes + ' entrar no dashboard.</div></div>') });
+  });
+  return out;
 }
 function iMarcasDesvio(){
   var M = marcasRep(), out = [], serie = ST.d.hist || [];
@@ -1810,7 +1840,12 @@ function montarIndividual(){
       sDivisor('Bloco 1', 'Fundamentos', 'Planos de fundamentos em andamento e a execução do setor: jornada, PEX, produtividade, frequência e evolução.')].concat(andSlides('fund'),
       [sJornadaPex(ST.setor), iProd(), iFreq(), iEvolucao()], comDados(ST.dF, iFundamentos),
       [sDivisor('Bloco 2', 'Produtos', 'Planos de produto em andamento e o resultado das marcas: atingimento, cota × mercado e concorrentes por marca.')], andSlides('prod'),
-      [iProdutos(), iMercado()], iConcorrentes(), comDados(ST.dF, iMarcasDesvio));
+      [iProdutos(), iMercado()], iConcorrentes(), comMarcasParciais(comDados(ST.dF, iMarcasDesvio)));
+  // Fundamentos: depois do slide do mês fechado vem o da parcial do mês da reunião
+  if (ST.dF && ST.dF !== ST.d && ST.mes !== MES_FECHADO){
+    var kf = lista.map(function(s){ return s.nome; }).indexOf('Fundamentos');
+    if (kf >= 0) lista.splice(kf + 1, 0, iFundamentosParcial());
+  }
   // plano que já está em andamento aparece só no slide "Planos em andamento" do bloco (com Editar lá);
   // o slide "Plano — X" fica para quem ainda não tem plano, que é onde ele é criado
   ST.planoAqui = {};
