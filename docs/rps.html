@@ -141,7 +141,8 @@ tr.ip-ch td{background:#fffdf5}tr.ip-ch td.n{font-weight:800;color:#78350f}
 .mk-leg{display:flex;gap:16px;flex-wrap:wrap;font-size:11px;color:var(--gray);margin-top:8px}
 .mk-leg span{display:flex;align-items:center;gap:5px;cursor:pointer;user-select:none;transition:opacity .15s}
 .mk-leg span.off{opacity:.3}.mk-leg span.sel{color:var(--navy,#0b1f3a);font-weight:700}
-.mk-s{transition:opacity .15s;cursor:pointer}.mk-svg.foco .mk-s{opacity:.08}.mk-svg.foco .mk-s.on{opacity:1}.mk-leg i{width:16px;height:3px;border-radius:2px;display:inline-block}
+.mk-s{transition:opacity .15s;cursor:pointer}.mk-svg.foco .mk-s{opacity:.1}.mk-svg.foco .mk-s.on{opacity:1}
+.mk-hid{display:none}.mk-svg.foco .mk-s.on .mk-hid{display:inline}.mk-svg.foco .mk-s:not(.on) .mk-val{display:none}.mk-leg i{width:16px;height:3px;border-radius:2px;display:inline-block}
 .mkc-grid{display:grid;grid-template-columns:repeat(var(--n,3),minmax(410px,1fr));gap:12px}
 .mkc-card{border:1px solid var(--border);border-radius:12px;background:#fff;padding:12px}
 .mkc-hdr{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
@@ -754,6 +755,11 @@ function mkFoco(escopo, idx){
   var sel = (escopo.dataset.mkSel || '').split(',').filter(Boolean), k = sel.indexOf(String(idx));
   if (k >= 0) sel.splice(k, 1); else sel.push(String(idx));
   escopo.dataset.mkSel = sel.join(',');
+  mkAplica(escopo, sel);
+}
+// passar o mouse: mostra só a série apontada enquanto o mouse estiver sobre ela; ao sair, volta à seleção fixa
+function mkHover(escopo, idx){ mkAplica(escopo, idx === null ? (escopo.dataset.mkSel || '').split(',').filter(Boolean) : [String(idx)]); }
+function mkAplica(escopo, sel){
   escopo.querySelectorAll('svg.mk-svg').forEach(function(sv){
     sv.classList.toggle('foco', sel.length > 0);
     sv.querySelectorAll('.mk-s').forEach(function(g){ g.classList.toggle('on', sel.indexOf(g.getAttribute('data-s')) >= 0); });
@@ -768,6 +774,15 @@ document.addEventListener('click', function(ev){
   var g = ev.target.closest && ev.target.closest('svg.mk-svg .mk-s');
   if (g){ mkFoco(mkEscopo(g.closest('svg'), '.mk-leg'), g.getAttribute('data-s')); }
 });
+function mkAlvo(el){
+  var sp = el.closest && el.closest('.mk-leg > span');
+  if (sp) return { esc: mkEscopo(sp.parentElement, 'svg.mk-svg'), idx: Array.prototype.indexOf.call(sp.parentElement.children, sp), el: sp };
+  var g = el.closest && el.closest('svg.mk-svg .mk-s');
+  if (g) return { esc: mkEscopo(g.closest('svg'), '.mk-leg'), idx: g.getAttribute('data-s'), el: g };
+  return null;
+}
+document.addEventListener('mouseover', function(ev){ var a = mkAlvo(ev.target); if (a) mkHover(a.esc, a.idx); });
+document.addEventListener('mouseout', function(ev){ var a = mkAlvo(ev.target); if (!a) return; var b = ev.relatedTarget ? mkAlvo(ev.relatedTarget) : null; if (!b || b.el !== a.el) mkHover(a.esc, null); });
 
 // Linhas de referência dos gráficos de mercado: a nossa marca no distrito (pontilhada) e na regional (tracejada)
 function mkRefs(nivel){
@@ -800,11 +815,13 @@ function mkGrafico(labels, series){
     s.pts.forEach(function(v, i){
       if (v === null || isNaN(v)) return;
       o += '<circle cx="' + X(i).toFixed(1) + '" cy="' + Y(v).toFixed(1) + '" r="' + (s.ref ? 2.4 : 3.6) + '" fill="' + (s.ref ? '#fff' : s.cor) + '" stroke="' + s.cor + '" stroke-width="1.8"><title>' + s.nome + ' · ' + labels[i] + ': ' + mkPct(v) + '</title></circle>';
-      if (s.semRotulo) return;
-      if (s.ref){ if (i === n - 1) o += '<text x="' + (X(i) + 6).toFixed(1) + '" y="' + (Y(v) + 3.5).toFixed(1) + '" class="mk-val ref" fill="' + s.cor + '">' + mkPct(v) + '</text>'; }
-      else o += '<text x="' + X(i).toFixed(1) + '" y="' + (Y(v) - 7).toFixed(1) + '" class="mk-val" fill="' + s.cor + '" text-anchor="middle">' + mkPct(v) + '</text>';
+      // rótulo fixo (como antes) ou rótulo que só aparece quando a série está em destaque
+      var fixo = !s.semRotulo && (!s.ref || i === n - 1);
+      if (fixo && s.ref) o += '<text x="' + (X(i) + 6).toFixed(1) + '" y="' + (Y(v) + 3.5).toFixed(1) + '" class="mk-val ref" fill="' + s.cor + '">' + mkPct(v) + '</text>';
+      else o += '<text x="' + X(i).toFixed(1) + '" y="' + (Y(v) - 7).toFixed(1) + '" class="mk-val' + (fixo ? '' : ' mk-hid') + '" fill="' + s.cor + '" text-anchor="middle">' + mkPct(v) + '</text>';
     });
-    o += '</g>';
+    // faixa invisível larga para o mouse pegar a linha mesmo com as séries próximas
+    o += '<path d="' + d + '" fill="none" stroke="transparent" stroke-width="14" pointer-events="stroke"/></g>';
   });
   return o + '</svg>';
 }
