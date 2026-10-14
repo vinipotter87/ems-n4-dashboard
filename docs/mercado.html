@@ -85,7 +85,7 @@ svg.graf{width:100%;height:auto;display:block}
 .g-leg span{display:flex;align-items:center;gap:5px}
 .g-leg i{width:14px;height:3px;border-radius:2px;display:inline-block}
 @media(max-width:520px){.graf-grid{grid-template-columns:1fr}}
-.ref-reg{display:inline-block;margin-bottom:6px;padding:3px 8px;background:var(--pri-l);border-radius:6px;color:var(--pri);font-size:11px}
+.ref-reg{display:table;margin-bottom:4px;padding:3px 8px;background:var(--pri-l);border-radius:6px;color:var(--pri);font-size:11px}
 .ref-reg .acima{color:var(--green)}.ref-reg .abaixo{color:var(--red)}
 tr.ref td{background:#f1f4fb;border-bottom:2px solid #dbe3f5}
 th.reg{background:#e5e9f2;color:var(--pri)}
@@ -96,6 +96,9 @@ html.embed body{background:transparent;min-height:0}
 html.embed .bar{border-radius:10px;margin-bottom:8px;border:1px solid var(--border)}
 html.embed .bar,html.embed .main{padding-left:14px;padding-right:14px}
 html.embed .main{padding-top:14px}
+.rep-banner{background:#fff;border:1.5px solid #0d9488;border-radius:12px;padding:10px 14px;margin:0 0 6px;font-size:13px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.rep-banner .link-btn{margin-left:auto}
+.mk-up{color:var(--green)}.mk-dn{color:var(--red)}
 .nota{font-size:11px;color:var(--gray);margin-top:10px;line-height:1.5}
 .loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,.92);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
 .loading-spinner{width:48px;height:48px;border:4px solid #dbe5ff;border-top:4px solid var(--pri-2);border-radius:50%;animation:spin .8s linear infinite}
@@ -149,6 +152,8 @@ html.embed .main{padding-top:14px}
   <select class="sel" id="sel-marca"></select>
   <span class="bar-label" style="margin-left:8px">Distrito:</span>
   <select class="sel" id="sel-distrito"></select>
+  <span class="bar-label grp-setor" style="margin-left:8px;display:none">Representante:</span>
+  <select class="sel grp-setor" id="sel-setor" style="display:none"></select>
   <button class="link-btn" id="btn-limpar">Ver regional inteira</button>
 </div>
 
@@ -158,7 +163,7 @@ html.embed .main{padding-top:14px}
 var CONFIG = {};
 var TODOS_MESES = ["JAN","FEV","MAR","ABR","MAI","JUN","JUL","AGO","SET","OUT","NOV","DEZ"];
 var REG_LABEL = { SPI: 'SPI OESTE', LESTE: 'LESTE' };
-var STATE = { rx: [], dem: [], mes: null, regional: null, marcaKey: null, distrito: '', sort: { rx: { col: 'rxMercado', dir: -1 }, dem: { col: 'demTotal', dir: -1 } } };
+var STATE = { rx: [], dem: [], mes: null, regional: null, marcaKey: null, distrito: '', setor: '', sort: { rx: { col: 'rxMercado', dir: -1 }, dem: { col: 'demTotal', dir: -1 } } };
 // Modo embutido (dentro do dashboard): sem cabeçalho próprio, estado inicial pela URL e altura avisada ao pai
 var PARAMS = new URLSearchParams(location.search);
 var EMBED = PARAMS.get('embed') === '1';
@@ -166,6 +171,7 @@ if (EMBED) document.documentElement.classList.add('embed');
 if (PARAMS.get('regional')) { STATE.regional = PARAMS.get('regional'); if (EMBED) document.documentElement.classList.add('reg-fixa'); } // embutida no dashboard de uma regional: sem troca de regional
 if (PARAMS.get('mes')) STATE.mes = PARAMS.get('mes');
 var DISTRITO_INICIAL = PARAMS.get('distrito') || '';
+var SETOR_INICIAL = PARAMS.get('setor') || '';
 function avisarAltura() {
   if (EMBED && window.parent !== window) window.parent.postMessage({ mercadoAltura: document.documentElement.scrollHeight }, location.origin);
 }
@@ -317,7 +323,7 @@ function graficoLinhas(labels, series, estimado) {
       d += (primeiro ? 'M' : 'L') + X(i).toFixed(1) + ' ' + Y(v).toFixed(1) + ' ';
       primeiro = false;
     });
-    o += '<path d="' + d + '" fill="none" stroke="' + cor + '" stroke-opacity="' + (s.referencia ? 0.6 : 1) + '" stroke-width="' + (s.destaque ? 3 : (s.referencia ? 1.6 : 2)) + '" stroke-linejoin="round" stroke-linecap="round"' + (s.tracejado ? ' stroke-dasharray="5 4"' : '') + '/>';
+    o += '<path d="' + d + '" fill="none" stroke="' + cor + '" stroke-opacity="' + (s.referencia ? 0.6 : 1) + '" stroke-width="' + (s.destaque ? 3 : (s.referencia ? 1.6 : 2)) + '" stroke-linejoin="round" stroke-linecap="round"' + (s.tracejado ? ' stroke-dasharray="' + (s.dash || '5 4') + '"' : '') + '/>';
     s.pontos.forEach(function(v, i) {
       if (v === null || isNaN(v)) return;
       o += '<circle cx="' + X(i).toFixed(1) + '" cy="' + Y(v).toFixed(1) + '" r="' + (s.destaque ? 4.5 : (s.referencia ? 2.6 : 3.5)) + '" fill="' + ((estimado[i] || s.referencia) ? '#fff' : cor) + '" stroke="' + cor + '" stroke-width="2"><title>' + esc(s.nome) + ' · ' + esc(labels[i]) + ': ' + fmtPct(v) + '</title></circle>';
@@ -329,7 +335,7 @@ function graficoLinhas(labels, series, estimado) {
   });
   o += '</svg><div class="g-leg">';
   series.forEach(function(s, k) {
-    o += '<span><i style="' + (s.tracejado ? 'background:repeating-linear-gradient(90deg,' + (s.cor || CORES[k % CORES.length]) + ' 0 4px,transparent 4px 7px)' : 'background:' + (s.cor || CORES[k % CORES.length])) + '"></i>' + esc(s.nome) + '</span>';
+    o += '<span><i style="' + (s.tracejado ? 'background:repeating-linear-gradient(90deg,' + (s.cor || CORES[k % CORES.length]) + ' 0 ' + (s.dash === '2 3' ? '2px,transparent 2px 4px' : '4px,transparent 4px 7px') + ')' : 'background:' + (s.cor || CORES[k % CORES.length])) + '"></i>' + esc(s.nome) + '</span>';
   });
   return o + '</div>';
 }
@@ -347,24 +353,38 @@ function secao(tipo) {
 
 function render() {
   var marca = STATE.marcaKey.split('|')[1], linha = STATE.marcaKey.split('|')[0];
-  var noDistrito = !!STATE.distrito;
-  var rxEsc = noDistrito ? rxDe('DISTRITO', STATE.distrito)[0] : rxDe('REGIONAL')[0];
-  var demEsc = resumoDem(noDistrito ? demDe('DISTRITO', STATE.distrito) : demDe('REGIONAL'));
-  var nomeEsc = noDistrito ? ('Distrito ' + primeiroNome((rxEsc || demDe('DISTRITO', STATE.distrito)[0] || {}).nome)) : ('Regional ' + (REG_LABEL[STATE.regional] || STATE.regional));
+  // escopo da página: regional inteira, um distrito ou um representante (setor — só SPI)
+  var noSetor = !!STATE.setor, noDistrito = !!STATE.distrito && !noSetor, comRef = noDistrito || noSetor;
+  var nivelEsc = noSetor ? 'SETOR' : (noDistrito ? 'DISTRITO' : 'REGIONAL'), codEsc = noSetor ? STATE.setor : (noDistrito ? STATE.distrito : undefined);
+  var rotEsc = noSetor ? 'setor' : 'distrito';
+  function rxEscOf() { return nivelEsc === 'REGIONAL' ? rxDe('REGIONAL')[0] : rxDe(nivelEsc, codEsc)[0]; }
+  function demEscOf() { return resumoDem(nivelEsc === 'REGIONAL' ? demDe('REGIONAL') : demDe(nivelEsc, codEsc)); }
+  // referências: com representante = distrito (pontilhada) e regional (tracejada); com distrito = regional
+  var refs = [];
+  if (noSetor) refs.push({ rot: 'Distrito', nivel: 'DISTRITO', cod: STATE.distrito, dash: '2 3' });
+  if (comRef) refs.push({ rot: 'Regional', nivel: 'REGIONAL', cod: undefined, dash: '6 4' });
+  function rxRef(rf) { return rf.nivel === 'REGIONAL' ? rxDe('REGIONAL')[0] : rxDe('DISTRITO', rf.cod)[0]; }
+  function demRef(rf) { return resumoDem(rf.nivel === 'REGIONAL' ? demDe('REGIONAL') : demDe('DISTRITO', rf.cod)); }
+
+  var rxEsc = rxEscOf(), demEsc = demEscOf();
   var nomeReg = 'Regional ' + (REG_LABEL[STATE.regional] || STATE.regional);
+  var nomeDist = STATE.distrito ? 'Distrito ' + primeiroNome((rxDe('DISTRITO', STATE.distrito)[0] || demDe('DISTRITO', STATE.distrito)[0] || {}).nome) : '';
+  var linhaSet = noSetor ? (rxDe('SETOR', STATE.setor)[0] || demDe('SETOR', STATE.setor)[0] || {}) : null;
+  var nomeEsc = noSetor ? (primeiroNome(linhaSet.nome) + ' · setor ' + STATE.setor) : (noDistrito ? nomeDist : nomeReg);
+  refs.forEach(function(rf) { rf.nome = rf.nivel === 'REGIONAL' ? nomeReg : nomeDist; rf.rx = rxRef(rf); rf.dem = demRef(rf); });
 
   document.getElementById('pill-mes').textContent = STATE.mes + '/2026';
   document.getElementById('pill-escopo').textContent = marca + ' · ' + nomeEsc;
 
   var rxShare = rxEsc ? n(rxEsc.share) : null;
-  // Referência da regional (aparece quando um distrito está selecionado)
-  var rxReg = rxDe('REGIONAL')[0], demReg = resumoDem(demDe('REGIONAL'));
-  var rxShareReg = rxReg ? n(rxReg.share) : null;
   function pp(v) { return Math.abs(v).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' pp'; }
-  function refReg(v, vr) {
-    if (!noDistrito || vr === null || vr === undefined) return '';
-    var d = (v !== null && v !== undefined) ? Math.round((v - vr) * 10) / 10 : null;
-    return '<div class="ref-reg">Regional: <b>' + fmtPct(vr) + '</b>' + (d === null ? '' : (d === 0 ? ' · distrito igual' : ' · distrito <b class="' + (d > 0 ? 'acima' : 'abaixo') + '">' + pp(d) + (d > 0 ? ' acima' : ' abaixo') + '</b>')) + '</div>';
+  // linhas de referência nos cartões: valor do distrito/regional e a distância do escopo
+  function refHtml(v, getter) {
+    return refs.map(function(rf) {
+      var vr = getter(rf); if (vr === null || vr === undefined) return '';
+      var d = (v !== null && v !== undefined) ? Math.round((v - vr) * 10) / 10 : null;
+      return '<div class="ref-reg">' + rf.rot + ': <b>' + fmtPct(vr) + '</b>' + (d === null ? '' : (d === 0 ? ' · ' + rotEsc + ' igual' : ' · ' + rotEsc + ' <b class="' + (d > 0 ? 'acima' : 'abaixo') + '">' + pp(d) + (d > 0 ? ' acima' : ' abaixo') + '</b>')) + '</div>';
+    }).join(' ');
   }
   function difReg(v, vr) {
     if (v === null || v === undefined || vr === null || vr === undefined) return '—';
@@ -372,6 +392,7 @@ function render() {
     return '<span class="tr ' + (d > 0 ? 'up' : (d < 0 ? 'down' : 'flat')) + '">' + (d > 0 ? '+' : (d < 0 ? '-' : '')) + pp(d) + '</span>';
   }
   function u(v) { return v === undefined ? null : v; }
+  var legRef = noSetor ? 'linha cheia = setor · pontilhada = distrito · tracejada = regional' : 'linha cheia = distrito · tracejada = regional';
 
   // dados comuns: lista de marcas, histórico de ciclos, setores e distritos
   var chaves = {};
@@ -383,14 +404,13 @@ function render() {
   var mesSel = STATE.mes;
   var hist = meses.map(function(m) {
     STATE.mes = m;
-    var rx = noDistrito ? rxDe('DISTRITO', STATE.distrito)[0] : rxDe('REGIONAL')[0];
-    return { mes: m, rx: rx, d: resumoDem(noDistrito ? demDe('DISTRITO', STATE.distrito) : demDe('REGIONAL')), rxR: rxDe('REGIONAL')[0], dR: resumoDem(demDe('REGIONAL')) };
+    return { mes: m, rx: rxEscOf(), d: demEscOf(), refs: refs.map(function(rf) { return { rx: rxRef(rf), d: demRef(rf) }; }) };
   });
   STATE.mes = mesSel;
   var labels = meses.slice(), estimado = meses.map(function() { return false; });
 
   var cods = {};
-  if (!noDistrito) {
+  if (!comRef) {
     rxDe('DISTRITO').forEach(function(r) { cods[r.codigo] = r.nome; });
     demDe('DISTRITO').forEach(function(r) { cods[r.codigo] = cods[r.codigo] || r.nome; });
   }
@@ -412,10 +432,11 @@ function render() {
   }
 
   var html = '<div class="sec-hdr" style="margin-top:0">' + esc(marca) + ' <small>' + esc(linha) + ' · ' + esc(nomeEsc) + ' · ' + STATE.mes + '/2026 · penetração = mudança do share contra o mês anterior</small></div>';
+  if (noSetor) html += '<div class="rep-banner">👤 <b>' + esc(linhaSet.nome || '') + '</b> · setor ' + STATE.setor + ' · ' + esc(nomeDist) + ' <span class="sub">— comparado ao distrito e à regional</span> <button class="link-btn" data-distrito="' + STATE.distrito + '">← voltar ao distrito</button></div>';
 
   // ═════════════════════════════ BLOCO 1 — PRESCRIÇÃO ═════════════════════════════
   var rxH = '';
-  if (listaChaves.length > 1) {
+  if (listaChaves.length > 1 && !comRef) {
     rxH += '<div class="sec-hdr">Todas as marcas-chave <small>' + esc(nomeReg) + ' · ' + STATE.mes + '/2026 · clique para abrir a marca</small></div>';
     rxH += '<div class="box"><div class="box-scroll"><table><thead><tr><th class="l">Marca</th><th>Rx mercado</th><th>Presc. share</th><th>Penetração</th></tr></thead><tbody>';
     listaChaves.forEach(function(k) {
@@ -433,30 +454,37 @@ function render() {
   var baseC = (STATE.rxc || []).filter(function(r) { return r.regional === STATE.regional && r.linha === linha && r.marca === marca && MS.indexOf(r.mes) <= MS.indexOf(STATE.mes); });
   var mesRx = baseC.map(function(r) { return r.mes; }).sort(function(a, b) { return MS.indexOf(a) - MS.indexOf(b); }).pop();
   function concDe(nivel, cod) { return baseC.filter(function(r) { return r.mes === mesRx && r.nivel === nivel && (!cod || r.codigo === cod); }).sort(function(a, b) { return (n(b.share) || 0) - (n(a.share) || 0); }); }
-  var listaC = mesRx ? (noDistrito ? concDe('DISTRITO', STATE.distrito) : concDe('REGIONAL')) : [];
-  var regC = (mesRx && noDistrito) ? concDe('REGIONAL') : [];
+  var listaC = mesRx ? concDe(nivelEsc, codEsc) : [];
+  var refsC = refs.map(function(rf) { return mesRx ? concDe(rf.nivel, rf.cod) : []; });
   var nossaC = listaC.filter(function(p) { return p.eh_marca === '1'; })[0];
 
   rxH += '<div class="sec-hdr">Indicadores de prescrição <small>' + esc(nomeEsc) + ' · ' + STATE.mes + '/2026</small></div><div class="card-grid">';
   rxH += '<div class="card rx"><div class="card-t">Prescription share</div><div class="card-v">' + fmtPct(rxShare) + trend(rxEsc ? n(rxEsc.var_pp) : null, ' pp') + '</div>' +
-    '<div class="card-f">' + refReg(rxShare, rxShareReg) + '<b>Penetração:</b> ' + penTxt(rxEsc ? n(rxEsc.var_pp) : null) + '<br>Fatia das receitas do mercado que saem com a marca.</div></div>';
+    '<div class="card-f">' + refHtml(rxShare, function(rf) { return rf.rx ? n(rf.rx.share) : null; }) + '<b>Penetração:</b> ' + penTxt(rxEsc ? n(rxEsc.var_pp) : null) + '<br>Fatia das receitas do mercado que saem com a marca.</div></div>';
   rxH += '<div class="card rx"><div class="card-t">Rx mercado</div><div class="card-v">' + fmtInt(rxEsc ? n(rxEsc.rx_mercado) : null) + '</div>' +
-    '<div class="card-f">Receitas do mercado no painel' + (rxEsc && n(rxEsc.painel) !== null ? ' de ' + fmtInt(n(rxEsc.painel)) + ' médicos' : '') + '.' + (noDistrito && rxReg ? '<br>Regional: ' + fmtInt(n(rxReg.rx_mercado)) + ' Rx' : '') + '</div></div>';
+    '<div class="card-f">Receitas do mercado no painel' + (rxEsc && n(rxEsc.painel) !== null ? ' de ' + fmtInt(n(rxEsc.painel)) + ' médicos' : '') + '.' + refs.map(function(rf) { return rf.rx ? '<br>' + rf.rot + ': ' + fmtInt(n(rf.rx.rx_mercado)) + ' Rx' : ''; }).join('') + '</div></div>';
   if (listaC.length) {
     var liderC = listaC[0];
     rxH += '<div class="card rx"><div class="card-t">Posição nas receitas</div><div class="card-v" style="font-size:22px">' + (nossaC ? (listaC.indexOf(nossaC) + 1) + 'ª de ' + listaC.length : '—') + '</div>' +
-      '<div class="card-f">' + (nossaC && listaC.indexOf(nossaC) === 0 ? 'A marca lidera as receitas.' : 'Líder: <b>' + esc(liderC.produto) + '</b> (' + fmtPct(n(liderC.share)) + ').') + '<br>Ciclo ' + mesRx + '/2026' + (mesRx !== STATE.mes ? ' (mais recente disponível)' : '') + '.</div></div>';
+      '<div class="card-f">' + (nossaC && listaC.indexOf(nossaC) === 0 ? 'A marca lidera as receitas.' : 'Líder: <b>' + esc(liderC.produto) + '</b> (' + fmtPct(n(liderC.share)) + ').') +
+      refs.map(function(rf, i) { var l = refsC[i], ns = l.filter(function(p) { return p.eh_marca === '1'; })[0]; return ns ? '<br>' + rf.rot + ': ' + (l.indexOf(ns) + 1) + 'ª de ' + l.length : ''; }).join('') +
+      '<br>Ciclo ' + mesRx + '/2026' + (mesRx !== STATE.mes ? ' (mais recente disponível)' : '') + '.</div></div>';
+  }
+  if (noSetor) {
+    var demSh = demEsc.marcaShare, gapS = (rxShare !== null && demSh !== null) ? rxShare - demSh : null;
+    rxH += '<div class="card gap"><div class="card-t">GAP prescrição × demanda</div><div class="card-v" style="font-size:24px">' + gapHtml(gapS) + '</div>' +
+      '<div class="card-f">Presc. share ' + fmtPct(rxShare) + ' − market share ' + fmtPct(demSh) + '.<br>' + (gapS === null ? '' : (gapS > 0 ? 'A receita está maior que a venda: checar estoque, farmácia e troca na balcão.' : 'A venda está acima da receita: prescrição é a alavanca.')) + '</div></div>';
   }
   rxH += '</div>';
 
-  var sRx = [{ nome: 'Prescription share', pontos: hist.map(function(h) { return h.rx ? n(h.rx.share) : null; }), cor: '#0d9488', destaque: true }];
-  if (noDistrito) sRx.push({ nome: 'Regional · prescription share', pontos: hist.map(function(h) { return h.rxR ? n(h.rxR.share) : null; }), cor: '#0d9488', tracejado: true, referencia: true });
+  var sRx = [{ nome: 'Prescription share · ' + rotEsc, pontos: hist.map(function(h) { return h.rx ? n(h.rx.share) : null; }), cor: '#0d9488', destaque: true }];
+  refs.forEach(function(rf, i) { sRx.push({ nome: rf.rot + ' · prescription share', pontos: hist.map(function(h) { var r = h.refs[i].rx; return r ? n(r.share) : null; }), cor: '#0d9488', tracejado: true, dash: rf.dash, referencia: true }); });
   rxH += '<div class="sec-hdr">Evolução mês a mês <small>prescription share · ' + esc(nomeEsc) + '</small></div>';
-  rxH += '<div class="graf-grid"><div class="box graf-box"><div class="graf-t">Prescription share' + (noDistrito ? ' <span class="sub">linha cheia = distrito · tracejada = regional</span>' : '') + '</div>' + graficoLinhas(labels, sRx, estimado) + '</div>';
-  rxH += '<div class="box"><div class="box-scroll"><table><thead><tr><th class="l">Ciclo</th><th>Presc. share</th><th>Penetração</th><th>Rx mercado</th>' + (noDistrito ? '<th class="reg">Presc. share regional</th>' : '') + '</tr></thead><tbody>';
+  rxH += '<div class="graf-grid"><div class="box graf-box"><div class="graf-t">Prescription share' + (comRef ? ' <span class="sub">' + legRef + '</span>' : '') + '</div>' + graficoLinhas(labels, sRx, estimado) + '</div>';
+  rxH += '<div class="box"><div class="box-scroll"><table><thead><tr><th class="l">Ciclo</th><th>Presc. share</th><th>Penetração</th><th>Rx mercado</th>' + refs.map(function(rf) { return '<th class="reg">Presc. share ' + rf.rot.toLowerCase() + '</th>'; }).join('') + '</tr></thead><tbody>';
   hist.forEach(function(h) {
     rxH += '<tr class="' + (h.mes === mesSel ? 'marca' : '') + '"><td class="l">' + h.mes + '/2026</td><td>' + fmtPct(h.rx ? n(h.rx.share) : null) + '</td><td>' + trend(h.rx ? n(h.rx.var_pp) : null, ' pp') + '</td><td>' + fmtInt(h.rx ? n(h.rx.rx_mercado) : null) + '</td>' +
-      (noDistrito ? '<td class="reg">' + fmtPct(h.rxR ? n(h.rxR.share) : null) + '</td>' : '') + '</tr>';
+      h.refs.map(function(r) { return '<td class="reg">' + fmtPct(r.rx ? n(r.rx.share) : null) + '</td>'; }).join('') + '</tr>';
   });
   rxH += '</tbody></table></div></div></div>';
 
@@ -464,25 +492,27 @@ function render() {
   if (listaC.length) {
     var ant = MS[MS.indexOf(mesRx) - 1] || 'mês anterior';
     var maxS = Math.max.apply(null, listaC.map(function(p) { return n(p.share) || 0; }).concat([1]));
+    var r0 = refs[0];
     rxH += '<div class="sec-hdr">Disputa nas receitas <small>share de receitas de cada marca do mercado · ' + esc(nomeEsc) + ' · ' + mesRx + '/2026' + (mesRx !== STATE.mes ? ' (mais recente disponível)' : '') + '</small></div>';
-    rxH += '<div class="box"><div class="box-scroll"><table><thead><tr><th class="l">#</th><th class="l">Marca</th><th style="width:34%">Share de receitas</th>' +
-      (noDistrito ? '<th class="reg">Regional</th><th class="reg">Distrito vs regional</th>' : '') + '<th>' + ant + '</th><th>Penetração</th></tr></thead><tbody>';
+    rxH += '<div class="box"><div class="box-scroll"><table><thead><tr><th class="l">#</th><th class="l">Marca</th><th style="width:30%">Share de receitas</th>' +
+      refs.map(function(rf) { return '<th class="reg">' + rf.rot + '</th>'; }).join('') + (r0 ? '<th class="reg">' + (noSetor ? 'Setor' : 'Distrito') + ' vs ' + r0.rot.toLowerCase() + '</th>' : '') + '<th>' + ant + '</th><th>Penetração</th></tr></thead><tbody>';
     listaC.forEach(function(p, i) {
-      var sh = n(p.share), r = regC.filter(function(x) { return x.produto === p.produto; })[0], shR = r ? n(r.share) : null;
+      var sh = n(p.share), shR = refsC.map(function(l) { var r = l.filter(function(x) { return x.produto === p.produto; })[0]; return r ? n(r.share) : null; });
       rxH += '<tr class="' + (p.eh_marca === '1' ? 'marca' : '') + '"><td class="l">' + (i + 1) + '</td><td class="l">' + esc(p.produto) + '</td>' +
         '<td><div class="share-cell"><div class="share-bar rx"><i style="width:' + Math.max(0, (sh || 0) / maxS * 100).toFixed(1) + '%"></i></div><span class="share-n">' + fmtPct(sh) + '</span></div></td>' +
-        (noDistrito ? '<td class="reg">' + fmtPct(shR) + '</td><td class="reg">' + difReg(sh, shR) + '</td>' : '') +
+        shR.map(function(v) { return '<td class="reg">' + fmtPct(v) + '</td>'; }).join('') + (r0 ? '<td class="reg">' + difReg(sh, shR[0]) + '</td>' : '') +
         '<td>' + fmtPct(n(p.share_ant)) + '</td><td>' + trend(n(p.var_pp), ' pp') + '</td></tr>';
     });
     rxH += '</tbody></table></div></div>';
+  } else if (noSetor) {
+    rxH += '<div class="nota">Sem leitura de prescrição por concorrente para este setor até ' + STATE.mes + '/2026.</div>';
   }
 
-  function refRx(nome, sub, rx, comPainel) {
+  function refRx(nome, sub, rx, extra) {
     return '<tr class="ref"><td class="l"><b>' + esc(nome) + '</b><br><span class="sub">' + esc(sub) + '</span></td>' +
-      (comPainel ? '<td>' + fmtInt(rx ? n(rx.painel) : null) + '</td>' : '') +
-      '<td>' + fmtInt(rx ? n(rx.rx_mercado) : null) + '</td><td><b>' + fmtPct(rx ? n(rx.share) : null) + '</b></td><td>' + trend(rx ? n(rx.var_pp) : null, ' pp') + '</td></tr>';
+      '<td>' + fmtInt(rx ? n(rx.painel) : null) + '</td><td>' + fmtInt(rx ? n(rx.rx_mercado) : null) + '</td><td><b>' + fmtPct(rx ? n(rx.share) : null) + '</b></td><td>' + trend(rx ? n(rx.var_pp) : null, ' pp') + '</td>' + (extra || '') + '</tr>';
   }
-  if (!noDistrito && Object.keys(cods).length) {
+  if (!comRef && Object.keys(cods).length) {
     rxH += '<div class="sec-hdr">Por distrito <small>prescrição · clique em um distrito para abrir</small></div>';
     rxH += '<div class="box"><div class="box-scroll"><table><thead><tr><th class="l">Distrito (GD)</th><th>Rx mercado</th><th>Presc. share</th><th>Penetração</th></tr></thead><tbody>';
     Object.keys(cods).sort().forEach(function(c) {
@@ -490,31 +520,45 @@ function render() {
       rxH += '<tr class="clicavel" data-distrito="' + c + '"><td class="l"><b>' + esc(cods[c]) + '</b><br><span class="sub">' + c + '</span></td>' +
         '<td>' + fmtInt(rx ? n(rx.rx_mercado) : null) + '</td><td><b>' + fmtPct(rx ? n(rx.share) : null) + '</b></td><td>' + trend(rx ? n(rx.var_pp) : null, ' pp') + '</td></tr>';
     });
-    rxH += refRx(nomeReg, 'total da regional', rxReg, false) + '</tbody></table></div></div>';
+    var rxRg = rxDe('REGIONAL')[0];
+    rxH += '<tr class="ref"><td class="l"><b>' + esc(nomeReg) + '</b><br><span class="sub">total da regional</span></td><td>' + fmtInt(rxRg ? n(rxRg.rx_mercado) : null) + '</td><td><b>' + fmtPct(rxRg ? n(rxRg.share) : null) + '</b></td><td>' + trend(rxRg ? n(rxRg.var_pp) : null, ' pp') + '</td></tr></tbody></table></div></div>';
   }
 
+  // Por setor: base para o GD afunilar — share contra o distrito, posição e líder nas receitas, GAP com a demanda
+  var podeSetor = STATE.regional === 'SPI';
   var setRx = [];
   rxDe('SETOR').forEach(function(r) {
-    if (noDistrito && r.distrito !== STATE.distrito) return;
-    setRx.push({ codigo: r.codigo, nome: r.nome, painel: n(r.painel), rxMercado: n(r.rx_mercado), rxShare: n(r.share), rxVar: n(r.var_pp) });
+    if (STATE.distrito && r.distrito !== STATE.distrito) return;
+    var dRx = rxDe('DISTRITO', r.distrito)[0], shD = dRx ? n(dRx.share) : null, sh = n(r.share);
+    var lc = mesRx ? concDe('SETOR', r.codigo) : [], ns = lc.filter(function(p) { return p.eh_marca === '1'; })[0], lid = lc[0];
+    var ds = resumoDem(demDe('SETOR', r.codigo)).marcaShare;
+    setRx.push({ codigo: r.codigo, distrito: r.distrito, nome: r.nome, painel: n(r.painel), rxMercado: n(r.rx_mercado), rxShare: sh, rxVar: n(r.var_pp),
+      vsDist: (sh !== null && shD !== null) ? sh - shD : null, pos: ns ? lc.indexOf(ns) + 1 : null, nMk: lc.length,
+      lider: lid ? lid.produto : '', liderSh: lid ? n(lid.share) : null, gap: (sh !== null && ds !== null && ds !== undefined) ? sh - ds : null });
   });
   if (setRx.length) {
     ordenar(setRx, 'rx');
-    rxH += '<div class="sec-hdr">Por setor <small>prescrição · ' + setRx.length + ' setores' + (noDistrito ? ' do distrito' : '') + ' · clique no cabeçalho para ordenar</small></div>';
-    rxH += '<div class="box"><div class="box-scroll"><table><thead><tr><th class="l">Setor</th>' + thS('rx', 'painel', 'Painel') + thS('rx', 'rxMercado', 'Rx mercado') + thS('rx', 'rxShare', 'Presc. share') + thS('rx', 'rxVar', 'Penetração') + '</tr></thead><tbody>';
-    rxH += refRx(nomeReg, 'referência', rxReg, true);
-    if (noDistrito) rxH += refRx(nomeEsc, 'total do distrito', rxEsc, true);
+    rxH += '<div class="sec-hdr">Por setor <small>prescrição · ' + setRx.length + ' setores' + (STATE.distrito ? ' do distrito' : '') + ' · clique no cabeçalho para ordenar' + (podeSetor ? ' · clique no setor para abrir o representante' : '') + (mesRx ? ' · posição e líder: ' + mesRx + '/2026' : '') + '</small></div>';
+    rxH += '<div class="box"><div class="box-scroll"><table><thead><tr><th class="l">Setor</th>' + thS('rx', 'painel', 'Painel') + thS('rx', 'rxMercado', 'Rx mercado') + thS('rx', 'rxShare', 'Presc. share') + thS('rx', 'rxVar', 'Penetração') +
+      thS('rx', 'vsDist', 'Vs distrito') + thS('rx', 'pos', 'Posição') + '<th class="l">Líder nas receitas</th>' + thS('rx', 'gap', 'GAP PX × DEM') + '</tr></thead><tbody>';
+    var vazio = '<td></td><td></td><td></td><td></td>';
+    rxH += refRx(nomeReg, 'referência', rxDe('REGIONAL')[0], vazio);
+    if (STATE.distrito) rxH += refRx(nomeDist, 'total do distrito', rxDe('DISTRITO', STATE.distrito)[0], vazio);
     setRx.forEach(function(l) {
-      rxH += '<tr><td class="l"><b>' + esc(l.nome) + '</b><br><span class="sub">' + l.codigo + '</span></td><td>' + fmtInt(l.painel) + '</td><td>' + fmtInt(l.rxMercado) + '</td><td><b>' + fmtPct(l.rxShare) + '</b></td><td>' + trend(l.rxVar, ' pp') + '</td></tr>';
+      var sel = l.codigo === STATE.setor;
+      rxH += '<tr class="' + (podeSetor ? 'clicavel' : '') + (sel ? ' marca' : '') + '"' + (podeSetor ? ' data-setor="' + l.codigo + '" data-dist="' + l.distrito + '"' : '') + '><td class="l"><b>' + esc(l.nome) + '</b>' + (sel ? ' ◀' : '') + '<br><span class="sub">' + l.codigo + '</span></td><td>' + fmtInt(l.painel) + '</td><td>' + fmtInt(l.rxMercado) + '</td>' +
+        '<td><b class="' + (l.vsDist === null ? '' : (l.vsDist >= 0 ? 'mk-up' : 'mk-dn')) + '">' + fmtPct(l.rxShare) + '</b></td><td>' + trend(l.rxVar, ' pp') + '</td><td>' + difReg(l.rxShare, l.vsDist === null ? null : l.rxShare - l.vsDist) + '</td>' +
+        '<td>' + (l.pos ? l.pos + 'ª de ' + l.nMk : '—') + '</td><td class="l"><span class="sub">' + (l.pos === 1 ? '<b style="color:#0f766e">a marca lidera</b>' : esc(l.lider) + (l.liderSh !== null ? ' (' + fmtPct(l.liderSh) + ')' : '')) + '</span></td><td>' + gapHtml(l.gap) + '</td></tr>';
     });
     rxH += '</tbody></table></div></div>';
   }
-  rxH += '<div class="nota"><b>Prescrição:</b> receitas que os médicos do painel fizeram no mercado da marca. Prescription share = Rx da marca ÷ Rx do mercado. No distrito e na regional cada médico conta uma vez, por isso o total não é a soma dos setores; o share por setor vem do Raio X sem casa decimal.</div>';
+  rxH += '<div class="nota"><b>Prescrição:</b> receitas que os médicos do painel fizeram no mercado da marca. Prescription share = Rx da marca ÷ Rx do mercado. No distrito e na regional cada médico conta uma vez, por isso o total não é a soma dos setores; o share por setor vem do Raio X sem casa decimal. ' +
+    '<b>Vs distrito</b> = presc. share do setor menos o do distrito (verde acima, vermelho abaixo). <b>GAP PX × DEM</b> = presc. share menos market share do setor: positivo = a receita não está virando venda; negativo = a venda está acima da receita.</div>';
   html += secao('rx') + '<div class="mk-secao-box rx">' + rxH + '</div>';
 
   // ═════════════════════════ BLOCO 2 — DEMANDA · MARKET SHARE ═════════════════════════
   var dH = '';
-  if (listaChaves.length > 1) {
+  if (listaChaves.length > 1 && !comRef) {
     dH += '<div class="sec-hdr">Todas as marcas-chave <small>' + esc(nomeReg) + ' · ' + STATE.mes + '/2026 · clique para abrir a marca</small></div>';
     dH += '<div class="box"><div class="box-scroll"><table><thead><tr><th class="l" rowspan="2">Marca</th><th class="grp" colspan="3">Mercado total</th><th class="grp" colspan="3">Disputa entre marcas</th><th class="grp" colspan="2">Genérico</th></tr>' +
       '<tr><th>Mercado</th><th>Market share</th><th>Penetração</th><th>Share entre marcas</th><th>Penetração</th><th class="l">Principal concorrente</th><th>Peso</th><th>Penetração</th></tr></thead><tbody>';
@@ -533,9 +577,9 @@ function render() {
 
   dH += '<div class="sec-hdr">Indicadores de demanda <small>' + esc(nomeEsc) + ' · ' + STATE.mes + '/2026</small></div><div class="card-grid">';
   dH += '<div class="card"><div class="card-t">Market share</div><div class="card-v">' + fmtPct(demEsc.marcaShare) + trend(demEsc.marcaVar, ' pp') + '</div>' +
-    '<div class="card-f">' + refReg(demEsc.marcaShare, demReg.marcaShare) + '<b>Penetração:</b> ' + penTxt(demEsc.marcaVar) + '<br>Fatia da venda do mercado em preço fábrica.<br>' + fmtRS(demEsc.marcaValor) + ' da marca' + (demEsc.marcaCresc !== null ? ' · ' + (demEsc.marcaCresc > 0 ? '+' : '') + fmtPct(demEsc.marcaCresc) + ' vs mês anterior' : '') + '</div></div>';
+    '<div class="card-f">' + refHtml(demEsc.marcaShare, function(rf) { return rf.dem.marcaShare; }) + '<b>Penetração:</b> ' + penTxt(demEsc.marcaVar) + '<br>Fatia da venda do mercado em preço fábrica.<br>' + fmtRS(demEsc.marcaValor) + ' da marca' + (demEsc.marcaCresc !== null ? ' · ' + (demEsc.marcaCresc > 0 ? '+' : '') + fmtPct(demEsc.marcaCresc) + ' vs mês anterior' : '') + '</div></div>';
   dH += '<div class="card"><div class="card-t">Share entre marcas</div><div class="card-v">' + fmtPct(demEsc.shareMarcas) + trend(demEsc.shareMarcasVar, ' pp') + '</div>' +
-    '<div class="card-f">' + refReg(demEsc.shareMarcas, demReg.shareMarcas) + '<b>Penetração:</b> ' + penTxt(demEsc.shareMarcasVar) + '<br>Fatia da marca tirando o genérico da conta. ' + (demEsc.posMarcas ? demEsc.posMarcas + 'ª de ' + demEsc.marcas.length + ' marcas.' : '') + '</div></div>';
+    '<div class="card-f">' + refHtml(demEsc.shareMarcas, function(rf) { return rf.dem.shareMarcas; }) + '<b>Penetração:</b> ' + penTxt(demEsc.shareMarcasVar) + '<br>Fatia da marca tirando o genérico da conta. ' + (demEsc.posMarcas ? demEsc.posMarcas + 'ª de ' + demEsc.marcas.length + ' marcas.' : '') + '</div></div>';
   dH += '<div class="card conc"><div class="card-t">Principal concorrente</div><div class="card-v" style="font-size:19px">' + (demEsc.concorrente ? esc(demEsc.concorrente.produto) : '—') + '</div>' +
     '<div class="card-f">' + (demEsc.concorrente ? fmtPct(demEsc.concorrenteShareMarcas) + ' entre marcas · ' + fmtRS(n(demEsc.concorrente.valor)) + '<br><b>Penetração:</b> ' + penTxt(n(demEsc.concorrente.var_pp)) : 'Sem marca concorrente neste recorte.') + '</div></div>';
   dH += '<div class="card gen"><div class="card-t">Tamanho do mercado</div><div class="card-v">' + fmtRS(demEsc.total) + trend(demEsc.cresc, '%') + '</div>' +
@@ -555,19 +599,19 @@ function render() {
     { nome: 'Market share (mercado total)', pontos: hist.map(function(h) { return h.d.marcaShare; }), cor: '#2563eb', destaque: true },
     { nome: 'Share entre marcas', pontos: hist.map(function(h) { return h.d.shareMarcas; }), cor: '#7c3aed' }
   ];
-  if (noDistrito) {
-    sDem.push({ nome: 'Regional · market share', pontos: hist.map(function(h) { return h.dR.marcaShare; }), cor: '#2563eb', tracejado: true, referencia: true });
-    sDem.push({ nome: 'Regional · share entre marcas', pontos: hist.map(function(h) { return h.dR.shareMarcas; }), cor: '#7c3aed', tracejado: true, referencia: true });
-    seriesMarcas.push({ nome: marca + ' na regional', pontos: hist.map(function(h) { return h.dR.shareMarcas; }), cor: '#2563eb', tracejado: true, referencia: true });
-  }
+  refs.forEach(function(rf, i) {
+    sDem.push({ nome: rf.rot + ' · market share', pontos: hist.map(function(h) { return h.refs[i].d.marcaShare; }), cor: '#2563eb', tracejado: true, dash: rf.dash, referencia: true });
+    sDem.push({ nome: rf.rot + ' · share entre marcas', pontos: hist.map(function(h) { return h.refs[i].d.shareMarcas; }), cor: '#7c3aed', tracejado: true, dash: rf.dash, referencia: true });
+    seriesMarcas.push({ nome: marca + ' · ' + rf.rot.toLowerCase(), pontos: hist.map(function(h) { return h.refs[i].d.shareMarcas; }), cor: '#2563eb', tracejado: true, dash: rf.dash, referencia: true });
+  });
   dH += '<div class="sec-hdr">Evolução mês a mês <small>demanda · ' + esc(nomeEsc) + '</small></div>';
   dH += '<div class="graf-grid">' +
-    '<div class="box graf-box"><div class="graf-t">Market share' + (noDistrito ? ' <span class="sub">linha cheia = distrito · tracejada = regional</span>' : '') + '</div>' + graficoLinhas(labels, sDem, estimado) + '</div>' +
-    '<div class="box graf-box"><div class="graf-t">Disputa entre marcas <span class="sub">share entre marcas, sem o genérico' + (noDistrito ? ' · tracejada = marca na regional' : '') + '</span></div>' + graficoLinhas(labels, seriesMarcas, estimado) + '</div></div>';
-  dH += '<div class="box" style="margin-top:12px"><div class="box-scroll"><table><thead><tr><th class="l">Ciclo</th><th>Market share</th><th>Penetração</th><th>Share entre marcas</th><th>Genérico</th><th>Mercado</th><th>Marca R$</th>' + (noDistrito ? '<th class="reg">Market share regional</th><th class="reg">Entre marcas regional</th>' : '') + '</tr></thead><tbody>';
+    '<div class="box graf-box"><div class="graf-t">Market share' + (comRef ? ' <span class="sub">' + legRef + '</span>' : '') + '</div>' + graficoLinhas(labels, sDem, estimado) + '</div>' +
+    '<div class="box graf-box"><div class="graf-t">Disputa entre marcas <span class="sub">share entre marcas, sem o genérico' + (comRef ? ' · ' + (noSetor ? 'pontilhada/tracejada = marca no distrito/regional' : 'tracejada = marca na regional') : '') + '</span></div>' + graficoLinhas(labels, seriesMarcas, estimado) + '</div></div>';
+  dH += '<div class="box" style="margin-top:12px"><div class="box-scroll"><table><thead><tr><th class="l">Ciclo</th><th>Market share</th><th>Penetração</th><th>Share entre marcas</th><th>Genérico</th><th>Mercado</th><th>Marca R$</th>' + refs.map(function(rf) { return '<th class="reg">Market share ' + rf.rot.toLowerCase() + '</th><th class="reg">Entre marcas ' + rf.rot.toLowerCase() + '</th>'; }).join('') + '</tr></thead><tbody>';
   hist.forEach(function(h) {
     dH += '<tr class="' + (h.mes === mesSel ? 'marca' : '') + '"><td class="l">' + h.mes + '/2026</td><td>' + fmtPct(h.d.marcaShare) + '</td><td>' + trend(h.d.marcaVar, ' pp') + '</td><td>' + fmtPct(h.d.shareMarcas) + '</td><td>' + (h.d.genValor > 0 ? fmtPct(h.d.genShare) : '—') + '</td><td>' + fmtRS(h.d.total) + '</td><td>' + fmtRS(h.d.marcaValor) + '</td>' +
-      (noDistrito ? '<td class="reg">' + fmtPct(h.dR.marcaShare) + '</td><td class="reg">' + fmtPct(h.dR.shareMarcas) + '</td>' : '') + '</tr>';
+      h.refs.map(function(r) { return '<td class="reg">' + fmtPct(r.d.marcaShare) + '</td><td class="reg">' + fmtPct(r.d.shareMarcas) + '</td>'; }).join('') + '</tr>';
   });
   dH += '</tbody></table></div></div>';
 
@@ -584,24 +628,26 @@ function render() {
     '</div></div>';
 
   // Disputa entre marcas na venda
+  var d0 = refs[0];
   dH += '<div class="sec-hdr">Disputa entre marcas na venda <small>ranking sem o genérico · ' + esc(nomeEsc) + '</small></div>';
-  dH += '<div class="box"><div class="box-scroll"><table><thead><tr><th class="l">#</th><th class="l">Marca</th><th>Valor</th><th>Cresc.</th><th style="width:30%">Share entre marcas</th>' + (noDistrito ? '<th class="reg">Regional</th><th class="reg">Distrito vs regional</th>' : '') + '<th>Share no mercado total</th><th>Penetração</th></tr></thead><tbody>';
-  function colReg(produto, sm) {
-    if (!noDistrito) return '';
-    var r = demReg.marcas.filter(function(x) { return x.produto === produto; })[0];
-    var smR = (r && demReg.marcasValor > 0) ? (n(r.valor) || 0) / demReg.marcasValor * 100 : null;
-    return '<td class="reg">' + fmtPct(smR) + '</td><td class="reg">' + difReg(sm, smR) + '</td>';
+  dH += '<div class="box"><div class="box-scroll"><table><thead><tr><th class="l">#</th><th class="l">Marca</th><th>Valor</th><th>Cresc.</th><th style="width:26%">Share entre marcas</th>' +
+    refs.map(function(rf) { return '<th class="reg">' + rf.rot + '</th>'; }).join('') + (d0 ? '<th class="reg">' + (noSetor ? 'Setor' : 'Distrito') + ' vs ' + d0.rot.toLowerCase() + '</th>' : '') + '<th>Share no mercado total</th><th>Penetração</th></tr></thead><tbody>';
+  function colRefs(produto, sm) {
+    if (!refs.length) return '';
+    var vals = refs.map(function(rf) { var r = rf.dem.marcas.filter(function(x) { return x.produto === produto; })[0]; return (r && rf.dem.marcasValor > 0) ? (n(r.valor) || 0) / rf.dem.marcasValor * 100 : null; });
+    return vals.map(function(v) { return '<td class="reg">' + fmtPct(v) + '</td>'; }).join('') + '<td class="reg">' + difReg(sm, vals[0]) + '</td>';
   }
-  var vazioReg = noDistrito ? '<td class="reg"></td><td class="reg"></td>' : '';
+  var vazioReg = refs.length ? refs.map(function() { return '<td class="reg"></td>'; }).join('') + '<td class="reg"></td>' : '';
   var maxSM = Math.max.apply(null, demEsc.marcas.map(function(p) { return n(p.valor) || 0; }).concat([1]));
   demEsc.marcas.forEach(function(p, i) {
     var v = n(p.valor) || 0, sm = demEsc.marcasValor > 0 ? v / demEsc.marcasValor * 100 : 0;
     dH += '<tr class="' + (p.eh_marca === '1' ? 'marca' : '') + '"><td class="l">' + (i + 1) + '</td><td class="l">' + esc(p.produto) + (p === demEsc.concorrente ? ' <span class="tag-conc">principal concorrente</span>' : '') + '</td><td>' + fmtRS(v) + '</td><td>' + trend(n(p.cresc_pct), '%') + '</td>' +
-      '<td><div class="share-cell"><div class="share-bar"><i style="width:' + Math.max(0, v / maxSM * 100).toFixed(1) + '%"></i></div><span class="share-n">' + fmtPct(sm) + '</span></div></td>' + colReg(p.produto, sm) + '<td>' + fmtPct(n(p.share)) + '</td><td>' + trend(n(p.var_pp), ' pp') + '</td></tr>';
+      '<td><div class="share-cell"><div class="share-bar"><i style="width:' + Math.max(0, v / maxSM * 100).toFixed(1) + '%"></i></div><span class="share-n">' + fmtPct(sm) + '</span></div></td>' + colRefs(p.produto, sm) + '<td>' + fmtPct(n(p.share)) + '</td><td>' + trend(n(p.var_pp), ' pp') + '</td></tr>';
   });
   dH += '<tr class="tot"><td class="l"></td><td class="l">Total das marcas</td><td>' + fmtRS(demEsc.marcasValor) + '</td><td>' + trend(demEsc.marcasCresc, '%') + '</td><td></td>' + vazioReg + '<td>' + fmtPct(100 - pg) + '</td><td></td></tr>';
   demEsc.genericos.forEach(function(p) {
-    dH += '<tr class="gen-row"><td class="l"></td><td class="l">' + esc(p.produto) + ' <span class="sub">fora do ranking</span></td><td>' + fmtRS(n(p.valor)) + '</td><td>' + trend(n(p.cresc_pct), '%') + '</td><td></td>' + (noDistrito ? '<td class="reg">' + fmtPct(demReg.genShare) + ' <span class="sub">do mercado</span></td><td class="reg">' + difReg(n(p.share), demReg.genShare) + '</td>' : '') + '<td>' + fmtPct(n(p.share)) + '</td><td>' + trend(n(p.var_pp), ' pp') + '</td></tr>';
+    dH += '<tr class="gen-row"><td class="l"></td><td class="l">' + esc(p.produto) + ' <span class="sub">fora do ranking</span></td><td>' + fmtRS(n(p.valor)) + '</td><td>' + trend(n(p.cresc_pct), '%') + '</td><td></td>' +
+      (refs.length ? refs.map(function(rf) { return '<td class="reg">' + fmtPct(rf.dem.genShare) + ' <span class="sub">do mercado</span></td>'; }).join('') + '<td class="reg">' + difReg(n(p.share), refs[0].dem.genShare) + '</td>' : '') + '<td>' + fmtPct(n(p.share)) + '</td><td>' + trend(n(p.var_pp), ' pp') + '</td></tr>';
   });
   dH += '<tr class="tot"><td class="l"></td><td class="l">Total do mercado</td><td>' + fmtRS(demEsc.total) + '</td><td>' + trend(demEsc.cresc, '%') + '</td><td></td>' + vazioReg + '<td>100%</td><td></td></tr>';
   dH += '</tbody></table></div></div>';
@@ -609,9 +655,10 @@ function render() {
   function refDem(nome, sub, d, extra) {
     return '<tr class="ref"><td class="l"><b>' + esc(nome) + '</b><br><span class="sub">' + esc(sub) + '</span></td>' +
       '<td>' + fmtRS(d.total) + '</td><td>' + fmtRS(d.marcaValor) + '</td><td><b>' + fmtPct(d.marcaShare) + '</b></td><td>' + trend(d.marcaVar, ' pp') + '</td>' +
-      (extra ? '<td>' + fmtPct(d.shareMarcas) + '</td><td>' + fmtPct(d.genShare) + '</td><td class="l"><span class="sub">' + esc(d.concorrente ? d.concorrente.produto : '') + '</span></td>' : '') + '</tr>';
+      (extra ? '<td></td><td>' + fmtPct(d.shareMarcas) + '</td><td>' + fmtPct(d.genShare) + '</td><td class="l"><span class="sub">' + esc(d.concorrente ? d.concorrente.produto : '') + '</span></td>' : '') + '</tr>';
   }
-  if (!noDistrito && Object.keys(cods).length) {
+  var demRg = resumoDem(demDe('REGIONAL'));
+  if (!comRef && Object.keys(cods).length) {
     dH += '<div class="sec-hdr">Por distrito <small>demanda · clique em um distrito para abrir</small></div>';
     dH += '<div class="box"><div class="box-scroll"><table><thead><tr><th class="l">Distrito (GD)</th><th>Mercado</th><th>Marca</th><th>Market share</th><th>Penetração</th></tr></thead><tbody>';
     Object.keys(cods).sort().forEach(function(c) {
@@ -623,32 +670,35 @@ function render() {
     if (nv.produtos.length) {
       dH += '<tr><td class="l"><b>Não visitado</b><br><span class="sub">demanda fora dos setores da linha</span></td><td>' + fmtRS(nv.total) + '</td><td>' + fmtRS(nv.marcaValor) + '</td><td><b>' + fmtPct(nv.marcaShare) + '</b></td><td>' + trend(nv.marcaVar, ' pp') + '</td></tr>';
     }
-    dH += refDem(nomeReg, 'total da regional', demReg, false) + '</tbody></table></div></div>';
+    dH += refDem(nomeReg, 'total da regional', demRg, false) + '</tbody></table></div></div>';
   }
 
   var porSetor = {};
   demDe('SETOR').forEach(function(r) {
-    if (noDistrito && r.distrito !== STATE.distrito) return;
+    if (STATE.distrito && r.distrito !== STATE.distrito) return;
     (porSetor[r.codigo] = porSetor[r.codigo] || []).push(r);
   });
   var setDem = Object.keys(porSetor).map(function(c) {
-    var d = resumoDem(porSetor[c]);
-    return { codigo: c, nome: porSetor[c][0].nome, demTotal: d.total, demMarca: d.marcaValor, demShare: d.marcaShare, demVar: d.marcaVar, shareMarcas: d.shareMarcas, genShare: d.genShare, lider: d.concorrente ? d.concorrente.produto : '' };
+    var d = resumoDem(porSetor[c]), dD = resumoDem(demDe('DISTRITO', porSetor[c][0].distrito));
+    return { codigo: c, distrito: porSetor[c][0].distrito, nome: porSetor[c][0].nome, demTotal: d.total, demMarca: d.marcaValor, demShare: d.marcaShare, demVar: d.marcaVar,
+      vsDist: (d.marcaShare !== null && dD.marcaShare !== null) ? d.marcaShare - dD.marcaShare : null, shareMarcas: d.shareMarcas, genShare: d.genShare, lider: d.concorrente ? d.concorrente.produto : '' };
   });
   if (setDem.length) {
     ordenar(setDem, 'dem');
-    dH += '<div class="sec-hdr">Por setor <small>demanda · ' + setDem.length + ' setores' + (noDistrito ? ' do distrito' : '') + ' · clique no cabeçalho para ordenar</small></div>';
-    dH += '<div class="box"><div class="box-scroll"><table><thead><tr><th class="l">Setor</th>' + thS('dem', 'demTotal', 'Mercado') + thS('dem', 'demMarca', 'Marca') + thS('dem', 'demShare', 'Market share') + thS('dem', 'demVar', 'Penetração') + thS('dem', 'shareMarcas', 'Entre marcas') + thS('dem', 'genShare', 'Genérico') + '<th class="l">Principal concorrente</th></tr></thead><tbody>';
-    dH += refDem(nomeReg, 'referência', demReg, true);
-    if (noDistrito) dH += refDem(nomeEsc, 'total do distrito', demEsc, true);
+    dH += '<div class="sec-hdr">Por setor <small>demanda · ' + setDem.length + ' setores' + (STATE.distrito ? ' do distrito' : '') + ' · clique no cabeçalho para ordenar' + (podeSetor ? ' · clique no setor para abrir o representante' : '') + '</small></div>';
+    dH += '<div class="box"><div class="box-scroll"><table><thead><tr><th class="l">Setor</th>' + thS('dem', 'demTotal', 'Mercado') + thS('dem', 'demMarca', 'Marca') + thS('dem', 'demShare', 'Market share') + thS('dem', 'demVar', 'Penetração') + thS('dem', 'vsDist', 'Vs distrito') + thS('dem', 'shareMarcas', 'Entre marcas') + thS('dem', 'genShare', 'Genérico') + '<th class="l">Principal concorrente</th></tr></thead><tbody>';
+    dH += refDem(nomeReg, 'referência', demRg, true);
+    if (STATE.distrito) dH += refDem(nomeDist, 'total do distrito', resumoDem(demDe('DISTRITO', STATE.distrito)), true);
     setDem.forEach(function(l) {
-      dH += '<tr><td class="l"><b>' + esc(l.nome) + '</b><br><span class="sub">' + l.codigo + '</span></td><td>' + fmtRS(u(l.demTotal)) + '</td><td>' + fmtRS(u(l.demMarca)) + '</td><td><b>' + fmtPct(u(l.demShare)) + '</b></td><td>' + trend(u(l.demVar), ' pp') + '</td>' +
+      var sel = l.codigo === STATE.setor;
+      dH += '<tr class="' + (podeSetor ? 'clicavel' : '') + (sel ? ' marca' : '') + '"' + (podeSetor ? ' data-setor="' + l.codigo + '" data-dist="' + l.distrito + '"' : '') + '><td class="l"><b>' + esc(l.nome) + '</b>' + (sel ? ' ◀' : '') + '<br><span class="sub">' + l.codigo + '</span></td><td>' + fmtRS(u(l.demTotal)) + '</td><td>' + fmtRS(u(l.demMarca)) + '</td>' +
+        '<td><b class="' + (l.vsDist === null ? '' : (l.vsDist >= 0 ? 'mk-up' : 'mk-dn')) + '">' + fmtPct(u(l.demShare)) + '</b></td><td>' + trend(u(l.demVar), ' pp') + '</td><td>' + difReg(l.demShare, l.vsDist === null ? null : l.demShare - l.vsDist) + '</td>' +
         '<td>' + fmtPct(u(l.shareMarcas)) + '</td><td>' + fmtPct(u(l.genShare)) + '</td><td class="l"><span class="sub">' + esc(l.lider || '') + '</span></td></tr>';
     });
     dH += '</tbody></table></div></div>';
   }
   dH += '<div class="nota"><b>Demanda:</b> venda em R$ a preço fábrica. Market share = venda da marca ÷ venda do mercado (com o genérico no total). Genérico entra no tamanho do mercado, mas fica fora do ranking: share entre marcas e principal concorrente consideram só produtos de marca. ' +
-    'Com um distrito selecionado, a referência da regional aparece nos cartões, como linha tracejada nos gráficos e em colunas ou linhas próprias nas tabelas; é o indicador da regional inteira, não a média simples dos distritos.</div>';
+    'Com um distrito ou representante selecionado, as referências aparecem nos cartões, como linhas pontilhada (distrito) e tracejada (regional) nos gráficos e em colunas próprias nas tabelas; são os indicadores do território inteiro, não a média simples dos setores.</div>';
   html += secao('dem') + '<div class="mk-secao-box dem">' + dH + '</div>';
 
   document.getElementById('main').innerHTML = html;
@@ -692,26 +742,40 @@ function montarFiltros() {
     return '<option value="' + c + '"' + (c === STATE.distrito ? ' selected' : '') + '>' + esc(dist[c]) + '</option>';
   }).join('');
   document.getElementById('btn-limpar').style.display = STATE.distrito ? '' : 'none';
+
+  // Representante (setor): só SPI, dentro do distrito escolhido
+  var sets = {};
+  if (STATE.regional === 'SPI' && STATE.distrito) {
+    rxDe('SETOR').concat(demDe('SETOR')).forEach(function(r) { if (r.distrito === STATE.distrito) sets[r.codigo] = sets[r.codigo] || r.nome; });
+  }
+  if (STATE.setor && !sets[STATE.setor]) STATE.setor = '';
+  var temSet = Object.keys(sets).length > 0;
+  document.querySelectorAll('.grp-setor').forEach(function(el) { el.style.display = temSet ? '' : 'none'; });
+  document.getElementById('sel-setor').innerHTML = '<option value="">Distrito inteiro</option>' + Object.keys(sets).sort().map(function(c) {
+    return '<option value="' + c + '"' + (c === STATE.setor ? ' selected' : '') + '>' + c.slice(-3) + ' · ' + esc(primeiroNome(sets[c])) + '</option>';
+  }).join('');
 }
 
 function atualizar() { montarFiltros(); render(); avisarAltura(); }
 
 document.addEventListener('click', function(e) {
-  var t = e.target.closest('[data-mes],[data-reg],[data-distrito],[data-sort],[data-marca],#btn-limpar');
+  var t = e.target.closest('[data-mes],[data-reg],[data-setor],[data-distrito],[data-sort],[data-marca],#btn-limpar');
   if (!t) return;
-  if (t.id === 'btn-limpar') { STATE.distrito = ''; }
-  else if (t.dataset.marca) { STATE.marcaKey = t.dataset.marca; STATE.distrito = ''; }
+  if (t.id === 'btn-limpar') { STATE.distrito = ''; STATE.setor = ''; }
+  else if (t.dataset.marca) { STATE.marcaKey = t.dataset.marca; STATE.distrito = ''; STATE.setor = ''; }
   else if (t.dataset.mes) { STATE.mes = t.dataset.mes; }
-  else if (t.dataset.reg) { STATE.regional = t.dataset.reg; STATE.distrito = ''; }
-  else if (t.dataset.distrito) { STATE.distrito = t.dataset.distrito; window.scrollTo({ top: 0, behavior: 'smooth' }); }
+  else if (t.dataset.reg) { STATE.regional = t.dataset.reg; STATE.distrito = ''; STATE.setor = ''; }
+  else if (t.dataset.setor) { STATE.distrito = t.dataset.dist; STATE.setor = t.dataset.setor; window.scrollTo({ top: 0, behavior: 'smooth' }); }
+  else if (t.dataset.distrito) { STATE.distrito = t.dataset.distrito; STATE.setor = ''; window.scrollTo({ top: 0, behavior: 'smooth' }); }
   else if (t.dataset.sort) {
     var ps = t.dataset.sort.split(':'), sc = STATE.sort[ps[0]];
     if (sc.col === ps[1]) sc.dir *= -1; else STATE.sort[ps[0]] = { col: ps[1], dir: -1 };
   }
   atualizar();
 });
-document.getElementById('sel-marca').addEventListener('change', function() { STATE.marcaKey = this.value; STATE.distrito = ''; atualizar(); });
-document.getElementById('sel-distrito').addEventListener('change', function() { STATE.distrito = this.value; atualizar(); });
+document.getElementById('sel-marca').addEventListener('change', function() { STATE.marcaKey = this.value; STATE.distrito = ''; STATE.setor = ''; atualizar(); });
+document.getElementById('sel-distrito').addEventListener('change', function() { STATE.distrito = this.value; STATE.setor = ''; atualizar(); });
+document.getElementById('sel-setor').addEventListener('change', function() { STATE.setor = this.value; atualizar(); });
 
 async function init() {
   var txt = document.getElementById('loading-txt');
@@ -735,7 +799,7 @@ async function init() {
         var chavesIni = {};
         STATE.rx.concat(STATE.dem).forEach(function(r) { if (r.linha === linhaIni && (!STATE.regional || r.regional === STATE.regional)) chavesIni[r.linha + '|' + r.marca] = 1; });
         var primeira = Object.keys(chavesIni).sort()[0];
-        if (primeira) { STATE.marcaKey = primeira; STATE.distrito = DISTRITO_INICIAL; }
+        if (primeira) { STATE.marcaKey = primeira; STATE.distrito = DISTRITO_INICIAL; STATE.setor = SETOR_INICIAL; }
       }
       atualizar();
     }
