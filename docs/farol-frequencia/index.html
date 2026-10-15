@@ -276,7 +276,7 @@ function quadroLinhas() {
   t.p = pct(t.cf, t.q13); t.projMin = pct(t.garantido + t.proteger + t.conquistar, t.q13); t.projMax = pct(t.q13 - t.reconstruir, t.q13);
   t.visitas = t.proteger + t.conquistar + t.possivel;
   const linha = (l, tot) => `<tr class="${tot ? 'tot' : 'click'}${l.chave === st.linha ? ' sel' : ''}" ${tot ? '' : `data-linha="${l.chave}"`}>
-      <td><b>${tot ? 'Regional SPI' : esc(l.linha)}</b><div class="cod">${l.setores} setores</div></td>
+      <td><b>${tot ? (MAN.linhas.length > 2 ? 'Regional SPI' : MAN.linhas.map(x => esc(x.linha)).join(' + ')) : esc(l.linha)}</b><div class="cod">${l.setores} setores</div></td>
       <td class="r num">${nfmt(l.q13)}</td><td>${farolCel(l.p)}</td><td>${projCel(l)}</td>
       <td class="r num">${nfmt(l.visitas)}</td><td class="r num">${nfmt(l.reconstruir)}</td></tr>`;
   return `<h2 style="margin-top:0">Linhas da regional <small>do pior para o melhor hoje · clique para abrir a linha</small></h2>
