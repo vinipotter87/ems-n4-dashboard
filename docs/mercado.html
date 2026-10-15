@@ -17,6 +17,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
 .hdr-text h1{color:#fff;font-size:15px;font-weight:700}
 .hdr-text p{color:rgba(255,255,255,.65);font-size:11px;margin-top:2px}
 .hdr-pills{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap;align-items:center}
+.hback{background:#fff;color:var(--pri);padding:5px 14px;border-radius:20px;font-size:11.5px;font-weight:800;text-decoration:none;white-space:nowrap}.hback:hover{background:#e8effd}
 .hpill{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600}
 .hpill.hi{background:#fff;color:var(--pri)}
 .bar{display:flex;gap:10px;padding:10px 28px;background:#fff;border-bottom:1px solid var(--border);flex-wrap:wrap;align-items:center}
@@ -150,6 +151,7 @@ html.embed .main{padding-top:14px}
       <p>Prescrição (receitas) e Demanda · Market share (venda) em blocos separados · fonte: Power BI Raio X</p>
     </div>
     <div class="hdr-pills">
+      <a class="hback" id="btn-voltar" href="index.html">← Voltar ao Dashboard</a>
       <span class="hpill hi" id="pill-mes">—</span>
       <span class="hpill" id="pill-escopo">—</span>
     </div>
@@ -447,6 +449,7 @@ function render() {
   refs.forEach(function(rf) { rf.nome = rf.nivel === 'REGIONAL' ? nomeReg : nomeDist; rf.rx = rxRef(rf); rf.dem = demRef(rf); });
 
   document.getElementById('pill-mes').textContent = STATE.mes + '/2026';
+  document.getElementById('btn-voltar').href = STATE.regional === 'LESTE' ? 'leste.html' : 'index.html';
   document.getElementById('pill-escopo').textContent = marca + ' · ' + nomeEsc;
 
   var rxShare = rxEsc ? n(rxEsc.share) : null;
