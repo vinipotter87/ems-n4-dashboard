@@ -252,6 +252,8 @@ tr.ip-ch td{background:#fffdf5}tr.ip-ch td.n{font-weight:800;color:#78350f}
 <div class="stage" id="stage"></div>
 <div class="nav"><button class="btn" id="b-prev">← Anterior</button><div class="dots" id="dots"></div><span id="cnt"></span><button class="btn" id="b-next">Próximo →</button></div>
 
+<script src="farol-frequencia/farol-core.js"></script>
+<script src="farol-frequencia/dados/freq_q13.js"></script>
 <script>
 // ── RPS — apresentação do GD com o time ──────────────────────────
 // Página isolada: escolhe o modelo (coletiva ou individual), o GD, o mês e a
@@ -313,10 +315,25 @@ async function fetchAba(aba, semCache, tent){
   return (CACHE[aba] = rows.slice(1).map(function(r){ var o = {}; h.forEach(function(k, i){ o[k] = r[i] !== undefined ? r[i] : ''; }); return o; }));
 }
 
+// Farol da Frequência: médicos da linha classificados para o próximo ciclo (mesma regra da página do farol)
+var FAROL_LINHA = {};
+function carregarFarol(linha){
+  var ch = String(linha || '').toUpperCase();
+  if (FAROL_LINHA.hasOwnProperty(ch)) return Promise.resolve(FAROL_LINHA[ch]);
+  return new Promise(function(ok){
+    if (!window.FarolCore){ FAROL_LINHA[ch] = null; return ok(null); }
+    var sc = document.createElement('script'); sc.src = 'farol-frequencia/dados/' + ch + '.js?t=' + Date.now();
+    sc.onload = function(){ var d = (window.FAROL_DADOS || {})[ch] || null;
+      FAROL_LINHA[ch] = d ? { d: d, med: d.medicos.map(FarolCore.classifica), jan: FarolCore.janela(d.janela) } : null; ok(FAROL_LINHA[ch]); };
+    sc.onerror = function(){ FAROL_LINHA[ch] = null; ok(null); };
+    document.head.appendChild(sc);
+  });
+}
+
 // Snapshots de frequência e sobreposição + meses com PEX simulado: ficam no index.html
 async function carregarExtra(){
   if (EXTRA) return EXTRA;
-  EXTRA = { freq: {}, sobrep: {}, pexSim: [] };
+  EXTRA = { freq: {}, sobrep: {}, pexSim: [], q13: window.FAROL_Q13 || {} };
   try {
     var txt = await (await fetch(REG_PAG + '?t=' + Date.now(), {cache:'no-store'})).text();
     function bloco(nome){ var a = txt.indexOf('var ' + nome + ' = {'); if (a < 0) return ''; return txt.substring(a, txt.indexOf('};', a)); }
@@ -381,12 +398,14 @@ async function carregarDistrito(d, m){ // dados de um distrito no mês, cada fon
   var dRef = ref.reps === m ? d : (doD(await fetchAba('distritos_' + ref.reps))[0] || d);
   var distAnt = aR ? doD(await fetchAba('distritos_' + aR))[0] || null : null, pexAnt = aX ? doD(await fetchAba('pex_' + aX)) : [];
   await carregarExtra();
+  var farolL = await carregarFarol(L);
   var pref = d.distrito_id.substring(0, 6);
-  [['freq', EXTRA.freq], ['sob', EXTRA.sobrep]].forEach(function(par){ // frequência e sobreposição têm snapshots em meses diferentes
-    for (var mf = m, nf = 0; mf && nf < 6; mf = mesAnt(mf), nf++){ if ((par[1][mf] || []).some(function(l){ return l.substring(0, 6) === pref; })){ ref[par[0]] = mf; break; } } });
+  // frequência (Q1–Q3, do Farol) e sobreposição têm snapshots em meses diferentes: usa o mais recente até o mês
+  for (var mf = m, nf = 0; mf && nf < 6; mf = mesAnt(mf), nf++){ if (Object.keys((EXTRA.q13[mf] || {}).setores || {}).some(function(k){ return k.substring(0, 6) === pref; })){ ref.freq = mf; break; } }
+  for (var ms2 = m, ns2 = 0; ms2 && ns2 < 6; ms2 = mesAnt(ms2), ns2++){ if ((EXTRA.sobrep[ms2] || []).some(function(l){ return l.substring(0, 6) === pref; })){ ref.sob = ms2; break; } }
   var dist = {}; Object.keys(d).forEach(function(k){ dist[k] = d[k]; }); dist.prod = dRef.prod;
   var o = { mes: m, dist: dist, ref: ref, antReps: aR, antPex: aX, reps: doD(uR.rows).filter(function(x){ return x.vago !== 'True'; }), pd: doD(pd), pr: doD(uP.rows), pex: doD(uX.rows), pexAnt: pexAnt, jor: jor,
-           distAnt: distAnt, histD: [] };
+           distAnt: distAnt, histD: [], farol: farolL };
   // Dados de mercado (Raio X): chegam com ~45 dias de defasagem; usa o ciclo mais recente até o mês escolhido
   var mrx = await fetchAba('mercado_rx'), mdm = await fetchAba('mercado_demanda'), ciclos = {}, cic = null, mrc = [];
   try { mrc = await fetchAba('mercado_rx_conc'); } catch (e) { mrc = []; } // prescrição por concorrente (aba nova; pode não existir)
@@ -416,13 +435,14 @@ async function ultimaAba(nomeDe, mes, tem){
   return { mes: mes, rows: [] };
 }
 async function distritosDe(mes){ return (await ultimaAba(function(m){ return 'distritos_' + m; }, mes, function(r){ return r.length > 0; })).rows; }
-var FONTE_NOME = { mercado: 'Dados de mercado (Raio X)', reps: 'Produtividade e coberturas (MDV, Q1 a Q4 e painel)', prod: 'Produtos (cota e realizado)', pex: 'PEX', freq: 'Frequência de visitação', sob: 'Sobreposição' };
+var FONTE_NOME = { mercado: 'Dados de mercado (Raio X)', reps: 'Produtividade e coberturas (MDV, Q1 a Q4 e painel)', prod: 'Produtos (cota e realizado)', pex: 'PEX', freq: 'Frequência Q1–Q3 (Farol)', sob: 'Sobreposição' };
 function fontesDe(nome){
   if (nome === 'Fechamento do mês') return ST.modelo === 'individual' ? ['reps', 'prod', 'pex', 'freq', 'sob'] : ['reps', 'prod', 'pex'];
   if (nome === 'Marcas-chave' || nome === 'Cobertura da cota — todos os produtos' || nome === 'Demais produtos' || nome === 'Prioridades do mês' || /^Marca-chave — /.test(nome)) return ['prod'];
   if (/^Mercado — /.test(nome)) return ['prod', 'mercado'];
   if (nome === 'Produtividade') return ['reps'];
   if (nome === 'Frequência e sobreposição') return ['freq', 'sob'];
+  if (/^Frequência — plano/.test(nome)) return ['freq'];
   if (nome === 'Jornada e PEX') return ['pex', 'reps'];
   if (nome === 'Fundamentos') return ['reps', 'freq', 'sob', 'pex'];
   return [];
@@ -988,25 +1008,26 @@ function sProd(){
   return { nome: 'Produtividade', msg: ab ? ab + ' de ' + reps.length + ' representantes abaixo de 100% de MDV' : 'Todos os representantes em 100% ou mais de MDV', html: h };
 }
 function sFreqSobrep(){
-  var D = ST.d, pref = D.dist.distrito_id.substring(0, 6), rf = D.ref.freq, a = mesAnt(rf);
-  function freq(mes){ var o = {}; (EXTRA.freq[mes] || []).forEach(function(l){ var x = l.split('|'); if (x[0].substring(0, 6) === pref) o[x[0]] = { nome: x[1], painel: +x[4], cob: +x[4] ? (+x[9] + +x[10]) / +x[4] * 100 : null }; }); return o; }
+  var D = ST.d, pref = D.dist.distrito_id.substring(0, 6), rf = D.ref.freq, a = mesAnt(rf) && EXTRA.q13[mesAnt(rf)] ? mesAnt(rf) : null; // comparação só com ciclo que tem Q1–Q3
+  var nomes = {}; D.reps.forEach(function(r){ nomes[r.setor_id] = r.nome; }); if (D.farol) Object.keys(D.farol.d.setores).forEach(function(k){ if (!nomes[k]) nomes[k] = D.farol.d.setores[k]; });
+  function freq(mes){ var o = {}, ss = (EXTRA.q13[mes] || {}).setores || {}; Object.keys(ss).forEach(function(k){ if (k.substring(0, 6) === pref){ var x = ss[k]; o[k] = { nome: nomes[k] || '', painel: x[0], cob: x[0] ? x[1] / x[0] * 100 : null }; } }); return o; }
   function sob(mes){ var o = {}; (EXTRA.sobrep[mes] || []).forEach(function(l){ var x = l.split('|'); if (x[0].substring(0, 6) === pref) o[x[0]] = { nome: x[1], painel: +x[4], todas: +x[5], nv: +x[6] }; }); return o; }
   var f = freq(rf), fa = a ? freq(a) : {}, s = sob(D.ref.sob), ids = {};
   Object.keys(f).concat(Object.keys(s)).forEach(function(k){ ids[k] = 1; });
   var lista = Object.keys(ids).sort();
   if (!lista.length) return { nome: 'Frequência e sobreposição', msg: 'Sem snapshot para ' + ST.mes, html: '<div class="vazio"><b>Sem dados de frequência e sobreposição para ' + ST.mes + '/2026</b>Esses dois indicadores são snapshots do Power BI e só existem nos meses em que foram extraídos.</div>' };
-  var h = '<div class="card"><h3>Por setor</h3><table><thead><tr><th>Setor — representante</th><th>Painel</th><th>Cobertura de frequência</th>' + (a ? '<th>vs ' + a + '</th>' : '') + '<th>Sobreposição Nexus × Vital</th><th>Sobreposição (todas as linhas)</th></tr></thead><tbody>';
+  var h = '<div class="card"><h3>Por setor</h3><table><thead><tr><th>Setor — representante</th><th>Médicos Q1–Q3</th><th>Frequência Q1–Q3 (PEX)</th>' + (a ? '<th>vs ' + a + '</th>' : '') + '<th>Sobreposição Nexus × Vital</th><th>Sobreposição (todas as linhas)</th></tr></thead><tbody>';
   var fb = 0, sbx = 0;
   lista.forEach(function(k){
     var x = f[k], y = s[k], cob = x ? x.cob : null, ant = fa[k] ? fa[k].cob : null, nv = y && y.painel ? y.nv / y.painel * 100 : null, td = y && y.painel ? y.todas / y.painel * 100 : null;
-    if (cob !== null && cob < 75) fb++; if (nv !== null && nv > 10) sbx++;
+    if (cob !== null && cob < 90) fb++; if (nv !== null && nv > 10) sbx++;
     function sc(v){ return v === null ? 'na' : (v > 20 ? 'crit' : (v >= 10 ? 'warn' : 'ok')); }
-    h += '<tr><td class="n">' + k + ' — ' + esc((x || y).nome) + '</td><td>' + ((x || y).painel || '—') + '</td><td>' + (cob === null ? '—' : barra(cob, cob >= 75 ? 'ok' : (cob >= 50 ? 'warn' : 'crit'))) + '</td>' +
+    h += '<tr><td class="n">' + k + ' — ' + esc((x || y).nome) + '</td><td>' + (x ? x.painel : '—') + '</td><td>' + (cob === null ? '—' : barra(cob, cls(cob, 90, 80))) + '</td>' +
       (a ? '<td>' + (cob === null || ant === null ? '—' : ((cob - ant >= 0 ? '▲ +' : '▼ ') + (cob - ant).toFixed(1).replace('.', ',') + ' pp')) + '</td>' : '') +
       '<td><span class="cel ' + sc(nv) + '">' + p1(nv) + '</span></td><td><span class="cel ' + sc(td) + '">' + p1(td) + '</span></td></tr>';
   });
-  h += '</tbody></table><div class="nota">Frequência = (Freq 80 + Freq 100) ÷ painel; meta 75%. Sobreposição = mesmo médico agendado por duas linhas com até 4 dias de diferença; meta até 10%. O nome do setor é o do snapshot e pode diferir do titular atual.</div></div>';
-  return { nome: 'Frequência e sobreposição', msg: fb + ' setores com frequência abaixo de 75% · ' + sbx + ' com sobreposição Nexus × Vital acima de 10%', html: h };
+  h += '</tbody></table><div class="nota">Frequência Q1–Q3 = médicos Q1–Q3 com Freq 80 ou 100 ÷ médicos Q1–Q3 do painel; meta 90% (pontua no PEX; Q4 fica fora). Sobreposição = mesmo médico agendado por duas linhas com até 4 dias de diferença; meta até 10%. O nome do setor é o do snapshot e pode diferir do titular atual.</div></div>';
+  return { nome: 'Frequência e sobreposição', msg: fb + ' setores com frequência Q1–Q3 abaixo de 90% · ' + sbx + ' com sobreposição Nexus × Vital acima de 10%', html: h };
 }
 function sJornadaPex(setor){
   var D = ST.d, jor = {}, pex = {}, ant = {};
@@ -1334,8 +1355,12 @@ var PLANOS = []; // planos do representante aberto: {chave, titulo, problema, kp
 
 function repSel(){ return ST.d.reps.filter(function(r){ return r.setor_id === ST.setor; })[0]; }
 function mediaDist(campo){ var vs = ST.d.reps.map(function(r){ return num(r[campo]); }).filter(function(x){ return x !== null; }); return vs.length ? vs.reduce(function(a, b){ return a + b; }, 0) / vs.length : null; }
-function freqSetor(mes){ var l = (EXTRA.freq[mes] || []).filter(function(x){ return x.split('|')[0] === ST.setor; })[0]; if (!l) return null; var x = l.split('|');
-  return { painel: +x[4], f: [+x[5], +x[6], +x[7], +x[8], +x[9], +x[10]], cob: +x[4] ? (+x[9] + +x[10]) / +x[4] * 100 : null }; }
+// Frequência Q1–Q3 (PEX, meta 90%) do Farol da Frequência: por setor e ciclo
+// [médicos Q1–Q3, com frequência, Freq 0, 20, 40, 60, 80, 100, n Q1, cf Q1, n Q2, cf Q2, n Q3, cf Q3]
+function q13Setor(mes, setor){ var x = ((EXTRA.q13[mes] || {}).setores || {})[setor]; if (!x) return null;
+  function q(i){ return { n: x[i], cf: x[i + 1], cob: x[i] ? x[i + 1] / x[i] * 100 : null }; }
+  return { n: x[0], cf: x[1], painel: x[0], f: x.slice(2, 8), cob: x[0] ? x[1] / x[0] * 100 : null, q: { Q1: q(8), Q2: q(10), Q3: q(12) } }; }
+function freqSetor(mes){ return q13Setor(mes, ST.setor); }
 function sobSetor(mes){ var l = (EXTRA.sobrep[mes] || []).filter(function(x){ return x.split('|')[0] === ST.setor; })[0]; if (!l) return null; var x = l.split('|');
   return { painel: +x[4], todas: +x[5], nv: +x[6], pNv: +x[4] ? +x[6] / +x[4] * 100 : null, pTd: +x[4] ? +x[5] / +x[4] * 100 : null }; }
 function marcasRep(){ var c = coberturaMarcas(), eu = c.reps.filter(function(r){ return r.setor === ST.setor; })[0] || { m: {}, abaixo: [], gap: 0, cob: null, cota: 0, real: 0 };
@@ -1377,7 +1402,7 @@ function iRetrato(){
   var a = comp('prod'), q13 = comp('q1_q3', 90, 80), q1 = comp('q1', 90, 80), q2 = comp('q2', 90, 80), q3 = comp('q3', 90, 80), q4 = comp('q4', 90, 80), cp = comp('cob_painel', 90, 80);
   var h = '<div class="kpis" style="grid-template-columns:repeat(6,minmax(0,1fr))">' + k('Produtividade (MDV)', a[0], a[1], a[2]) + k('Cobertura Q1-Q3 (PEX)', q13[0], q13[1], q13[2]) + k('Cobertura Q1', q1[0], q1[1], q1[2]) + k('Cobertura Q2', q2[0], q2[1], q2[2]) + k('Cobertura Q3', q3[0], q3[1], q3[2]) + k('Cobertura Q4', q4[0], q4[1], q4[2]) + '</div><div class="kpis" style="grid-template-columns:repeat(6,minmax(0,1fr))">' + k('Cobertura de painel', cp[0], cp[1], cp[2]) +
     k('Dias trabalhados', num(r.dias_trabalhados) === null ? '—' : Math.round(num(r.dias_trabalhados)), '', 'no mês') +
-    k('Frequência de visitação', f ? p1(f.cob) : '—', f ? (f.cob >= 75 ? 'ok' : (f.cob >= 50 ? 'warn' : 'crit')) : '', f ? 'meta 75% · painel de ' + f.painel : 'sem snapshot no mês') +
+    k('Frequência Q1–Q3 (PEX)', f ? p1(f.cob) : '—', f ? cls(f.cob, 90, 80) : '', f ? 'meta 90% · ' + f.cf + ' de ' + f.n + ' médicos Q1–Q3' : 'sem frequência Q1–Q3 no mês') +
     k('Sobreposição Nexus × Vital', s ? p1(s.pNv) : '—', s ? (s.pNv > 20 ? 'crit' : (s.pNv >= 10 ? 'warn' : 'ok')) : '', s ? 'meta até 10% · todas as linhas ' + p1(s.pTd) : 'sem snapshot no mês') +
     k('PEX' + (sim ? ' (simulado)' : ''), px ? num(px.pts).toFixed(1).replace('.', ',') : '—', px ? (/ATEN|CR[IÍ]T/i.test(px.medalha) ? 'crit' : 'ok') : '', px ? px.medalha : 'sem PEX no mês') +
     k('Marcas-chave', p1(marcasRep().eu.cob), cls(marcasRep().eu.cob), 'soma das marcas-chave do setor') + '</div>';
@@ -1409,7 +1434,7 @@ function iEvolucao(){ // últimos 3 meses do setor: fundamentos (execução) e p
   var f = tabela('Fundamentos', 'indicadores de execução');
   f += linha('Produtividade (MDV)', campo('prod'), c100, p1, ' pp') + linha('Cobertura Q1-Q3 (PEX)', campo('q1_q3'), c90, p1, ' pp') + linha('Cobertura Q1', campo('q1'), c90, p1, ' pp') + linha('Cobertura Q2', campo('q2'), c90, p1, ' pp') + linha('Cobertura Q3', campo('q3'), c90, p1, ' pp') + linha('Cobertura Q4', campo('q4'), c90, p1, ' pp') + linha('Cobertura de painel', campo('cob_painel'), c90, p1, ' pp');
   f += linha('Dias trabalhados', campo('dias_trabalhados'), function(){ return ''; }, function(v){ return Math.round(v); }, ' d');
-  f += linha('Frequência de visitação', serie.map(function(s){ var x = freqSetor(s.mes); return x ? x.cob : null; }), function(v){ return v >= 75 ? 'ok' : (v >= 50 ? 'warn' : 'crit'); }, p1, ' pp');
+  f += linha('Frequência Q1–Q3 (PEX)', serie.map(function(s){ var x = freqSetor(s.mes); return x ? x.cob : null; }), c90, p1, ' pp');
   f += linha('Sobreposição Nexus × Vital', serie.map(function(s){ var x = sobSetor(s.mes); return x ? x.pNv : null; }), function(v){ return v > 20 ? 'crit' : (v >= 10 ? 'warn' : 'ok'); }, p1, ' pp', true);
   f += linha('PEX (pontos)', serie.map(function(s){ var x = (s.pex || []).filter(function(y){ return y.setor_id === ST.setor; })[0]; return x ? num(x.pts) : null; }), function(){ return ''; }, function(v){ return v.toFixed(1).replace('.', ','); }, ' pts');
   f += '</tbody></table></div>';
@@ -1428,13 +1453,75 @@ function iFreq(){
   if (!f && !s) return { nome: 'Frequência e sobreposição', msg: 'Sem snapshot para ' + ST.mes, html: '<div class="vazio"><b>Sem dados de frequência e sobreposição para ' + ST.mes + '/2026</b>Esses indicadores são snapshots do Power BI e só existem nos meses em que foram extraídos.</div>' };
   var h = '';
   if (f){ var rot = ['Freq 0', 'Freq 20', 'Freq 40', 'Freq 60', 'Freq 80', 'Freq 100'];
-    h += '<div class="card"><h3>Frequência de visitação <small>painel de ' + f.painel + ' médicos · cobertura ' + p1(f.cob) + (fa ? ' · ' + (f.cob - fa.cob >= 0 ? '▲ +' : '▼ ') + (f.cob - fa.cob).toFixed(1).replace('.', ',') + ' pp vs ' + mesAnt(rf) : '') + '</small></h3><table><thead><tr>' + rot.map(function(x){ return '<th>' + x + '</th>'; }).join('') + '</tr></thead><tbody><tr>' +
-      f.f.map(function(v, k){ var pc = f.painel ? v / f.painel * 100 : 0; return '<td><b style="font-size:20px">' + v + '</b><div class="nota" style="margin:0">' + p1(pc) + ' do painel</div><span class="bar" style="width:90%;margin:4px 0 0"><i class="' + (k >= 4 ? 'ok' : (k >= 2 ? 'warn' : 'crit')) + '" style="width:' + Math.min(100, pc) + '%"></i></span></td>'; }).join('') +
-      '</tr></tbody></table><div class="nota">Cobertura = (Freq 80 + Freq 100) ÷ painel; meta 75%. Médicos em Freq 0 a 60 são os que puxam o indicador para baixo.</div></div>'; }
+    h += '<div class="card"><h3>Frequência Q1–Q3 (PEX) <small>' + f.cf + ' de ' + f.n + ' médicos Q1–Q3 com frequência · <b class="' + cls(f.cob, 90, 80) + '">' + p1(f.cob) + '</b> · meta 90%' + (fa ? ' · ' + (f.cob - fa.cob >= 0 ? '▲ +' : '▼ ') + (f.cob - fa.cob).toFixed(1).replace('.', ',') + ' pp vs ' + mesAnt(rf) : '') + '</small></h3><table><thead><tr>' + rot.map(function(x){ return '<th>' + x + '</th>'; }).join('') + '<th>Q1</th><th>Q2</th><th>Q3</th></tr></thead><tbody><tr>' +
+      f.f.map(function(v, k){ var pc = f.n ? v / f.n * 100 : 0; return '<td><b style="font-size:20px">' + v + '</b><div class="nota" style="margin:0">' + p1(pc) + ' dos Q1–Q3</div><span class="bar" style="width:90%;margin:4px 0 0"><i class="' + (k >= 4 ? 'ok' : (k >= 2 ? 'warn' : 'crit')) + '" style="width:' + Math.min(100, pc) + '%"></i></span></td>'; }).join('') +
+      ['Q1', 'Q2', 'Q3'].map(function(q){ var x = f.q[q]; return '<td><span class="cel ' + cls(x.cob, 90, 80) + '">' + p1(x.cob) + '</span><div class="nota" style="margin:0">' + x.cf + ' de ' + x.n + '</div></td>'; }).join('') +
+      '</tr></tbody></table><div class="nota">Frequência Q1–Q3 = médicos Q1–Q3 com Freq 80 ou 100 ÷ médicos Q1–Q3 do painel; meta 90% (pontua no PEX). Q4 fica fora: não é prioridade e não pontua no PEX. O plano do próximo ciclo está no slide seguinte.</div></div>'; }
   if (s) h += '<div class="card"><h3>Sobreposição de visitas</h3><table><thead><tr><th>Recorte</th><th>Médicos em sobreposição</th><th>% do painel</th></tr></thead><tbody>' +
     '<tr><td class="n">Nexus × Vital</td><td>' + s.nv + '</td><td><span class="cel ' + (s.pNv > 20 ? 'crit' : (s.pNv >= 10 ? 'warn' : 'ok')) + '">' + p1(s.pNv) + '</span></td></tr>' +
     '<tr><td class="n">Todas as linhas</td><td>' + s.todas + '</td><td><span class="cel ' + (s.pTd > 20 ? 'crit' : (s.pTd >= 10 ? 'warn' : 'ok')) + '">' + p1(s.pTd) + '</span></td></tr></tbody></table><div class="nota">Mesmo médico agendado por duas linhas com até 4 dias de diferença. Meta: até 10% do painel.</div></div>';
-  return { nome: 'Frequência e sobreposição', msg: (f ? 'Frequência em ' + p1(f.cob) : '') + (f && s ? ' · ' : '') + (s ? 'sobreposição Nexus × Vital em ' + p1(s.pNv) : ''), html: h };
+  return { nome: 'Frequência e sobreposição', msg: (f ? 'Frequência Q1–Q3 em ' + p1(f.cob) : '') + (f && s ? ' · ' : '') + (s ? 'sobreposição Nexus × Vital em ' + p1(s.pNv) : ''), html: h };
+}
+// ── Frequência — plano do próximo ciclo (Farol da Frequência) ──
+// Mesma regra da página farol-frequencia/: cada médico Q1–Q3 num grupo para o próximo ciclo.
+// Só monta quando a janela do Farol termina no mês de frequência da reunião (o plano vale para o ciclo seguinte).
+var FAROL_GRUPO = { proteger: ['Proteger', '#fdf3d7', '#9a6b00'], conquistar: ['Conquistar', '#fde9da', '#b5530c'], possivel: ['Possível', '#fff1e6', '#b5530c'],
+  reconstruir: ['Reconstruir', '#fbe3e3', '#d23f3f'], garantido: ['Garantido', '#e3f5ec', '#1e9e62'] };
+function farolBase(){ var F = ST.d.farol; return F && F.jan.FECHADO === ST.d.ref.freq ? F : null; }
+function farolTag(g){ var x = FAROL_GRUPO[g]; return '<span class="cel" style="background:' + x[1] + ';color:' + x[2] + ';font-weight:800">' + x[0] + '</span>'; }
+function farolFaixa(a){ return Math.abs(a.projMax - a.projMin) < 0.05 ? p1(a.projMax) : p1(a.projMin).replace('%', '') + '–' + p1(a.projMax); }
+function farolSem(nome){ var F = ST.d.farol;
+  return { nome: nome, msg: 'Plano do ciclo indisponível', html: '<div class="vazio"><b>Plano do ciclo indisponível para ' + ST.mes + '/2026</b>' + (F ? 'O Farol da Frequência está com a janela ' + F.d.janela + '; o plano é montado sobre o último ciclo fechado da frequência (' + ST.d.ref.freq + ').' : 'Sem os dados do Farol da Frequência para esta linha.') + '</div>' }; }
+function farolOQue(m, J){
+  if (m.g === 'proteger') return 'Visitar em ' + J.CICLO + ' — sem a visita, sai da frequência';
+  if (m.g === 'conquistar') return 'Visitar em ' + J.CICLO + ' — com a visita, entra';
+  if (m.g === 'possivel') return 'Visitar em ' + J.CICLO + ' — entra se ' + J.SAI + ' ficou sem visita';
+  if (m.g === 'reconstruir') return 'Visitar todo ciclo — entra ' + (m.cedo === m.tarde ? 'em ' + J.ciclo(m.cedo) : 'entre ' + J.ciclo(m.cedo) + ' e ' + J.ciclo(m.tarde));
+  return 'Garantido em ' + J.CICLO;
+}
+function farolGrupos(a, J){
+  function q(o){ return ['Q1', 'Q2', 'Q3'].filter(function(k){ return o[k]; }).map(function(k){ return k + ': ' + o[k]; }).join(' · ') || '—'; }
+  return '<div class="kpis" style="grid-template-columns:repeat(4,minmax(0,1fr))">' +
+    '<div class="kpi warn"><div class="l">Proteger</div><div class="v">' + a.proteger + '</div><div class="s">saem se não forem visitados em ' + J.CICLO + ' · ' + q(a.protegerQ) + '</div></div>' +
+    '<div class="kpi warn"><div class="l">Conquistar e Possível</div><div class="v">' + (a.conquistar + a.possivel) + '</div><div class="s">entram com 1 visita em ' + J.CICLO + ' (' + a.possivel + ' dependem de ' + J.SAI + ' sem visita)</div></div>' +
+    '<div class="kpi crit"><div class="l">Reconstruir</div><div class="v">' + a.reconstruir + '</div><div class="s">não entram em ' + J.CICLO + '; visitar todo ciclo' + (a.zerado ? ' · ' + a.zerado + ' sem visita desde ' + J.SAI : '') + '</div></div>' +
+    '<div class="kpi ok"><div class="l">Garantido</div><div class="v">' + a.garantido + '</div><div class="s">seguem na frequência em ' + J.CICLO + ' sem visita</div></div></div>';
+}
+function iFreqPlano(){
+  var F = farolBase(), C = window.FarolCore; if (!F) return farolSem('Frequência — plano do próximo ciclo');
+  var J = F.jan, meds = F.med.filter(function(m){ return m.cod === ST.setor; }), a = C.agrega(meds), sem = Math.ceil(a.visitas / 4);
+  var lista = meds.filter(function(m){ return m.meta && C.PLANO.indexOf(m.g) >= 0; })
+    .sort(function(x, y){ return C.ORDEM.indexOf(x.g) - C.ORDEM.indexOf(y.g) || (C.QORD[x.q] || 9) - (C.QORD[y.q] || 9) || x.nome.localeCompare(y.nome); });
+  var MAX = 10, h = '<div class="kpis" style="grid-template-columns:repeat(4,minmax(0,1fr))">' +
+    '<div class="kpi ' + cls(a.p, 90, 80) + '"><div class="l">Frequência Q1–Q3 hoje</div><div class="v">' + p1(a.p) + '</div><div class="s">janela ' + F.d.janela + ' · meta 90% (' + a.alvo + ' médicos)</div></div>' +
+    '<div class="kpi ' + cls(a.projMax, 90, 80) + '"><div class="l">' + J.CICLO + ' cumprindo a lista</div><div class="v">' + farolFaixa(a) + '</div><div class="s">se não visitar a lista: ' + p1(a.semNada) + '</div></div>' +
+    '<div class="kpi"><div class="l">Visitas Q1–Q3 em ' + J.CICLO + '</div><div class="v">' + a.visitas + '</div><div class="s">≈ ' + sem + ' por semana</div></div>' +
+    (function(){ var minimo = a.garantido + a.proteger + a.conquistar, maximo = minimo + a.possivel, falta = Math.max(0, a.alvo - minimo);
+      return '<div class="kpi ' + (falta ? (a.alvo > maximo ? 'crit' : 'warn') : 'ok') + '"><div class="l">Para bater 90%</div><div class="v">' + falta + '</div><div class="s">' +
+        (!falta ? 'a lista já fecha a meta' : a.alvo > maximo ? 'mesmo com a lista toda faltam ' + (a.alvo - maximo) + ': vêm do Reconstruir nos próximos ciclos' : 'médicos a converter entre os Possível da lista') + '</div></div></div>'; })() +
+    farolGrupos(a, J);
+  h += '<div class="card"><h3>Lista do ciclo ' + J.CICLO + ' <small>' + lista.length + ' médicos Q1–Q3 · Proteger → Conquistar → Possível · Q1 primeiro</small></h3><table><thead><tr><th>Médico</th><th>Quartil</th><th>Visitas ' + F.d.janela + '</th><th>Grupo</th><th style="text-align:left">O que fazer</th></tr></thead><tbody>' +
+    lista.slice(0, MAX).map(function(m){ return '<tr><td class="n">' + esc(m.nome) + '</td><td><b>' + m.q + '</b></td><td>' + m.real + '/' + m.obj + '</td><td>' + farolTag(m.g) + '</td><td style="text-align:left">' + farolOQue(m, J) + '</td></tr>'; }).join('') +
+    '</tbody></table><div class="nota">' + (lista.length > MAX ? '+' + (lista.length - MAX) + ' médicos na lista completa: <a href="farol-frequencia/" target="_blank">Farol da Frequência → Estratégia do rep</a> (com download da planilha). ' : '') +
+    '<b>Para o plano de fundamentos (5W2H):</b> o quê = visitar os ' + a.proteger + ' Proteger e os ' + (a.conquistar + a.possivel) + ' Conquistar/Possível desta lista · quem = representante · quando = até o fim de ' + J.CICLO + ', ≈ ' + sem + ' por semana · como = agenda semanal pela lista, Q1 primeiro. Na próxima RPS, conferir quem do Proteger saiu da frequência.</div></div>';
+  return { nome: 'Frequência — plano de ' + J.CICLO, msg: a.visitas + ' visitas Q1–Q3 em ' + J.CICLO + ' levam o setor a ' + farolFaixa(a) + ' (hoje ' + p1(a.p) + ')', html: h };
+}
+function sFreqPlano(){
+  var F = farolBase(), C = window.FarolCore; if (!F) return farolSem('Frequência — plano do próximo ciclo');
+  var D = ST.d, J = F.jan, pref = D.dist.distrito_id.substring(0, 6), meds = F.med.filter(function(m){ return m.cod.substring(0, 6) === pref; });
+  var a = C.agrega(meds), por = {}; meds.forEach(function(m){ (por[m.cod] = por[m.cod] || []).push(m); });
+  var sets = Object.keys(por).map(function(k){ var x = C.agrega(por[k]); x.cod = k; x.nome = F.d.setores[k] || k; return x; }).filter(function(x){ return x.n; })
+    .sort(function(x, y){ return x.projMin - y.projMin || x.p - y.p; });
+  var h = '<div class="kpis" style="grid-template-columns:repeat(4,minmax(0,1fr))">' +
+    '<div class="kpi ' + cls(a.p, 90, 80) + '"><div class="l">Frequência Q1–Q3 do distrito</div><div class="v">' + p1(a.p) + '</div><div class="s">janela ' + F.d.janela + ' · meta 90% (' + a.alvo + ' médicos)</div></div>' +
+    '<div class="kpi ' + cls(a.projMax, 90, 80) + '"><div class="l">' + J.CICLO + ' cumprindo as listas</div><div class="v">' + farolFaixa(a) + '</div><div class="s">se ninguém visitar: ' + p1(a.semNada) + '</div></div>' +
+    '<div class="kpi"><div class="l">Visitas Q1–Q3 do time em ' + J.CICLO + '</div><div class="v">' + a.visitas + '</div><div class="s">≈ ' + Math.ceil(a.visitas / 4) + ' por semana no distrito</div></div>' +
+    '<div class="kpi"><div class="l">Setores na meta</div><div class="v">' + sets.filter(function(x){ return x.p >= 90; }).length + ' → ' + sets.filter(function(x){ return x.projMin >= 90; }).length + '</div><div class="s">hoje → ' + J.CICLO + ' (pior caso), de ' + sets.length + '</div></div></div>' +
+    farolGrupos(a, J);
+  h += '<div class="card"><h3>Compromisso de cada setor para ' + J.CICLO + ' <small>do mais distante da meta para o mais próximo</small></h3><table><thead><tr><th>Setor — representante</th><th>Hoje</th><th>' + J.CICLO + ' cumprindo a lista</th><th>Proteger</th><th>Conquistar / Possível</th><th>Reconstruir</th><th>Visitas por semana</th></tr></thead><tbody>' +
+    sets.map(function(x){ return '<tr><td class="n">' + x.cod + ' — ' + esc(x.nome) + '</td><td><span class="cel ' + cls(x.p, 90, 80) + '">' + p1(x.p) + '</span></td><td><span class="cel ' + cls(x.projMax, 90, 80) + '">' + farolFaixa(x) + '</span></td><td>' + x.proteger + '</td><td>' + (x.conquistar + x.possivel) + '</td><td>' + x.reconstruir + '</td><td>' + Math.ceil(x.visitas / 4) + '</td></tr>'; }).join('') +
+    '</tbody></table><div class="nota">Cada representante sai com a própria lista (Farol da Frequência → Estratégia do rep, com download da planilha); a ação do GD por setor (campo, cobrança) fica na Estratégia do GD, para a conversa individual. Faixa = pior caso (' + J.SAI + ' tinha visita) a melhor caso (' + J.SAI + ' sem visita).</div></div>';
+  return { nome: 'Frequência — plano de ' + J.CICLO, msg: 'Time: ' + a.visitas + ' visitas Q1–Q3 em ' + J.CICLO + ' levam o distrito a ' + farolFaixa(a) + ' (hoje ' + p1(a.p) + ')', html: h };
 }
 function iDemais(){ return demaisSlide(ST.d.pr.filter(function(x){ return x.setor_id === ST.setor; }), 'setor'); }
 function iProd(){
@@ -1454,7 +1541,7 @@ function fundamentosRep(){
   function add(nome, v, meta, desvio, fonte){ out.push({ nome: nome, valor: v === null ? '—' : p1(v), meta: meta, desvio: v !== null && desvio, sem: v === null, n: v, fonte: fonte || 'reps' }); }
   var p = num(r.prod); add('Produtividade (MDV)', p, '≥ 100%', p < 100);
   [['q1_q3','Cobertura Q1-Q3 (PEX)'],['q1','Cobertura Q1'],['q2','Cobertura Q2'],['q3','Cobertura Q3'],['q4','Cobertura Q4'],['cob_painel','Cobertura de painel']].forEach(function(q){ var v = num(r[q[0]]); add(q[1], v, '≥ 90%', v < 90); });
-  add('Frequência de visitação', f ? f.cob : null, '≥ 75%', f && f.cob < 75, 'freq');
+  add('Frequência Q1–Q3 (PEX)', f ? f.cob : null, '≥ 90%', f && f.cob < 90, 'freq');
   add('Sobreposição Nexus × Vital', s ? s.pNv : null, '≤ 10%', s && s.pNv > 10, 'sob');
   // PEX aparece sempre, com a pontuação e o quadrante (medalha); só conta como desvio em atenção ou crítico
   var sim = EXTRA.pexSim.indexOf(ST.d.ref.pex) >= 0;
@@ -1611,7 +1698,7 @@ function objetivoTag(p){ // etiqueta curta do objetivo, para cabeçalhos
   return prazoVencido(p) ? '<span class="p crit">prazo encerrado em ' + p.objetivos[p.objetivos.length - 1].mes + '</span>' : '';
 }
 
-function kpiKey(s){ return String(s).replace(/ \(simulado\)$/, '').replace(/^PEX — .*$/, 'PEX'); }
+function kpiKey(s){ return String(s).replace(/ \(simulado\)$/, '').replace(/^PEX — .*$/, 'PEX').replace(/^Frequência de visitação$/, 'Frequência Q1–Q3 (PEX)'); } // planos antigos: frequência do painel virou Q1–Q3
 function medir(ch){ // retrato atual do que o plano acompanha, para o setor em ST.setor
   var ref = ST.d.ref, m = { data: hoje(), rps: ST.data };
   if (/^fund/.test(ch)) m.inds = fundamentosRep().map(function(i){ return { nome: kpiKey(i.nome), n: i.n, txt: i.valor + (i.quad ? ' ' + i.quad : ''), mes: ref[i.fonte] || ST.mes }; });
@@ -1854,8 +1941,8 @@ function montarIndividual(){
       // mesma lógica da Apresentação N4: Bloco 1 = jornada e PEX → produtividade → frequência → evolução → fundamentos e plano;
       // Bloco 2 = atingimento das marcas → demais produtos → cota × mercado → um slide de concorrentes por marca → marcas em desvio e planos
       // cada bloco abre com os planos em andamento dele e só depois mostra os dados
-      sDivisor('Bloco 1', 'Fundamentos', 'Planos de fundamentos em andamento e a execução do setor: jornada, PEX, produtividade, frequência e evolução.')].concat(andSlides('fund'),
-      [sJornadaPex(ST.setor), iProd(), iFreq(), iEvolucao()], comDados(ST.dF, iFundamentos),
+      sDivisor('Bloco 1', 'Fundamentos', 'Planos de fundamentos em andamento e a execução do setor: jornada, PEX, produtividade, frequência (resultado e plano do ciclo) e evolução.')].concat(andSlides('fund'),
+      [sJornadaPex(ST.setor), iProd(), iFreq(), iFreqPlano(), iEvolucao()], comDados(ST.dF, iFundamentos),
       [sDivisor('Bloco 2', 'Produtos', 'Planos de produto em andamento e o resultado das marcas: atingimento, cota × mercado e concorrentes por marca.')], andSlides('prod'),
       [iProdutos(), iMercado()], iConcorrentes(), comMarcasParciais(comDados(ST.dF, iMarcasDesvio)));
   // plano que já está em andamento aparece só no slide "Planos em andamento" do bloco (com Editar lá);
@@ -2006,8 +2093,8 @@ function montar(){
   var fim = TEMAS.map(sTitulo).concat([sPrioridades(), { nome: 'Ata desta reunião', msg: ' ', html: '<div id="ata-nova"></div>' }]); fim[0].fim1 = true;
   var lista = [{ nome: 'Combinados anteriores', msg: ' ', html: '<div id="ata"></div>' }, sFechamento(),
       // mesma lógica da Apresentação N4 (ver comentário na individual)
-      sDivisor('Bloco 1', 'Fundamentos', 'Execução do distrito: jornada, PEX, produtividade e frequência e sobreposição.'),
-      sJornadaPex(), sProd(), sFreqSobrep(),
+      sDivisor('Bloco 1', 'Fundamentos', 'Execução do distrito: jornada, PEX, produtividade, frequência e sobreposição e o plano de frequência do ciclo.'),
+      sJornadaPex(), sProd(), sFreqSobrep(), sFreqPlano(),
       sDivisor('Bloco 2', 'Produtos', 'Resultado dos produtos: cobertura da cota por representante, cota × mercado e concorrentes por marca.'),
       sCoberturaProdutos(), sMercadoSetores(), sMercadoDistrito()].concat(sConcorrentes(), fim);
   var h = '<div class="slide">' + sCapa(lista) + '</div>';
