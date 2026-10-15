@@ -1,0 +1,613 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Farol da Frequência</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@200;400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#1F2D44; --navy-2:#1C2D46; --azul:#B6E4FA; --gelo:#DFF1FB; --aco:#5787A2;
+  --bg:#F3F9FD; --card:#FFFFFF; --line:#D6E6F0; --text:#1F2D44; --muted:#5787A2;
+  --verde:#1E9E62; --amarelo:#E3A008; --laranja:#E8701A; --vermelho:#D23F3F; --cinza:#56606B;
+  --verde-bg:#E3F5EC; --amarelo-bg:#FDF3D7; --laranja-bg:#FDE9DA; --vermelho-bg:#FBE3E3; --cinza-bg:#E7EAED;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'Sora',system-ui,-apple-system,'Segoe UI',sans-serif;font-size:13px;line-height:1.45}
+.num{font-variant-numeric:tabular-nums}
+button,select,input{font:inherit;color:inherit}
+
+.hdr{background:var(--navy);color:#fff;position:relative;overflow:hidden}
+.hdr::before,.hdr::after{content:"";position:absolute;border-radius:50%;background:var(--navy-2);filter:brightness(1.35);opacity:.55}
+.hdr::before{width:260px;height:260px;right:-60px;top:-120px}
+.hdr::after{width:170px;height:170px;right:130px;top:10px}
+.hdr-in{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:20px 24px;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.hdr img{height:20px;display:block}
+.hdr-sep{width:1px;height:38px;background:var(--aco)}
+.hdr h1{margin:0;font-size:21px;font-weight:700}
+.hdr h1 span{color:var(--azul);font-weight:200}
+.hdr p{margin:3px 0 0;color:var(--gelo);font-size:12px}
+.voltar{margin-left:auto;color:var(--azul);border:1px solid var(--aco);border-radius:999px;padding:6px 14px;text-decoration:none;font-size:12px;font-weight:600}
+.voltar:hover{background:var(--navy-2)}
+
+.bar{position:sticky;top:0;z-index:5;background:#fff;border-bottom:1px solid var(--line)}
+.bar-in{max-width:1400px;margin:0 auto;padding:10px 24px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.tabs{display:flex;background:var(--gelo);border-radius:999px;padding:3px}
+.tabs button{border:0;background:none;padding:6px 16px;border-radius:999px;cursor:pointer;color:var(--muted);font-weight:600}
+.tabs button.on{background:var(--navy);color:#fff}
+.bar select{border:1px solid var(--line);border-radius:8px;padding:6px 10px;background:#fff;max-width:100%}
+.bar .sp{flex:1}
+.legend{display:flex;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:11px}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:middle}
+
+main{max-width:1400px;margin:0 auto;padding:20px 24px 60px}
+h2{font-size:15px;margin:26px 0 10px}
+h2 small{font-weight:400;color:var(--muted);font-size:12px;margin-left:6px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px}
+
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.kpi{padding:14px 16px;border-left:5px solid var(--line)}
+.kpi .lb{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.kpi .vl{font-size:26px;font-weight:700;margin-top:2px}
+.kpi .sb{font-size:11.5px;color:var(--muted)}
+
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th{font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap;background:#FAFDFF;position:sticky;top:0}
+td{padding:8px 10px;border-bottom:1px solid #EDF4F8;vertical-align:middle}
+tr.click{cursor:pointer}
+tr.click:hover td{background:#F5FAFD}
+td.r,th.r{text-align:right}
+td.c,th.c{text-align:center}
+.cod{color:var(--muted);font-size:11px}
+
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;vertical-align:middle;margin-right:6px}
+.pct{font-weight:700}
+.stack{display:flex;height:10px;border-radius:5px;overflow:hidden;min-width:140px;background:var(--cinza-bg)}
+.stack span{display:block;height:100%}
+.delta{font-size:11px;font-weight:600}
+.delta.up{color:var(--verde)} .delta.dn{color:var(--vermelho)} .delta.eq{color:var(--muted)}
+
+.tag{display:inline-block;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:600;white-space:nowrap}
+.s-emdia{background:var(--verde-bg);color:var(--verde)}
+.s-margem{background:var(--amarelo-bg);color:#9A6B00}
+.s-recuperar{background:var(--laranja-bg);color:#B5530C}
+.s-critico{background:var(--vermelho-bg);color:var(--vermelho)}
+.s-zerado{background:var(--cinza-bg);color:var(--cinza)}
+.b0{font-size:10px;color:var(--aco);border:1px solid var(--line);border-radius:4px;padding:0 4px;margin-left:6px}
+
+.plano{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.passo{padding:14px 16px;display:flex;gap:12px;align-items:flex-start}
+.passo .n{font-size:24px;font-weight:700;min-width:44px;text-align:center;border-radius:10px;padding:4px 0}
+.passo b{display:block;font-size:13px}
+.passo p{margin:2px 0 0;color:var(--muted);font-size:12px}
+
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+.chips button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 11px;cursor:pointer;font-size:12px}
+.chips button.on{background:var(--navy);border-color:var(--navy);color:#fff}
+.chips input{border:1px solid var(--line);border-radius:999px;padding:4px 12px;margin-left:auto;min-width:200px}
+.chk{width:16px;height:16px;cursor:pointer;accent-color:var(--verde)}
+tr.feito td{opacity:.45}
+.vis{display:inline-flex;gap:3px}
+.vis i{width:8px;height:14px;border-radius:2px;background:var(--cinza-bg)}
+.vis i.ok{background:var(--navy)}
+.note{font-size:11.5px;color:var(--muted);margin-top:8px}
+.spark{display:block}
+.btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 12px;cursor:pointer}
+.vazio{padding:30px;text-align:center;color:var(--muted)}
+
+.g-garantido{background:var(--verde-bg);color:var(--verde)}
+.g-proteger{background:var(--amarelo-bg);color:#9A6B00}
+.g-conquistar{background:var(--laranja-bg);color:#B5530C}
+.g-possivel{background:#FFF1E6;color:#B5530C;border:1px dashed #E8A06A}
+.g-reconstruir{background:var(--vermelho-bg);color:var(--vermelho)}
+.g-q4{background:var(--cinza-bg);color:var(--cinza)}
+.estr{padding:18px 20px;border-left:5px solid var(--navy)}
+.estr h3{margin:0 0 4px;font-size:15px}
+.estr .lead{margin:0 0 12px;color:var(--muted)}
+.estr ol{margin:0;padding-left:20px}
+.estr li{margin:0 0 9px}
+.estr li b{color:var(--navy)}
+.estr .qs{color:var(--muted);font-size:12px}
+.grupos{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.grupo{padding:14px 16px;cursor:pointer;border-top:4px solid var(--line)}
+.grupo:hover{box-shadow:0 2px 10px rgba(31,45,68,.08)}
+.grupo .t{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.grupo .t b{font-size:13px}
+.grupo .t span{font-size:24px;font-weight:700}
+.grupo p{margin:4px 0 0;font-size:12px;color:var(--muted)}
+.grupo .qs{margin-top:6px;font-size:11px;color:var(--muted)}
+.proj{font-weight:700}
+.proj small{font-weight:400;color:var(--muted)}
+.acao{font-size:12px}
+table.linhas tr.sel td{background:var(--gelo)}
+table.linhas tr.tot td{border-top:2px solid var(--line);background:#FAFDFF}
+.tit-acao{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.btn-xl{margin-left:auto;background:var(--navy);color:#fff;border-color:var(--navy);font-weight:600}
+.btn-xl:disabled{opacity:.6;cursor:wait}
+.acao small{display:block;color:var(--muted);font-size:11px}
+@media (max-width:700px){
+  .hdr-in,.bar-in,main{padding-left:16px;padding-right:16px}
+  .chips input{margin-left:0;min-width:0;width:100%}
+  .hide-m{display:none}
+}
+@media print{
+  .bar,.hdr::before,.hdr::after,.noprint{display:none!important}
+  body{background:#fff}
+  .card{border-color:#ccc}
+  th{position:static}
+}
+</style>
+</head>
+<body>
+<header class="hdr"><div class="hdr-in">
+  <img src="assets/logo-grupo-ems.png" alt="Grupo EMS">
+  <div class="hdr-sep"></div>
+  <div><h1>Farol da Frequência <span>· Regional SPI OESTE</span></h1><p id="sub"></p></div>
+  <a id="voltar" href="../index.html" class="voltar">← Dashboard N4</a>
+</div></header>
+
+<div class="bar"><div class="bar-in">
+  <div class="tabs"><button data-v="regional" class="on">Regional</button><button data-v="gd">Estratégia do GD</button><button data-v="setor">Estratégia do rep</button></div>
+  <select id="fLinha" title="Linha"></select>
+  <select id="fDist"></select>
+  <select id="fSetor"></select>
+  <span class="sp"></span>
+  <div class="legend" id="legend"></div>
+</div></div>
+
+<main id="app"></main>
+
+<script src="dados/manifest.js"></script>
+<script>
+// ---- Regras (ajustar aqui) ------------------------------------------------
+// Meta: % dos médicos Q1–Q3 com frequência (≥80% das visitas objetivadas na janela de 5 ciclos).
+// Q4 e sem quartil ficam fora da meta e fora do plano.
+const FAROL = { verde: 90, amarelo: 80 };
+const QUARTIS_META = ['Q1', 'Q2', 'Q3'];
+const JANELA = 5;            // ciclos na janela móvel
+// Médico com frequência = Freq. ≥80% no Power BI, que arredonda para cima em degraus de 20%
+// (2/3 → 80%, 3/4 → 80%). Na prática: visitas/objetivo > 60%.
+const precisaDe = meses => Math.floor(3 * meses / 5) + 1;
+const SEMANAS_CICLO = 4;
+const MESES = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
+
+const MAN = window.FAROL_MANIFEST;
+let D, MED, porSetor, SET;          // dados da linha aberta (preparar)
+const fmtData = s => s ? s.split('-').reverse().join('/') : '';
+const pct = (a, b) => b ? a / b * 100 : 0;
+const f1 = v => v.toFixed(1).replace('.', ',');
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const corFarol = p => p >= FAROL.verde ? 'var(--verde)' : p >= FAROL.amarelo ? 'var(--amarelo)' : 'var(--vermelho)';
+const distDe = cod => cod.slice(0, 6) + '000';
+const nfmt = n => n.toLocaleString('pt-BR');
+
+// Ciclos: a janela do export é [MES_INI–MES_FIM]; o próximo ciclo é o seguinte ao fim
+const [INI, FIM] = (MAN.janela || 'MAI–SET').split('–').map(m => MESES.indexOf(m));
+const ciclo = m => MESES[(FIM + m) % 12];   // m=1 → próximo ciclo
+const CICLO = ciclo(1), SAI = MESES[INI];
+
+// ---- Projeção por médico ----------------------------------------------------
+// O export não traz o mês de cada visita, então quando um ciclo antigo sai da janela
+// não se sabe se ele tinha visita: calcula melhor e pior caso.
+// Depois de m ciclos, com "novas" visitas nesses ciclos:
+function proj(obj, real, m, novas) {
+  const meses = Math.min(obj + m, JANELA);
+  const ficam = Math.min(obj, Math.max(0, JANELA - m));          // ciclos antigos que continuam na janela
+  return {
+    melhor: Math.min(real, ficam) + novas,                         // visitas antigas nos ciclos mais recentes
+    pior: Math.max(0, real - (obj - ficam)) + novas,               // visitas antigas nos ciclos que saem
+    precisa: precisaDe(meses),
+  };
+}
+
+const GRUPOS = {
+  proteger:    { nome: 'Proteger',    cor: 'var(--amarelo)',  cls: 'g-proteger',
+                 dica: c => `Têm frequência hoje e saem se não forem visitados em ${c}.` },
+  conquistar:  { nome: 'Conquistar',  cor: 'var(--laranja)',  cls: 'g-conquistar',
+                 dica: c => `Entram na frequência com 1 visita em ${c}. Ganho garantido.` },
+  possivel:    { nome: 'Possível',    cor: '#F0A060',         cls: 'g-possivel',
+                 dica: c => `Entram com 1 visita em ${c} se ${SAI} ficou sem visita.` },
+  reconstruir: { nome: 'Reconstruir', cor: 'var(--vermelho)', cls: 'g-reconstruir',
+                 dica: c => `Não entram em ${c} nem visitando. Visitar todo ciclo a partir de agora.` },
+  garantido:   { nome: 'Garantido',   cor: 'var(--verde)',    cls: 'g-garantido',
+                 dica: c => `Continuam com frequência em ${c} mesmo sem visita. Manter a rotina.` },
+};
+const ORDEM = ['proteger', 'conquistar', 'possivel', 'reconstruir', 'garantido'];
+const PLANO = ['proteger', 'conquistar', 'possivel'];        // o que exige visita no ciclo
+const QORD = { Q1: 1, Q2: 2, Q3: 3, Q4: 4 };
+
+// [setor, id, nome, esp, quartil, base0, obj, real, freq, cfreq, freqAnterior]
+const classifica = r => {
+  const [cod, id, nome, esp, q, b0, obj, real, freq, cf] = r;
+  const m = { cod, id, nome, esp, q, b0, obj, real, freq, cf, meta: QUARTIS_META.includes(q) };
+  const sem = proj(obj, real, 1, 0), com = proj(obj, real, 1, 1);
+  if (sem.pior >= sem.precisa) m.g = 'garantido';
+  else if (com.pior >= com.precisa) m.g = cf ? 'proteger' : 'conquistar';
+  else if (com.melhor >= com.precisa) m.g = 'possivel';
+  else {
+    m.g = 'reconstruir';
+    // primeiro ciclo em que entra visitando todo ciclo a partir do próximo
+    const entra = caso => { for (let k = 2; k <= JANELA; k++) { const p = proj(obj, real, k, k); if (p[caso] >= p.precisa) return k; } return JANELA; };
+    m.cedo = entra('melhor'); m.tarde = entra('pior');
+  }
+  return m;
+};
+
+function agrega(lista) {
+  const a = { n: 0, cf: 0, q4n: 0, q4cf: 0, zerado: 0, Q1: 0, Q2: 0, Q3: 0 };
+  ORDEM.forEach(g => { a[g] = 0; a[g + 'Q'] = { Q1: 0, Q2: 0, Q3: 0 }; });
+  lista.forEach(m => {
+    if (!m.meta) { a.q4n++; a.q4cf += m.cf; return; }
+    a.n++; a.cf += m.cf; a[m.g]++; a[m.g + 'Q'][m.q]++;
+    if (m.real === 0) a.zerado++;
+  });
+  a.p = pct(a.cf, a.n);
+  a.q4p = pct(a.q4cf, a.q4n);
+  a.projMin = pct(a.garantido + a.proteger + a.conquistar, a.n);           // cumprindo o plano, pior caso
+  a.projMax = pct(a.garantido + a.proteger + a.conquistar + a.possivel, a.n);
+  a.semNada = pct(a.garantido, a.n);                                       // se não visitar ninguém (pior caso)
+  a.visitas = a.proteger + a.conquistar + a.possivel;
+  a.alvo = Math.ceil(a.n * FAROL.verde / 100 - 1e-9);                      // médicos com frequência p/ bater a meta
+  return a;
+}
+function preparar(chave) {
+  D = window.FAROL_DADOS[chave];
+  MED = D.medicos.map(classifica);
+  porSetor = {};
+  MED.forEach(m => (porSetor[m.cod] ??= []).push(m));
+  SET = Object.keys(D.setores).sort().map(cod => ({
+    cod, rep: D.setores[cod], dist: distDe(cod), linha: D.linha, ...agrega(porSetor[cod] || []),
+  }));
+}
+const nomeGD = d => (D.distritos[d] || '').trim() || '—';
+
+// ---- Estado ---------------------------------------------------------------
+const st = { view: 'regional', linha: 'NEXUS', setor: '', dist: '', filtro: 'plano', busca: '', distSel: null };
+try { Object.assign(st, JSON.parse(localStorage.getItem('farol-freq-ui') || '{}')); } catch (e) {}
+if (!MAN.linhas.some(l => l.chave === st.linha)) st.linha = MAN.linhas[0].chave;
+const salvaUI = () => { try { localStorage.setItem('farol-freq-ui', JSON.stringify({ view: st.view, linha: st.linha, setor: st.setor, dist: st.dist })); } catch (e) {} };
+const chaveFeito = () => `farol-freq-ciclo-${st.setor}-${CICLO}`;
+let feitos = new Set();
+const carregaFeitos = () => { try { feitos = new Set(JSON.parse(localStorage.getItem(chaveFeito()) || '[]')); } catch (e) { feitos = new Set(); } };
+const salvaFeitos = () => { try { localStorage.setItem(chaveFeito(), JSON.stringify([...feitos])); } catch (e) {} };
+
+// ---- Componentes ----------------------------------------------------------
+const stack = a => `<div class="stack" title="${ORDEM.map(g => `${GRUPOS[g].nome}: ${a[g]}`).join(' · ')}">${
+  ['garantido', 'proteger', 'conquistar', 'possivel', 'reconstruir'].map(g => a[g] ? `<span style="width:${pct(a[g], a.n)}%;background:${GRUPOS[g].cor}"></span>` : '').join('')}</div>`;
+const farolCel = p => `<span class="dot" style="background:${corFarol(p)}"></span><span class="pct num">${f1(p)}%</span>`;
+const projCel = a => `<span class="dot" style="background:${corFarol(a.projMax)}"></span><span class="proj num">${
+  Math.abs(a.projMax - a.projMin) < 0.05 ? f1(a.projMax) + '%' : `${f1(a.projMin)}–${f1(a.projMax)}%`}</span>`;
+const kpi = (lb, vl, sb, cor) => `<div class="card kpi" style="border-left-color:${cor || 'var(--line)'}"><div class="lb">${lb}</div><div class="vl num">${vl}</div><div class="sb">${sb}</div></div>`;
+const qs = o => QUARTIS_META.filter(q => o[q]).map(q => `${q}: ${o[q]}`).join(' · ') || '—';
+const faixa = (a, b) => `${f1(a)}${Math.abs(b - a) < 0.05 ? '' : '–' + f1(b)}%`;
+
+function oQueFazer(m) {
+  if (!m.meta) return `Fora da meta<small>Q4/sem quartil: só se couber na rota</small>`;
+  switch (m.g) {
+    case 'proteger':   return `Visitar em ${CICLO}<small>sem a visita, sai da frequência</small>`;
+    case 'conquistar': return `Visitar em ${CICLO}<small>com a visita, entra na frequência</small>`;
+    case 'possivel':   return `Visitar em ${CICLO}<small>entra se ${SAI} ficou sem visita</small>`;
+    case 'reconstruir': return `Visitar todo ciclo<small>entra ${m.cedo === m.tarde ? 'em ' + ciclo(m.cedo) : `entre ${ciclo(m.cedo)} e ${ciclo(m.tarde)}`}${m.real === 0 ? ' · sem visita desde ' + SAI : ''}</small>`;
+    default:           return `Garantido em ${CICLO}<small>manter a rotina de visita</small>`;
+  }
+}
+
+// ---- Estratégia automática do setor --------------------------------------
+function estrategia(s, meds) {
+  const itens = [];
+  const lista = meds.filter(m => m.meta && PLANO.includes(m.g));
+  const minimoMed = s.garantido + s.proteger + s.conquistar;
+  const maximoMed = minimoMed + s.possivel;
+  let lead;
+  if (s.n === 0) return '<div class="card estr"><h3>Sem médicos Q1–Q3 no painel</h3></div>';
+  if (minimoMed >= s.alvo)
+    lead = `Cumprindo o plano, você fecha ${CICLO} em <b>${faixa(s.projMin, s.projMax)}</b>, acima da meta de ${FAROL.verde}%. O foco é não deixar ninguém do grupo Proteger para trás.`;
+  else if (maximoMed >= s.alvo)
+    lead = `Cumprindo o plano, você fecha ${CICLO} entre <b>${f1(s.projMin)}% e ${f1(s.projMax)}%</b>. A meta de ${FAROL.verde}% (${s.alvo} médicos) depende dos "Possível": faltam ${s.alvo - minimoMed} além dos garantidos pelo plano.`;
+  else
+    lead = `Mesmo cumprindo tudo, ${CICLO} fecha em no máximo <b>${f1(s.projMax)}%</b>: faltam ${s.alvo - maximoMed} médicos para ${FAROL.verde}%. Esse ganho vem dos "Reconstruir", que precisam de visita em todo ciclo a partir de agora para entrar nos próximos.`;
+
+  if (s.proteger) itens.push(`<b>1º Proteger ${s.proteger} médico${s.proteger > 1 ? 's' : ''}</b>: ${s.proteger > 1 ? 'já têm frequência e saem se não forem visitados' : 'já tem frequência e sai se não for visitado'} em ${CICLO}. Agende primeiro, Q1 antes. <div class="qs">${qs(s.protegerQ)}</div>`);
+  if (s.conquistar) itens.push(`<b>${itens.length + 1}º Conquistar ${s.conquistar}</b>: com 1 visita em ${CICLO} entram na frequência (+${f1(pct(s.conquistar, s.n))} p.p.). <div class="qs">${qs(s.conquistarQ)}</div>`);
+  if (s.possivel) itens.push(`<b>${itens.length + 1}º Possível ${s.possivel}</b>: tiveram 3 de 5 visitas. Se a que faltou foi em ${SAI}, a visita de ${CICLO} coloca na frequência. Confira no seu histórico e priorize quem não teve visita em ${SAI}. <div class="qs">${qs(s.possivelQ)}</div>`);
+  if (s.reconstruir) {
+    const z = s.zerado ? ` ${s.zerado} deles não têm nenhuma visita desde ${SAI}: valide com o GD se continuam fazendo sentido no painel.` : '';
+    itens.push(`<b>${itens.length + 1}º Reconstruir ${s.reconstruir}</b>: não entram em ${CICLO}, mas uma visita por ciclo a partir de agora os coloca na frequência em 2 a 4 ciclos.${z} <div class="qs">${qs(s.reconstruirQ)}</div>`);
+  }
+  // concentração por especialidade na lista do ciclo
+  if (lista.length >= 5) {
+    const cont = {};
+    lista.forEach(m => cont[m.esp] = (cont[m.esp] || 0) + 1);
+    const [esp, n] = Object.entries(cont).sort((a, b) => b[1] - a[1])[0];
+    if (n / lista.length >= 0.4) itens.push(`<b>Concentração:</b> ${n} dos ${lista.length} médicos da lista do ciclo são ${esp.toLowerCase()}s. Vale montar a rota pensando neles.`);
+  }
+  const porSemana = Math.ceil(s.visitas / SEMANAS_CICLO);
+  itens.push(`<b>Ritmo:</b> ${s.visitas} visitas Q1–Q3 no ciclo, cerca de <b>${porSemana} por semana</b>. Se não visitar ninguém da lista, o farol cai para ${f1(s.semNada)}%.`);
+
+  return `<div class="card estr"><h3>Estratégia do ciclo ${CICLO}</h3><p class="lead">${lead}</p><ol>${itens.map(i => `<li>${i}</li>`).join('')}</ol></div>`;
+}
+
+// ---- Quadro de linhas (resumo do manifesto, todas as linhas) --------------
+function quadroLinhas() {
+  const L = MAN.linhas.map(l => ({ ...l, p: pct(l.cf, l.q13), projMin: pct(l.garantido + l.proteger + l.conquistar, l.q13),
+    projMax: pct(l.q13 - l.reconstruir, l.q13), visitas: l.proteger + l.conquistar + l.possivel }));
+  const t = { chave: '' };
+  ['q13', 'cf', 'garantido', 'proteger', 'conquistar', 'possivel', 'reconstruir', 'setores'].forEach(k => t[k] = L.reduce((s, l) => s + l[k], 0));
+  t.p = pct(t.cf, t.q13); t.projMin = pct(t.garantido + t.proteger + t.conquistar, t.q13); t.projMax = pct(t.q13 - t.reconstruir, t.q13);
+  t.visitas = t.proteger + t.conquistar + t.possivel;
+  const linha = (l, tot) => `<tr class="${tot ? 'tot' : 'click'}${l.chave === st.linha ? ' sel' : ''}" ${tot ? '' : `data-linha="${l.chave}"`}>
+      <td><b>${tot ? 'Regional SPI' : esc(l.linha)}</b><div class="cod">${l.setores} setores</div></td>
+      <td class="r num">${nfmt(l.q13)}</td><td>${farolCel(l.p)}</td><td>${projCel(l)}</td>
+      <td class="r num">${nfmt(l.visitas)}</td><td class="r num">${nfmt(l.reconstruir)}</td></tr>`;
+  return `<h2 style="margin-top:0">Linhas da regional <small>do pior para o melhor hoje · clique para abrir a linha</small></h2>
+  <div class="card tw"><table class="linhas">
+    <thead><tr><th>Linha</th><th class="r">Médicos Q1–Q3</th><th>Hoje</th><th>${CICLO} (plano)</th><th class="r">Visitas no plano</th><th class="r">Reconstruir</th></tr></thead>
+    <tbody>${L.slice().sort((a, b) => a.p - b.p).map(l => linha(l)).join('')}${linha(t, true)}</tbody></table></div>`;
+}
+
+// ---- Visão regional -------------------------------------------------------
+function viewRegional() {
+  const sets = SET, meds = MED;
+  const a = agrega(meds);
+  const dists = [...new Set(sets.map(s => s.dist))].sort().map(d => ({ d, ss: sets.filter(s => s.dist === d), ...agrega(meds.filter(m => distDe(m.cod) === d)) }));
+  const metaHoje = sets.filter(s => s.p >= FAROL.verde).length;
+  const metaProj = sets.filter(s => s.projMin >= FAROL.verde).length;
+  const cab = `<th class="r">Proteger</th><th class="r">Conquistar</th><th class="r">Possível</th><th class="r">Reconstruir</th><th class="r hide-m">Q4</th>`;
+  const cels = x => `<td class="r num">${x.proteger}</td><td class="r num">${x.conquistar}</td><td class="r num">${x.possivel}</td><td class="r num">${x.reconstruir}</td><td class="r num hide-m cod">${f1(x.q4p)}%</td>`;
+
+  return `
+  ${quadroLinhas()}
+  <h2>${esc(D.linha)} <small>regional SPI · ${sets.length} setores</small></h2>
+  <div class="kpis">
+    ${kpi(`Q1–Q3 com frequência · ${D.janela}`, f1(a.p) + '%', `${nfmt(a.cf)} de ${nfmt(a.n)} médicos · meta ${FAROL.verde}%`, corFarol(a.p))}
+    ${kpi(`Projeção ${CICLO} cumprindo o plano`, faixa(a.projMin, a.projMax), `se ninguém visitar: ${f1(a.semNada)}%`, corFarol(a.projMax))}
+    ${kpi('Setores na meta', `${metaHoje} → ${metaProj}`, `hoje → ${CICLO} (pior caso), de ${sets.length}`, 'var(--verde)')}
+    ${kpi(`Visitas Q1–Q3 no plano de ${CICLO}`, nfmt(a.visitas), `${nfmt(a.proteger)} proteger · ${nfmt(a.conquistar)} conquistar · ${nfmt(a.possivel)} possível`, 'var(--navy)')}
+    ${kpi('Reconstruir', nfmt(a.reconstruir), `${nfmt(a.zerado)} sem nenhuma visita desde ${SAI}`, GRUPOS.reconstruir.cor)}
+  </div>
+
+  <h2>Por distrito <small>clique para abrir a estratégia do GD</small></h2>
+  <div class="card tw"><table>
+    <thead><tr><th>Distrito · GD</th><th>Hoje</th><th>${CICLO} (plano)</th><th>Composição Q1–Q3</th>${cab}</tr></thead>
+    <tbody>${dists.map(x => `
+      <tr class="click" data-dist="${x.d}"><td><b>${esc(nomeGD(x.d))}</b><div class="cod">${x.d} · ${esc(D.linha)}</div></td>
+        <td>${farolCel(x.p)}</td><td>${projCel(x)}</td><td>${stack(x)}</td>${cels(x)}</tr>`).join('')}</tbody></table></div>
+
+  <h2 id="setores">Setores <small>${st.distSel ? `distrito ${st.distSel} · <a href="#" id="limpaDist">ver todos</a>` : 'do pior para o melhor na projeção · clique para abrir a estratégia do rep'}</small></h2>
+  <div class="card tw"><table>
+    <thead><tr><th>#</th><th>Setor · Representante</th><th>Hoje</th><th>${CICLO} (plano)</th><th>Composição Q1–Q3</th>${cab}</tr></thead>
+    <tbody>${sets.filter(s => !st.distSel || s.dist === st.distSel).sort((x, y) => x.projMin - y.projMin || x.p - y.p).map((s, i) => `
+      <tr class="click" data-setor="${s.cod}"><td class="cod num">${i + 1}</td>
+        <td><b>${esc(s.rep)}</b><div class="cod">${s.cod} · ${esc(nomeGD(s.dist))}</div></td>
+        <td>${farolCel(s.p)}</td><td>${projCel(s)}</td><td>${stack(s)}</td>${cels(s)}</tr>`).join('')}
+    </tbody></table></div>
+  <p class="note">Tudo conta só médicos Q1–Q3. Projeção ${CICLO}: % com frequência se o rep visitar Proteger, Conquistar e Possível no ciclo. Ao virar o ciclo, ${SAI} sai da janela; como o export não informa o mês de cada visita, a projeção vai do pior caso (${SAI} tinha visita) ao melhor (${SAI} sem visita).</p>`;
+}
+
+// ---- Visão do setor (rep) -------------------------------------------------
+function viewSetor() {
+  const s = SET.find(x => x.cod === st.setor) || SET[0];
+  const meds = (porSetor[s.cod] || []).slice();
+  const doDist = SET.filter(x => x.dist === s.dist).sort((a, b) => b.p - a.p);
+  const posDist = doDist.findIndex(x => x.cod === s.cod) + 1;
+  const g = nomeGD(s.dist);
+
+  const filtros = { plano: m => m.meta && PLANO.includes(m.g), q4: m => !m.meta, todos: () => true };
+  ORDEM.forEach(k => filtros[k] = m => m.meta && m.g === k);
+  const q = st.busca.trim().toLowerCase();
+  const lista = meds.filter(filtros[st.filtro] || filtros.plano)
+    .filter(m => !q || m.nome.toLowerCase().includes(q) || m.id.toLowerCase().includes(q) || m.esp.toLowerCase().includes(q))
+    .sort((a, b) => (b.meta - a.meta) || ORDEM.indexOf(a.g) - ORDEM.indexOf(b.g) || (QORD[a.q] || 9) - (QORD[b.q] || 9) || a.nome.localeCompare(b.nome));
+  const feitosPlano = meds.filter(m => m.meta && PLANO.includes(m.g) && feitos.has(m.id)).length;
+  const chip = (k, nome, n) => `<button data-f="${k}" class="${st.filtro === k ? 'on' : ''}">${nome} <span class="num">${n}</span></button>`;
+
+  return `
+  <div class="kpis">
+    ${kpi(`Q1–Q3 com frequência · ${D.janela}`, f1(s.p) + '%', `${s.cf} de ${s.n} médicos · meta ${FAROL.verde}% (${s.alvo})`, corFarol(s.p))}
+    ${kpi(`Projeção ${CICLO} cumprindo o plano`, faixa(s.projMin, s.projMax), `se não visitar a lista: ${f1(s.semNada)}%`, corFarol(s.projMax))}
+    ${kpi(`Visitas Q1–Q3 em ${CICLO}`, s.visitas, `≈ ${Math.ceil(s.visitas / SEMANAS_CICLO)} por semana · ${feitosPlano} marcadas`, 'var(--navy)')}
+    ${kpi('Posição no distrito (hoje)', `${posDist}º/${doDist.length}`, `${esc(g)} · ${s.dist}`)}
+  </div>
+
+  <h2 class="tit-acao">${esc(s.rep)} <small>${s.cod} · ${s.linha}</small><button class="btn btn-xl noprint" id="baixar">⬇ Baixar planilha do rep</button></h2>
+  ${estrategia(s, meds)}
+
+  <h2>Grupos do ciclo <small>Q1–Q3 · clique para filtrar a lista</small></h2>
+  <div class="grupos">${ORDEM.map(k => `
+    <div class="card grupo" data-f="${k}" style="border-top-color:${GRUPOS[k].cor}">
+      <div class="t"><b>${GRUPOS[k].nome}</b><span class="num">${s[k]}</span></div>
+      <p>${GRUPOS[k].dica(CICLO)}</p><div class="qs">${qs(s[k + 'Q'])}</div></div>`).join('')}
+  </div>
+
+  <h2>Lista do ciclo ${CICLO}</h2>
+  <div class="chips noprint">
+    ${chip('plano', `Visitar em ${CICLO}`, s.visitas)}
+    ${ORDEM.map(k => chip(k, GRUPOS[k].nome, s[k])).join('')}
+    ${chip('q4', 'Q4 / sem quartil', s.q4n)}
+    ${chip('todos', 'Todos', s.n + s.q4n)}
+    <button class="btn" id="imprimir">🖨 Imprimir</button>
+    <input id="busca" placeholder="Buscar médico, CRM ou especialidade" value="${esc(st.busca)}">
+  </div>
+  <div class="card tw"><table>
+    <thead><tr><th class="c noprint" title="Visitado/agendado no ciclo">✓</th><th>Médico</th><th class="hide-m">Especialidade</th><th class="c">Quartil</th>
+      <th>Visitas ${D.janela}</th><th>Grupo</th><th>O que fazer</th></tr></thead>
+    <tbody>${lista.length ? lista.map(m => `
+      <tr class="${feitos.has(m.id) ? 'feito' : ''}">
+        <td class="c noprint"><input type="checkbox" class="chk" data-id="${esc(m.id)}" ${feitos.has(m.id) ? 'checked' : ''}></td>
+        <td><b>${esc(m.nome)}</b>${m.b0 ? '<span class="b0" title="Base Zero">BASE 0</span>' : ''}<div class="cod">${esc(m.id)}</div></td>
+        <td class="hide-m">${esc(m.esp)}</td><td class="c"><b>${esc(m.q)}</b></td>
+        <td><span class="vis">${Array.from({ length: m.obj }, (_, i) => `<i class="${i < m.real ? 'ok' : ''}"></i>`).join('')}</span> <span class="cod num">${m.real}/${m.obj}</span></td>
+        <td>${m.meta ? `<span class="tag ${GRUPOS[m.g].cls}">${GRUPOS[m.g].nome}</span>` : '<span class="tag g-q4">Q4</span>'}</td>
+        <td class="acao">${oQueFazer(m)}</td>
+      </tr>`).join('') : '<tr><td colspan="7" class="vazio">Nenhum médico neste filtro.</td></tr>'}</tbody>
+  </table></div>
+  <p class="note">Ordem: Q1–Q3 antes de Q4; Proteger → Conquistar → Possível → Reconstruir → Garantido; dentro de cada grupo, Q1 → Q2 → Q3. As barrinhas mostram quantas visitas o médico teve na janela, não em quais ciclos (o export não traz essa informação). As marcações ✓ ficam salvas neste navegador para o ciclo ${CICLO}.</p>`;
+}
+
+// ---- Visão do GD (distrito) -------------------------------------------------
+// Papel do GD por setor, a partir da projeção do ciclo (só Q1–Q3)
+const ACOES_GD = {
+  vago:   { nome: 'Setor vago', cls: 'g-reconstruir', txt: s => `GD assume ou redistribui os ${s.protegerQ.Q1 + s.protegerQ.Q2} Q1–Q2 do Proteger` },
+  campo:  { nome: 'Campo',      cls: 'g-conquistar',  txt: s => `Não chega a ${FAROL.verde}% em ${CICLO}: acompanhar em campo${s.zerado >= 5 ? ` e revisar o painel (${s.zerado} sem visita)` : ''}` },
+  cobrar: { nome: 'Cobrar',     cls: 'g-proteger',    txt: () => `Meta depende do Possível: revisar a lista com o rep e checar quem não teve visita em ${SAI}` },
+  manter: { nome: 'Manter',     cls: 'g-garantido',   txt: () => `No caminho: cobrar só o Proteger` },
+};
+const acaoGD = s => /VAGO/i.test(s.rep) ? 'vago' : s.projMin >= FAROL.verde ? 'manter' : s.projMax >= FAROL.verde ? 'cobrar' : 'campo';
+const nomeCurto = r => { if (/VAGO/i.test(r)) return 'setor vago'; const p = r.trim().split(/\s+/); return p.length > 1 ? `${p[0]} ${p[p.length - 1]}` : p[0]; };
+const lista = (arr, fn) => arr.length <= 1 ? arr.map(fn).join('') : arr.slice(0, -1).map(fn).join(', ') + ' e ' + fn(arr[arr.length - 1]);
+
+function estrategiaGD(a, sets) {
+  const minimo = a.garantido + a.proteger + a.conquistar, maximo = minimo + a.possivel;
+  const reps = sets.filter(s => !/VAGO/i.test(s.rep));
+  const vagos = sets.filter(s => /VAGO/i.test(s.rep));
+  const top = (k, n = 3) => reps.filter(s => s[k] > 0).sort((x, y) => y[k] - x[k]).slice(0, n);
+  const fmtTop = (k) => lista(top(k), s => `${esc(nomeCurto(s.rep))} (${s[k]})`);
+  // quem acompanhar em campo: quem não fecha a meta, pelo tamanho do que está em jogo no ciclo
+  const campo = reps.filter(s => s.projMin < FAROL.verde)
+    .map(s => ({ ...s, jogo: s.proteger + s.possivel + s.conquistar, ac: acaoGD(s) }))
+    .sort((x, y) => (x.ac === 'campo' ? 0 : 1) - (y.ac === 'campo' ? 0 : 1) || y.jogo - x.jogo || x.p - y.p).slice(0, 3);
+  const possVago = vagos.reduce((t, s) => t + s.possivel + s.conquistar, 0);
+
+  let lead;
+  if (minimo >= a.alvo) lead = `Com todos os reps cumprindo a lista, o distrito fecha ${CICLO} em <b>${faixa(a.projMin, a.projMax)}</b>, acima da meta. O papel do GD é garantir que nenhum Proteger fique sem visita.`;
+  else if (maximo >= a.alvo) lead = `Com a lista cumprida, o distrito fecha ${CICLO} entre <b>${f1(a.projMin)}% e ${f1(a.projMax)}%</b>. A meta (${a.alvo} médicos) depende de converter <b>${a.alvo - minimo} dos ${a.possivel} Possível</b>${possVago ? `, e ${possVago} deles estão em setor vago` : ''}.`;
+  else lead = `Mesmo com tudo cumprido, ${CICLO} fecha em no máximo <b>${f1(a.projMax)}%</b>: faltam ${a.alvo - maximo} médicos para ${FAROL.verde}%. O ciclo é de proteger o que já tem e começar a reconstruir para ${ciclo(2)}–${ciclo(3)}.`;
+
+  const it = [];
+  if (a.proteger) it.push(`<b>Risco: ${a.proteger} médicos no Proteger</b> (${qs(a.protegerQ)}). Se não forem visitados em ${CICLO}, o distrito cai para ${f1(a.semNada)}%. Maior volume: ${fmtTop('proteger')}.`);
+  if (a.possivel + a.conquistar) it.push(`<b>Ganho: ${a.possivel + a.conquistar} médicos podem entrar</b> com 1 visita em ${CICLO}. Maior volume: ${fmtTop('possivel')}. Peça a cada rep para separar quem não teve visita em ${SAI}: esses entram com certeza.`);
+  if (campo.length) it.push(`<b>Visita GD em ${CICLO}:</b> ${lista(campo, s => `<b>${esc(nomeCurto(s.rep))}</b> (${f1(s.p)}% hoje, ${s.jogo} médicos em jogo)`)}. São os setores que não fecham a meta e onde mais médicos dependem da visita do ciclo.`);
+  if (a.zerado) it.push(`<b>Painel:</b> ${a.zerado} médicos Q1–Q3 sem nenhuma visita desde ${SAI}${top('zerado').length ? ` (mais em ${fmtTop('zerado')})` : ''}. Revise com o rep se continuam fazendo sentido no painel ou se precisam de outra abordagem.`);
+  if (vagos.length) it.push(`<b>Setor vago:</b> ${lista(vagos, s => `${s.cod} (${s.proteger} Proteger, ${s.possivel} Possível)`)}. Defina quem cobre os Q1–Q2 do Proteger em ${CICLO}, senão o distrito perde esses médicos.`);
+
+  const cad = [
+    `<b>Semana 1:</b> 1:1 de 15 min com cada rep (${reps.length}) para fechar a lista do ciclo: Proteger primeiro, depois Possível, Q1 antes.`,
+    `<b>Semanas 2 e 3:</b> campo com ${campo.length ? lista(campo, s => esc(nomeCurto(s.rep))) : 'os setores com mais Possível'}; nos demais, cobrar o andamento da lista toda sexta.`,
+    `<b>Semana 4:</b> fechamento. Quem do Proteger ainda não foi visitado? É a última chance antes de ${CICLO} fechar.`,
+  ];
+  return `<div class="card estr"><h3>Estratégia do distrito para ${CICLO}</h3><p class="lead">${lead}</p>
+    <ol>${it.map(i => `<li>${i}</li>`).join('')}</ol>
+    <h3 style="margin-top:14px">Cadência do ciclo</h3><ol>${cad.map(i => `<li>${i}</li>`).join('')}</ol></div>`;
+}
+
+function viewGD() {
+  const d = st.dist;
+  const sets = SET.filter(s => s.dist === d);
+  const meds = MED.filter(m => distDe(m.cod) === d);
+  const a = agrega(meds);
+  const dists = [...new Set(SET.map(s => s.dist))].sort();
+  const pos = dists.map(x => ({ x, p: agrega(MED.filter(m => distDe(m.cod) === x)).p })).sort((u, v) => v.p - u.p).findIndex(u => u.x === d) + 1;
+  const metaHoje = sets.filter(s => s.p >= FAROL.verde).length, metaProj = sets.filter(s => s.projMin >= FAROL.verde).length;
+  const ordem = { vago: 0, campo: 1, cobrar: 2, manter: 3 };
+
+  return `
+  <div class="kpis">
+    ${kpi(`Q1–Q3 com frequência · ${D.janela}`, f1(a.p) + '%', `${nfmt(a.cf)} de ${nfmt(a.n)} médicos · meta ${FAROL.verde}% (${a.alvo})`, corFarol(a.p))}
+    ${kpi(`Projeção ${CICLO} cumprindo o plano`, faixa(a.projMin, a.projMax), `se ninguém visitar: ${f1(a.semNada)}%`, corFarol(a.projMax))}
+    ${kpi('Setores na meta', `${metaHoje} → ${metaProj}`, `hoje → ${CICLO} (pior caso), de ${sets.length}`, 'var(--verde)')}
+    ${kpi(`Visitas Q1–Q3 em ${CICLO}`, nfmt(a.visitas), `≈ ${Math.ceil(a.visitas / SEMANAS_CICLO)} por semana no distrito · ${pos}º/${dists.length} na linha`, 'var(--navy)')}
+  </div>
+
+  <h2 class="tit-acao">${esc(nomeGD(d))} <small>${d} · ${esc(D.linha)}</small><button class="btn btn-xl noprint" id="baixar">⬇ Baixar planilha do GD</button></h2>
+  ${estrategiaGD(a, sets)}
+
+  <h2>Ação do GD por setor <small>Q1–Q3 · clique para abrir a estratégia do rep</small></h2>
+  <div class="card tw"><table>
+    <thead><tr><th>Setor · Representante</th><th>Hoje</th><th>${CICLO} (plano)</th><th class="r">Proteger</th><th class="r">Possível</th>
+      <th class="r">Reconstruir</th><th class="r hide-m">Visitas/sem</th><th>Ação do GD</th></tr></thead>
+    <tbody>${sets.map(s => ({ ...s, ac: acaoGD(s) })).sort((x, y) => ordem[x.ac] - ordem[y.ac] || x.projMin - y.projMin).map(s => `
+      <tr class="click" data-setor="${s.cod}">
+        <td><b>${esc(s.rep)}</b><div class="cod">${s.cod}</div></td>
+        <td>${farolCel(s.p)}</td><td>${projCel(s)}</td>
+        <td class="r num">${s.proteger}</td><td class="r num">${s.possivel + s.conquistar}</td><td class="r num">${s.reconstruir}</td>
+        <td class="r num hide-m">${Math.ceil(s.visitas / SEMANAS_CICLO)}</td>
+        <td class="acao"><span class="tag ${ACOES_GD[s.ac].cls}">${ACOES_GD[s.ac].nome}</span><small>${ACOES_GD[s.ac].txt(s)}</small></td>
+      </tr>`).join('')}</tbody></table></div>
+  <p class="note">Ação do GD: <b>Manter</b> = fecha a meta só com Proteger e Conquistar; <b>Cobrar</b> = só fecha se converter os Possível; <b>Campo</b> = não fecha a meta em ${CICLO} nem no melhor caso; <b>Setor vago</b> = sem rep para executar a lista. Possível inclui Conquistar.</p>
+  <div class="noprint" style="margin-top:10px"><button class="btn" id="imprimir">🖨 Imprimir</button></div>`;
+}
+
+// ---- Render ---------------------------------------------------------------
+const app = document.getElementById('app');
+const fSetor = document.getElementById('fSetor');
+const fDist = document.getElementById('fDist');
+const fLinha = document.getElementById('fLinha');
+
+function render() {
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.v === st.view));
+  fLinha.value = st.linha;
+  fSetor.style.display = st.view === 'setor' ? '' : 'none';
+  fDist.style.display = st.view === 'gd' ? '' : 'none';
+  fDist.value = st.dist;
+  fSetor.value = st.setor;
+  carregaFeitos();
+  app.innerHTML = st.view === 'regional' ? viewRegional() : st.view === 'gd' ? viewGD() : viewSetor();
+  salvaUI();
+}
+
+document.getElementById('sub').textContent =
+  `Dados ${MAN.janela} (${fmtData(MAN.data)}) · estratégia para o ciclo ${CICLO} · meta: ${FAROL.verde}% dos médicos Q1–Q3 com Freq. ≥80%`;
+document.getElementById('legend').innerHTML =
+  `<span><i style="background:var(--verde)"></i>≥${FAROL.verde}%</span><span><i style="background:var(--amarelo)"></i>${FAROL.amarelo}–${String(FAROL.verde - 0.1).replace('.', ',')}%</span><span><i style="background:var(--vermelho)"></i>&lt;${FAROL.amarelo}%</span>`;
+
+fLinha.innerHTML = MAN.linhas.map(l => `<option value="${l.chave}">${esc(l.linha)}</option>`).join('');
+
+// Carrega dados/{LINHA}.js sob demanda (funciona pelo servidor local e abrindo o arquivo direto)
+function abreLinha(chave) {
+  const pronto = () => {
+    preparar(chave);
+    st.linha = chave; st.distSel = null;
+    if (!SET.some(s => s.cod === st.setor)) st.setor = SET[0].cod;
+    const dists = [...new Set(SET.map(s => s.dist))].sort();
+    if (!dists.includes(st.dist)) st.dist = dists[0];
+    fDist.innerHTML = dists.map(d => `<option value="${d}">${d} · ${esc(nomeGD(d))}</option>`).join('');
+    fSetor.innerHTML = dists.map(d => `<optgroup label="${d} · ${esc(nomeGD(d))}">${
+      SET.filter(s => s.dist === d).map(s => `<option value="${s.cod}">${s.cod} · ${esc(s.rep)}</option>`).join('')}</optgroup>`).join('');
+    render();
+  };
+  if (window.FAROL_DADOS && window.FAROL_DADOS[chave]) return pronto();
+  app.innerHTML = '<div class="vazio">Carregando a linha…</div>';
+  const sc = document.createElement('script');
+  sc.src = `dados/${chave}.js?v=${MAN.data}`;
+  sc.onload = pronto;
+  sc.onerror = () => { app.innerHTML = `<div class="vazio">Não encontrei dados/${chave}.js. Rode gerar_farol.py.</div>`; };
+  document.head.appendChild(sc);
+}
+
+document.querySelector('.tabs').addEventListener('click', e => { const v = e.target.dataset.v; if (v) { st.view = v; render(); } });
+fLinha.addEventListener('change', () => abreLinha(fLinha.value));
+fDist.addEventListener('change', () => { st.dist = fDist.value; render(); });
+fSetor.addEventListener('change', () => { st.setor = fSetor.value; st.busca = ''; st.filtro = 'plano'; render(); });
+
+app.addEventListener('click', e => {
+  if (e.target.id === 'limpaDist') { e.preventDefault(); st.distSel = null; render(); return; }
+  if (e.target.id === 'imprimir') { window.print(); return; }
+  if (e.target.id === 'baixar') { baixarPlanilha(e.target); return; }
+  if (e.target.classList.contains('chk')) return;
+  const f = e.target.closest('[data-f]');
+  if (f) { st.filtro = f.dataset.f; render(); if (f.classList.contains('grupo')) document.querySelector('.chips').scrollIntoView({ behavior: 'smooth' }); return; }
+  const tr = e.target.closest('tr');
+  if (tr && tr.dataset.linha) { abreLinha(tr.dataset.linha); return; }
+  if (tr && tr.dataset.setor) { st.setor = tr.dataset.setor; st.view = 'setor'; st.filtro = 'plano'; st.busca = ''; render(); scrollTo(0, 0); return; }
+  if (tr && tr.dataset.dist) { st.dist = tr.dataset.dist; st.view = 'gd'; render(); scrollTo(0, 0); }
+});
+app.addEventListener('change', e => {
+  if (!e.target.classList.contains('chk')) return;
+  const id = e.target.dataset.id;
+  e.target.checked ? feitos.add(id) : feitos.delete(id);
+  salvaFeitos(); render();
+});
+app.addEventListener('input', e => {
+  if (e.target.id !== 'busca') return;
+  st.busca = e.target.value; const pos = e.target.selectionStart;
+  render(); const b = document.getElementById('busca'); b.focus(); b.setSelectionRange(pos, pos);
+});
+
+if (location.port === '8747' || location.protocol === 'file:' && !/ems-n4-dashboard/.test(location.pathname)) document.getElementById('voltar').remove();
+abreLinha(st.linha);
+</script>
+<script src="planilha.js"></script>
+</body>
+</html>
