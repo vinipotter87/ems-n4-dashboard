@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EMS | Dashboard N4 — Nexus & Vital</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="farol-frequencia/dados/freq_q13.js"></script>
 <style>
 :root{--red:#C8102E;--red-d:#8B0B1F;--red-l:#fce8ec;--orange:#E87722;--orange-l:#FFF3E0;
 --nexus:#12735A;--nexus-l:#EEF2FA;--green:#15693A;--green-l:#E8F5EE;
@@ -1399,14 +1400,14 @@ function renderKPIs(dados) {
   var cCrm = kpiCard(clsMeta(crmPct), 'CRM CHAVE', crmPct !== null ? pp(crmPct) : '—',
     crmPct !== null ? Math.round(crmReal) + ' de ' + Math.round(crmObj) + ' interações' : SEM);
 
-  // Frequência — cobertura (Freq 80 + 100 ÷ painel) do snapshot do ciclo
-  var fDist = FREQ_SETORES_RAW[mes] ? freqDistritos(mes, prefixo) : [];
+  // Frequência — Q1–Q3 (meta 90%) quando o Farol tem o ciclo; senão, régua antiga do painel (meta 75%)
+  var fDist = freqTem(mes) ? freqDistritos(mes, prefixo) : [];
   var cFreq;
   if (fDist.length) {
-    var fTot = freqSoma(fDist), fAntC = freqCicloAnterior(mes);
+    var fQ = freqUsar(mes), fTot = freqSoma(fDist), fAntC = freqCicloAnterior(mes);
     var fAnt = fAntC ? freqDistritos(fAntC, prefixo) : [];
-    cFreq = kpiCard(fTot.cob >= 75 ? 'g' : (fTot.cob >= 50 ? 'o' : 'r'), 'FREQUÊNCIA', pp(fTot.cob),
-      'cobertura do painel' + (fAnt.length ? ' · ' + freqDeltaHtml(fTot.cob, freqSoma(fAnt).cob) + ' vs ' + fAntC : ''));
+    cFreq = kpiCard(fTot.cob >= FREQ_RG.ok ? 'g' : (fTot.cob >= FREQ_RG.warn ? 'o' : 'r'), fQ ? 'FREQUÊNCIA Q1–Q3' : 'FREQUÊNCIA', pp(fTot.cob),
+      (fQ ? 'Q1–Q3 · meta 90%' : 'cobertura do painel') + (fAnt.length ? ' · ' + freqDeltaHtml(fTot.cob, freqSoma(fAnt).cob) + ' vs ' + fAntC : ''));
   } else {
     cFreq = kpiCard('n', 'FREQUÊNCIA', '—', SEM);
   }
@@ -2618,14 +2619,32 @@ var FREQ_NOTAS = {
   SET: "Dados do export \"Resumo da Frequência\" do relatório (por Setor), com o ciclo de setembro fechado — o relatório calcula a frequência com base nos últimos 5 ciclos fechados (2026-05 a 2026-09). Totais conferidos contra o próprio relatório (Painel 16.181, Cobertura 66,2%). Setor 11630206 (Aline de Jesus Munhoz) segue com decisão pendente de tratamento no PEX de junho — cobertura de 5% neste setor reflete isso. Setores 11030408 (Luan de Melo Souza) e 11630303 (Julliane de Lima Silva) seguem com a maior parte do painel em Freq 0 (194 de 271 e 202 de 258 médicos, respectivamente)."
 };
 
+// Frequência Q1–Q3 (PEX, meta 90%): vem do Farol da Frequência (farol-frequencia/dados/freq_q13.js),
+// mesma régua do Farol, da RPS e do PEX. Ciclos com esse dado usam Q1–Q3; os ciclos antigos (só o
+// painel inteiro, meta 75%) continuam consultáveis, mas não entram em comparação: a régua é outra.
+var FREQ_Q13 = window.FAROL_Q13 || {};
+var FREQ_MESES_ORD = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
+Object.keys(FREQ_Q13).forEach(function(c) { if (FREQ_CICLOS_ORDEM.indexOf(c) < 0) FREQ_CICLOS_ORDEM.push(c); });
+FREQ_CICLOS_ORDEM.sort(function(a, b) { return FREQ_MESES_ORD.indexOf(a) - FREQ_MESES_ORD.indexOf(b); });
+FREQ_CICLO = FREQ_CICLOS_ORDEM[FREQ_CICLOS_ORDEM.length - 1];
+var FREQ_NOMES = {};
+FREQ_CICLOS_ORDEM.forEach(function(c) { (FREQ_SETORES_RAW[c] || '').trim().split('\n').filter(Boolean).forEach(function(l) { var p = l.split('|'); FREQ_NOMES[p[0]] = p[1]; }); });
+function freqEhQ13(ciclo) { return !!FREQ_Q13[ciclo]; }
+function freqTem(ciclo) { return !!(FREQ_SETORES_RAW[ciclo] || FREQ_Q13[ciclo]); }
+var FREQ_RG = { q13: true, ok: 90, warn: 80 };            // régua em uso na tela (freqUsar)
+function freqUsar(ciclo) { FREQ_RG = freqEhQ13(ciclo) ? { q13: true, ok: 90, warn: 80 } : { q13: false, ok: 75, warn: 50 }; return FREQ_RG.q13; }
+function freqLegenda() {
+  var R = FREQ_RG, q = function(c) { return '<span style="display:inline-block;width:10px;height:10px;background:' + c + ';border-radius:2px;margin-right:4px"></span>'; };
+  return q('#22c55e') + '≥' + R.ok + '%&nbsp;&nbsp;' + q('#f59e0b') + R.warn + '–' + (R.ok - (R.q13 ? 0.1 : 1)).toString().replace('.', ',') + '%&nbsp;&nbsp;' + q('#ef4444') + '&lt;' + R.warn + '%';
+}
 function freqCls(v) {
   if (v === null || isNaN(v)) return '';
-  if (v >= 75) return 'crm-pct ok';
-  if (v >= 50) return 'crm-pct warn';
+  if (v >= FREQ_RG.ok) return 'crm-pct ok';
+  if (v >= FREQ_RG.warn) return 'crm-pct warn';
   return 'crm-pct crit';
 }
 function freqBarHtml(v) {
-  var clsFill = (v === null || isNaN(v)) ? 'crit' : (v >= 75 ? 'ok' : (v >= 50 ? 'warn' : 'crit'));
+  var clsFill = (v === null || isNaN(v)) ? 'crit' : (v >= FREQ_RG.ok ? 'ok' : (v >= FREQ_RG.warn ? 'warn' : 'crit'));
   var w = (v !== null && !isNaN(v)) ? Math.min(100, Math.max(0, v)) : 0;
   return '<span class="crm-bar-wrap"><span class="crm-bar-fill ' + clsFill + '" style="width:' + w + '%"></span></span>';
 }
@@ -2646,6 +2665,16 @@ function freqDeltaHtml(atual, anterior) {
 }
 
 function freqSetores(ciclo, prefixo) {
+  if (freqEhQ13(ciclo)) {
+    // [médicos Q1–Q3, com frequência, Freq 0, 20, 40, 60, 80, 100, …] — só Nexus e Vital (1103 / 1163)
+    var ss = FREQ_Q13[ciclo].setores || {};
+    var q = Object.keys(ss).filter(function(k) { return /^1(103|163)/.test(k); }).sort().map(function(k) {
+      var x = ss[k], r = {setor:k, nome:FREQ_NOMES[k] || k, linha:k.substring(0, 4) === '1103' ? 'NEXUS' : 'VITAL', painel:x[0], f0:x[2], f20:x[3], f40:x[4], f60:x[5], f80:x[6], f100:x[7]};
+      r.cob = freqCob(r);
+      return r;
+    });
+    return prefixo ? q.filter(function(r) { return r.setor.substring(0, 6) === prefixo; }) : q;
+  }
   var rows = (FREQ_SETORES_RAW[ciclo] || '').trim().split('\n').filter(Boolean).map(function(l) {
     var p = l.split('|');
     var r = {setor:p[0], nome:p[1], linha:p[2], painel:+p[4], f0:+p[5], f20:+p[6], f40:+p[7], f60:+p[8], f80:+p[9], f100:+p[10]};
@@ -2681,8 +2710,8 @@ function freqDistritos(ciclo, prefixo) {
 }
 
 function freqCicloAnterior(ciclo) {
-  var i = FREQ_CICLOS_ORDEM.indexOf(ciclo);
-  return i > 0 ? FREQ_CICLOS_ORDEM[i - 1] : null;
+  var i = FREQ_CICLOS_ORDEM.indexOf(ciclo), a = i > 0 ? FREQ_CICLOS_ORDEM[i - 1] : null;
+  return a && freqEhQ13(a) === freqEhQ13(ciclo) ? a : null;   // só compara ciclos da mesma régua
 }
 
 function renderFrequenciaDistTable(dist, distAnt, cicloAnt) {
@@ -2692,7 +2721,7 @@ function renderFrequenciaDistTable(dist, distAnt, cicloAnt) {
     return a ? a.cob : null;
   }
   var html = '<div class="visitas-table-wrap"><table class="visitas-table"><thead><tr>';
-  html += '<th class="th-gd">GD / Distrito</th><th>Setores</th><th>Painel</th><th>Freq 0</th><th>Freq 20</th><th>Freq 40</th><th>Freq 60</th><th>Freq 80</th><th>Freq 100</th><th>Cobertura</th>';
+  html += '<th class="th-gd">GD / Distrito</th><th>Setores</th><th>' + (FREQ_RG.q13 ? 'Médicos Q1–Q3' : 'Painel') + '</th><th>Freq 0</th><th>Freq 20</th><th>Freq 40</th><th>Freq 60</th><th>Freq 80</th><th>Freq 100</th><th>' + (FREQ_RG.q13 ? 'Freq. Q1–Q3' : 'Cobertura') + '</th>';
   if (cicloAnt) html += '<th>Δ vs ' + cicloAnt + '</th>';
   html += '</tr></thead><tbody>';
   ['NEXUS', 'VITAL'].forEach(function(linha) {
@@ -2721,7 +2750,7 @@ function renderFrequenciaDistTable(dist, distAnt, cicloAnt) {
 
 function renderFrequenciaSetorTable(setores, setoresAnt, cicloAnt) {
   var html = '<div class="visitas-table-wrap"><table class="visitas-table"><thead><tr>';
-  html += '<th class="th-gd">Setor</th><th>Linha</th><th>Painel</th><th>Freq 0</th><th>Freq 20</th><th>Freq 40</th><th>Freq 60</th><th>Freq 80</th><th>Freq 100</th><th>Cobertura</th>';
+  html += '<th class="th-gd">Setor</th><th>Linha</th><th>' + (FREQ_RG.q13 ? 'Médicos Q1–Q3' : 'Painel') + '</th><th>Freq 0</th><th>Freq 20</th><th>Freq 40</th><th>Freq 60</th><th>Freq 80</th><th>Freq 100</th><th>' + (FREQ_RG.q13 ? 'Freq. Q1–Q3' : 'Cobertura') + '</th>';
   if (cicloAnt) html += '<th>Δ vs ' + cicloAnt + '</th>';
   html += '</tr></thead><tbody>';
   setores.forEach(function(r) {
@@ -2740,8 +2769,10 @@ function renderFrequenciaSetorTable(setores, setoresAnt, cicloAnt) {
 // Evolução da cobertura ciclo a ciclo — sempre mostra todos os ciclos,
 // independente do ciclo selecionado. Sem filtro: por distrito + totais;
 // com distrito filtrado: por setor + total do distrito.
+function freqCiclosEvolucao() { return FREQ_CICLOS_ORDEM.filter(freqEhQ13); }
 function renderFrequenciaEvolucao(prefixo) {
-  var ciclos = FREQ_CICLOS_ORDEM;
+  var ciclos = freqCiclosEvolucao();
+  freqUsar(ciclos[ciclos.length - 1]);
   var primeiro = ciclos[0], ultimo = ciclos[ciclos.length - 1];
   var nCols = ciclos.length + 2;
   var VAZIO = '<span style="color:#aaa">—</span>';
@@ -2799,6 +2830,7 @@ function freqTrocarCiclo(ciclo) {
 function renderFrequencia() {
   VIEW_ATUAL = 'frequencia';
   var ciclo = FREQ_CICLO;
+  var Q = freqUsar(ciclo);
   var cicloAnt = freqCicloAnterior(ciclo);
   var prefixo = DISTRITO_FILTRO ? DISTRITO_FILTRO.substring(0, 6) : null;
   var dist = freqDistritos(ciclo, prefixo);
@@ -2817,38 +2849,37 @@ function renderFrequencia() {
 
   var html = '<div style="padding:24px">';
   html += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap">';
-  html += '<h2 style="margin:0;font-size:17px;font-weight:700;color:var(--text)">🩺 Frequência de Visitação Médica</h2>';
+  html += '<h2 style="margin:0;font-size:17px;font-weight:700;color:var(--text)">🩺 Frequência de Visitação Médica' + (Q ? ' — Q1–Q3 (PEX)' : '') + '</h2>';
   html += '<span style="display:inline-flex;gap:6px;align-items:center"><span style="font-size:11px;font-weight:700;color:var(--gray)">Ciclo:</span>';
   FREQ_CICLOS_ORDEM.forEach(function(c) {
     var ativo = c === ciclo;
-    html += '<button onclick="freqTrocarCiclo(\'' + c + '\')" style="' + BTN + (ativo ? 'background:#0369a1;border-color:#0369a1;color:#fff' : 'background:#fff;color:#0369a1') + '">' + c + '/2026</button>';
+    html += '<button onclick="freqTrocarCiclo(\'' + c + '\')" title="' + (freqEhQ13(c) ? 'Frequência Q1–Q3 (meta 90%)' : 'Régua antiga: painel inteiro (meta 75%)') + '" style="' + BTN + (ativo ? 'background:#0369a1;border-color:#0369a1;color:#fff' : 'background:#fff;color:#0369a1') + '">' + c + '/2026' + (freqEhQ13(c) ? '' : ' · painel') + '</button>';
   });
   html += '</span>';
   if (gdFiltrado) html += '<span style="font-size:12px;background:#fef3c7;color:#92400e;padding:3px 10px;border-radius:20px;font-weight:600">🎯 ' + gdFiltrado + '</span>';
   html += '</div>';
 
   html += '<div class="visitas-kpi-grid">';
-  html += kpiCard('Cobertura de Frequência', tot.cob.toFixed(1).replace('.', ',') + '%',
-    'Freq 80 + Freq 100 ÷ Painel' + (totAnt ? '<br>' + freqDeltaHtml(tot.cob, totAnt.cob) + ' vs ' + cicloAnt : ''), 'hi');
-  html += kpiCard('Frequência Painel', freqFmt(tot.painel), 'médicos no painel ativo', 'hi');
-  html += kpiCard('Frequência Realizado', freqFmt(tot.f80 + tot.f100), 'visitas no ciclo (Freq 80+100)', 'hi');
+  html += kpiCard(Q ? 'Frequência Q1–Q3 (PEX)' : 'Cobertura de Frequência', freqPctTxt(tot.cob),
+    (Q ? 'médicos Q1–Q3 em Freq 80 + 100 ÷ médicos Q1–Q3 · meta 90%' : 'Freq 80 + Freq 100 ÷ Painel · régua antiga (meta 75%)') + (totAnt ? '<br>' + freqDeltaHtml(tot.cob, totAnt.cob) + ' vs ' + cicloAnt : ''), 'hi');
+  html += kpiCard(Q ? 'Médicos Q1–Q3' : 'Frequência Painel', freqFmt(tot.painel), Q ? 'Q4 fica fora: não é prioridade e não pontua no PEX' : 'médicos no painel ativo', 'hi');
+  html += kpiCard(Q ? 'Com frequência' : 'Frequência Realizado', freqFmt(tot.f80 + tot.f100), Q ? 'médicos Q1–Q3 em Freq 80 ou 100' : 'visitas no ciclo (Freq 80+100)', 'hi');
   html += kpiCard('Qtde. Setores', tot.setores, dist.length + (dist.length === 1 ? ' distrito' : ' distritos'), 'hi');
   html += '</div>';
 
-  if (FREQ_CICLOS_ORDEM.length > 1) {
+  if (Q && freqCiclosEvolucao().length > 1) {
     html += '<div class="visitas-chart-wrap">';
-    html += '<h3>📈 Evolução da Cobertura por ciclo' + (gdFiltrado ? ' — ' + gdFiltrado : '') + '</h3>';
-    html += '<p style="font-size:11px;color:var(--gray);margin:0 0 12px">Cobertura de frequência em cada ciclo e variação em pontos percentuais (pp) do primeiro ao último ciclo' + (gdFiltrado ? ', por setor' : ' — selecione um distrito no filtro do topo para ver por setor') + '.</p>';
+    html += '<h3>📈 Evolução da frequência Q1–Q3 por ciclo' + (gdFiltrado ? ' — ' + gdFiltrado : '') + '</h3>';
+    html += '<p style="font-size:11px;color:var(--gray);margin:0 0 12px">Frequência Q1–Q3 em cada ciclo e variação em pontos percentuais (pp) do primeiro ao último ciclo' + (gdFiltrado ? ', por setor' : ' — selecione um distrito no filtro do topo para ver por setor') + '.</p>';
     html += renderFrequenciaEvolucao(prefixo);
+    freqUsar(ciclo);
     html += '</div>';
   }
 
   html += '<div class="visitas-chart-wrap">';
   html += '<h3>📋 Frequência por Distrito (GD) — ' + ciclo + '/2026' + (gdFiltrado ? ' — ' + gdFiltrado : '') + '</h3>';
-  html += '<p style="font-size:11px;color:var(--gray);margin:0 0 12px">Cobertura = (Freq 80 + Freq 100) ÷ Painel &nbsp;·&nbsp; ';
-  html += '<span style="display:inline-block;width:10px;height:10px;background:#22c55e;border-radius:2px;margin-right:4px"></span>≥75%&nbsp;&nbsp;';
-  html += '<span style="display:inline-block;width:10px;height:10px;background:#f59e0b;border-radius:2px;margin-right:4px"></span>50–74%&nbsp;&nbsp;';
-  html += '<span style="display:inline-block;width:10px;height:10px;background:#ef4444;border-radius:2px;margin-right:4px"></span>&lt;50%</p>';
+  html += '<p style="font-size:11px;color:var(--gray);margin:0 0 12px">' + (Q ? 'Frequência Q1–Q3 = médicos Q1–Q3 em Freq 80 + 100 ÷ médicos Q1–Q3' : 'Cobertura = (Freq 80 + Freq 100) ÷ Painel · régua antiga') + ' &nbsp;·&nbsp; ';
+  html += freqLegenda() + '</p>';
   html += renderFrequenciaDistTable(dist, distAnt, cicloAnt);
   html += '</div>';
 
@@ -2861,9 +2892,15 @@ function renderFrequencia() {
   html += '</div>';
 
   html += '<p style="font-size:11px;color:var(--gray);margin-top:6px;line-height:1.5">';
-  html += 'Fonte: Power BI "Velos - Produtividade EMS" (Médico → Frequência), filtrado por Linhas = Nexus + Vital e UGN = SPI. ';
-  html += '<b>' + ciclo + '/2026:</b> ' + (FREQ_NOTAS[ciclo] || '') + ' ';
-  html += 'Snapshots manuais por ciclo — ainda não integrado à atualização automática mensal do dashboard (Sheets/ingest.py); cada novo ciclo depende de um novo export.';
+  if (Q) {
+    html += 'Fonte: <a href="farol-frequencia/" style="color:#0369a1;font-weight:700">🚦 Farol da Frequência</a> (Power BI "Velos - Produtividade EMS", Médico | Frequência, UGN = SPI), janela ' + FREQ_Q13[ciclo].janela + ', export de ' + FREQ_Q13[ciclo].data.split('-').reverse().join('/') + '. ';
+    html += 'Mesma régua do Farol, da RPS e do PEX: só médicos Q1–Q3, meta 90%. Cada ciclo entra quando o Farol é atualizado com o export do ciclo fechado. ';
+    html += 'Ciclos marcados "· painel" são da régua antiga (painel inteiro, meta 75%) e ficam só para consulta, sem comparação com Q1–Q3.';
+  } else {
+    html += '<b>Régua antiga:</b> frequência sobre o painel inteiro (meta 75%), não comparável com a frequência Q1–Q3 dos ciclos seguintes. ';
+    html += 'Fonte: Power BI "Velos - Produtividade EMS" (Médico → Frequência), filtrado por Linhas = Nexus + Vital e UGN = SPI. ';
+    html += '<b>' + ciclo + '/2026:</b> ' + (FREQ_NOTAS[ciclo] || '') + ' ';
+  }
   html += '</p>';
 
   html += '</div>';
@@ -2874,7 +2911,8 @@ function renderFrequencia() {
 // sem filtro, por setor com distrito filtrado. Só aparece nos meses que
 // têm snapshot em FREQ_SETORES_RAW.
 function renderFrequenciaMes(mes) {
-  if (!FREQ_SETORES_RAW[mes]) return '';
+  if (!freqTem(mes)) return '';
+  var Q = freqUsar(mes);
   var cicloAnt = freqCicloAnterior(mes);
   var prefixo = DISTRITO_FILTRO ? DISTRITO_FILTRO.substring(0, 6) : null;
   var dist = freqDistritos(mes, prefixo);
@@ -2887,13 +2925,11 @@ function renderFrequenciaMes(mes) {
   html += '<div class="sec-hdr"><div class="sec-title">PANORAMA — FREQUÊNCIA DE VISITAÇÃO</div><div class="sec-line"></div>';
   html += '<span style="font-size:11px;color:var(--gray)">' + mes + '/2026</span></div>';
   html += '<div class="visitas-chart-wrap" style="margin-top:8px">';
-  html += '<h3>🩺 Cobertura de frequência ' + (prefixo ? 'por setor — ' + dist[0].gd : 'por distrito') + ': ' + freqPctTxt(tot.cob) +
+  html += '<h3>🩺 ' + (Q ? 'Frequência Q1–Q3 (PEX)' : 'Cobertura de frequência') + ' ' + (prefixo ? 'por setor — ' + dist[0].gd : 'por distrito') + ': ' + freqPctTxt(tot.cob) +
     (totAnt ? ' &nbsp;' + freqDeltaHtml(tot.cob, totAnt.cob) + ' <span style="font-weight:400;color:var(--gray)">vs ' + cicloAnt + '</span>' : '') + '</h3>';
-  html += '<p style="font-size:11px;color:var(--gray);margin:0 0 12px">Cobertura = (Freq 80 + Freq 100) ÷ Painel' +
+  html += '<p style="font-size:11px;color:var(--gray);margin:0 0 12px">' + (Q ? 'Frequência Q1–Q3 = médicos Q1–Q3 em Freq 80 + 100 ÷ médicos Q1–Q3 · meta 90%' : 'Cobertura = (Freq 80 + Freq 100) ÷ Painel · régua antiga') +
     (prefixo ? '' : ' &nbsp;·&nbsp; selecione um distrito no filtro do topo para ver por setor') + ' &nbsp;·&nbsp; ';
-  html += '<span style="display:inline-block;width:10px;height:10px;background:#22c55e;border-radius:2px;margin-right:4px"></span>≥75%&nbsp;&nbsp;';
-  html += '<span style="display:inline-block;width:10px;height:10px;background:#f59e0b;border-radius:2px;margin-right:4px"></span>50–74%&nbsp;&nbsp;';
-  html += '<span style="display:inline-block;width:10px;height:10px;background:#ef4444;border-radius:2px;margin-right:4px"></span>&lt;50%</p>';
+  html += freqLegenda() + '</p>';
   html += prefixo
     ? renderFrequenciaSetorTable(freqSetores(mes, prefixo), cicloAnt ? freqSetores(cicloAnt, prefixo) : [], cicloAnt)
     : renderFrequenciaDistTable(dist, distAnt, cicloAnt);
@@ -3277,8 +3313,9 @@ function apresFundamentos() {
   if (crm && cr === null) cr = 0;
   add('CRM Chave', cr, '≥ 100%', cr < 100, crm ? (n(crm.real_interacoes) === null ? 0 : Math.round(n(crm.real_interacoes))) + ' de ' + Math.round(n(crm.obj_interacoes)) + ' interações' : '');
   var prefixo = DISTRITO_FILTRO.substring(0, 6);
-  var fD = FREQ_SETORES_RAW[mesP] ? freqDistritos(mesP, prefixo) : [], fr = fD.length ? freqSoma(fD).cob : null;
-  add('Frequência de visitação', fr, '≥ 75%', fr < 75, 'Freq 80 + 100 ÷ painel');
+  var fD = freqTem(mesP) ? freqDistritos(mesP, prefixo) : [], fr = fD.length ? freqSoma(fD).cob : null;
+  if (freqEhQ13(mesP)) add('Frequência Q1–Q3 (PEX)', fr, '≥ 90%', fr < 90, 'médicos Q1–Q3 em Freq 80 + 100 · pontua no PEX');
+  else add('Frequência de visitação', fr, '≥ 75%', fr < 75, 'Freq 80 + 100 ÷ painel (régua antiga)');
   var sb = SOBREP_DIST[mesP] ? SOBREP_DIST[mesP].find(function(x) { return x.id === prefixo; }) : null;
   var sv = sb && sb.painel ? sb.nv / sb.painel * 100 : null;
   add('Sobreposição Nexus × Vital', sv, '≤ 10%', sv > 10, '% do painel');
