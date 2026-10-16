@@ -1359,6 +1359,8 @@ async function budgetDesbloquear() {
   await carregarBudget();
   var el = document.getElementById('budget-resumo');
   if (el) el.outerHTML = renderBudgetResumo();
+  var pg = document.getElementById('budget-por-gd');
+  if (pg) pg.outerHTML = renderBudgetPorGd();
 }
 
 function renderBudgetResumo() {
@@ -1377,10 +1379,12 @@ function renderBudgetResumo() {
   html += '<div style="display:flex;align-items:center;gap:26px;flex-wrap:wrap">';
   html += '<div style="min-width:150px"><div style="font-size:13px;font-weight:800">💰 Budget — verba tática</div>' +
     '<div class="kpi-sub">' + (prefixo ? gds[0] : 'Regional LESTE · 4 GDs') + ' · acumulado</div></div>';
-  html += bloco('Total', brl(verba));
-  if (BUDGET_LANC === null) {
-    html += bloco('Utilizado', '—') + (GATE.liberado() ? '<div class="kpi-sub">lançamentos indisponíveis no momento</div>' : '<button class="gate-btn" onclick="budgetDesbloquear()">🔒 Senha para ver o utilizado</button>');
+  if (!GATE.liberado()) { // área restrita: sem sessão não mostra nem a verba
+    html += '<div class="kpi-sub" style="flex:1">verba e lançamentos em área restrita</div><button class="gate-btn" onclick="budgetDesbloquear()">🔒 Senha para ver o budget</button>';
+  } else if (BUDGET_LANC === null) {
+    html += bloco('Total', brl(verba)) + bloco('Utilizado', '—') + '<div class="kpi-sub">lançamentos indisponíveis no momento</div>';
   } else {
+    html += bloco('Total', brl(verba));
     var usado = BUDGET_LANC.filter(function(l){ return l.produto !== 'GLEMPA' && gds.indexOf(l.gd) >= 0; })
       .reduce(function(t, l){ return t + (parseFloat(l.valor) || 0); }, 0);
     var pctU = verba ? usado / verba * 100 : 0;
@@ -1403,6 +1407,12 @@ function renderBudgetPorGd() {
   var prefixo = DISTRITO_FILTRO ? DISTRITO_FILTRO.substring(0, 6) : null;
   var chaves = Object.keys(BUDGET_VERBA_GD).filter(function(k){ return !prefixo || k === prefixo; });
   if (!chaves.length) return '';
+  var cab = '<div class="sec-hdr"><div class="sec-title">PANORAMA — BUDGET POR GD</div><div class="sec-line"></div>' +
+    '<span style="font-size:11px;color:var(--gray)">verba tática · acumulado</span></div>';
+  if (!GATE.liberado()) { // área restrita: sem sessão não mostra a verba por GD
+    return '<div style="margin:0 0 28px" id="budget-por-gd">' + cab + '<div class="kpi" style="margin-top:8px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">' +
+      '<span class="kpi-sub" style="flex:1">Verba e lançamentos por GD ficam em área restrita.</span><button class="gate-btn" onclick="budgetDesbloquear()">🔒 Senha para ver o budget</button></div></div>';
+  }
   var semLanc = BUDGET_LANC === null;
   function brl(v) { return v.toLocaleString('pt-BR', {style:'currency', currency:'BRL'}); }
   function usadoDe(gd) {
@@ -1423,9 +1433,7 @@ function renderBudgetPorGd() {
   }
   var TOT = 'background:#f3f4f6;font-weight:700';
 
-  var html = '<div style="margin:0 0 28px">';
-  html += '<div class="sec-hdr"><div class="sec-title">PANORAMA — BUDGET POR GD</div><div class="sec-line"></div>';
-  html += '<span style="font-size:11px;color:var(--gray)">verba tática · acumulado</span></div>';
+  var html = '<div style="margin:0 0 28px" id="budget-por-gd">' + cab;
   html += '<div class="visitas-chart-wrap" style="margin-top:8px">';
   html += '<div class="visitas-table-wrap"><table class="visitas-table"><thead><tr>';
   html += '<th class="th-gd">GD</th><th>Total</th><th>Utilizado</th><th>Saldo</th><th>% utilizado</th></tr></thead><tbody>';
