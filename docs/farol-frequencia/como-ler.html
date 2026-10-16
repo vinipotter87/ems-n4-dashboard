@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Como ler o Farol da Frequência</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@200;400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#1F2D44; --navy-2:#1C2D46; --azul:#B6E4FA; --gelo:#DFF1FB; --aco:#5787A2;
+  --bg:#F3F9FD; --card:#FFFFFF; --line:#D6E6F0; --text:#1F2D44; --muted:#5787A2;
+  --verde:#1E9E62; --amarelo:#E3A008; --laranja:#E8701A; --vermelho:#D23F3F; --cinza:#56606B;
+  --verde-bg:#E3F5EC; --amarelo-bg:#FFF4D6; --laranja-bg:#FDE8D8; --vermelho-bg:#FBE3E3; --cinza-bg:#EDF0F3;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Sora,system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.55}
+.hdr{background:var(--navy);color:#fff;position:relative;overflow:hidden}
+.hdr::before,.hdr::after{content:"";position:absolute;border-radius:50%;background:var(--navy-2);filter:brightness(1.35);opacity:.55}
+.hdr::before{width:260px;height:260px;right:-60px;top:-120px}
+.hdr::after{width:170px;height:170px;right:130px;top:10px}
+.hdr-in{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:20px 24px;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.hdr img{height:20px;display:block}
+.hdr-sep{width:1px;height:38px;background:var(--aco)}
+.hdr h1{margin:0;font-size:21px;font-weight:700}
+.hdr h1 span{color:var(--azul);font-weight:200}
+.hdr p{margin:3px 0 0;color:var(--gelo);font-size:12px}
+.voltar{margin-left:auto;color:var(--azul);border:1px solid var(--aco);border-radius:999px;padding:6px 14px;text-decoration:none;font-size:12px;font-weight:600}
+.voltar:hover{background:var(--navy-2)}
+.bar{position:sticky;top:0;z-index:5;background:#fff;border-bottom:1px solid var(--line)}
+.bar-in{max-width:1100px;margin:0 auto;padding:8px 24px;display:flex;gap:4px;align-items:center;flex-wrap:wrap;font-size:12px}
+.bar-in a{color:var(--muted);text-decoration:none;padding:5px 10px;border-radius:999px;font-weight:600}
+.bar-in a:hover{background:var(--gelo);color:var(--navy)}
+main{max-width:1100px;margin:0 auto;padding:24px 24px 70px}
+section{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px 24px;margin:0 0 16px}
+section h2{margin:0 0 10px;font-size:17px;display:flex;align-items:center;gap:10px}
+section h2 .n{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:var(--navy);color:#fff;font-size:13px;font-weight:700;flex:none}
+section h3{margin:16px 0 6px;font-size:13.5px;color:var(--navy)}
+p{margin:0 0 10px}
+ul,ol{margin:0 0 10px;padding-left:22px}
+li{margin:0 0 5px}
+.lead{font-size:15px;color:var(--navy)}
+.meta{display:flex;gap:12px;flex-wrap:wrap;margin:10px 0 4px}
+.meta .k{flex:1 1 180px;border-left:5px solid var(--line);background:#FAFDFF;border-radius:8px;padding:10px 14px}
+.meta .k b{display:block;font-size:22px}
+.meta .k small{color:var(--muted);font-size:11.5px}
+.far{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 10px}
+.far span{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;font-size:12.5px;font-weight:600;background:#FAFDFF;border:1px solid var(--line)}
+.far i{width:10px;height:10px;border-radius:50%;display:inline-block}
+table{width:100%;border-collapse:collapse;font-size:13px;margin:6px 0 12px}
+th{font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);background:#FAFDFF}
+td{padding:8px 10px;border-bottom:1px solid #EDF4F8;vertical-align:top}
+table.mini{width:auto}
+table.mini th,table.mini td{text-align:center;border:1px solid var(--line)}
+.tag{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:600;white-space:nowrap}
+.g-garantido{background:var(--verde-bg);color:var(--verde)}
+.g-proteger{background:var(--amarelo-bg);color:#9A6B00}
+.g-conquistar{background:var(--laranja-bg);color:#B5530C}
+.g-possivel{background:#FFF1E6;color:#B5530C;border:1px dashed #E8A06A}
+.g-reconstruir{background:var(--vermelho-bg);color:var(--vermelho)}
+.g-q4{background:var(--cinza-bg);color:var(--cinza)}
+.ex{background:var(--gelo);border-radius:8px;padding:10px 14px;margin:6px 0 10px;font-size:13px}
+.ex b{color:var(--navy)}
+.dois{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.faq dt{font-weight:600;color:var(--navy);margin-top:10px}
+.faq dd{margin:2px 0 0}
+kbd{font:inherit;background:#FAFDFF;border:1px solid var(--line);border-radius:6px;padding:0 6px;font-size:12px;white-space:nowrap}
+@media (max-width:700px){.hdr-in,.bar-in,main{padding-left:16px;padding-right:16px}.dois{grid-template-columns:1fr}section{padding:16px}}
+@media print{.bar,.hdr::before,.hdr::after{display:none!important}body{background:#fff}section{border-color:#ccc;break-inside:avoid}}
+</style>
+</head>
+<body>
+<header class="hdr"><div class="hdr-in">
+  <img src="assets/logo-grupo-ems.png" alt="Grupo EMS">
+  <div class="hdr-sep"></div>
+  <div><h1>Como ler o Farol da Frequência <span>· Regional SPI OESTE</span></h1><p id="sub">Construção, regras de avaliação e leitura de cada visão</p></div>
+  <a href="index.html" class="voltar">← Voltar ao Farol</a>
+</div></header>
+
+<div class="bar"><div class="bar-in">
+  <a href="#s1">O que mede</a><a href="#s2">Dados</a><a href="#s3">Frequência</a><a href="#s4">Projeção</a><a href="#s5">Grupos</a><a href="#s6">Visões</a><a href="#s7">Rotina</a><a href="#s8">Perguntas</a>
+</div></div>
+
+<main>
+
+<section id="s1">
+  <h2><span class="n">1</span>O que o Farol mede</h2>
+  <p class="lead">O Farol mostra, para cada setor, distrito e linha, a <b>porcentagem dos médicos Q1–Q3 do painel que estão com frequência</b>. A meta é <b>90%</b>.</p>
+  <div class="meta">
+    <div class="k" style="border-color:var(--navy)"><b>Q1–Q3</b><small>só os quartis que pontuam no PEX entram na conta</small></div>
+    <div class="k" style="border-color:var(--verde)"><b>90%</b><small>meta de médicos Q1–Q3 com frequência, igual ao PEX</small></div>
+    <div class="k" style="border-color:var(--aco)"><b>5 ciclos</b><small>janela móvel que o Power BI usa para medir a frequência</small></div>
+  </div>
+  <h3>As cores do farol</h3>
+  <div class="far">
+    <span><i style="background:var(--verde)"></i> Verde · 90% ou mais: na meta</span>
+    <span><i style="background:var(--amarelo)"></i> Amarelo · 80% a 89,9%: perto, atenção</span>
+    <span><i style="background:var(--vermelho)"></i> Vermelho · abaixo de 80%: fora</span>
+  </div>
+  <p><b>Q4 e médicos sem quartil ficam fora da meta.</b> Eles aparecem no dash só como referência (filtro "Q4 / sem quartil"), porque não são prioridade e não têm impacto no PEX. Medir o painel inteiro diluiria o foco: em média, 3 de cada 4 médicos do painel são Q4.</p>
+</section>
+
+<section id="s2">
+  <h2><span class="n">2</span>De onde vêm os dados</h2>
+  <p>A fonte é o relatório <b>Velos · Produtividade EMS</b> no Power BI, página <b>Médico | Frequência</b>, exportado como "Detalhamento da Frequência" com o filtro UGN = SPI. O Farol não inventa número: a coluna <b>Freq.</b> e a marcação <b>c/ Freq.</b> são as mesmas do Power BI, médico a médico.</p>
+  <ul>
+    <li><b>Janela:</b> os últimos 5 ciclos fechados (<span class="janela">MAI–SET</span>). A cada ciclo que fecha, o mais antigo sai e o novo entra.</li>
+    <li><b>Atualização:</b> uma captura por ciclo, logo após o fechamento. A data no topo do Farol diz de quando são os dados.</li>
+    <li><b>O que o export não traz:</b> o mês de cada visita. Sabemos quantas visitas o médico teve na janela, não em quais ciclos. Isso é o que obriga o Farol a trabalhar com melhor e pior caso (seção 4).</li>
+  </ul>
+</section>
+
+<section id="s3">
+  <h2><span class="n">3</span>Como a frequência de um médico é calculada</h2>
+  <p>Para cada médico, o Power BI olha a janela de 5 ciclos e conta:</p>
+  <ul>
+    <li><b>Objetivo:</b> em quantos ciclos da janela o médico estava no painel (até 5). Um médico incluído há 2 ciclos tem objetivo 2.</li>
+    <li><b>Realizado:</b> quantas visitas ele recebeu nesses ciclos (vale 1 por ciclo).</li>
+    <li><b>Freq.:</b> realizado ÷ objetivo, arredondado <b>para cima</b> em degraus de 20%. Por isso 2 de 3 e 3 de 4 aparecem como 80%.</li>
+  </ul>
+  <p><b>Médico com frequência = Freq. de 80% ou mais.</b> Na prática, as visitas precisam passar de 60% do objetivo:</p>
+  <table class="mini"><tr><th>Ciclos no painel (objetivo)</th><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td></tr><tr><th>Visitas necessárias</th><td>1</td><td>2</td><td>2</td><td>3</td><td>4</td></tr></table>
+  <div class="ex"><b>Exemplo.</b> Dra. Ana está no painel há 5 ciclos e recebeu 4 visitas: Freq. 80%, com frequência. Dr. Bruno, também há 5 ciclos, recebeu 3: Freq. 60%, sem frequência. Dra. Carla entrou há 2 ciclos e teve 1 visita: 1 de 2 = 50%, que o Power BI mostra como 60%, sem frequência.</div>
+  <p>O indicador do setor é simples: <b>médicos Q1–Q3 com frequência ÷ médicos Q1–Q3 do painel</b>. O card "Q1–Q3 com frequência" mostra essa conta e, entre parênteses, quantos médicos precisam estar com frequência para bater 90%.</p>
+</section>
+
+<section id="s4">
+  <h2><span class="n">4</span>A projeção do próximo ciclo: melhor e pior caso</h2>
+  <p>Quando o ciclo vira, o mais antigo da janela sai e o novo entra. Se o médico tinha visita no ciclo que sai, ele perde uma visita; se não tinha, nada muda. Como o export não diz em qual mês foi cada visita, o Farol calcula os dois cenários:</p>
+  <ul>
+    <li><b>Pior caso:</b> a visita mais antiga era do ciclo que sai e se perde.</li>
+    <li><b>Melhor caso:</b> a visita que sai não existia (o ciclo antigo já estava sem visita), então nada se perde.</li>
+  </ul>
+  <p>Por isso o card <b>"Projeção cumprindo o plano"</b> é uma faixa, por exemplo <b>77,8%–90,3%</b>: o valor de baixo é o pior caso e o de cima, o melhor, ambos supondo que toda a lista do ciclo foi visitada. A linha pequena "se não visitar a lista" é o pior caso sem nenhuma visita: é para onde o farol cai se nada for feito.</p>
+  <div class="ex"><b>Como usar a faixa.</b> Se o valor de baixo já passa de 90%, a meta está garantida cumprindo a lista. Se só o de cima passa, a meta depende de converter os "Possível" (seção 5). Se nem o de cima chega, o ciclo é de proteger e reconstruir, e a meta volta a ser possível em 2 a 3 ciclos.</div>
+</section>
+
+<section id="s5">
+  <h2><span class="n">5</span>Os grupos do ciclo</h2>
+  <p>Cada médico Q1–Q3 é classificado em um grupo para o próximo ciclo, testando nesta ordem e parando no primeiro que vale:</p>
+  <table>
+    <thead><tr><th>Grupo</th><th>Freq. hoje</th><th>O que significa</th><th>O que fazer</th></tr></thead>
+    <tbody>
+      <tr><td><span class="tag g-garantido">Garantido</span></td><td><b>100%</b></td><td>Continua com frequência no próximo ciclo mesmo sem visita, até no pior caso. Visitou em todos os ciclos da janela (5 de 5, 4 de 4, 3 de 3).</td><td>Manter a rotina. Não precisa de visita para o indicador.</td></tr>
+      <tr><td><span class="tag g-proteger">Proteger</span></td><td><b>80%</b></td><td>Tem frequência hoje, mas faltou 1 visita na janela (4 de 5, 3 de 4, 2 de 3). Sem visita no próximo ciclo, pode cair para 3 de 5 e sair.</td><td><b>Visitar primeiro</b>, Q1 antes. É o grupo que faz o farol cair.</td></tr>
+      <tr><td><span class="tag g-conquistar">Conquistar</span></td><td><b>60%</b></td><td>Não tem frequência hoje, mas 1 visita no próximo ciclo coloca na frequência com certeza. Médico com só 2 ciclos no painel e 1 visita. Caso raro.</td><td>Visitar. Ganho certo.</td></tr>
+      <tr><td><span class="tag g-possivel">Possível</span></td><td><b>60%</b></td><td>3 de 5. Uma visita no próximo ciclo só coloca na frequência se o ciclo que sai estava sem visita (melhor caso).</td><td>Visitar quem não teve visita no ciclo que sai; conferir no histórico do médico.</td></tr>
+      <tr><td><span class="tag g-reconstruir">Reconstruir</span></td><td><b>0% a 60%</b></td><td>Nem com visita no próximo ciclo entra na frequência. No máximo 2 visitas em 5 ciclos, ou 1 de 3, 1 de 4, 2 de 4.</td><td>Visitar todo ciclo a partir de agora: entra na frequência em 2 a 4 ciclos. Quem está sem nenhuma visita, revisar se continua fazendo sentido no painel.</td></tr>
+      <tr><td><span class="tag g-q4">Q4 / sem quartil</span></td><td>—</td><td>Fora da meta. Aparece só como referência.</td><td>Não entra na lista do ciclo.</td></tr>
+    </tbody>
+  </table>
+  <p><b>Lista "Visitar no ciclo"</b> = Proteger + Conquistar + Possível. São as visitas que mudam o farol já no próximo ciclo. O card "Visitas Q1–Q3" divide esse total por 4 semanas para dar o ritmo.</p>
+</section>
+
+<section id="s6">
+  <h2><span class="n">6</span>Como ler cada visão</h2>
+  <p>No topo, escolha a <b>linha</b> (Nexus, Vital…), e nas visões do GD e do rep, o <b>distrito</b> e o <b>setor</b>. O botão "Como os grupos são definidos" repete o resumo das regras em qualquer visão.</p>
+
+  <h3>Regional</h3>
+  <ul>
+    <li><b>Linhas da regional:</b> as 10 linhas, da pior para a melhor hoje. "Hoje" é o farol atual; "(plano)" é a faixa do próximo ciclo cumprindo a lista; "Visitas no plano" é o volume de visitas Q1–Q3 que a linha precisa fazer; "Reconstruir" é o estoque de médio prazo. Clique na linha para abrir.</li>
+    <li><b>Cards da linha:</b> farol hoje, projeção, setores na meta (hoje → próximo ciclo no pior caso), visitas no plano e Reconstruir, com quantos médicos estão sem nenhuma visita na janela.</li>
+    <li><b>Por distrito e Setores:</b> as mesmas colunas por GD e por rep, com a barra de composição (verde Garantido, amarelo Proteger, laranja Conquistar/Possível, vermelho Reconstruir). Clique para abrir a estratégia.</li>
+  </ul>
+
+  <h3>Estratégia do GD</h3>
+  <ul>
+    <li><b>Estratégia do distrito:</b> um texto pronto com o risco (Proteger), o ganho (Possível), quem o GD deve acompanhar em campo, o painel (médicos sem visita) e setores vagos. Abaixo, a <b>cadência do ciclo</b> em 4 semanas.</li>
+    <li><b>Ação do GD por setor:</b>
+      <span class="tag g-garantido">Manter</span> fecha 90% só com Proteger e Conquistar: cobrar só o Proteger ·
+      <span class="tag g-proteger">Cobrar</span> só fecha se converter os Possível: revisar a lista com o rep ·
+      <span class="tag g-conquistar">Campo</span> não fecha a meta no próximo ciclo nem no melhor caso: acompanhar em campo ·
+      <span class="tag g-reconstruir">Setor vago</span> sem rep para executar: GD assume ou redistribui os Q1–Q2 do Proteger.</li>
+    <li><b>Baixar planilha do GD:</b> gera um Excel com o resumo, os setores, a lista do ciclo e os Reconstruir, para levar à N4 ou à RPS.</li>
+  </ul>
+
+  <h3>Estratégia do rep</h3>
+  <ul>
+    <li><b>Cards:</b> farol hoje (com quantos médicos faltam para 90%), projeção cumprindo o plano, visitas do ciclo (e o ritmo por semana) e a posição do setor no distrito.</li>
+    <li><b>Estratégia do ciclo:</b> o que fazer primeiro, em ordem: Proteger, depois Possível, Q1 antes de Q2 e Q3, concentração por especialidade e ritmo semanal.</li>
+    <li><b>Grupos do ciclo:</b> os 5 cards com a contagem por quartil e a Freq. atual dos médicos de cada grupo. Clique em um card para filtrar a lista.</li>
+    <li><b>Lista do ciclo:</b> médico, especialidade, quartil, visitas na janela (realizado de objetivo), grupo e o que fazer. A caixa <kbd>✓</kbd> marca visitado ou agendado; fica salva só no seu navegador. "Imprimir" gera a versão de bolso; "Baixar planilha do rep" gera o Excel do setor.</li>
+  </ul>
+</section>
+
+<section id="s7">
+  <h2><span class="n">7</span>Rotina sugerida no ciclo</h2>
+  <div class="dois">
+    <div>
+      <h3 style="margin-top:0">Representante</h3>
+      <ol>
+        <li><b>Virada do ciclo:</b> abra a Estratégia do rep, leia a estratégia e baixe ou imprima a lista.</li>
+        <li><b>Semana 1:</b> agende os Proteger, Q1 primeiro. Separe os Possível que não tiveram visita no ciclo que saiu.</li>
+        <li><b>Semanas 2 e 3:</b> execute a lista no ritmo do card "por semana" e marque o <kbd>✓</kbd> a cada visita.</li>
+        <li><b>Semana 4:</b> confira quem do Proteger ainda não foi visitado. É a última chance antes do ciclo fechar.</li>
+        <li><b>Todo ciclo:</b> 1 visita em cada Reconstruir que continua fazendo sentido no painel.</li>
+      </ol>
+    </div>
+    <div>
+      <h3 style="margin-top:0">Gerente distrital</h3>
+      <ol>
+        <li><b>Semana 1:</b> 1:1 de 15 minutos com cada rep para fechar a lista do ciclo.</li>
+        <li><b>Semanas 2 e 3:</b> campo nos setores marcados como "Campo"; nos demais, cobrar o andamento da lista toda sexta.</li>
+        <li><b>Semana 4:</b> fechamento: quem do Proteger ficou sem visita?</li>
+        <li><b>Na RPS:</b> o slide "Frequência — plano do ciclo" usa estes mesmos dados. Setor abaixo de 90% abre plano normalmente; a lista do Farol entra como insumo do 5W2H.</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<section id="s8">
+  <h2><span class="n">8</span>Perguntas frequentes</h2>
+  <dl class="faq">
+    <dt>Meu farol caiu e eu não deixei de visitar ninguém. Por quê?</dt>
+    <dd>Um ciclo antigo saiu da janela e levou visitas junto. Médicos que estavam com 4 de 5 e tinham visita no ciclo que saiu ficaram com 3 de 5. É exatamente o risco do grupo Proteger.</dd>
+    <dt>O médico está com 80% e aparece como risco. Ele não está bem?</dt>
+    <dd>80% é o mínimo para ter frequência. Falta 1 visita na janela, então qualquer ciclo sem visita o derruba. Está bem hoje, mas não está seguro.</dd>
+    <dt>Por que a projeção é uma faixa e não um número?</dt>
+    <dd>Porque o export do Power BI não diz em qual mês foi cada visita. Sem isso, não dá para saber quem perde visita quando o ciclo vira. A faixa mostra os dois extremos.</dd>
+    <dt>Visitei um Reconstruir e ele continuou sem frequência. O que houve?</dt>
+    <dd>É o esperado: Reconstruir precisa de visita em todo ciclo durante 2 a 4 ciclos para voltar. A lista mostra a faixa de cada médico.</dd>
+    <dt>Os Q4 não contam para nada?</dt>
+    <dd>Para o farol e para o PEX, não. Eles seguem no painel e podem ser visitados, mas não entram na lista do ciclo nem na meta de 90%.</dd>
+    <dt>Marquei o ✓ e o colega não vê.</dt>
+    <dd>A marcação fica salva só no navegador de quem marcou. Para compartilhar, use a planilha baixada.</dd>
+  </dl>
+</section>
+
+</main>
+<script src="farol-core.js?v=2026-10-16"></script>
+<script src="dados/manifest.js"></script>
+<script>
+(function () {
+  const MAN = window.FAROL_MANIFEST; if (!MAN) return;
+  const j = window.FarolCore.janela(MAN.janela);
+  document.querySelectorAll('.janela').forEach(e => e.textContent = MAN.janela);
+  document.getElementById('sub').textContent = 'Dados ' + MAN.data.split('-').reverse().join('/') + ' · janela ' + MAN.janela + ' · próximo ciclo ' + j.CICLO + ' · meta: 90% dos médicos Q1–Q3 com Freq. ≥80%';
+})();
+</script>
+</body>
+</html>
