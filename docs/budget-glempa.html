@@ -333,6 +333,9 @@ async function fetchAba(aba, tentativa){
 
 async function carregarLancamentos(){
   var registros = await fetchAba(TAB_NAME);
+  // um mesmo id gravado mais de uma vez (retry do Apps Script) conta uma vez só
+  var vistos = {};
+  registros = registros.filter(function(r){ if (!r.id || !vistos[r.id]){ vistos[r.id] = true; return true; } return false; });
   return registros.map(function(r){
     return {
       id: r.id, gd: r.gd, linha: r.linha, produto: r.produto, crm: r.crm,
@@ -340,6 +343,17 @@ async function carregarLancamentos(){
       data: r.data, criadoEm: r.criadoEm, editado: r.editado === 'TRUE'
     };
   });
+}
+
+// Confere direto na planilha se a operação já foi aplicada — o Apps Script às
+// vezes grava e só depois falha na resposta (timeout / página de erro HTML).
+// Sem essa checagem, o retry ou um novo clique gravavam a linha 2-3 vezes.
+async function jaGravadoNoSheet(operacao, id){
+  try {
+    var regs = await fetchAba(TAB_NAME);
+    var existe = regs.some(function(r){ return String(r.id) === String(id); });
+    return operacao === 'delete' ? !existe : (operacao === 'add' && existe);
+  } catch (e) { return false; }
 }
 
 function enviarAoSheet(operacao, dados, tentativa){
@@ -351,6 +365,17 @@ function enviarAoSheet(operacao, dados, tentativa){
     crm: dados.crm, medico: dados.medico, valor: dados.valor,
     acao_lancamento: dados.acao, data: dados.data, criadoEm: dados.criadoEm
   };
+  function falhou(){
+    return jaGravadoNoSheet(operacao, dados.id).then(function(gravado){
+      if (gravado) return { ok: true };
+      if (tentativa < 2){
+        var espera = 1200 * (tentativa + 1);
+        return new Promise(function(resolve){ setTimeout(resolve, espera); })
+          .then(function(){ return enviarAoSheet(operacao, dados, tentativa + 1); });
+      }
+      throw new Error('O Google Sheets não respondeu corretamente após algumas tentativas. Clique em "🔄 Atualizar" para conferir se o lançamento entrou antes de tentar de novo.');
+    });
+  }
   return fetch(CONFIG.budget_webapp_url, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -359,16 +384,9 @@ function enviarAoSheet(operacao, dados, tentativa){
     try {
       return JSON.parse(texto);
     } catch (e) {
-      // o Apps Script às vezes devolve uma página de erro em HTML em vez do JSON
-      // esperado (falha transitória do lado do Google) — tenta de novo antes de desistir
-      if (tentativa < 2){
-        var espera = 600 * (tentativa + 1);
-        return new Promise(function(resolve){ setTimeout(resolve, espera); })
-          .then(function(){ return enviarAoSheet(operacao, dados, tentativa + 1); });
-      }
-      throw new Error('O Google Sheets não respondeu corretamente após algumas tentativas. Tente novamente em instantes.');
+      return falhou();
     }
-  });
+  }, falhou);
 }
 
 async function recarregar(){
@@ -660,6 +678,8 @@ function abrirModalGlempa(crm, lancamentoId){
     .reduce(function(a,l){ return a + l.valor; }, 0);
   var saldoDisponivel = Math.round((glempaVerba(med) - usadoOutros) * 100) / 100;
   var hoje = new Date().toISOString().slice(0,10);
+  // id fixo enquanto a janela estiver aberta: re-clique após falha não duplica
+  var novoId = uid(), novoCriadoEm = Date.now().toString();
 
   document.getElementById('modal-root').innerHTML = '<div class="modal-bg" id="modal-bg"><div class="modal">' +
     '<h3>' + (editando ? '✏️ Editar lançamento GLEMPA' : '➕ Lançamento GLEMPA') + '</h3>' +
@@ -712,16 +732,17 @@ function abrirModalGlempa(crm, lancamentoId){
       return;
     }
     var registro = {
-      id: editando ? editando.id : uid(), gd: GLEMPA_DISTRITOS[med.d].gd, linha: GLEMPA_DISTRITOS[med.d].linha.toUpperCase(), produto: GLEMPA_PROD,
+      id: editando ? editando.id : novoId, gd: GLEMPA_DISTRITOS[med.d].gd, linha: GLEMPA_DISTRITOS[med.d].linha.toUpperCase(), produto: GLEMPA_PROD,
       crm: med.c, medico: med.m, valor: valor, acao: document.getElementById('f-acao').value, data: data,
-      criadoEm: editando ? editando.criadoEm : Date.now().toString()
+      criadoEm: editando ? editando.criadoEm : novoCriadoEm
     };
     btnSalvar.disabled = true;
     btnSalvar.textContent = 'Salvando…';
     enviarAoSheet(editando ? 'edit' : 'add', registro).then(function(resp){
       if (!resp || !resp.ok) throw new Error((resp && resp.erro) || 'falha desconhecida');
-      return recarregar();
-    }).then(fechar).catch(function(e){
+      fechar();
+      recarregar().catch(function(e){ alert('Lançamento gravado, mas a lista não atualizou: ' + e.message + '. Clique em "🔄 Atualizar".'); });
+    }).catch(function(e){
       err.textContent = 'Erro ao gravar no Sheets: ' + e.message;
       err.style.display = 'block';
       btnSalvar.disabled = false;

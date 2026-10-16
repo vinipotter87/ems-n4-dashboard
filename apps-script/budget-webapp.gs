@@ -50,10 +50,28 @@ function doPost(e) {
     return resposta({ ok: false, erro: 'não autorizado' });
   }
 
+  // uma gravação por vez: sem isso, dois envios simultâneos do mesmo id passam
+  // juntos pela checagem abaixo e ambos gravam
+  var lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(20000);
+  } catch (err) {
+    return resposta({ ok: false, erro: 'planilha ocupada, tente de novo' });
+  }
+  try {
+    return executar(body);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function executar(body) {
   var sheet = pegarAba();
   var acao = body.acao;
 
   if (acao === 'add') {
+    // idempotente: reenvio do mesmo lançamento (retry após timeout) não duplica
+    if (encontrarLinha(sheet, body.id) >= 0) return resposta({ ok: true, jaExistia: true });
     sheet.appendRow([
       body.id, body.gd, body.linha, body.produto, body.crm,
       body.medico, body.valor, body.acao_lancamento, body.data, body.criadoEm, 'FALSE'
@@ -93,6 +111,7 @@ function pegarAba() {
 }
 
 function encontrarLinha(sheet, id) {
+  if (sheet.getLastRow() < 2) return -1;
   var valores = sheet.getRange('A2:A' + sheet.getLastRow()).getValues();
   for (var i = 0; i < valores.length; i++) {
     if (String(valores[i][0]) === String(id)) return i + 2; // +2: pula header e é 1-indexado
