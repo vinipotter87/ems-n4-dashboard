@@ -78,7 +78,7 @@ td{padding:8px 9px;border-bottom:1px solid var(--border);vertical-align:top;line
 
 <div class="trava" id="trava"><form id="trava-form" autocomplete="off">
   <h2>🔒 Atas de RPS</h2><p>Digite a senha para abrir as atas.</p>
-  <input id="trava-senha" type="password" inputmode="numeric" placeholder="••••" autofocus>
+  <input id="trava-senha" type="password" inputmode="numeric" placeholder="••••" autocomplete="new-password" autofocus>
   <button type="submit">Entrar</button><div class="err" id="trava-err"></div>
 </form></div>
 
@@ -249,7 +249,7 @@ $('btn-atualizar').addEventListener('click', function(){ carregar().catch(erro);
 function erro(e){ $('lista').innerHTML = '<div class="vazio"><b>Erro ao carregar</b>' + esc(e.message) + '</div>'; }
 
 // Senha de acesso: só a hash fica no código (a página é pública no GitHub Pages).
-// Depois de acertar, a aba lembra até ser fechada.
+// A senha é pedida toda vez que a página abre (nada fica lembrado no navegador).
 var SENHA_HASH = '55595a6e5cfc81858117b2737ed72bedb96f5a3aa35be330b2b8912c5601c0be';
 async function hashSenha(t){
   var b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t));
@@ -263,13 +263,10 @@ async function iniciar(){
     await carregar();
   } catch(e){ erro(e); }
 }
-var liberado = false;
-try { liberado = sessionStorage.getItem('atas_rps_ok') === SENHA_HASH; } catch(e){}
-if (liberado) iniciar();
-else $('trava-form').addEventListener('submit', async function(ev){
+try { sessionStorage.removeItem('atas_rps_ok'); } catch(e){} // limpa a liberação da versão anterior
+$('trava-form').addEventListener('submit', async function(ev){
   ev.preventDefault();
   if (await hashSenha($('trava-senha').value.trim()) === SENHA_HASH){
-    try { sessionStorage.setItem('atas_rps_ok', SENHA_HASH); } catch(e){}
     iniciar();
   } else { $('trava-err').textContent = 'Senha incorreta.'; $('trava-senha').value = ''; $('trava-senha').focus(); }
 });
