@@ -248,7 +248,7 @@ tr.ip-ch td{background:#fffdf5}tr.ip-ch td.n{font-weight:800;color:#78350f}
 </head>
 <body>
 <div class="top"><div class="logo"><img src="assets/logo-grupo-ems.png" alt="Grupo EMS"></div><span id="ctx">Copiloto de RPS — Reunião de Performance Semanal</span><span class="sp"></span>
-  <button class="btn" id="b-senha" style="display:none" onclick="rpsDesbloquear()" title="Planos, textos completos das atas e gravação ficam em área restrita">🔒 Senha</button><button class="btn" id="b-rep" style="display:none" onclick="telaReps()">⇄ Trocar representante</button><button class="btn" id="b-trocar" style="display:none">⇄ Trocar reunião</button><a class="btn" id="b-dash" href="index.html">← Dashboard</a></div>
+  <button class="btn" id="b-senha" style="display:none" onclick="rpsDesbloquear()" title="Com a senha dá para editar ou apagar planos e atas já salvos">🔒 Senha</button><button class="btn" id="b-rep" style="display:none" onclick="telaReps()">⇄ Trocar representante</button><button class="btn" id="b-trocar" style="display:none">⇄ Trocar reunião</button><a class="btn" id="b-dash" href="index.html">← Dashboard</a></div>
 <div class="stage" id="stage"></div>
 <div class="nav"><button class="btn" id="b-prev">← Anterior</button><div class="dots" id="dots"></div><span id="cnt"></span><button class="btn" id="b-next">Próximo →</button></div>
 
@@ -367,14 +367,16 @@ function telaEntrada(){
   $('e-mes').onchange = async function(){ ST.mes = this.value; ST.distritos = await distritosDe(ST.mes); telaEntrada(); };
 }
 
-// Os registros de RPS (atas, texto completo e planos) são leitura e gravação abertas no gate;
-// com sessão (PIN digitado em outra página) lê a aba inteira, sem diferença pro Copiloto.
+// Regra do Copiloto (16/10/2026): sem senha, qualquer um vê os combinados, muda o status deles,
+// anexa a ata e sobe um plano novo. Plano e ata já salvos ficam fixos: editar, trocar ou apagar
+// só com a senha (botão 🔒 no cabeçalho) — é o GD quem exclui pra um plano novo subir.
+// (`pode` = aberto a todos; `senha` = exige a sessão do gate.)
 async function lancRps(){
   if (GATE.liberado()){ try { return await GATE.ler('budget_lancamentos'); } catch(e){ if (!e.sessao) throw e; } }
   try { return await GATE.lerAberto(); }
   catch(e){ console.warn('Combinados indisponíveis (gate): ' + e.message); return []; } // o copiloto abre mesmo assim, sem as atas
 }
-function rpsBotaoSenha(){ var b = $('b-senha'); if (b) b.style.display = 'none'; } // Copiloto é todo sem senha
+function rpsBotaoSenha(){ var b = $('b-senha'); if (b) b.style.display = GATE.pronto() && !GATE.liberado() ? '' : 'none'; }
 async function rpsDesbloquear(){
   if (!(await GATE.garantir('Copiloto de RPS — área restrita', { cancelavel: true, texto: 'Planos, textos completos das atas e gravação ficam em área restrita. Digite a senha.' }))) return false;
   rpsBotaoSenha();
@@ -1348,7 +1350,7 @@ async function copiarPromptAta(btn){
 }
 function desenharAtaDe(alvo){
   var box = ataBox(alvo); if (!box) return;
-  var pode = true, reg = ataRegDe(alvo), salva = null; if (reg) try { salva = JSON.parse(reg.acao); } catch(e){}
+  var pode = true, senha = GATE.liberado(), reg = ataRegDe(alvo), salva = null; if (reg) try { salva = JSON.parse(reg.acao); } catch(e){}
   var meu = (ST.alvo || 'ant') === alvo, ed = meu && !!ST.edit, previa = meu && !ed && !!ST.previa, ata = ed ? ST.edit : (previa ? ST.previa : salva), h = '', A = "ataAlvo('" + alvo + "');";
   var up = '<input type="file" accept="application/pdf,.pdf" style="display:none" onchange="' + A + 'ataArquivo(this)">';
   var digitar = '<button class="b2" style="padding:8px 14px" onclick="' + A + 'ST.edit={titulo:\'' + (alvo === 'atual' ? 'Combinados da RPS de ' + dataBr(ST.data) : 'Combinados da RPS anterior') + '\',data:\'\',itens:[{n:1,texto:\'\',resp:\'\',prazo:\'\',status:\'Pendente\'}]};desenharAta()">Digitar os combinados</button>';
@@ -1365,7 +1367,8 @@ function desenharAtaDe(alvo){
     h = '<div class="card"><div class="ata-top"><div><h3 style="margin:0">' + esc(ata.titulo) + '</h3><div class="nota" style="margin:2px 0 0">' + (dr ? 'RPS de ' + dr + ' · ' : '') + ata.itens.length + ' combinados' + (ata.arquivo ? ' · lido de ' + esc(ata.arquivo) : '') + '</div></div><span class="ac">';
     if (ed) h += '<button class="b1" onclick="' + A + 'ataSalvarEdicao()">Salvar alterações</button><button class="b2" onclick="ST.edit=null;desenharAta()">Cancelar</button>';
     else if (previa) h += '<button class="b1" onclick="' + A + 'ataConfirmar()">Salvar combinados</button><button class="b2" onclick="' + A + 'ataEditar()">✏️ Editar</button><button class="b2" onclick="ST.previa=null;desenharAta()">Cancelar</button>';
-    else if (pode) h += '<button class="b2" onclick="' + A + 'ataEditar()">✏️ Editar</button><label class="b2">Trocar ata' + up + '</label><button class="b2" onclick="' + A + 'ataRemover()">Remover</button>';
+    else if (senha) h += '<button class="b2" onclick="' + A + 'ataEditar()">✏️ Editar</button><label class="b2">Trocar ata' + up + '</label><button class="b2" onclick="' + A + 'ataRemover()">Remover</button>';
+    else h += '<span class="nota" title="Editar, trocar ou remover a ata exige a senha (botão 🔒 no cabeçalho)">🔒 ata fixa</span>';
     h += '</span></div>';
     if (ed && ata.naoLida) h += '<div class="aviso">Não encontrei a tabela "Plano de ação consolidado" neste PDF. Digite os combinados abaixo.</div>';
     else if (previa) h += '<div class="aviso">Confira se os combinados foram lidos corretamente, use "Editar" para ajustar ou excluir, e depois "Salvar combinados".</div>';
@@ -1861,12 +1864,11 @@ function desenharAndamento(){
 }
 function desenharAndamentoEm(box, ab, qual){
   if (!box) return;
-  var pode = true, h = '';
-  if (!pode) h = '<div class="vazio"><b>Planos em área restrita</b><p><button class="b2" onclick="rpsDesbloquear()">🔒 Senha para ver e editar os planos</button></p></div>';
-  else if (!ab.length) h = '<div class="vazio"><b>Nenhum plano ' + qual + ' em andamento</b>Os planos salvos para este representante voltam aqui a cada RPS, até serem encerrados.</div>';
+  var pode = true, senha = GATE.liberado(), h = '';
+  if (!ab.length) h = '<div class="vazio"><b>Nenhum plano ' + qual + ' em andamento</b>Os planos salvos para este representante voltam aqui a cada RPS, até serem encerrados.</div>';
   ab.forEach(function(o){ var p = o.p, id = o.reg.id, evs = evolDados(o.ch, p, medir(o.ch)), feitas = (p.acoes || []).filter(function(a){ return a.status === 'Concluída'; }).length;
     // plano que não tem mais o slide "Plano — X" (já está em andamento): a edição acontece aqui mesmo
-    var edita = pode && ST.planoAqui && ST.planoAqui[o.ch] && planoInfo(o.ch);
+    var edita = senha && ST.planoAqui && ST.planoAqui[o.ch] && planoInfo(o.ch);
     h += '<div class="plano" id="and-card-' + o.ch + '" style="margin-bottom:12px"><div class="ph">🧭 ' + esc(planoTitulo(o.ch)) + ' <span>criado em ' + dataBr(criadoDe(o.reg)) + ' · base ' + (p.mesBase || o.mes) + '/2026' + (p.revisoes && p.revisoes.length ? ' · revisado em ' + p.revisoes.map(function(d){ return dataBr(d).slice(0, 5); }).join(', ') : '') + '</span><span style="margin-left:auto">' + (edita ? '<button class="b2" style="margin-right:8px" onclick="andEditar(\'' + o.ch + '\')">✏️ Editar plano</button>' : '') + objetivoTag(p) + ' ' + revisaoTag(p, ST.data) + '</span></div>' +
       '<div class="pcols" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)"><div class="pp" style="margin:0"><b>Problema</b>' + esc(p.problema) + '</div><div class="pv raiz" style="margin:0"><i>Causa raiz</i>' + esc(raizDe(p) || '—') + '</div></div>' +
       (evs.length ? '<b class="psub" style="margin-top:10px">Evolução desde o plano</b><table class="wt ver"><thead><tr><th>' + (/^fund/.test(o.ch) ? 'Indicador acompanhado' : 'Métrica') + '</th><th>Linha do tempo</th><th>Resultado</th></tr></thead><tbody>' +
@@ -1874,8 +1876,8 @@ function desenharAndamentoEm(box, ab, qual){
       '<b class="psub" style="margin-top:10px">Ações <small style="font-weight:600;text-transform:none;letter-spacing:0">' + feitas + ' de ' + (p.acoes || []).length + ' concluídas</small></b><table class="wt ver"><thead><tr><th>O quê</th><th>Quem</th><th>Quando</th><th>Como</th><th style="width:170px">Status</th></tr></thead><tbody>' +
       (p.acoes || []).map(function(a, k){ var st = ACAO_ST.indexOf(a.status) >= 0 ? a.status : 'Pendente';
         return '<tr><td>' + (esc(a.oque) || '—') + '</td><td>' + (esc(a.quem) || '—') + '</td><td>' + (esc(a.quando) || '—') + '</td><td>' + (esc(a.como) || '—') + '</td><td>' +
-          (pode ? '<select class="st ' + ACAO_COR[st] + '" onchange="andStatus(\'' + id + '\',' + k + ',this)">' + ACAO_ST.map(function(s){ return '<option' + (s === st ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' : st) + '</td></tr>'; }).join('') + '</tbody></table>' +
-      (pode ? '<div class="pf"><span style="font-weight:700;color:var(--text)">Próxima revisão:</span><input type="date" id="and-rev-' + id + '" value="' + maisDias(ST.data, 7) + '" style="border:1.5px solid var(--border);border-radius:7px;padding:5px 8px;font-size:12.5px">' +
+          (senha ? '<select class="st ' + ACAO_COR[st] + '" onchange="andStatus(\'' + id + '\',' + k + ',this)">' + ACAO_ST.map(function(s){ return '<option' + (s === st ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' : st) + '</td></tr>'; }).join('') + '</tbody></table>' +
+      (senha ? '<div class="pf"><span style="font-weight:700;color:var(--text)">Próxima revisão:</span><input type="date" id="and-rev-' + id + '" value="' + maisDias(ST.data, 7) + '" style="border:1.5px solid var(--border);border-radius:7px;padding:5px 8px;font-size:12.5px">' +
         '<button class="b1" onclick="andRevisar(\'' + id + '\')">✓ Registrar revisão de ' + dataBr(ST.data).slice(0, 5) + '</button><span style="flex:1"></span>' +
         '<button class="b2" onclick="andEncerrar(\'' + id + '\',\'atingido\')">Encerrar — objetivo atingido</button><button class="b2" onclick="andEncerrar(\'' + id + '\',\'nao\')">Encerrar — não atingido</button></div>' : '') + '</div>' +
       (edita ? '<div class="plano" id="plano-' + o.ch + '" data-inline="1" style="display:none;margin-bottom:12px"></div>' : ''); });
@@ -1911,7 +1913,7 @@ function planoDesenhar(ch, editar, rasc){
   var box = $('plano-' + ch), info = planoInfo(ch); if (!box || !info) return;
   if (box.getAttribute('data-inline') && editar !== true){ // edição embutida no slide de planos em andamento: fecha e volta o cartão
     box.style.display = 'none'; box.innerHTML = ''; var cd = $('and-card-' + ch); if (cd) cd.style.display = ''; if (ST.slides.length) ajustar(); return; }
-  var pode = true, reg = planoReg(ch), salvo = planoDados(ch), ed = pode && (editar === true || (!salvo && !info.opcional)), q = "'" + ch + "'", h = '';
+  var pode = true, senha = GATE.liberado(), reg = planoReg(ch), salvo = planoDados(ch), ed = editar === true ? (senha || !salvo) : (!salvo && !info.opcional), q = "'" + ch + "'", h = '';
   if (ed){
     var p = rasc || salvo || { problema: info.problema, kpis: info.kpis.slice(), porques: [], acoes: [{}] }; if (!p.acoes || !p.acoes.length) p.acoes = [{}];
     h += '<div class="ph">🧭 Plano — ' + info.titulo + ' <span>5 porquês + 5W2H</span></div><label class="pl">Problema</label><textarea data-f="problema" rows="2">' + esc(p.problema) + '</textarea>';
@@ -1926,7 +1928,7 @@ function planoDesenhar(ch, editar, rasc){
       '<div class="pf"><button class="b2" onclick="planoAcao(' + q + ',1)">+ Adicionar ação</button><button class="b1" onclick="planoSalvar(' + q + ')">Salvar plano</button>' +
       (salvo ? '<button class="b2" onclick="planoDesenhar(' + q + ',false)">Cancelar</button><button class="b2" onclick="planoApagar(' + q + ')">Apagar plano</button>' : (info.opcional ? '<button class="b2" onclick="planoDesenhar(' + q + ',false)">Cancelar</button>' : '')) + '<span id="plano-st-' + ch + '">' + (reg ? 'Salvo em ' + dataBr(reg.data) : 'Ainda não preenchido') + '</span></div>';
   } else if (salvo){
-    h += '<div class="ph">🧭 Plano — ' + info.titulo + '<span style="margin-left:auto">' + (pode ? '<button class="b2" onclick="planoDesenhar(' + q + ',true)">✏️ Editar</button>' : '') + '</span></div>' +
+    h += '<div class="ph">🧭 Plano — ' + info.titulo + '<span style="margin-left:auto">' + (senha ? '<button class="b2" onclick="planoDesenhar(' + q + ',true)">✏️ Editar</button>' : '<span class="nota" title="Plano salvo fica fixo. Para alterar ou excluir, o GD entra com a senha (botão 🔒 no cabeçalho) e apaga o plano; aí um novo pode subir.">🔒 plano fixo</span>') + '</span></div>' +
       '<div class="pp"><b>Problema</b>' + esc(salvo.problema) + (salvo.kpis && salvo.kpis.length ? '<div class="ptags">' + salvo.kpis.map(function(k){ return '<span>' + esc(k) + '</span>'; }).join('') + '</div>' : '') + '</div><div class="pcols"><div><b class="psub">5 porquês</b>' +
       salvo.porques.map(function(t, k){ var r = !salvo.raiz && k === salvo.porques.length - 1; return '<div class="pv' + (r ? ' raiz' : '') + '"><i>' + (r ? 'Causa raiz' : (k + 1) + 'º por quê') + '</i>' + esc(t) + '</div>'; }).join('') +
       (salvo.raiz ? '<div class="pv raiz"><i>Causa raiz</i>' + esc(salvo.raiz) + '</div>' : '') +
@@ -2036,7 +2038,7 @@ function histExigidos(){
 
 function telaHistorico(){ // consolidado da regional, com filtro por GD (HIST.filtro = '' → todos)
   ST.slides = [];
-  var pode = true;
+  var pode = true, senha = GATE.liberado();
   var trava = pode ? '' : '<div class="vazio" style="padding:10px 0 18px"><b>Planos e textos completos das atas ficam em área restrita.</b><p><button class="b2" onclick="rpsDesbloquear()">🔒 Senha para ver e editar os planos</button></p></div>';
   var todos = ST.distritos.filter(function(d){ return HIST.dist && HIST.dist[d.distrito_id]; });
   if (HIST.filtro && !todos.some(function(d){ return d.distrito_id === HIST.filtro; })) HIST.filtro = '';
@@ -2076,7 +2078,7 @@ function telaHistorico(){ // consolidado da regional, com filtro por GD (HIST.fi
           p.acoes.forEach(function(a, k){ g.ac++; var st = ACAO_ST.indexOf(a.status) >= 0 ? a.status : 'Pendente'; if (st === 'Concluída') g.conc++;
             acoes += '<tr>' + (k === 0 ? tdGd(D, p.acoes.length) + '<td class="n" rowspan="' + p.acoes.length + '">' + esc(r.nome) + '</td><td rowspan="' + p.acoes.length + '">' + esc(tit) + '</td><td rowspan="' + p.acoes.length + '" style="text-align:left">' + esc(raizDe(p) || '—') + '</td>' : '') +
               '<td style="text-align:left">' + (esc(a.oque) || '—') + '</td><td>' + (esc(a.quem) || '—') + '</td><td>' + (esc(a.quando) || '—') + '</td><td>' +
-              (pode ? '<select class="st ' + ACAO_COR[st] + '" onchange="histAcaoStatus(\'' + o.l.id + '\',' + k + ',this)">' + ACAO_ST.map(function(s){ return '<option' + (s === st ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' : st) + '</td></tr>'; });
+              (senha ? '<select class="st ' + ACAO_COR[st] + '" onchange="histAcaoStatus(\'' + o.l.id + '\',' + k + ',this)">' + ACAO_ST.map(function(s){ return '<option' + (s === st ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' : st) + '</td></tr>'; });
           completos += '<details class="det"><summary><b>' + esc(r.nome) + '</b> · ' + esc(tit) + (varios ? ' · GD ' + esc(D.ab || D.nm) : '') + '<span>causa raiz: ' + esc(raizDe(p) || '—') + ' · criado em ' + dataBr(criadoDe(o.l)) + (p.revisao && !p.encerrado ? ' · próxima revisão ' + dataBr(p.revisao) : '') + (p.encerrado ? ' · encerrado em ' + dataBr(p.encerrado.data) : '') + '</span></summary><div class="detc">' +
             '<div class="pp"><b>Problema</b>' + esc(p.problema) + '</div><div class="pcols"><div><b class="psub">5 porquês</b>' + p.porques.map(function(t, k){ var rz = !p.raiz && k === p.porques.length - 1; return '<div class="pv' + (rz ? ' raiz' : '') + '"><i>' + (rz ? 'Causa raiz' : (k + 1) + 'º por quê') + '</i>' + esc(t) + '</div>'; }).join('') + (p.raiz ? '<div class="pv raiz"><i>Causa raiz</i>' + esc(p.raiz) + '</div>' : '') +
             '</div><div><b class="psub">Plano de ação — 5W2H</b><table class="wt ver"><thead><tr>' + W.map(function(w){ return '<th>' + w[1] + '</th>'; }).join('') + '</tr></thead><tbody>' + p.acoes.map(function(a){ return '<tr>' + W.map(function(w){ return '<td>' + (esc(a[w[0]]) || '—') + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div></div></div></details>'; });
