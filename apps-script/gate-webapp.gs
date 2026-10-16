@@ -42,6 +42,10 @@
  * continuam válidas por até 6 h).
  */
 
+// ID da planilha PRIVADA. Se o projeto foi criado por Extensões → Apps Script
+// dentro dela, getActiveSpreadsheet() já resolve; se foi criado avulso em
+// script.google.com, abre por este ID (a service account e o dono têm acesso).
+var PLANILHA_ID = '1ze0t-BoO9CDUjMQw6ucs5wthTVCoXbBR-9XrML2I8Mk';
 var ABA_BUDGET = 'budget_lancamentos';
 var HEADERS = ['id', 'gd', 'linha', 'produto', 'crm', 'medico', 'valor', 'acao', 'data', 'criadoEm', 'editado'];
 var ABAS_PERMITIDAS = /^(budget_lancamentos|tendencias_[A-Z]{3})$/; // o que o navegador pode ler
@@ -114,7 +118,7 @@ function iguais(a, b) {
 function ler(body) {
   var aba = String(body.aba || '');
   if (!ABAS_PERMITIDAS.test(aba)) return resposta({ ok: false, erro: 'aba não permitida: ' + aba });
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(aba);
+  var sheet = planilha().getSheetByName(aba);
   if (!sheet) return resposta({ ok: true, values: [] }); // mesma semântica do 400 da API: aba inexistente = vazia
   var lastRow = sheet.getLastRow(), lastCol = sheet.getLastColumn();
   if (lastRow < 1 || lastCol < 1) return resposta({ ok: true, values: [] });
@@ -175,8 +179,12 @@ function executar(body) {
   return resposta({ ok: false, erro: 'ação desconhecida: ' + acao });
 }
 
+function planilha() {
+  return SpreadsheetApp.getActiveSpreadsheet() || SpreadsheetApp.openById(PLANILHA_ID);
+}
+
 function pegarAba() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = planilha();
   var sheet = ss.getSheetByName(ABA_BUDGET);
   if (!sheet) {
     sheet = ss.insertSheet(ABA_BUDGET);
