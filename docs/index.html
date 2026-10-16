@@ -6310,6 +6310,145 @@ function renderCotaTableDist(meses, distritos) {
   return html;
 }
 
+// ── Tabela por Representante ──────────────────────────────────────
+// Cota/realizado somados por setor: todos os produtos da linha ou só o
+// produto escolhido no filtro. A chave é o setor (o rep de um setor pode
+// mudar ao longo do ano) e o nome exibido é o do mês mais recente.
+var COTA_REP_LINHA = 'NEXUS';
+var COTA_REP_PROD  = ''; // '' = todos os produtos
+
+function cotaRepLinha() {
+  var dist = cotaDistFiltro();
+  return dist ? dist.linha : COTA_REP_LINHA;
+}
+
+function cotaRepArr(mes, linha) {
+  var d = DADOS_CACHE[mes]; if (!d) return [];
+  var dist = cotaDistFiltro();
+  return (linha === 'NEXUS' ? (d.prodRepNex||[]) : (d.prodRepVit||[])).filter(function(r) {
+    return (!dist || r.distrito_id === dist.distrito_id) &&
+      (!COTA_REP_PROD || normProd(r.produto) === COTA_REP_PROD);
+  });
+}
+
+function cotaRepProdutos(meses, linha) {
+  var set = {};
+  meses.forEach(function(m) {
+    var d = DADOS_CACHE[m]; if (!d) return;
+    (linha === 'NEXUS' ? (d.prodRepNex||[]) : (d.prodRepVit||[])).forEach(function(r) {
+      if (r.produto) set[normProd(r.produto)] = r.produto;
+    });
+  });
+  return Object.keys(set).sort(function(a, b) {
+    var ak = isMarcaChave(a, linha) ? 0 : 1, bk = isMarcaChave(b, linha) ? 0 : 1;
+    return ak !== bk ? ak - bk : a.localeCompare(b);
+  }).map(function(k) { return { key: k, nome: set[k] }; });
+}
+
+function renderCotaTableRep(meses, distritos) {
+  var linha = cotaRepLinha();
+  // Soma por mês → setor
+  var porMes = {}, setores = {};
+  meses.forEach(function(m) {
+    var acc = porMes[m] = {};
+    cotaRepArr(m, linha).forEach(function(r) {
+      var s = r.setor_id; if (!s) return;
+      var a = acc[s] || (acc[s] = { c: 0, r: 0 });
+      var c = safeFloat(r.cota), re = safeFloat(r.realizado);
+      if (c !== null && c > 0) a.c += c;
+      if (re !== null && re > 0) a.r += re;
+      setores[s] = { setor: s, nome: r.nome || setores[s] && setores[s].nome || '', distrito_id: r.distrito_id };
+    });
+  });
+  var lista = Object.keys(setores).map(function(s) { return setores[s]; });
+  if (!lista.length) {
+    return '<p style="color:var(--gray);font-size:12px;padding:12px 0">Sem dados por representante para ' + linha + '.</p>';
+  }
+
+  function cells(getC, getR) {
+    var ytdC = 0, ytdR = 0, h = '';
+    meses.forEach(function(m, idx) {
+      var c = getC(m);
+      var r = isMesParcial(m) ? null : getR(m);
+      var pct = (c > 0 && r !== null) ? r / c * 100 : null;
+      ytdC += c; if (r !== null) ytdR += r;
+      h += '<td class="' + (idx === 0 ? '' : 'td-mes-sep') + '">' + fmtBRL(c) + '</td>';
+      h += '<td>' + (r !== null ? fmtBRL(r) : '—') + '</td>';
+      h += '<td class="' + cotaPctClass(pct) + '">' + (pct !== null ? pct.toFixed(1) + '%' : '—') + '</td>';
+    });
+    var ytdPct = ytdC > 0 ? ytdR / ytdC * 100 : null;
+    h += '<td class="td-ytd">' + fmtBRL(ytdC) + '</td>';
+    h += '<td class="td-ytd">' + fmtBRL(ytdR) + '</td>';
+    h += '<td class="td-ytd-pct ' + cotaPctClass(ytdPct) + '">' + (ytdPct !== null ? ytdPct.toFixed(1) + '%' : '—') + '</td>';
+    return h;
+  }
+  function val(m, s, k) { var a = porMes[m][s]; return a ? a[k] : 0; }
+
+  var html = '<div class="cota-table-wrap"><table class="cota-table">';
+  html += '<thead><tr>';
+  html += '<th class="th-label" rowspan="2">Distrito / Representante</th>';
+  meses.forEach(function(m) {
+    var lbl = m + (isMesParcial(m) ? ' <span style="font-size:8px;font-weight:700;background:#fef3c7;color:#92400e;padding:1px 5px;border-radius:4px;vertical-align:middle">PARCIAL</span>' : '');
+    html += '<th class="th-mes-hdr" colspan="3">' + lbl + '</th>';
+  });
+  html += '<th class="th-ytd-hdr" colspan="3">YTD</th>';
+  html += '</tr><tr>';
+  meses.forEach(function() { html += '<th class="th-sub">Cota</th><th class="th-sub">Realizado</th><th class="th-sub">%</th>'; });
+  html += '<th class="th-sub-ytd">Cota</th><th class="th-sub-ytd">Realizado</th><th class="th-sub-ytd">%</th>';
+  html += '</tr></thead><tbody>';
+
+  // Agrupa por distrito, na ordem dos distritos da página
+  var ordem = distritos.filter(function(d) { return d.linha === linha; }).map(function(d) { return d.distrito_id; });
+  lista.forEach(function(s) { if (ordem.indexOf(s.distrito_id) < 0) ordem.push(s.distrito_id); });
+  var rowCls = linha === 'NEXUS' ? 'row-nexus' : 'row-vital';
+  ordem.forEach(function(distId) {
+    var doDist = lista.filter(function(s) { return s.distrito_id === distId; })
+      .sort(function(a, b) { return a.setor.localeCompare(b.setor); });
+    if (!doDist.length) return;
+    var dObj = distritos.find(function(d) { return d.distrito_id === distId; });
+    var ids = doDist.map(function(s) { return s.setor; });
+    function somaDist(k) { return function(m) { return ids.reduce(function(t, s) { return t + val(m, s, k); }, 0); }; }
+    html += '<tr class="' + rowCls + '"><td class="td-label">' + (dObj ? cotaDistNome(dObj) : distId) +
+      ' <span style="font-weight:400;color:var(--gray)">· ' + distId + '</span></td>' + cells(somaDist('c'), somaDist('r')) + '</tr>';
+    doDist.forEach(function(s) {
+      html += '<tr class="row-dist"><td class="td-label" style="padding-left:22px">' +
+        '<span style="color:var(--gray);font-weight:400">' + s.setor + '</span> · ' + (s.nome || 'Vago') + '</td>' +
+        cells(function(m) { return val(m, s.setor, 'c'); }, function(m) { return val(m, s.setor, 'r'); }) + '</tr>';
+    });
+  });
+  html += '</tbody></table></div>';
+  return html;
+}
+
+function renderCotaRepBloco() {
+  var meses = window._cotaMeses || [], dist = cotaDistFiltro(), linha = cotaRepLinha();
+  var prods = cotaRepProdutos(meses, linha);
+  if (COTA_REP_PROD && !prods.some(function(p) { return p.key === COTA_REP_PROD; })) COTA_REP_PROD = '';
+  var sel = '<select onchange="cotaRepSetProd(this.value)" style="margin-left:auto;padding:6px 10px;border-radius:8px;border:2px solid var(--border);font-size:11px;font-weight:700;font-family:inherit;color:var(--dark);background:#fff;cursor:pointer">' +
+    '<option value="">Todos os produtos</option>' +
+    prods.map(function(p) {
+      return '<option value="' + p.key + '"' + (p.key === COTA_REP_PROD ? ' selected' : '') + '>' + p.nome + (isMarcaChave(p.key, linha) ? ' ★' : '') + '</option>';
+    }).join('') +
+  '</select>';
+  return '<div class="cota-tabs" style="align-items:center">' +
+      (dist ? '' :
+        '<button class="cota-tab' + (linha === 'NEXUS' ? ' an' : '') + '" onclick="cotaRepSetLinha(\'NEXUS\')">NEXUS</button>' +
+        '<button class="cota-tab' + (linha === 'VITAL' ? ' av' : '') + '" onclick="cotaRepSetLinha(\'VITAL\')">VITAL</button>') +
+      sel +
+    '</div>' +
+    renderCotaTableRep(meses, window._cotaDistritos || []);
+}
+
+function cotaRepSetLinha(linha) {
+  COTA_REP_LINHA = linha;
+  COTA_REP_PROD = '';
+  document.getElementById('cota-rep-wrap').innerHTML = renderCotaRepBloco();
+}
+function cotaRepSetProd(prod) {
+  COTA_REP_PROD = prod;
+  document.getElementById('cota-rep-wrap').innerHTML = renderCotaRepBloco();
+}
+
 // ── Tabela por Produto ────────────────────────────────────────────
 function renderCotaTableProduto(meses, linha) {
   // Produto list = union of all months para a linha
@@ -6745,6 +6884,14 @@ function renderEvolucaoCota(meses, distritos) {
     renderCotaTableDist(meses, distritos) +
     '</div>';
 
+  var secRepHtml =
+    '<div class="cota-section">' +
+    '<div class="cota-section-hdr">👤 Evolução por Representante' + (dist ? ' · ' + distNome : '') +
+      '<span style="font-size:11px;font-weight:400;color:var(--gray)">Cota vs realizado por setor · soma dos produtos da linha ou do produto escolhido</span>' +
+    '</div>' +
+    '<div id="cota-rep-wrap">' + renderCotaRepBloco() + '</div>' +
+    '</div>';
+
   var sec3Html =
     '<div class="cota-section">' +
     '<div class="cota-section-hdr">📦 Evolução por Produto' + (dist ? ' · ' + distNome : '') + '</div>' +
@@ -6765,7 +6912,7 @@ function renderEvolucaoCota(meses, distritos) {
     '</div>';
 
   document.getElementById('main-content').innerHTML =
-    pageHdr + ytdHtml + sec1Html + secIncrHtml + sec2Html + sec3Html;
+    pageHdr + ytdHtml + sec1Html + secIncrHtml + sec2Html + secRepHtml + sec3Html;
 
   window._mesesDisponiveis = meses;
 
