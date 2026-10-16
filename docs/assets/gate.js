@@ -72,15 +72,26 @@ var GATE = (function () {
     if (t) try { await chamar({ acao: 'sair', token: t }); } catch (e) {}
   }
 
+  function paraObjetos(rows) {
+    rows = rows || [];
+    if (rows.length < 2) return [];
+    var h = rows[0];
+    return rows.slice(1).map(function (row) { var o = {}; h.forEach(function (k, i) { o[k] = row[i] !== undefined ? row[i] : ''; }); return o; });
+  }
+
   // linhas da aba como objetos {coluna: valor}, igual ao fetchAba das páginas
   async function ler(aba) {
     if (!TOKEN) { var e = new Error('Digite a senha para abrir os dados restritos.'); e.sessao = true; throw e; }
     var r = await chamar({ acao: 'ler', token: TOKEN, aba: aba });
     if (!r.ok) throw new Error(r.erro || 'falha ao ler ' + aba);
-    var rows = r.values || [];
-    if (rows.length < 2) return [];
-    var h = rows[0];
-    return rows.slice(1).map(function (row) { var o = {}; h.forEach(function (k, i) { o[k] = row[i] !== undefined ? row[i] : ''; }); return o; });
+    return paraObjetos(r.values);
+  }
+
+  // leitura SEM senha: só os combinados das atas de RPS (produto RPS_ATA), pro Copiloto
+  async function lerAberto() {
+    var r = await chamar({ acao: 'ler_aberto' });
+    if (!r.ok) throw new Error(r.erro || 'falha ao ler os combinados');
+    return paraObjetos(r.values);
   }
 
   // payload no contrato do web app: {acao:'add'|'edit'|'delete', id, gd, linha, produto, crm, medico, valor, acao_lancamento, data, criadoEm}
@@ -160,7 +171,7 @@ var GATE = (function () {
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', css); else css();
   return {
-    garantir: garantir, pedirSenha: pedirSenha, entrar: entrar, sair: sair, ler: ler, gravar: gravar, enviar: enviar,
+    garantir: garantir, pedirSenha: pedirSenha, entrar: entrar, sair: sair, ler: ler, lerAberto: lerAberto, gravar: gravar, enviar: enviar,
     liberado: function () { return !!TOKEN; },
     pronto: function () { return !!URL; },
     config: config,

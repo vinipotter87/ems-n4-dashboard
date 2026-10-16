@@ -13,6 +13,7 @@
  * O que o script faz (POST JSON, Content-Type text/plain pra não ter preflight):
  *   {acao:'login', senha}                → {ok, token}   sessão de 6 h
  *   {acao:'ler', token, aba}             → {ok, values}  linhas cruas da aba
+ *   {acao:'ler_aberto'}  (sem senha)     → {ok, values}  só os combinados RPS_ATA
  *   {acao:'add'|'edit'|'delete', token, ...campos}  (aba budget_lancamentos,
  *                                          mesmo contrato do web app antigo)
  *   {acao:'sair', token}                 → {ok}
@@ -49,6 +50,10 @@ var PLANILHA_ID = '1ze0t-BoO9CDUjMQw6ucs5wthTVCoXbBR-9XrML2I8Mk';
 var ABA_BUDGET = 'budget_lancamentos';
 var HEADERS = ['id', 'gd', 'linha', 'produto', 'crm', 'medico', 'valor', 'acao', 'data', 'criadoEm', 'editado'];
 var ABAS_PERMITIDAS = /^(budget_lancamentos|tendencias_[A-Z]{3})$/; // o que o navegador pode ler
+// Leitura SEM senha (acao 'ler_aberto'): só os combinados das atas de RPS, que o
+// Copiloto de RPS mostra ao time do distrito. Planos, textos completos das atas,
+// atas de N4, budget e gravação continuam atrás da senha.
+var PRODUTOS_ABERTOS = { 'RPS_ATA': true };
 var SESSAO_SEG = 6 * 60 * 60;        // 6 h (máximo do CacheService)
 // Senha de 4 dígitos por decisão do Vinicius (16/10/2026): fácil pro time, mas são só
 // 10 mil combinações. Pra compensar, o bloqueio é duro: 5 erros travam o login por
@@ -71,6 +76,7 @@ function doPost(e) {
   }
   var acao = body.acao;
   if (acao === 'login') return login(body);
+  if (acao === 'ler_aberto') return lerAberto();
 
   var sessao = sessaoValida(body.token);
   if (!sessao) return resposta({ ok: false, erro: 'sessao' });
@@ -129,6 +135,15 @@ function ler(body) {
   if (lastRow < 1 || lastCol < 1) return resposta({ ok: true, values: [] });
   var values = sheet.getRange(1, 1, lastRow, lastCol).getDisplayValues();
   return resposta({ ok: true, values: values });
+}
+
+function lerAberto() {
+  var sheet = planilha().getSheetByName(ABA_BUDGET);
+  if (!sheet || sheet.getLastRow() < 1 || sheet.getLastColumn() < 1) return resposta({ ok: true, values: [] });
+  var values = sheet.getRange(1, 1, sheet.getLastRow(), sheet.getLastColumn()).getDisplayValues();
+  var h = values[0], ip = h.indexOf('produto'), out = [h];
+  for (var i = 1; i < values.length; i++) if (ip >= 0 && PRODUTOS_ABERTOS[values[i][ip]]) out.push(values[i]);
+  return resposta({ ok: true, values: out });
 }
 
 // ── Gravação (budget_lancamentos) ───────────────────────────────────────────
