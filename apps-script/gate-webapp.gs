@@ -13,7 +13,8 @@
  * O que o script faz (POST JSON, Content-Type text/plain pra não ter preflight):
  *   {acao:'login', senha}                → {ok, token}   sessão de 6 h
  *   {acao:'ler', token, aba}             → {ok, values}  linhas cruas da aba
- *   {acao:'ler_aberto'}  (sem senha)     → {ok, values}  só os combinados RPS_ATA
+ *   {acao:'ler_aberto'}  (sem senha)     → {ok, values}  só registros de RPS (PRODUTOS_ABERTOS)
+ *   add/edit/delete sem token: aceitos só para registros de RPS
  *   {acao:'add'|'edit'|'delete', token, ...campos}  (aba budget_lancamentos,
  *                                          mesmo contrato do web app antigo)
  *   {acao:'sair', token}                 → {ok}
@@ -50,10 +51,12 @@ var PLANILHA_ID = '1ze0t-BoO9CDUjMQw6ucs5wthTVCoXbBR-9XrML2I8Mk';
 var ABA_BUDGET = 'budget_lancamentos';
 var HEADERS = ['id', 'gd', 'linha', 'produto', 'crm', 'medico', 'valor', 'acao', 'data', 'criadoEm', 'editado'];
 var ABAS_PERMITIDAS = /^(budget_lancamentos|tendencias_[A-Z]{3})$/; // o que o navegador pode ler
-// Leitura SEM senha (acao 'ler_aberto'): só os combinados das atas de RPS, que o
-// Copiloto de RPS mostra ao time do distrito. Planos, textos completos das atas,
-// atas de N4, budget e gravação continuam atrás da senha.
-var PRODUTOS_ABERTOS = { 'RPS_ATA': true };
+// SEM senha (decisão do Vinicius, 16/10/2026): o Copiloto de RPS é usado pelos GDs
+// com o time, então os registros de RPS — combinados das atas, texto completo e
+// planos — podem ser lidos ('ler_aberto') e gravados (add/edit/delete sem token)
+// por qualquer um. Só esses produtos: atas de N4, planos de N4, budget e
+// tendências continuam atrás da senha, tanto pra ler quanto pra gravar.
+var PRODUTOS_ABERTOS = { 'RPS_ATA': true, 'RPS_ATA_DOC': true, 'RPS_PLANO': true };
 var SESSAO_SEG = 6 * 60 * 60;        // 6 h (máximo do CacheService)
 // Senha de 4 dígitos por decisão do Vinicius (16/10/2026): fácil pro time, mas são só
 // 10 mil combinações. Pra compensar, o bloqueio é duro: 5 erros travam o login por
@@ -79,10 +82,10 @@ function doPost(e) {
   if (acao === 'ler_aberto') return lerAberto();
 
   var sessao = sessaoValida(body.token);
+  if (acao === 'add' || acao === 'edit' || acao === 'delete') return gravar(body, sessao);
   if (!sessao) return resposta({ ok: false, erro: 'sessao' });
   if (acao === 'sair') { cache().remove('tok:' + body.token); return resposta({ ok: true }); }
   if (acao === 'ler') return ler(body);
-  if (acao === 'add' || acao === 'edit' || acao === 'delete') return gravar(body);
   return resposta({ ok: false, erro: 'ação desconhecida: ' + acao });
 }
 
@@ -148,7 +151,7 @@ function lerAberto() {
 
 // ── Gravação (budget_lancamentos) ───────────────────────────────────────────
 
-function gravar(body) {
+function gravar(body, sessao) {
   // uma gravação por vez: sem isso, dois envios simultâneos do mesmo id passam
   // juntos pela checagem e ambos gravam
   var lock = LockService.getScriptLock();
@@ -158,15 +161,25 @@ function gravar(body) {
     return resposta({ ok: false, erro: 'planilha ocupada, tente de novo' });
   }
   try {
-    return executar(body);
+    return executar(body, sessao);
   } finally {
     lock.releaseLock();
   }
 }
 
-function executar(body) {
+function executar(body, sessao) {
   var sheet = pegarAba();
   var acao = body.acao;
+
+  // Sem sessão, só registros de RPS: o que entra (add/edit) e o que já existe (edit/delete)
+  // precisam ter produto em PRODUTOS_ABERTOS.
+  if (!sessao) {
+    if ((acao === 'add' || acao === 'edit') && !PRODUTOS_ABERTOS[body.produto]) return resposta({ ok: false, erro: 'sessao' });
+    if (acao === 'edit' || acao === 'delete') {
+      var li = encontrarLinha(sheet, body.id);
+      if (li >= 0 && !PRODUTOS_ABERTOS[String(sheet.getRange(li, 4).getValue())]) return resposta({ ok: false, erro: 'sessao' });
+    }
+  }
 
   if (acao === 'add') {
     // idempotente: reenvio do mesmo lançamento (retry após timeout) não duplica

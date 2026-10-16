@@ -252,7 +252,7 @@ tr.ip-ch td{background:#fffdf5}tr.ip-ch td.n{font-weight:800;color:#78350f}
 <div class="stage" id="stage"></div>
 <div class="nav"><button class="btn" id="b-prev">← Anterior</button><div class="dots" id="dots"></div><span id="cnt"></span><button class="btn" id="b-next">Próximo →</button></div>
 
-<script src="assets/gate.js?v=20261016e"></script>
+<script src="assets/gate.js?v=20261016f"></script>
 <script src="farol-frequencia/farol-core.js"></script>
 <script src="farol-frequencia/dados/freq_q13.js"></script>
 <script>
@@ -367,14 +367,14 @@ function telaEntrada(){
   $('e-mes').onchange = async function(){ ST.mes = this.value; ST.distritos = await distritosDe(ST.mes); telaEntrada(); };
 }
 
-// Os combinados das atas de RPS (RPS_ATA) são leitura aberta; planos, textos completos
-// e qualquer gravação exigem a senha (sessão do gate).
+// Os registros de RPS (atas, texto completo e planos) são leitura e gravação abertas no gate;
+// com sessão (PIN digitado em outra página) lê a aba inteira, sem diferença pro Copiloto.
 async function lancRps(){
   if (GATE.liberado()){ try { return await GATE.ler('budget_lancamentos'); } catch(e){ if (!e.sessao) throw e; } }
   try { return await GATE.lerAberto(); }
   catch(e){ console.warn('Combinados indisponíveis (gate): ' + e.message); return []; } // o copiloto abre mesmo assim, sem as atas
 }
-function rpsBotaoSenha(){ var b = $('b-senha'); if (b) b.style.display = GATE.pronto() && !GATE.liberado() ? '' : 'none'; }
+function rpsBotaoSenha(){ var b = $('b-senha'); if (b) b.style.display = 'none'; } // Copiloto é todo sem senha
 async function rpsDesbloquear(){
   if (!(await GATE.garantir('Copiloto de RPS — área restrita', { cancelavel: true, texto: 'Planos, textos completos das atas e gravação ficam em área restrita. Digite a senha.' }))) return false;
   rpsBotaoSenha();
@@ -1300,7 +1300,6 @@ async function ataArquivo(input){
 }
 async function ataGravar(ata, apagar){
   var reg = ataReg(), st = ataSt(), d = ST.d.dist;
-  if (!GATE.liberado()){ if (st) st.textContent = 'Gravação indisponível nesta página.'; return false; }
   if (st) st.textContent = 'Salvando…';
   if (ata && ST.alvo === 'atual') ata.daReuniao = true;
   var env = null;
@@ -1349,7 +1348,7 @@ async function copiarPromptAta(btn){
 }
 function desenharAtaDe(alvo){
   var box = ataBox(alvo); if (!box) return;
-  var pode = !!GATE.liberado(), reg = ataRegDe(alvo), salva = null; if (reg) try { salva = JSON.parse(reg.acao); } catch(e){}
+  var pode = true, reg = ataRegDe(alvo), salva = null; if (reg) try { salva = JSON.parse(reg.acao); } catch(e){}
   var meu = (ST.alvo || 'ant') === alvo, ed = meu && !!ST.edit, previa = meu && !ed && !!ST.previa, ata = ed ? ST.edit : (previa ? ST.previa : salva), h = '', A = "ataAlvo('" + alvo + "');";
   var up = '<input type="file" accept="application/pdf,.pdf" style="display:none" onchange="' + A + 'ataArquivo(this)">';
   var digitar = '<button class="b2" style="padding:8px 14px" onclick="' + A + 'ST.edit={titulo:\'' + (alvo === 'atual' ? 'Combinados da RPS de ' + dataBr(ST.data) : 'Combinados da RPS anterior') + '\',data:\'\',itens:[{n:1,texto:\'\',resp:\'\',prazo:\'\',status:\'Pendente\'}]};desenharAta()">Digitar os combinados</button>';
@@ -1762,7 +1761,6 @@ async function planoAcompanhar(ch, d, reg, dataRps){ // cria a base (planos anti
   return mudou ? await gravarLinha(reg, d) : false;
 }
 async function acompanharPlanos(){ // RPS individual: roda ao montar o deck do representante
-  if (!GATE.liberado()) return;
   var ab = planosAbertos(ST.setor), gravou = false;
   for (var i = 0; i < ab.length; i++) if (await planoAcompanhar(ab[i].ch, ab[i].p, ab[i].reg, ST.data)) gravou = true;
   if (gravou) andRedesenhar();
@@ -1863,7 +1861,7 @@ function desenharAndamento(){
 }
 function desenharAndamentoEm(box, ab, qual){
   if (!box) return;
-  var pode = !!GATE.liberado(), h = '';
+  var pode = true, h = '';
   if (!pode) h = '<div class="vazio"><b>Planos em área restrita</b><p><button class="b2" onclick="rpsDesbloquear()">🔒 Senha para ver e editar os planos</button></p></div>';
   else if (!ab.length) h = '<div class="vazio"><b>Nenhum plano ' + qual + ' em andamento</b>Os planos salvos para este representante voltam aqui a cada RPS, até serem encerrados.</div>';
   ab.forEach(function(o){ var p = o.p, id = o.reg.id, evs = evolDados(o.ch, p, medir(o.ch)), feitas = (p.acoes || []).filter(function(a){ return a.status === 'Concluída'; }).length;
@@ -1913,7 +1911,7 @@ function planoDesenhar(ch, editar, rasc){
   var box = $('plano-' + ch), info = planoInfo(ch); if (!box || !info) return;
   if (box.getAttribute('data-inline') && editar !== true){ // edição embutida no slide de planos em andamento: fecha e volta o cartão
     box.style.display = 'none'; box.innerHTML = ''; var cd = $('and-card-' + ch); if (cd) cd.style.display = ''; if (ST.slides.length) ajustar(); return; }
-  var pode = !!GATE.liberado(), reg = planoReg(ch), salvo = planoDados(ch), ed = pode && (editar === true || (!salvo && !info.opcional)), q = "'" + ch + "'", h = '';
+  var pode = true, reg = planoReg(ch), salvo = planoDados(ch), ed = pode && (editar === true || (!salvo && !info.opcional)), q = "'" + ch + "'", h = '';
   if (ed){
     var p = rasc || salvo || { problema: info.problema, kpis: info.kpis.slice(), porques: [], acoes: [{}] }; if (!p.acoes || !p.acoes.length) p.acoes = [{}];
     h += '<div class="ph">🧭 Plano — ' + info.titulo + ' <span>5 porquês + 5W2H</span></div><label class="pl">Problema</label><textarea data-f="problema" rows="2">' + esc(p.problema) + '</textarea>';
@@ -2038,7 +2036,7 @@ function histExigidos(){
 
 function telaHistorico(){ // consolidado da regional, com filtro por GD (HIST.filtro = '' → todos)
   ST.slides = [];
-  var pode = !!GATE.liberado();
+  var pode = true;
   var trava = pode ? '' : '<div class="vazio" style="padding:10px 0 18px"><b>Planos e textos completos das atas ficam em área restrita.</b><p><button class="b2" onclick="rpsDesbloquear()">🔒 Senha para ver e editar os planos</button></p></div>';
   var todos = ST.distritos.filter(function(d){ return HIST.dist && HIST.dist[d.distrito_id]; });
   if (HIST.filtro && !todos.some(function(d){ return d.distrito_id === HIST.filtro; })) HIST.filtro = '';

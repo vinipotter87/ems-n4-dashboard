@@ -98,7 +98,7 @@ var GATE = (function () {
     return paraObjetos(r.values);
   }
 
-  // leitura SEM senha: só os combinados das atas de RPS (produto RPS_ATA), pro Copiloto
+  // leitura SEM senha: só os registros de RPS (atas, texto completo e planos), pro Copiloto
   async function lerAberto() {
     var r = await chamar({ acao: 'ler_aberto' });
     if (!r.ok) throw new Error(r.erro || 'falha ao ler os combinados');
@@ -106,10 +106,10 @@ var GATE = (function () {
   }
 
   // payload no contrato do web app: {acao:'add'|'edit'|'delete', id, gd, linha, produto, crm, medico, valor, acao_lancamento, data, criadoEm}
+  // Sem sessão a chamada vai sem token: o servidor só aceita registros de RPS (senão responde 'sessao').
   async function gravar(payload) {
-    if (!TOKEN) { var e = new Error('Digite a senha para gravar.'); e.sessao = true; throw e; }
     var env = {}; for (var k in payload) if (k !== 'token') env[k] = payload[k];
-    env.token = TOKEN;
+    if (TOKEN) env.token = TOKEN;
     var r = await chamar(env);
     if (!r.ok) throw new Error(r.erro || 'falha desconhecida');
     return r;
@@ -118,9 +118,8 @@ var GATE = (function () {
   // igual a gravar(), mas devolve a resposta {ok, erro} sem lançar erro em ok:false
   // (páginas que tratam o erro elas mesmas)
   async function enviar(payload) {
-    if (!TOKEN) { var e = new Error('Digite a senha para gravar.'); e.sessao = true; throw e; }
     var env = {}; for (var k in payload) if (k !== 'token') env[k] = payload[k];
-    env.token = TOKEN;
+    if (TOKEN) env.token = TOKEN;
     return chamar(env);
   }
 
