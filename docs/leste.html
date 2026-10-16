@@ -953,7 +953,7 @@ body.apres-on{overflow:hidden}
   <!-- Conteúdo injetado dinamicamente -->
 </div>
 
-<script src="assets/gate.js?v=20261016f"></script>
+<script src="assets/gate.js?v=20261016g"></script>
 <script>
 // ══════════════════════════════════════════════════════════════════
 //  EMS N4 Dashboard v5 — Dynamic (reads from Google Sheets)
@@ -9358,7 +9358,11 @@ window.addEventListener('message', function(e) {
   if (e.data.mercadoTopo) { var h = document.querySelector('.hdr'); window.scrollTo({ top: Math.max(0, f.getBoundingClientRect().top + window.scrollY - (h ? h.offsetHeight : 0) - 8), behavior: 'smooth' }); }
 });
 
-init();
+// Página inteira em área restrita, com a senha própria da Leste (a senha SPI também abre).
+window.GATE_PAPEL = 'leste';
+GATE.garantir('Dashboard N4 — Leste', { cheia: true, texto: 'Digite a senha da Regional Leste.',
+  links: [{ r: '📊 Mercado', h: 'mercado.html' }, { r: '📅 Copiloto de RPS', h: 'rps.html?regional=LESTE' }, { r: '🗺️ Regional SPI', h: 'index.html' }]
+}).then(function (ok) { if (ok) init(); });
 </script>
 </body>
 </html>

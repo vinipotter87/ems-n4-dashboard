@@ -11,7 +11,8 @@
  * gravar qualquer linha. A senha nunca fica no código nem no repositório.
  *
  * O que o script faz (POST JSON, Content-Type text/plain pra não ter preflight):
- *   {acao:'login', senha}                → {ok, token}   sessão de 6 h
+ *   {acao:'login', senha, papel?}        → {ok, token, papel}  sessão de 6 h ('spi' ou 'leste')
+ *   {acao:'sessao', token}               → {ok, papel}   confere a sessão guardada
  *   {acao:'ler', token, aba}             → {ok, values}  linhas cruas da aba
  *   {acao:'ler_aberto'}  (sem senha)     → {ok, values}  só registros de RPS (PRODUTOS_ABERTOS)
  *   add/edit/delete sem token: aceitos só para registros de RPS
@@ -19,7 +20,8 @@
  *                                          mesmo contrato do web app antigo)
  *   {acao:'sair', token}                 → {ok}
  * Resposta {ok:false, erro:'sessao'} = token inválido/expirado → a página
- * pede a senha de novo.
+ * pede a senha de novo; {erro:'negado'} = sessão válida mas sem permissão
+ * (papel Leste em registro da SPI) → a página só avisa.
  *
  * COMO IMPLANTAR (uma vez só) — na planilha PRIVADA, não na pública:
  * 1. Abra a planilha "EMS N4 — Dados restritos" no Google Sheets.
@@ -65,6 +67,17 @@ var SESSAO_SEG = 6 * 60 * 60;        // 6 h (máximo do CacheService)
 var MAX_FALHAS = 5, JANELA_SEG = 60 * 60; // 5 senhas erradas → bloqueia 1 h
 var SENHA_MIN = 4;
 var ATRASO_ERRO_MS = 1500;
+// Papéis (16/10/2026): a propriedade SENHA (SPI) abre tudo; SENHA_LESTE abre só o que é da
+// Regional Leste — leste.html e, na aba budget_lancamentos, as linhas dos GDs da Leste
+// (gd "N4:1105…"/"N4:1165…" nas atas e planos, ou o nome do GD nos lançamentos de budget).
+// A lista de nomes pode ser trocada pela propriedade GDS_LESTE (nomes separados por vírgula).
+var GDS_LESTE_PADRAO = ['Larissa de Melo Poubel Gomes', 'Carla Patricia de Melo Ziviani', 'Julio Cesar dos Santos Oliveira', 'Rafael Oliveira Almeida'];
+function gdsLeste() {
+  var p = PropertiesService.getScriptProperties().getProperty('GDS_LESTE');
+  var lista = p ? p.split(',').map(function (s) { return s.trim(); }).filter(String) : GDS_LESTE_PADRAO;
+  var m = {}; lista.forEach(function (n) { m[n.toLowerCase()] = true; }); return m;
+}
+function ehLeste(gd, mapa) { gd = String(gd || ''); return /^N4:(1105|1165)/.test(gd) || !!mapa[gd.toLowerCase()]; }
 
 function doGet() {
   return resposta({ ok: false, erro: 'use POST' });
@@ -81,11 +94,12 @@ function doPost(e) {
   if (acao === 'login') return login(body);
   if (acao === 'ler_aberto') return lerAberto();
 
-  var sessao = sessaoValida(body.token);
+  var sessao = sessaoValida(body.token); // false, 'spi' ou 'leste'
   if (acao === 'add' || acao === 'edit' || acao === 'delete') return gravar(body, sessao);
   if (!sessao) return resposta({ ok: false, erro: 'sessao' });
+  if (acao === 'sessao') return resposta({ ok: true, papel: sessao });
   if (acao === 'sair') { cache().remove('tok:' + body.token); return resposta({ ok: true }); }
-  if (acao === 'ler') return ler(body);
+  if (acao === 'ler') return ler(body, sessao);
   return resposta({ ok: false, erro: 'ação desconhecida: ' + acao });
 }
 
@@ -94,30 +108,40 @@ function doPost(e) {
 function cache() { return CacheService.getScriptCache(); }
 
 function login(body) {
-  var senhaCerta = PropertiesService.getScriptProperties().getProperty('SENHA') || '';
-  if (senhaCerta.length < SENHA_MIN) {
+  var props = PropertiesService.getScriptProperties();
+  var senhaSpi = props.getProperty('SENHA') || '', senhaLeste = props.getProperty('SENHA_LESTE') || '';
+  var papel = body.papel === 'leste' ? 'leste' : 'spi'; // o que a página pede
+  if (senhaSpi.length < SENHA_MIN) {
     return resposta({ ok: false, erro: 'o gate ainda não tem senha configurada (propriedade SENHA, mínimo ' + SENHA_MIN + ' caracteres)' });
+  }
+  if (papel === 'leste' && senhaLeste.length < SENHA_MIN) {
+    return resposta({ ok: false, erro: 'a senha da Leste ainda não foi configurada (propriedade SENHA_LESTE, mínimo ' + SENHA_MIN + ' caracteres)' });
   }
   var falhas = Number(cache().get('falhas') || 0);
   if (falhas >= MAX_FALHAS) return resposta({ ok: false, erro: 'muitas tentativas — aguarde 1 hora' });
 
-  var tentativa = String(body.senha || '');
-  if (!iguais(tentativa, senhaCerta)) {
+  var tentativa = String(body.senha || ''), concedido = null;
+  if (iguais(tentativa, senhaSpi)) concedido = 'spi';                       // a senha SPI abre tudo
+  else if (papel === 'leste' && iguais(tentativa, senhaLeste)) concedido = 'leste';
+  if (!concedido) {
     cache().put('falhas', String(falhas + 1), JANELA_SEG);
     Utilities.sleep(ATRASO_ERRO_MS); // desacelera chute em série
     return resposta({ ok: false, erro: 'senha incorreta' });
   }
   cache().remove('falhas');
   var token = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
-  cache().put('tok:' + token, '1', SESSAO_SEG);
-  return resposta({ ok: true, token: token, expiraEm: SESSAO_SEG });
+  cache().put('tok:' + token, concedido, SESSAO_SEG);
+  return resposta({ ok: true, token: token, papel: concedido, expiraEm: SESSAO_SEG });
 }
 
+// devolve o papel da sessão ('spi' ou 'leste') ou false
 function sessaoValida(token) {
   if (!token || typeof token !== 'string' || token.length < 32) return false;
-  var ok = cache().get('tok:' + token);
-  if (ok) cache().put('tok:' + token, '1', SESSAO_SEG); // renova a cada uso
-  return !!ok;
+  var p = cache().get('tok:' + token);
+  if (!p) return false;
+  if (p === '1') p = 'spi'; // sessões de versões anteriores
+  cache().put('tok:' + token, p, SESSAO_SEG); // renova a cada uso
+  return p;
 }
 
 // comparação sem sair cedo no primeiro caractere diferente
@@ -129,14 +153,20 @@ function iguais(a, b) {
 
 // ── Leitura ─────────────────────────────────────────────────────────────────
 
-function ler(body) {
+function ler(body, papel) {
   var aba = String(body.aba || '');
   if (!ABAS_PERMITIDAS.test(aba)) return resposta({ ok: false, erro: 'aba não permitida: ' + aba });
+  if (papel !== 'spi' && aba !== ABA_BUDGET) return resposta({ ok: false, erro: 'negado' }); // tendências é só SPI
   var sheet = planilha().getSheetByName(aba);
   if (!sheet) return resposta({ ok: true, values: [] }); // mesma semântica do 400 da API: aba inexistente = vazia
   var lastRow = sheet.getLastRow(), lastCol = sheet.getLastColumn();
   if (lastRow < 1 || lastCol < 1) return resposta({ ok: true, values: [] });
   var values = sheet.getRange(1, 1, lastRow, lastCol).getDisplayValues();
+  if (papel === 'leste') { // só o que é da Leste
+    var mapa = gdsLeste(), ig = values[0].indexOf('gd'), out = [values[0]];
+    for (var i = 1; i < values.length; i++) if (ehLeste(values[i][ig], mapa)) out.push(values[i]);
+    values = out;
+  }
   return resposta({ ok: true, values: values });
 }
 
@@ -178,6 +208,13 @@ function executar(body, sessao) {
     if (acao === 'edit' || acao === 'delete') {
       var li = encontrarLinha(sheet, body.id);
       if (li >= 0 && !PRODUTOS_ABERTOS[String(sheet.getRange(li, 4).getValue())]) return resposta({ ok: false, erro: 'sessao' });
+    }
+  } else if (sessao === 'leste') { // sessão da Leste só mexe em registros da Leste
+    var mapaL = gdsLeste();
+    if ((acao === 'add' || acao === 'edit') && !ehLeste(body.gd, mapaL)) return resposta({ ok: false, erro: 'negado' });
+    if (acao === 'edit' || acao === 'delete') {
+      var liL = encontrarLinha(sheet, body.id);
+      if (liL >= 0 && !ehLeste(sheet.getRange(liL, 2).getValue(), mapaL)) return resposta({ ok: false, erro: 'negado' });
     }
   }
 

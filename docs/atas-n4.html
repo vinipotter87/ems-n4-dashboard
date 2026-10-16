@@ -94,7 +94,7 @@ td{padding:8px 9px;border-bottom:1px solid var(--border);vertical-align:top;line
   <div class="doc" id="doc"><div class="vazio"><b>Escolha uma ata na lista</b>O texto completo aparece aqui.</div></div>
 </div>
 
-<script src="assets/gate.js?v=20261016f"></script>
+<script src="assets/gate.js?v=20261016g"></script>
 <script>
 // ── Atas de N4 ───────────────────────────────────────────────────
 // Leitura das atas de N4 que os GDs anexam no modo apresentação do dashboard
@@ -107,6 +107,7 @@ td{padding:8px 9px;border-bottom:1px solid var(--border);vertical-align:top;line
 // Página somente de leitura.
 var TAB = 'budget_lancamentos', MESES = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
 var REGIONAL_LESTE = /[?&]regional=leste(&|$)/i.test(window.location.search);
+window.GATE_PAPEL = REGIONAL_LESTE ? 'leste' : 'spi'; // qual senha a página exige
 var CONFIG = {}, ATAS = [], GDS = {}, SEL = null, ABERTOS = null;
 var NOME_MES = {JAN:'Janeiro',FEV:'Fevereiro',MAR:'Março',ABR:'Abril',MAI:'Maio',JUN:'Junho',JUL:'Julho',AGO:'Agosto',SET:'Setembro',OUT:'Outubro',NOV:'Novembro',DEZ:'Dezembro'};
 var TOPO = /^(RESUMO DA REUNI[ÃA]O|O QUE FOI DISCUTIDO POR BLOCO|IDEIAS E INICIATIVAS.*|COMBINADOS DA REUNI[ÃA]O|PR[ÓO]XIMA N4)$/;

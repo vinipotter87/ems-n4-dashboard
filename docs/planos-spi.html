@@ -88,7 +88,7 @@ select.st{cursor:pointer}
 
 <div class="main" id="main"><div class="vazio">Carregando planos…</div></div>
 
-<script src="assets/gate.js?v=20261016f"></script>
+<script src="assets/gate.js?v=20261016g"></script>
 <script>
 // ── Planos SPI ───────────────────────────────────────────────────
 // Consolida os planos que os GDs preenchem no modo apresentação do
@@ -109,6 +109,7 @@ function esc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace
 function dataBr(iso){ var x = String(iso || '').split('-'); return x.length === 3 ? x[2] + '/' + x[1] + '/' + x[0] : ''; }
 // A mesma página serve às duas regionais: planos-spi.html (SPI Oeste) e planos-spi.html?regional=LESTE (Leste)
 var REGIONAL_LESTE = /[?&]regional=leste(&|$)/i.test(window.location.search);
+window.GATE_PAPEL = REGIONAL_LESTE ? 'leste' : 'spi'; // qual senha a página exige
 // métrica, base e objetivo × realizado de cada mês do plano (gravados pela apresentação N4)
 function fmtMet(nome, v){ if (v === null || v === undefined || isNaN(v)) return '—'; return /^PEX/.test(nome) ? Math.round(v) + ' rep' + (Math.round(v) === 1 ? '' : 's') : (+v).toFixed(1).replace('.', ',') + '%'; }
 function metaHtml(p){

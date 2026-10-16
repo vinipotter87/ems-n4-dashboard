@@ -12,11 +12,15 @@
  *   await GATE.garantir('Atas de N4');  // mostra a tela de senha se preciso
  *   var linhas = await GATE.ler('budget_lancamentos'); // [{id, gd, ...}]
  *   await GATE.gravar({acao:'add'|'edit'|'delete', id, gd, ...});
- *   GATE.liberado()  → true quando há sessão nesta aba
+ *   GATE.liberado()  → true quando há sessão com o papel que a página exige (window.GATE_PAPEL)
  *   GATE.pronto()    → true quando o gate_url está configurado
  */
 var GATE = (function () {
   var URL = null, TOKEN = null, CFG = null;
+  // Papel da sessão: 'spi' (senha SPI, abre tudo) ou 'leste' (senha da Leste, só o que é da
+  // Leste). A página diz o que exige em window.GATE_PAPEL ('spi' se não disser) ou em
+  // opts.papel; a sessão 'spi' satisfaz qualquer exigência.
+  var PAPEL = null, EXP = 0;
   var CHAVE = 'ems_gate_token';
   function lerGuardado() {
     try { sessionStorage.removeItem(CHAVE); } catch (e) {} // versão anterior guardava por aba
@@ -24,15 +28,18 @@ var GATE = (function () {
       var raw = localStorage.getItem(CHAVE); if (!raw) return null;
       var o = JSON.parse(raw);
       if (!o || !o.t || (o.exp && Date.now() > o.exp)) { localStorage.removeItem(CHAVE); return null; }
+      PAPEL = o.papel || 'spi'; EXP = o.exp || 0;
       return o.t;
     } catch (e) { return null; }
   }
   TOKEN = lerGuardado();
 
-  function guardar(t, seg) {
-    TOKEN = t;
-    try { if (t) localStorage.setItem(CHAVE, JSON.stringify({ t: t, exp: Date.now() + (seg || 6 * 3600) * 1000 })); else localStorage.removeItem(CHAVE); } catch (e) {}
+  function guardar(t, seg, papel) {
+    TOKEN = t; PAPEL = t ? (papel || 'spi') : null; EXP = t ? Date.now() + (seg || 6 * 3600) * 1000 : 0;
+    try { if (t) localStorage.setItem(CHAVE, JSON.stringify({ t: t, exp: EXP, papel: PAPEL })); else localStorage.removeItem(CHAVE); } catch (e) {}
   }
+  function papelExigido(opts) { return (opts && opts.papel) || window.GATE_PAPEL || 'spi'; }
+  function temPapel(req) { return !!TOKEN && (PAPEL === 'spi' || PAPEL === req); }
 
   // lê config.json uma vez (mesma pasta das páginas) só pra pegar gate_url
   function config() {
@@ -68,13 +75,14 @@ var GATE = (function () {
       throw new Error('O servidor de dados restritos não respondeu direito. Clique em Atualizar para tentar de novo.');
     }
     if (!resp.ok && resp.erro === 'sessao') { guardar(null); var err = new Error('Sessão expirada — digite a senha de novo.'); err.sessao = true; throw err; }
+    if (!resp.ok && resp.erro === 'negado') { var errN = new Error('Sem permissão: a senha da Leste só alcança registros da Leste.'); errN.negado = true; throw errN; }
     return resp;
   }
 
-  async function entrar(senha) {
-    var r = await chamar({ acao: 'login', senha: String(senha || '') });
+  async function entrar(senha, papel) {
+    var r = await chamar({ acao: 'login', senha: String(senha || ''), papel: papel || papelExigido() });
     if (!r.ok) throw new Error(r.erro || 'senha incorreta');
-    guardar(r.token, r.expiraEm);
+    guardar(r.token, r.expiraEm, r.papel);
     return true;
   }
 
@@ -174,7 +182,7 @@ var GATE = (function () {
         ev.preventDefault();
         var s = inp.value; if (!s) { inp.focus(); return; }
         bt.disabled = true; err.textContent = 'Conferindo…';
-        try { await entrar(s); fechar(true); }
+        try { await entrar(s, papelExigido(opts)); fechar(true); }
         catch (e) { err.textContent = e.message || 'Senha incorreta.'; inp.value = ''; inp.focus(); bt.disabled = false; }
       });
       var volta = box.querySelector('.volta'); if (volta) volta.addEventListener('click', function () { fechar(false); });
@@ -194,29 +202,35 @@ var GATE = (function () {
     return box;
   }
 
-  // confere no servidor se o token guardado ainda vale (aba inexistente permitida: resposta vazia e rápida)
+  // confere no servidor se o token guardado ainda vale (e atualiza o papel)
   async function validar() {
     if (!TOKEN) return false;
-    try { var r = await chamar({ acao: 'ler', token: TOKEN, aba: 'tendencias_ZZZ' }); return !!r.ok; }
-    catch (e) { return e.sessao ? false : !!TOKEN; } // falha de rede não derruba a sessão
+    try {
+      var r = await chamar({ acao: 'sessao', token: TOKEN });
+      if (!r.ok) return false;
+      if (r.papel && r.papel !== PAPEL) guardar(TOKEN, Math.max(60, Math.round((EXP - Date.now()) / 1000)), r.papel);
+      return true;
+    } catch (e) { return e.sessao ? false : !!TOKEN; } // falha de rede não derruba a sessão
   }
 
   async function garantir(titulo, opts) {
     opts = opts || {};
+    var req = papelExigido(opts);
     if (opts.cheia) { // página inteira restrita: cobre já, antes de qualquer carregamento
-      if (TOKEN) { var tela = cobrir(titulo, opts); var ok = await validar(); tela.remove(); if (ok) return true; }
+      if (temPapel(req)) { var tela = cobrir(titulo, opts); var ok = await validar(); tela.remove(); if (ok && temPapel(req)) return true; }
       var p = pedirSenha(titulo, opts); config().catch(function () {}); return p;
     }
     try { await config(); } catch (e) {}
     if (!URL) { if (opts.silencioso) return false; throw new Error('Acesso restrito não configurado (gate_url ausente em config.json).'); }
-    if (TOKEN) return true;
+    if (temPapel(req)) return true;
     return pedirSenha(titulo, opts);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', css); else css();
   return {
     garantir: garantir, pedirSenha: pedirSenha, entrar: entrar, sair: sair, ler: ler, lerAberto: lerAberto, gravar: gravar, enviar: enviar,
-    liberado: function () { return !!TOKEN; },
+    liberado: function (papel) { return temPapel(papel || papelExigido()); },
+    papel: function () { return TOKEN ? PAPEL : null; },
     validar: validar,
     pronto: function () { return !!URL; },
     config: config,

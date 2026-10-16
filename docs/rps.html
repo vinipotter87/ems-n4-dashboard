@@ -252,7 +252,7 @@ tr.ip-ch td{background:#fffdf5}tr.ip-ch td.n{font-weight:800;color:#78350f}
 <div class="stage" id="stage"></div>
 <div class="nav"><button class="btn" id="b-prev">← Anterior</button><div class="dots" id="dots"></div><span id="cnt"></span><button class="btn" id="b-next">Próximo →</button></div>
 
-<script src="assets/gate.js?v=20261016f"></script>
+<script src="assets/gate.js?v=20261016g"></script>
 <script src="farol-frequencia/farol-core.js"></script>
 <script src="farol-frequencia/dados/freq_q13.js"></script>
 <script>
@@ -279,6 +279,7 @@ var CONFIG = {}, CACHE = {}, EXTRA = null;
 // jornada_LESTE, config_LESTE…); atas e planos ficam na mesma aba budget_lancamentos, separados pelo id do distrito.
 var REG = /[?&]regional=leste(&|$)/i.test(window.location.search) ? 'LESTE' : 'SPI';
 var REG_NOME = REG === 'LESTE' ? 'Regional Leste' : 'Regional SPI Oeste', REG_PAG = REG === 'LESTE' ? 'leste.html' : 'index.html';
+window.GATE_PAPEL = REG === 'LESTE' ? 'leste' : 'spi'; // qual senha o botão 🔒 pede
 function abaReg(aba){
   if (REG !== 'LESTE') return aba;
   var m;
