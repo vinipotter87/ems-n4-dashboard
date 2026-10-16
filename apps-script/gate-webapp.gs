@@ -210,3 +210,10 @@ function encontrarLinha(sheet, id) {
 function resposta(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }
+
+// Zera o contador de senhas erradas (o time ficou travado por 1 h sem querer).
+// Rodar pelo editor: escolher "destravar" na lista de funções → Executar.
+function destravar() {
+  cache().remove('falhas');
+  Logger.log('contador de falhas zerado');
+}
