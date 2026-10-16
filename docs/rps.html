@@ -1241,6 +1241,29 @@ async function docGravar(crm, doc, apagar){ // doc = {titulo, arquivo, texto}; f
     espelhar(env);
   } catch(e){ console.warn('Texto completo da ata não foi salvo.', e.message); var st = ataSt(); if (st) st.textContent = 'Combinados salvos, mas o texto completo da ata não foi gravado: ' + e.message; }
 }
+// Cada caixa de ata guarda UMA ata (coletiva: uma por data; individual: uma por representante e
+// data) e um novo upload grava por cima. Antes de gravar, confere se o PDF é do tipo e do
+// representante da reunião aberta e pede confirmação para substituir uma ata já anexada —
+// sem isso, duas atas individuais anexadas na coletiva se sobrescreviam sem aviso.
+function semAcento(t){ return String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); }
+function ataConferir(arquivo, ata){
+  var st = ataSt(), cab = semAcento(arquivo + ' ' + (ata ? ata.titulo : '') + ' ' + (ST.doc && ST.doc.texto ? ST.doc.texto.slice(0, 800) : ''));
+  var ind = /\bindividual\b/.test(cab), col = /\bcoletiva\b/.test(cab), aqui = ST.modelo === 'individual';
+  if (ind !== col && ind !== aqui){
+    st.textContent = 'Esta é uma ata de RPS ' + (ind ? 'individual' : 'coletiva') + ', mas a apresentação aberta é ' + (aqui ? 'individual' : 'coletiva') + '. ' +
+      (ind ? 'Volte ao início, escolha o modelo Individual e o representante da ata, e anexe de novo.' : 'Volte ao início, escolha o modelo Coletiva e anexe de novo.') + ' Nada foi gravado.';
+    return false;
+  }
+  if (aqui){
+    var rep = repSel(), nome = rep ? semAcento(rep.nome).split(/\s+/).filter(function(p){ return p.length > 2; }) : [];
+    if (nome.length && !nome.some(function(p){ return cab.indexOf(p) >= 0; }) &&
+      !window.confirm('O arquivo "' + arquivo + '" não cita ' + rep.nome + ', representante desta RPS. Anexar mesmo assim?')){ st.textContent = 'Nada foi gravado.'; return false; }
+  }
+  var reg = ataReg(), atual = null; try { atual = reg ? JSON.parse(reg.acao) : null; } catch(e){}
+  if (atual && atual.arquivo !== arquivo &&
+    !window.confirm('Já existe uma ata anexada aqui' + (atual.arquivo ? ' ("' + atual.arquivo + '")' : '') + '. Substituir pela nova? A anterior e os status dos combinados dela serão perdidos.')){ st.textContent = 'Nada foi gravado — a ata anterior foi mantida.'; return false; }
+  return true;
+}
 async function ataArquivo(input){
   var f = input.files && input.files[0], st = ataSt(); if (!f) return;
   if (!/\.pdf$/i.test(f.name)){ st.textContent = 'Escolha um arquivo PDF.'; return; }
@@ -1248,6 +1271,7 @@ async function ataArquivo(input){
   try {
     var buf = await f.arrayBuffer(), ata = await lerAta(buf.slice(0));
     try { ST.doc = { arquivo: f.name, texto: await lerTexto(buf.slice(0)) }; } catch(e2){ ST.doc = null; console.warn('Texto completo da ata não foi lido.', e2.message); }
+    if (!ataConferir(f.name, ata)){ ST.doc = null; input.value = ''; return; }
     if (!ata){ ata = { titulo: f.name.replace(/\.pdf$/i, ''), data: '', itens: [] }; ST.previa = null; ST.edit = ata; ata.arquivo = f.name; ata.naoLida = true; desenharAta(); return; }
     ata.arquivo = f.name; ST.previa = null; ST.edit = null;
     if (await ataGravar(ata, false)) desenharAta(); // o upload já salva a ata; ajustes depois pelo botão Editar
