@@ -159,7 +159,7 @@ table.linhas tr.tot td{border-top:2px solid var(--line);background:#FAFDFF}
   th{position:static}
 }
 /* ---- Q4 · Qualificação de painel ---- */
-.chips select{border:1px solid var(--line);border-radius:999px;padding:5px 10px;background:#fff;font:inherit;font-size:12px;color:var(--navy);max-width:100%}
+#fEsp{border-color:var(--navy);color:var(--navy);font-weight:600}
 .tabs a{display:inline-block;padding:6px 16px;border-radius:999px;color:var(--muted);font-weight:600;text-decoration:none;border-right:1px solid var(--line);margin-right:3px}
 .tabs a:hover{background:#fff;color:var(--navy)}
 .g-sai{background:var(--vermelho-bg);color:var(--vermelho)}
@@ -202,6 +202,7 @@ table.linhas tr.tot td{border-top:2px solid var(--line);background:#FAFDFF}
   <select id="fLinha" title="Linha"></select>
   <select id="fDist"></select>
   <select id="fSetor"></select>
+  <select id="fEsp" title="Especialidade" style="display:none"></select>
   <span class="sp"></span>
   <div class="legend"><span><i style="background:var(--vermelho)"></i>Sai (Q4)</span><span><i style="background:var(--verde)"></i>Entra (oportunidade)</span><span><i style="background:var(--amarelo)"></i>Gold list: manter</span></div>
 </div></div>
@@ -213,7 +214,7 @@ table.linhas tr.tot td{border-top:2px solid var(--line);background:#FAFDFF}
 <script>
 const MAN = window.Q4_MANIFEST;
 const app = document.getElementById('app');
-const fLinha = document.getElementById('fLinha'), fDist = document.getElementById('fDist'), fSetor = document.getElementById('fSetor');
+const fLinha = document.getElementById('fLinha'), fDist = document.getElementById('fDist'), fSetor = document.getElementById('fSetor'), fEsp = document.getElementById('fEsp');
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const f1 = v => (Math.round(v * 10) / 10).toFixed(1).replace('.', ',');
 const f2 = v => (Math.round(v * 100) / 100).toFixed(2).replace('.', ',');
@@ -398,7 +399,8 @@ function viewSetor() {
   s.pares.forEach(p => { const a = p.sai.esp || '—', c = p.entra.esp || '—'; espN[a].tr++; if (c !== a) espN[c].tr++; });
   const esps = Object.keys(espN).sort((x, y) => espN[y].tr - espN[x].tr || espN[y].op - espN[x].op || x.localeCompare(y));
   if (E && !espN[E]) st.esp = '';
-  const selEsp = `<select id="fEsp" title="Especialidade"><option value="">Todas as especialidades</option>${esps.map(e => `<option value="${esc(e)}" ${st.esp === e ? 'selected' : ''}>${esc(e)} · ${espN[e].tr} trocas · ${espN[e].q4} Q4 · ${espN[e].op} oport.</option>`).join('')}</select>`;
+  fEsp.innerHTML = `<option value="">Todas as especialidades</option>${esps.map(e => `<option value="${esc(e)}">${esc(e)} · ${espN[e].tr} trocas · ${espN[e].q4} Q4 · ${espN[e].op} oport.</option>`).join('')}`;
+  fEsp.value = st.esp;
   const nTr = s.pares.filter(p => !E || (p.sai.esp || '—') === E || (p.entra.esp || '—') === E).length;
   const soEsp = arr => E ? arr.filter(m => (m.esp || '—') === E) : arr;
   const it = [
@@ -444,14 +446,13 @@ function viewSetor() {
   <h2 class="tit-acao">${esc(s.rep)} <small>${s.cod} · ${esc(D.linha)}</small><button class="btn btn-xl noprint" id="baixar">⬇ Baixar planilha do rep</button></h2>
   <div class="card estr"><h3>Qualificação do painel: proposta para o setor</h3><ul>${it.map(i => `<li>${i}</li>`).join('')}</ul></div>
   ${regras()}
-  <h2>Lista${E ? ` <small>especialidade ${esc(E)} · <a href="#" id="limpaEsp">todas</a></small>` : ''}</h2>
+  <h2>${E ? `Trocas em ${esc(E)}` : 'Lista'}${E ? ` <small>${nTr} trocas sugeridas · ${soEsp(porSetor[s.cod].q4).length} Q4 no painel · ${soEsp(porSetor[s.cod].op).length} oportunidades · <a href="#" id="limpaEsp">ver todas as especialidades</a></small>` : ' <small>escolha a especialidade no seletor da barra de cima</small>'}</h2>
   <div class="chips noprint">
     ${chip('trocas', 'Trocas sugeridas', nTr)}
     ${chip('sai', 'Q4 sem substituto', soEsp(s.saiLivre).length)}
     ${chip('entra', 'Oportunidade sem troca', soEsp(s.entraLivre).length)}
     ${chip('q4', 'Todos os Q4', soEsp(porSetor[s.cod].q4).length)}
     ${chip('op', 'Todas as oportunidades', soEsp(porSetor[s.cod].op).length)}
-    ${selEsp}
     <button class="btn" id="imprimir">🖨 Imprimir</button>
     <input id="busca" placeholder="Buscar médico, CRM, especialidade ou cidade" value="${esc(st.busca)}">
   </div>
@@ -463,6 +464,7 @@ function render() {
   document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.v === st.view));
   fDist.style.display = st.view === 'regional' ? 'none' : '';
   fSetor.style.display = st.view === 'setor' ? '' : 'none';
+  fEsp.style.display = st.view === 'setor' ? '' : 'none';
   fLinha.value = st.linha; fDist.value = st.dist; fSetor.value = st.setor;
   document.getElementById('voltaFarol').href = `index.html`;
   app.innerHTML = st.view === 'regional' ? viewRegional() : st.view === 'gd' ? viewGD() : viewSetor();
@@ -512,7 +514,7 @@ document.querySelector('.tabs').addEventListener('click', e => { const v = e.tar
 fLinha.addEventListener('change', () => abreLinha(fLinha.value));
 fDist.addEventListener('change', () => { st.dist = fDist.value; render(); });
 fSetor.addEventListener('change', () => { st.setor = fSetor.value; st.busca = ''; st.filtro = 'trocas'; st.esp = ''; render(); });
-app.addEventListener('change', e => { if (e.target.id === 'fEsp') { st.esp = e.target.value; render(); } });
+fEsp.addEventListener('change', () => { st.esp = fEsp.value; render(); });
 app.addEventListener('click', e => {
   if (e.target.id === 'limpaEsp') { e.preventDefault(); st.esp = ''; render(); return; }
   if (e.target.id === 'imprimir') { window.print(); return; }
