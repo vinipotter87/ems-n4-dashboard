@@ -372,9 +372,34 @@ function telaEntrada(){
 // só com a senha (botão 🔒 no cabeçalho) — é o GD quem exclui pra um plano novo subir.
 // (`pode` = aberto a todos; `senha` = exige a sessão do gate.)
 async function lancRps(){
-  if (GATE.liberado()){ try { return await GATE.ler('budget_lancamentos'); } catch(e){ if (!e.sessao) throw e; } }
-  try { return await GATE.lerAberto(); }
-  catch(e){ console.warn('Combinados indisponíveis (gate): ' + e.message); return []; } // o copiloto abre mesmo assim, sem as atas
+  var rows;
+  if (GATE.liberado()){ try { rows = await GATE.ler('budget_lancamentos'); } catch(e){ if (!e.sessao) throw e; } }
+  if (!rows){ try { rows = await GATE.lerAberto(); } catch(e){ console.warn('Combinados indisponíveis (gate): ' + e.message); throw e; } }
+  lancCacheGravar(rows); return rows;
+}
+// Cópia local dos registros de RPS (última leitura boa neste navegador): quando o gate do
+// Google demora, o copiloto monta os slides com ela e troca pela resposta quando chegar.
+var LANC_CACHE = 'ems_rps_lanc', LANC_ESPERA_MS = 4000;
+function lancCacheLer(){ try { var o = JSON.parse(localStorage.getItem(LANC_CACHE) || 'null'); return o && o.rows ? o : null; } catch(e){ return null; } }
+function lancCacheGravar(rows){ try { localStorage.setItem(LANC_CACHE, JSON.stringify({ t: Date.now(), rows: rows })); } catch(e){} }
+function rpsRedesenhar(){ // redesenha a tela atual mantendo o slide
+  var i = ST.i || 0;
+  if (ST.modelo === 'historico' && HIST.dist) telaHistorico();
+  else if (ST.modelo === 'individual' && ST.setor && ST.slides.length) montarIndividual();
+  else if (ST.modelo !== 'individual' && ST.d && ST.slides.length) montar();
+  ir(i);
+}
+// Espera o gate só até LANC_ESPERA_MS depois dos KPIs; se demorar mais, segue com a cópia
+// local (ou vazio) em modo "pendente": sem anexar/salvar até a resposta chegar.
+async function lancResolver(pLanc){
+  var r = await Promise.race([pLanc, new Promise(function(ok){ setTimeout(function(){ ok(undefined); }, LANC_ESPERA_MS); })]);
+  if (r !== undefined){ ST.lanc = r || []; ST.lancPendente = false; ST.lancHora = 0; return; }
+  var c = lancCacheLer(); ST.lanc = c ? c.rows : []; ST.lancPendente = true; ST.lancHora = c ? c.t : 0;
+  pLanc.then(function(rows){ if (!rows) return; ST.lanc = rows; ST.lancPendente = false; ST.lancHora = 0; try { rpsRedesenhar(); } catch(e){ console.warn(e); } });
+}
+function lancAviso(){ // faixa nos slides de ata e plano enquanto o gate não responde
+  if (!ST.lancPendente) return '';
+  return '<div class="aviso">⏳ O servidor de atas e planos está lento. ' + (ST.lancHora ? 'Mostrando a cópia de ' + new Date(ST.lancHora).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) + '; ' : 'Nada carregado ainda; ') + 'anexar e salvar ficam liberados quando a resposta chegar (a tela atualiza sozinha).</div>';
 }
 function rpsBotaoSenha(){ var b = $('b-senha'); if (b) b.style.display = GATE.pronto() && !GATE.liberado() ? '' : 'none'; }
 async function rpsDesbloquear(){
@@ -382,11 +407,7 @@ async function rpsDesbloquear(){
   rpsBotaoSenha();
   if (!ST.lanc) return true;
   ST.lanc = await lancRps();
-  var i = ST.i || 0;
-  if (ST.modelo === 'historico' && HIST.dist) telaHistorico();
-  else if (ST.modelo === 'individual' && ST.setor && ST.slides.length) montarIndividual();
-  else if (ST.modelo !== 'individual' && ST.d && ST.slides.length) montar();
-  ir(i);
+  rpsRedesenhar();
   return true;
 }
 async function abrir(){
@@ -395,17 +416,20 @@ async function abrir(){
   ST.previa = null; ST.edit = null; ST.alvo = 'ant';
   if (ST.modelo === 'historico'){ // consolidado: carrega todos os distritos; o filtro por GD fica dentro da página
     // os planos partem do último mês fechado: é com ele que o histórico é montado
-    ST.mes = MES_FECHADO; ST.dF = null; HIST.filtro = esc0; HIST.dist = {}; ST.lanc = await lancRps();
+    ST.mes = MES_FECHADO; ST.dF = null; HIST.filtro = esc0; HIST.dist = {};
+    var pLancH = lancRps().catch(function(){ return null; }); // combinados e planos em paralelo com os KPIs
     for (var k = 0; k < ST.distritos.length; k++){ $('montando').textContent = 'Carregando ' + (k + 1) + ' de ' + ST.distritos.length + ' GDs…'; HIST.dist[ST.distritos[k].distrito_id] = await carregarDistrito(ST.distritos[k], ST.mes); }
+    await lancResolver(pLancH);
     ST.gd = esc0 || (ST.distritos[0] || {}).distrito_id; ST.d = HIST.dist[ST.gd];
     return telaHistorico();
   }
   ST.gd = esc0;
   var d = ST.distritos.filter(function(x){ return x.distrito_id === ST.gd; })[0];
   if (!d) return telaEntrada();
-  ST.lanc = await lancRps();
+  var pLanc = lancRps().catch(function(){ return null; }); // combinados e planos em paralelo com os KPIs (o gate leva uns segundos)
   ST.d = await carregarDistrito(d, ST.mes);
   ST.dF = ST.mes === MES_FECHADO ? ST.d : (ST.modelo === 'individual' ? await carregarDistrito(d, MES_FECHADO) : null); // base dos planos
+  await lancResolver(pLanc);
   if (ST.modelo === 'individual') telaReps(); else montar();
 }
 async function carregarDistrito(d, m){ // dados de um distrito no mês, cada fonte no último mês que tem resultado
@@ -1350,21 +1374,21 @@ async function copiarPromptAta(btn){
 }
 function desenharAtaDe(alvo){
   var box = ataBox(alvo); if (!box) return;
-  var pode = true, senha = GATE.liberado(), reg = ataRegDe(alvo), salva = null; if (reg) try { salva = JSON.parse(reg.acao); } catch(e){}
+  var pode = !ST.lancPendente, senha = pode && GATE.liberado(), reg = ataRegDe(alvo), salva = null; if (reg) try { salva = JSON.parse(reg.acao); } catch(e){}
   var meu = (ST.alvo || 'ant') === alvo, ed = meu && !!ST.edit, previa = meu && !ed && !!ST.previa, ata = ed ? ST.edit : (previa ? ST.previa : salva), h = '', A = "ataAlvo('" + alvo + "');";
   var up = '<input type="file" accept="application/pdf,.pdf" style="display:none" onchange="' + A + 'ataArquivo(this)">';
   var digitar = '<button class="b2" style="padding:8px 14px" onclick="' + A + 'ST.edit={titulo:\'' + (alvo === 'atual' ? 'Combinados da RPS de ' + dataBr(ST.data) : 'Combinados da RPS anterior') + '\',data:\'\',itens:[{n:1,texto:\'\',resp:\'\',prazo:\'\',status:\'Pendente\'}]};desenharAta()">Digitar os combinados</button>';
   var quem = ST.modelo === 'individual' ? ' deste representante' : ' do distrito';
   var promptBtn = '<button class="b2" style="padding:8px 14px" onclick="copiarPromptAta(this)" title="Copia o prompt oficial: cole no Claude junto com a transcrição da reunião">📋 Copiar prompt da ata</button>';
   if (!ata){
-    h = alvo === 'atual'
+    h = lancAviso() + (alvo === 'atual'
       ? '<div class="vazio"><div style="font-size:34px">📎</div><b>Anexe a ata desta reunião — RPS de ' + dataBr(ST.data) + '</b><p>Ainda não gerou a ata? Use "Copiar prompt da ata", cole no Claude junto com a transcrição e exporte a resposta em PDF. Com a ata pronta, anexe o PDF aqui. A página lê a tabela "Plano de ação consolidado", salva a ata completa (todas as seções) no histórico do time e, na próxima RPS' + quem + ', os combinados já aparecem no slide 2 ("Combinados anteriores"), prontos para a cobrança.</p>' +
         (pode ? '<label class="b1">Escolher PDF da ata' + up + '</label> ' + digitar + ' ' + promptBtn : '<p><button class="b2" style="padding:8px 14px" onclick="rpsDesbloquear()">🔒 Senha para anexar a ata</button></p>' + promptBtn) + '<div id="ata-st-atual"></div></div>'
       : '<div class="vazio"><div style="font-size:34px">📋</div><b>Nenhuma ata de RPS anterior' + quem + '</b><p>Os combinados aparecem aqui sozinhos quando a ata da reunião anterior foi anexada no último slide ("Ata desta reunião"). Se a ata anterior ainda não foi anexada, dá para anexar agora.</p>' +
-        (pode ? '<label class="b2" style="padding:8px 14px">Anexar a ata da reunião anterior' + up + '</label> ' + digitar : '') + '<div id="ata-st-ant"></div></div>';
+        (pode ? '<label class="b2" style="padding:8px 14px">Anexar a ata da reunião anterior' + up + '</label> ' + digitar : '') + '<div id="ata-st-ant"></div></div>');
   } else {
     var dr = reg ? dataBr(ataDataDe(reg)) : (alvo === 'atual' ? dataBr(ST.data) : '');
-    h = '<div class="card"><div class="ata-top"><div><h3 style="margin:0">' + esc(ata.titulo) + '</h3><div class="nota" style="margin:2px 0 0">' + (dr ? 'RPS de ' + dr + ' · ' : '') + ata.itens.length + ' combinados' + (ata.arquivo ? ' · lido de ' + esc(ata.arquivo) : '') + '</div></div><span class="ac">';
+    h = lancAviso() + '<div class="card"><div class="ata-top"><div><h3 style="margin:0">' + esc(ata.titulo) + '</h3><div class="nota" style="margin:2px 0 0">' + (dr ? 'RPS de ' + dr + ' · ' : '') + ata.itens.length + ' combinados' + (ata.arquivo ? ' · lido de ' + esc(ata.arquivo) : '') + '</div></div><span class="ac">';
     if (ed) h += '<button class="b1" onclick="' + A + 'ataSalvarEdicao()">Salvar alterações</button><button class="b2" onclick="ST.edit=null;desenharAta()">Cancelar</button>';
     else if (previa) h += '<button class="b1" onclick="' + A + 'ataConfirmar()">Salvar combinados</button><button class="b2" onclick="' + A + 'ataEditar()">✏️ Editar</button><button class="b2" onclick="ST.previa=null;desenharAta()">Cancelar</button>';
     else if (senha) h += '<button class="b2" onclick="' + A + 'ataEditar()">✏️ Editar</button><label class="b2">Trocar ata' + up + '</label><button class="b2" onclick="' + A + 'ataRemover()">Remover</button>';
@@ -1864,7 +1888,7 @@ function desenharAndamento(){
 }
 function desenharAndamentoEm(box, ab, qual){
   if (!box) return;
-  var pode = true, senha = GATE.liberado(), h = '';
+  var pode = !ST.lancPendente, senha = pode && GATE.liberado(), h = lancAviso();
   if (!ab.length) h = '<div class="vazio"><b>Nenhum plano ' + qual + ' em andamento</b>Os planos salvos para este representante voltam aqui a cada RPS, até serem encerrados.</div>';
   ab.forEach(function(o){ var p = o.p, id = o.reg.id, evs = evolDados(o.ch, p, medir(o.ch)), feitas = (p.acoes || []).filter(function(a){ return a.status === 'Concluída'; }).length;
     // plano que não tem mais o slide "Plano — X" (já está em andamento): a edição acontece aqui mesmo
@@ -1913,7 +1937,7 @@ function planoDesenhar(ch, editar, rasc){
   var box = $('plano-' + ch), info = planoInfo(ch); if (!box || !info) return;
   if (box.getAttribute('data-inline') && editar !== true){ // edição embutida no slide de planos em andamento: fecha e volta o cartão
     box.style.display = 'none'; box.innerHTML = ''; var cd = $('and-card-' + ch); if (cd) cd.style.display = ''; if (ST.slides.length) ajustar(); return; }
-  var pode = true, senha = GATE.liberado(), reg = planoReg(ch), salvo = planoDados(ch), ed = editar === true ? (senha || !salvo) : (!salvo && !info.opcional), q = "'" + ch + "'", h = '';
+  var pode = !ST.lancPendente, senha = pode && GATE.liberado(), reg = planoReg(ch), salvo = planoDados(ch), ed = pode && (editar === true ? (senha || !salvo) : (!salvo && !info.opcional)), q = "'" + ch + "'", h = lancAviso();
   if (ed){
     var p = rasc || salvo || { problema: info.problema, kpis: info.kpis.slice(), porques: [], acoes: [{}] }; if (!p.acoes || !p.acoes.length) p.acoes = [{}];
     h += '<div class="ph">🧭 Plano — ' + info.titulo + ' <span>5 porquês + 5W2H</span></div><label class="pl">Problema</label><textarea data-f="problema" rows="2">' + esc(p.problema) + '</textarea>';
