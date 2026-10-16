@@ -136,9 +136,21 @@ var GATE = (function () {
     '.gate-trava button[disabled]{opacity:.6;cursor:default}' +
     '.gate-trava button.volta{background:transparent;color:var(--gray,#6b7280);margin-top:6px;font-weight:700}' +
     '.gate-trava .err{color:var(--red,#c8102e);font-size:12px;font-weight:700;margin-top:10px;min-height:16px}' +
+    '.gate-links{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;padding:14px 16px}' +
+    '.gate-links span{font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--gray,#6b7280);margin-right:4px}' +
+    '.gate-links a{display:inline-block;background:#fff;border:1.5px solid var(--border,#e5e7eb);border-radius:999px;padding:7px 14px;font-size:12.5px;font-weight:700;color:var(--brand-d,#0b2a5b);text-decoration:none}' +
+    '.gate-links a:hover{border-color:var(--brand,#1d4ed8)}' +
     '.gate-btn{background:var(--brand,#1d4ed8);color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:11.5px;font-weight:800;cursor:pointer;white-space:nowrap}';
   var cssOk = false;
   function css() { if (cssOk) return; cssOk = true; var s = document.createElement('style'); s.textContent = CSS; document.head.appendChild(s); }
+
+  // barra no topo da tela cheia com as páginas que abrem sem senha (opts.links = [{r, h}])
+  function barraLinks(links) {
+    if (!links || !links.length) return '';
+    return '<div class="gate-links"><span>Sem senha</span>' + links.map(function (l) {
+      return '<a href="' + l.h + '">' + l.r + '</a>';
+    }).join('') + '</div>';
+  }
 
   var pendente = null;
   // Promessa que resolve true quando a senha é aceita; false se o usuário cancelar
@@ -151,7 +163,7 @@ var GATE = (function () {
     pendente = new Promise(function (resolve) {
       var box = document.createElement('div');
       box.className = 'gate-trava' + (opts.cheia ? ' cheia' : '');
-      box.innerHTML = '<form autocomplete="off"><h2>🔒 ' + (titulo || 'Acesso restrito') + '</h2>' +
+      box.innerHTML = barraLinks(opts.links) + '<form autocomplete="off"><h2>🔒 ' + (titulo || 'Acesso restrito') + '</h2>' +
         '<p>' + (opts.texto || 'Digite a senha para abrir.') + '</p>' +
         '<input type="password" autocomplete="current-password" placeholder="senha" autofocus>' +
         '<button type="submit">Entrar</button>' +
@@ -174,11 +186,11 @@ var GATE = (function () {
   }
 
   // tela cheia opaca imediata (sem esperar rede), usada enquanto a sessão guardada é conferida
-  function cobrir(titulo) {
+  function cobrir(titulo, opts) {
     css();
     var box = document.createElement('div');
     box.className = 'gate-trava cheia';
-    box.innerHTML = '<form><h2>🔒 ' + (titulo || 'Acesso restrito') + '</h2><p>Conferindo acesso…</p></form>';
+    box.innerHTML = barraLinks(opts && opts.links) + '<form><h2>🔒 ' + (titulo || 'Acesso restrito') + '</h2><p>Conferindo acesso…</p></form>';
     document.body.appendChild(box);
     return box;
   }
@@ -193,7 +205,7 @@ var GATE = (function () {
   async function garantir(titulo, opts) {
     opts = opts || {};
     if (opts.cheia) { // página inteira restrita: cobre já, antes de qualquer carregamento
-      if (TOKEN) { var tela = cobrir(titulo); var ok = await validar(); tela.remove(); if (ok) return true; }
+      if (TOKEN) { var tela = cobrir(titulo, opts); var ok = await validar(); tela.remove(); if (ok) return true; }
       var p = pedirSenha(titulo, opts); config().catch(function () {}); return p;
     }
     try { await config(); } catch (e) {}
