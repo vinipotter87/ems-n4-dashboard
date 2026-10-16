@@ -5743,6 +5743,42 @@ function renderCotaTableRep(meses, distritos) {
   return html;
 }
 
+// Incremento de cota por representante (Δ vs mês anterior), mesmo GD e
+// produto da tabela de cumprimento acima
+function renderCotaIncrRep(meses, distritos) {
+  var linha = cotaRepLinha(), distId = cotaRepDistId();
+  var porMes = {}, setores = {};
+  meses.forEach(function(m) {
+    var acc = porMes[m] = {};
+    cotaRepArr(m, linha).forEach(function(r) {
+      var s = r.setor_id; if (!s) return;
+      var c = safeFloat(r.cota);
+      acc[s] = (acc[s] || 0) + (c !== null && c > 0 ? c : 0);
+      setores[s] = r.nome || setores[s] || '';
+    });
+  });
+  var ids = Object.keys(setores).sort();
+  if (!ids.length) return '';
+  var dObj = distritos.find(function(d) { return d.distrito_id === distId; });
+  var html = '<div style="font-size:13px;font-weight:700;display:flex;align-items:center;gap:10px;margin:24px 0 14px;padding-top:18px;border-top:1px solid var(--border)">' +
+    '<span>📐</span><span>Incremento de Cota por Representante</span>' +
+    '<span style="font-size:11px;font-weight:400;color:var(--gray)">Δ da cota vs mês anterior · verde = crescimento · vermelho = redução</span>' +
+  '</div>';
+  html += '<div class="cota-table-wrap"><table class="cota-table">';
+  html += '<thead><tr><th class="th-label" rowspan="2">Distrito / Representante</th>' + _incrMakeHeaderCols(meses) +
+    '</tr><tr>' + _incrMakeSubCols(meses) + '</tr></thead><tbody>';
+  html += '<tr class="' + (linha === 'NEXUS' ? 'row-nexus' : 'row-vital') + '"><td class="td-label">' + (dObj ? cotaDistNome(dObj) : distId) +
+    ' <span style="font-weight:400;color:var(--gray)">· ' + distId + '</span></td>' +
+    _incrRowCells(meses, function(m) { return ids.reduce(function(t, s) { return t + (porMes[m][s] || 0); }, 0); }) + '</tr>';
+  ids.forEach(function(s) {
+    html += '<tr class="row-dist"><td class="td-label" style="padding-left:22px">' +
+      '<span style="color:var(--gray);font-weight:400">' + s + '</span> · ' + (setores[s] || 'Vago') + '</td>' +
+      _incrRowCells(meses, function(m) { return porMes[m][s] || 0; }) + '</tr>';
+  });
+  html += '</tbody></table></div>';
+  return html;
+}
+
 function renderCotaRepBloco() {
   var meses = window._cotaMeses || [], dist = cotaDistFiltro(), linha = cotaRepLinha();
   var prods = cotaRepProdutos(meses, linha);
@@ -5765,7 +5801,8 @@ function renderCotaRepBloco() {
         '<button class="cota-tab' + (linha === 'VITAL' ? ' av' : '') + '" onclick="cotaRepSetLinha(\'VITAL\')">VITAL</button>') +
       selGd + sel +
     '</div>' +
-    renderCotaTableRep(meses, window._cotaDistritos || []);
+    renderCotaTableRep(meses, window._cotaDistritos || []) +
+    renderCotaIncrRep(meses, window._cotaDistritos || []);
 }
 
 function cotaRepSetLinha(linha) {
