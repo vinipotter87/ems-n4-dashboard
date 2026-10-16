@@ -396,9 +396,6 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
 /* Faixas NEXUS/VITAL ocupam a largura toda: a célula não fixa, só o rótulo dela */
 .cota-table td.td-label[colspan]{position:static;box-shadow:none}
 .cota-sep-lbl{position:sticky;left:10px;display:inline-block}
-/* Tabela de reps: caixa com rolagem própria, meses fixos no topo e nome fixo à esquerda */
-.cota-rep-scroll{max-height:70vh;overflow:auto}
-.cota-rep-scroll thead{position:sticky;top:0;z-index:3}
 .cota-table td.td-mes-sep{border-left:1px solid #f0f0f0}
 .cota-table td.td-ytd{border-left:2px solid #7c3aed;background:#faf9ff}
 .cota-table td.td-ytd-pct{border-left:1px solid #ddd6fe;background:#faf9ff;font-weight:700}
@@ -6325,17 +6322,28 @@ function renderCotaTableDist(meses, distritos) {
 // mudar ao longo do ano) e o nome exibido é o do mês mais recente.
 var COTA_REP_LINHA = 'NEXUS';
 var COTA_REP_PROD  = ''; // '' = todos os produtos
+var COTA_REP_DIST  = ''; // GD escolhido no seletor da seção ('' = primeiro da linha)
 
 function cotaRepLinha() {
   var dist = cotaDistFiltro();
   return dist ? dist.linha : COTA_REP_LINHA;
 }
 
+// Mostra um GD (distrito) por vez: o do filtro do topo ou o do seletor da seção
+function cotaRepDistId() {
+  var dist = cotaDistFiltro();
+  if (dist) return dist.distrito_id;
+  var linha = cotaRepLinha();
+  var dists = (window._cotaDistritos || []).filter(function(d) { return d.linha === linha; });
+  if (!dists.some(function(d) { return d.distrito_id === COTA_REP_DIST; })) COTA_REP_DIST = dists.length ? dists[0].distrito_id : '';
+  return COTA_REP_DIST;
+}
+
 function cotaRepArr(mes, linha) {
   var d = DADOS_CACHE[mes]; if (!d) return [];
-  var dist = cotaDistFiltro();
+  var distId = cotaRepDistId();
   return (linha === 'NEXUS' ? (d.prodRepNex||[]) : (d.prodRepVit||[])).filter(function(r) {
-    return (!dist || r.distrito_id === dist.distrito_id) &&
+    return r.distrito_id === distId &&
       (!COTA_REP_PROD || normProd(r.produto) === COTA_REP_PROD);
   });
 }
@@ -6393,7 +6401,7 @@ function renderCotaTableRep(meses, distritos) {
   }
   function val(m, s, k) { var a = porMes[m][s]; return a ? a[k] : 0; }
 
-  var html = '<div class="cota-table-wrap cota-rep-scroll"><table class="cota-table">';
+  var html = '<div class="cota-table-wrap"><table class="cota-table">';
   html += '<thead><tr>';
   html += '<th class="th-label" rowspan="2">Distrito / Representante</th>';
   meses.forEach(function(m) {
@@ -6439,11 +6447,17 @@ function renderCotaRepBloco() {
       return '<option value="' + p.key + '"' + (p.key === COTA_REP_PROD ? ' selected' : '') + '>' + p.nome + (isMarcaChave(p.key, linha) ? ' ★' : '') + '</option>';
     }).join('') +
   '</select>';
+  var distId = cotaRepDistId();
+  var selGd = dist ? '' : '<select onchange="cotaRepSetDist(this.value)" style="padding:6px 10px;border-radius:8px;border:2px solid var(--border);font-size:11px;font-weight:700;font-family:inherit;color:var(--dark);background:#fff;cursor:pointer">' +
+    (window._cotaDistritos || []).filter(function(d) { return d.linha === linha; }).map(function(d) {
+      return '<option value="' + d.distrito_id + '"' + (d.distrito_id === distId ? ' selected' : '') + '>' + cotaDistNome(d) + ' · ' + d.distrito_id + '</option>';
+    }).join('') +
+  '</select>';
   return '<div class="cota-tabs" style="align-items:center">' +
       (dist ? '' :
         '<button class="cota-tab' + (linha === 'NEXUS' ? ' an' : '') + '" onclick="cotaRepSetLinha(\'NEXUS\')">NEXUS</button>' +
         '<button class="cota-tab' + (linha === 'VITAL' ? ' av' : '') + '" onclick="cotaRepSetLinha(\'VITAL\')">VITAL</button>') +
-      sel +
+      selGd + sel +
     '</div>' +
     renderCotaTableRep(meses, window._cotaDistritos || []);
 }
@@ -6451,6 +6465,10 @@ function renderCotaRepBloco() {
 function cotaRepSetLinha(linha) {
   COTA_REP_LINHA = linha;
   COTA_REP_PROD = '';
+  document.getElementById('cota-rep-wrap').innerHTML = renderCotaRepBloco();
+}
+function cotaRepSetDist(distId) {
+  COTA_REP_DIST = distId;
   document.getElementById('cota-rep-wrap').innerHTML = renderCotaRepBloco();
 }
 function cotaRepSetProd(prod) {
