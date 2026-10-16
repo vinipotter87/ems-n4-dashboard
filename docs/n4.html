@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>EMS | Reunião N4 — Apresentação</title>
+<style>
+:root{--red:#C8102E;--red-l:#fce8ec;--orange:#E87722;--nexus:#1A3A6B;--green:#15693A;--green-l:#E8F5EE;
+--yellow:#9C6D00;--yellow-l:#FFF7E0;--dark:#111827;--gray:#6B7280;--light:#F3F4F6;--border:#E5E7EB;
+--brand:#0057B8;--brand-d:#003D82;--text:#111827}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:'Segoe UI',system-ui,-apple-system,Arial,sans-serif;background:#0b1f3f;color:var(--text);overflow:hidden}
+button,select,textarea,input{font-family:inherit}
+
+/* ── barra superior ── */
+.top{height:52px;background:var(--brand-d);color:#fff;display:flex;align-items:center;gap:14px;padding:0 18px}
+.logo{background:#fff;color:var(--brand);font-weight:900;font-size:15px;padding:4px 9px;border-radius:6px;letter-spacing:.5px}
+.top h1{font-size:14px;font-weight:700;white-space:nowrap}
+.top .sp{flex:1}
+.top label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;opacity:.75}
+.top select{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:7px;padding:5px 8px;font-size:12px;font-weight:600;max-width:230px}
+.top select option{color:#111}
+.top a{color:#fff;font-size:11px;font-weight:700;text-decoration:none;opacity:.85;white-space:nowrap}
+
+/* ── palco ── */
+.stage{height:calc(100% - 52px - 46px);padding:12px 18px 6px;display:flex}
+.slide{display:none;flex:1;background:#fff;border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,.35);overflow:hidden;flex-direction:column;min-height:0}
+.slide.on{display:flex}
+.s-hdr{display:flex;align-items:center;gap:14px;padding:11px 24px 9px;border-bottom:3px solid var(--brand)}
+.s-tag{background:var(--brand);color:#fff;font-weight:900;font-size:17px;border-radius:9px;padding:6px 12px;letter-spacing:.5px}
+.s-hdr h2{font-size:20px;font-weight:800;color:var(--brand-d)}
+.s-hdr .s-sub{font-size:12px;color:var(--gray);margin-top:2px}
+.s-hdr .s-ctx{margin-left:auto;text-align:right;font-size:12px;color:var(--gray);font-weight:600;white-space:nowrap}
+.s-hdr .s-ctx b{display:block;color:var(--text);font-size:14px}
+.s-body{flex:1;min-height:0;overflow:hidden;padding:12px 24px}
+.fit{display:flex;gap:18px}
+.col{flex:1;min-width:0;display:flex;flex-direction:column;gap:10px}
+.col.narrow{flex:0 0 300px}
+.s-foot{padding:4px 24px 8px;font-size:10.5px;color:var(--gray);line-height:1.45}
+
+/* ── peças ── */
+.kpis{display:flex;gap:12px;flex-wrap:wrap}
+.kpi{flex:1;min-width:130px;border:1px solid var(--border);border-top:4px solid var(--brand);border-radius:10px;padding:7px 12px}
+.kpi.ok{border-top-color:#22c55e}.kpi.warn{border-top-color:#f59e0b}.kpi.crit{border-top-color:#ef4444}
+.kpi .l{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--gray)}
+.kpi .v{font-size:21px;font-weight:800;line-height:1.15;margin-top:2px}
+.kpi .s{font-size:11px;color:var(--gray);margin-top:1px}
+h3{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--brand-d);margin-bottom:6px}
+table.t{width:100%;border-collapse:collapse;font-size:12.5px}
+table.t th{background:#f1f5f9;color:#334155;font-size:10px;text-transform:uppercase;letter-spacing:.4px;padding:5px 8px;text-align:right;font-weight:700}
+table.t th:first-child,table.t td:first-child{text-align:left}
+table.t td{padding:3.5px 8px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap}
+table.t td:first-child{white-space:normal;font-weight:600}
+table.t tr.tot td{background:#f3f4f6;font-weight:800}
+.pct{font-weight:800}.pct.ok{color:#15803d}.pct.warn{color:#b45309}.pct.crit{color:#b91c1c}
+.cell{display:inline-block;min-width:54px;padding:1.5px 6px;border-radius:6px;font-weight:700;font-size:12px;text-align:center}
+.cell.ok{background:#dcfce7;color:#166534}.cell.warn{background:#fef3c7;color:#92400e}.cell.crit{background:#fee2e2;color:#991b1b}.cell.na{background:#f3f4f6;color:#9ca3af}
+.bar{display:inline-block;width:90px;height:8px;background:#e5e7eb;border-radius:4px;overflow:hidden;vertical-align:middle;margin-left:6px}
+.bar i{display:block;height:100%;border-radius:4px}
+.bar i.ok{background:#22c55e}.bar i.warn{background:#f59e0b}.bar i.crit{background:#ef4444}
+.tag{display:inline-block;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.3px}
+.tag.OURO{background:#fef3c7;color:#92400e}.tag.PRATA{background:#e5e7eb;color:#374151}.tag.BRONZE{background:#fde5d0;color:#9a3412}
+.tag.ATENCAO{background:#fef9c3;color:#854d0e}.tag.CRITICO{background:#fee2e2;color:#991b1b}
+.tag.Destaque{background:#dcfce7;color:#166534}.tag.Performance{background:#ffedd5;color:#9a3412}.tag.Start{background:#fee2e2;color:#991b1b}
+.pts{background:#f8fafc;border:1px solid var(--border);border-left:4px solid var(--orange);border-radius:9px;padding:10px 14px;font-size:12.5px;line-height:1.55}
+.pts ul{margin-left:16px}.pts li{margin:2px 0}
+.empty{border:2px dashed var(--border);border-radius:12px;padding:22px;color:var(--gray);font-size:13px;line-height:1.6;text-align:center}
+.notes{display:flex;flex-direction:column;flex:1;min-height:90px}
+.notes textarea{flex:1;min-height:60px;resize:none;border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.5;background:#fffef7}
+.notes textarea:focus{outline:2px solid var(--brand);border-color:var(--brand)}
+.notes small{font-size:10px;color:var(--gray);margin-top:4px}
+.aviso{background:#fef2f2;color:#991b1b;font-size:11.5px;font-weight:700;padding:7px 12px;border-radius:8px}
+
+/* capa */
+.capa{flex:1;display:flex;background:linear-gradient(135deg,var(--brand-d),var(--brand));color:#fff}
+.capa-l{flex:1.1;padding:54px 50px;display:flex;flex-direction:column;justify-content:center}
+.capa-l .k{font-size:13px;font-weight:700;letter-spacing:3px;text-transform:uppercase;opacity:.8}
+.capa-l h2{font-size:54px;font-weight:900;line-height:1.05;margin:10px 0 14px}
+.capa-l .gd{font-size:24px;font-weight:700}
+.capa-l .meta{font-size:14px;opacity:.85;margin-top:8px;line-height:1.6}
+.capa-r{flex:1;background:rgba(255,255,255,.08);padding:36px 40px;display:flex;flex-direction:column;justify-content:center;gap:7px}
+.capa-r .k{font-size:11px;font-weight:800;letter-spacing:2px;text-transform:uppercase;opacity:.75;margin-bottom:6px}
+.ag{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.1);border:none;color:#fff;border-radius:9px;padding:9px 14px;font-size:14.5px;font-weight:600;cursor:pointer;text-align:left}
+.ag:hover{background:rgba(255,255,255,.2)}
+.ag b{background:#fff;color:var(--brand-d);border-radius:6px;padding:2px 8px;font-size:12px;font-weight:900}
+
+/* ── navegação ── */
+.nav{height:46px;display:flex;align-items:center;gap:8px;padding:0 22px;color:#fff}
+.nav button{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:6px 14px;font-size:13px;font-weight:700;cursor:pointer}
+.nav button:hover:not(:disabled){background:rgba(255,255,255,.25)}
+.nav button:disabled{opacity:.35;cursor:default}
+.dots{flex:1;display:flex;justify-content:center;gap:6px;flex-wrap:wrap}
+.dot{background:rgba(255,255,255,.14);border:1px solid transparent;color:#fff;border-radius:7px;padding:4px 9px;font-size:11px;font-weight:700;cursor:pointer}
+.dot.on{background:#fff;color:var(--brand-d)}
+.cnt{font-size:12px;font-weight:700;opacity:.8;min-width:54px;text-align:right}
+.loading{position:fixed;inset:0;background:rgba(11,31,63,.82);color:#fff;display:none;align-items:center;justify-content:center;font-size:15px;font-weight:700;z-index:9}
+@media print{body{overflow:visible;background:#fff}.top,.nav{display:none}.stage{height:auto;display:block;padding:0}.slide{display:flex!important;box-shadow:none;page-break-after:always;height:100vh;border-radius:0}}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="logo">EMS</div>
+  <h1>Reunião N4 — Apresentação</h1>
+  <div class="sp"></div>
+  <label for="sel-reg">Regional</label>
+  <select id="sel-reg"><option value="SPI">SPI OESTE</option><option value="LESTE">LESTE</option></select>
+  <label for="sel-mes">Mês</label>
+  <select id="sel-mes"></select>
+  <label for="sel-gd">GD</label>
+  <select id="sel-gd"></select>
+  <a id="lnk-dash" href="index.html">← Dashboard</a>
+</div>
+
+<div class="stage" id="stage"></div>
+
+<div class="nav">
+  <button id="btn-prev">← Anterior</button>
+  <div class="dots" id="dots"></div>
+  <span class="cnt" id="cnt"></span>
+  <button id="btn-next">Próximo →</button>
+</div>
+<div class="loading" id="loading">Carregando dados…</div>
+
+<script>
+// ── Apresentação da reunião N4 ───────────────────────────────────
+// Um slide por tema oficial da N4 (B1 a B8), na ordem das diretrizes do
+// time de Demanda: reunião mensal, individual, GRD/GN + GD. Os dados vêm
+// das mesmas abas do Google Sheets que alimentam o dashboard; os blocos
+// que o dashboard não cobre (combinados anteriores, Consultório Virtual,
+// Trilha de Capacitação) ficam como slide de pauta com anotações.
+// As anotações ficam só neste navegador (localStorage).
+
+var MESES = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+var BLOCOS = [
+  {id:'capa', tag:'N4',  nome:'Abertura'},
+  {id:'b1',   tag:'B1',  nome:'Combinados anteriores', sub:'Verificação da execução dos combinados da reunião anterior'},
+  {id:'b2',   tag:'B2',  nome:'Marcas Chave',          sub:'Cobertura do objetivo nas marcas-chave'},
+  {id:'b3',   tag:'B3',  nome:'Produtividade',         sub:'MDV, cobertura de painel e visitas acompanhadas'},
+  {id:'b4',   tag:'B4',  nome:'CRM Chave',             sub:'Interações e cobertura do painel de médicos-chave'},
+  {id:'b5',   tag:'B5',  nome:'Consultório Virtual',   sub:''},
+  {id:'b6',   tag:'B6',  nome:'Trilha de Capacitação', sub:'Do GD e do distrito'},
+  {id:'b7',   tag:'B7',  nome:'Jornada de Produtividade', sub:'Tratativas'},
+  {id:'b8',   tag:'B8',  nome:'PEX',                   sub:'Pontuação e medalhas do distrito'},
+  {id:'fim',  tag:'✓',   nome:'Combinados e próxima N4'}
+];
+// Marcas-chave por linha (mesma regra do dashboard)
+var MARCAS_CHAVE = {
+  NEXUS: [{desde:'JAN', m:['BRAMICAR','BRAMICAR HCT','OLIRE','LYBERDIA']}, {desde:'JUL', m:['CONCARDIO','LYBERDIA','OZIVY']}],
+  VITAL: [{desde:'JAN', m:['BRASART HCT','BRASART BCC','LINADIB','LINADIB DUO','BUPIUM XL']}, {desde:'JUL', m:['OZIVY','LINADIB','LINADIB DUO','BUPIUM XL']}]
+};
+// Meses em que o PEX no dashboard é simulação, não o resultado oficial
+var PEX_SIMULADO = {SPI:['SET'], LESTE:['SET']};
+
+var CONFIG = {}, ST = {reg:'SPI', mes:null, gd:null, slide:0, distritos:[], d:{}};
+var CACHE = {};
+
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function num(v){ var n = parseFloat(String(v).replace(',', '.')); return isNaN(n) ? null : n; }
+function f1(v){ return v === null ? '—' : v.toFixed(1).replace('.', ','); }
+function pct(v){ return v === null ? '—' : f1(v) + '%'; }
+function brl(v){ return v === null ? '—' : 'R$ ' + Math.round(v).toLocaleString('pt-BR'); }
+function cls(v, ok, warn){ if (v === null) return 'na'; return v >= (ok || 100) ? 'ok' : (v >= (warn || 80) ? 'warn' : 'crit'); }
+function bar(v, c){ var w = v === null ? 0 : Math.max(0, Math.min(100, v)); return '<span class="bar"><i class="' + c + '" style="width:' + w + '%"></i></span>'; }
+function sfx(){ return ST.reg === 'LESTE' ? '_LESTE' : ''; }
+function aba(base, mes){ return base + sfx() + (mes ? '_' + mes : ''); }
+function mesAnterior(m){ var i = MESES.indexOf(m); return i > 0 ? MESES[i - 1] : null; }
+function marcasChave(linha, mes){
+  var h = MARCAS_CHAVE[linha] || [], out = [];
+  h.forEach(function(x){ if (MESES.indexOf(x.desde) <= MESES.indexOf(mes)) out = x.m; });
+  return out;
+}
+
+async function fetchAba(nome, tent){
+  if (CACHE[nome]) return CACHE[nome];
+  tent = tent || 0;
+  var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + CONFIG.spreadsheet_id + '/values/' + encodeURIComponent(nome) + '?key=' + CONFIG.api_key;
+  var res = await fetch(url, {cache:'no-store'});
+  if (res.status === 429 && tent < 6){
+    await new Promise(function(r){ setTimeout(r, 600 * Math.pow(1.8, tent) + Math.random() * 400); });
+    return fetchAba(nome, tent + 1);
+  }
+  if (!res.ok) return (CACHE[nome] = []); // aba inexistente = sem dado para esse mês
+  var rows = (await res.json()).values || [];
+  if (rows.length < 2) return (CACHE[nome] = []);
+  var h = rows[0];
+  return (CACHE[nome] = rows.slice(1).map(function(r){ var o = {}; h.forEach(function(k, i){ o[k] = r[i] !== undefined ? r[i] : ''; }); return o; }));
+}
+
+// ── notas (localStorage) ──
+function notaKey(bloco){ return 'n4:' + ST.reg + ':' + ST.mes + ':' + ST.gd + ':' + bloco; }
+function notaGet(bloco){ try { return localStorage.getItem(notaKey(bloco)) || ''; } catch(e){ return ''; } }
+function notaSet(bloco, v){ try { localStorage.setItem(notaKey(bloco), v); } catch(e){} }
+function notasHtml(bloco, titulo, ph){
+  return '<div class="notes"><h3>' + (titulo || 'Anotações da reunião') + '</h3>' +
+    '<textarea data-nota="' + bloco + '" placeholder="' + esc(ph || 'Digite aqui o que foi discutido neste bloco…') + '">' + esc(notaGet(bloco)) + '</textarea>' +
+    '<small>Fica salvo só neste navegador.</small></div>';
+}
+
+// ── slides ──
+function hdr(b){
+  var d = ST.d.distrito || {};
+  return '<div class="s-hdr"><span class="s-tag">' + b.tag + '</span><div><h2>' + b.nome + '</h2>' +
+    (b.sub ? '<div class="s-sub">' + b.sub + '</div>' : '') + '</div>' +
+    '<div class="s-ctx"><b>' + esc(d.nm || '') + '</b>' + esc(d.linha || '') + ' · ' + ST.mes + '/2026</div></div>';
+}
+function kpi(l, v, s, c){ return '<div class="kpi ' + (c || '') + '"><div class="l">' + l + '</div><div class="v">' + v + '</div><div class="s">' + (s || '') + '</div></div>'; }
+
+function sCapa(){
+  var d = ST.d.distrito || {};
+  var h = '<div class="capa"><div class="capa-l"><div class="k">Reunião N4 · ' + (ST.reg === 'LESTE' ? 'Regional Leste' : 'Regional SPI Oeste') + '</div>' +
+    '<h2>N4 — ' + ST.mes + '/2026</h2><div class="gd">' + esc(d.nm || 'Selecione um GD') + '</div>' +
+    '<div class="meta">Linha ' + esc(d.linha || '—') + ' · distrito ' + esc((d.distrito_id || '').substring(0, 6)) + ' · ' + (ST.d.reps || []).filter(function(r){ return r.vago !== 'True'; }).length + ' representantes ativos<br>' +
+    'Reunião mensal e individual, GRD/GN + GD, ~30 min</div></div>';
+  h += '<div class="capa-r"><div class="k">Pauta oficial</div>';
+  BLOCOS.forEach(function(b, i){ if (i === 0) return; h += '<button class="ag" data-go="' + i + '"><b>' + b.tag + '</b>' + b.nome + '</button>'; });
+  return h + '</div></div>';
+}
+
+function sSemDado(b, oQue, perguntas){
+  var h = hdr(b) + '<div class="s-body"><div class="col">';
+  h += '<div class="empty"><b>Este bloco não tem dado no dashboard.</b><br>' + oQue + '</div>';
+  h += '<div class="pts"><b>Roteiro do bloco</b><ul>' + perguntas.map(function(p){ return '<li>' + p + '</li>'; }).join('') + '</ul></div>';
+  h += '</div><div class="col">' + notasHtml(b.id) + '</div></div>';
+  return h;
+}
+
+function sB2(b){
+  var d = ST.d.distrito, linha = d.linha, chaves = marcasChave(linha, ST.mes);
+  var pd = ST.d.prodDist.filter(function(r){ return r.distrito_id === d.distrito_id; });
+  var pdAnt = ST.d.prodDistAnt.filter(function(r){ return r.distrito_id === d.distrito_id; });
+  var pr = ST.d.prodRep.filter(function(r){ return r.distrito_id === d.distrito_id; });
+  var h = hdr(b) + '<div class="s-body"><div class="col">';
+  if (!pd.length){ h += '<div class="empty">Sem dados de cota/produto para ' + ST.mes + '.</div></div></div>'; return h; }
+  var totC = 0, totR = 0, abaixo = [];
+  h += '<div><h3>Marcas-chave do distrito — ' + chaves.join(' · ') + '</h3><table class="t"><thead><tr><th>Marca</th><th>Cota</th><th>Realizado</th><th>Cobertura</th>' + (ST.mesAnt ? '<th>vs ' + ST.mesAnt + '</th>' : '') + '</tr></thead><tbody>';
+  chaves.forEach(function(m){
+    var r = pd.filter(function(x){ return x.produto.toUpperCase().trim() === m; })[0];
+    if (!r){ h += '<tr><td>' + m + '</td><td colspan="' + (ST.mesAnt ? 4 : 3) + '" style="text-align:center;color:#9ca3af">sem cota no mês</td></tr>'; return; }
+    var c = num(r.cota), re = num(r.realizado), a = c ? re / c * 100 : null;
+    var ra = pdAnt.filter(function(x){ return x.produto.toUpperCase().trim() === m; })[0];
+    var aa = ra && num(ra.cota) ? num(ra.realizado) / num(ra.cota) * 100 : null;
+    totC += c || 0; totR += re || 0;
+    if (a !== null && a < 100) abaixo.push(m + ' (' + pct(a) + ', faltam ' + brl(c - re) + ')');
+    h += '<tr><td>' + m + '</td><td>' + brl(c) + '</td><td>' + brl(re) + '</td><td><span class="pct ' + cls(a) + '">' + pct(a) + '</span>' + bar(a, cls(a)) + '</td>';
+    if (ST.mesAnt) h += '<td>' + (aa === null || a === null ? '—' : ((a - aa >= 0 ? '▲ +' : '▼ ') + f1(a - aa) + ' pp')) + '</td>';
+    h += '</tr>';
+  });
+  var at = totC ? totR / totC * 100 : null;
+  h += '<tr class="tot"><td>Marcas-chave (soma)</td><td>' + brl(totC) + '</td><td>' + brl(totR) + '</td><td><span class="pct ' + cls(at) + '">' + pct(at) + '</span>' + bar(at, cls(at)) + '</td>' + (ST.mesAnt ? '<td></td>' : '') + '</tr>';
+  h += '</tbody></table></div>';
+
+  // matriz rep × marca
+  var reps = {}; pr.forEach(function(r){ (reps[r.setor_id] = reps[r.setor_id] || {nome:r.nome, m:{}}).m[r.produto.toUpperCase().trim()] = num(r.cota) ? num(r.realizado) / num(r.cota) * 100 : null; });
+  h += '<div><h3>Cobertura por representante</h3><table class="t"><thead><tr><th>Representante</th>' + chaves.map(function(m){ return '<th style="text-align:center">' + m + '</th>'; }).join('') + '<th style="text-align:center">Marcas ≥100%</th></tr></thead><tbody>';
+  var semNenhuma = [];
+  Object.keys(reps).sort().forEach(function(s){
+    var r = reps[s], n = 0, t = 0;
+    h += '<tr><td>' + esc(r.nome) + '</td>' + chaves.map(function(m){
+      var v = r.m[m]; if (v === undefined) v = null; if (v !== null){ t++; if (v >= 100) n++; }
+      return '<td style="text-align:center"><span class="cell ' + cls(v) + '">' + pct(v) + '</span></td>';
+    }).join('') + '<td style="text-align:center"><b>' + n + '/' + t + '</b></td></tr>';
+    if (t && n === 0) semNenhuma.push(r.nome);
+  });
+  h += '</tbody></table></div></div>';
+
+  h += '<div class="col narrow"><div class="kpis">' + kpi('Marcas-chave', pct(at), brl(totR) + ' de ' + brl(totC), cls(at)) + '</div>';
+  h += '<div class="pts"><b>Pontos para a conversa</b><ul>';
+  h += abaixo.length ? abaixo.map(function(x){ return '<li>Abaixo do objetivo: ' + x + '</li>'; }).join('') : '<li>Todas as marcas-chave acima de 100% no distrito.</li>';
+  if (semNenhuma.length) h += '<li>Sem nenhuma marca-chave em 100%: ' + semNenhuma.map(esc).join(', ') + '</li>';
+  h += '</ul></div>' + notasHtml(b.id) + '</div></div>';
+  h += '<div class="s-foot">Cobertura = realizado ÷ cota do mês (demanda, preço fábrica). Setores vagos não aparecem na tabela por representante.</div>';
+  return h;
+}
+
+function prodPct(v){ var n = num(v); return n === null ? null : (n < 5 ? n * 100 : n); }
+function sB3(b){
+  var d = ST.d.distrito, reps = ST.d.reps.filter(function(r){ return r.vago !== 'True'; });
+  var pD = prodPct(d.prod), dAnt = ST.d.distritoAnt, pA = dAnt ? prodPct(dAnt.prod) : null;
+  var vis = ST.d.visitas.filter(function(v){ return v.distrito_id === d.distrito_id; })[0];
+  var abaixo = reps.filter(function(r){ var p = num(r.prod); return p !== null && p < 100; });
+  var h = hdr(b) + '<div class="s-body"><div class="col"><div class="kpis">';
+  h += kpi('Produtividade MDV', pct(pD), pA !== null && pD !== null ? ((pD - pA >= 0 ? '▲ +' : '▼ ') + f1(pD - pA) + ' pp vs ' + ST.mesAnt) : 'do distrito', cls(pD));
+  h += kpi('Reps ≥ 100%', (reps.length - abaixo.length) + '/' + reps.length, abaixo.length + ' abaixo do objetivo', abaixo.length ? 'warn' : 'ok');
+  if (vis){ var vc = num(vis.cob_pct); h += kpi('Visitas acompanhadas', f1(num(vis.real)).replace(',0', '') + '/' + f1(num(vis.obj)).replace(',0', ''), pct(vc) + ' do objetivo · ' + f1(num(vis.dias)).replace(',0', '') + ' dias', cls(vc)); }
+  h += '</div>';
+  h += '<div><h3>Representantes</h3><table class="t"><thead><tr><th>Representante</th><th>Produtividade</th><th>Cob. painel</th><th>Q1</th><th>Q2</th><th>Q3</th><th>Dias trab.</th></tr></thead><tbody>';
+  reps.slice().sort(function(a, c){ return (num(c.prod) || 0) - (num(a.prod) || 0); }).forEach(function(r){
+    var p = num(r.prod), cp = num(r.cob_painel);
+    h += '<tr><td>' + esc(r.nome) + '</td><td><span class="pct ' + cls(p) + '">' + pct(p) + '</span>' + bar(p, cls(p)) + '</td><td><span class="pct ' + cls(cp, 90, 80) + '">' + pct(cp) + '</span></td>' +
+      '<td>' + pct(num(r.q1)) + '</td><td>' + pct(num(r.q2)) + '</td><td>' + pct(num(r.q3)) + '</td><td>' + f1(num(r.dias_trabalhados)).replace(',0', '') + '</td></tr>';
+  });
+  h += '</tbody></table></div></div>';
+  h += '<div class="col narrow"><div class="pts"><b>Pontos para a conversa</b><ul>';
+  h += abaixo.length ? '<li>Abaixo de 100% de MDV: ' + abaixo.map(function(r){ return esc(r.nome) + ' (' + pct(num(r.prod)) + ')'; }).join('; ') + '</li>' : '<li>Todos os representantes ativos em 100% ou mais de MDV.</li>';
+  var semDado = reps.filter(function(r){ return num(r.prod) === null; });
+  if (semDado.length) h += '<li>Sem dado de produtividade: ' + semDado.map(function(r){ return esc(r.nome); }).join(', ') + '</li>';
+  if (vis && num(vis.cob_pct) !== null && num(vis.cob_pct) < 100) h += '<li>Visitas acompanhadas do GD em ' + pct(num(vis.cob_pct)) + ' do objetivo.</li>';
+  h += '</ul></div>' + notasHtml(b.id) + '</div></div>';
+  return h;
+}
+
+function sB4(b){
+  var d = ST.d.distrito, c = ST.d.crm.filter(function(x){ return x.distrito_id === d.distrito_id; })[0];
+  var ca = ST.d.crmAnt.filter(function(x){ return x.distrito_id === d.distrito_id; })[0];
+  var h = hdr(b) + '<div class="s-body"><div class="col">';
+  if (!c){ h += '<div class="empty">Sem dados de CRM Chave para ' + ST.mes + '.</div>'; }
+  else {
+    var ci = num(c.cob_interacoes), cp = num(c.cob_painel), ri = num(c.real_interacoes), oi = num(c.obj_interacoes);
+    h += '<div class="kpis">' + kpi('Interações', (ri === null ? '—' : f1(ri).replace(',0', '')) + '/' + f1(oi).replace(',0', ''), 'realizado ÷ objetivo', cls(ci)) +
+      kpi('Cobertura de interações', pct(ci), ca && num(ca.cob_interacoes) !== null && ci !== null ? ((ci - num(ca.cob_interacoes) >= 0 ? '▲ +' : '▼ ') + f1(ci - num(ca.cob_interacoes)) + ' pp vs ' + ST.mesAnt) : '', cls(ci)) +
+      kpi('Painel de médicos-chave', f1(num(c.painel)).replace(',0', ''), 'médicos no painel') +
+      kpi('Cobertura do painel', pct(cp), '', cls(cp)) + '</div>';
+    h += '<div class="pts"><b>Pontos para a conversa</b><ul>';
+    if (ri === null) h += '<li>Nenhuma interação registrada no mês.</li>';
+    else if (ci < 100) h += '<li>Faltam ' + f1(oi - ri).replace(',0', '') + ' interações para o objetivo de ' + f1(oi).replace(',0', '') + '.</li>';
+    else h += '<li>Objetivo de interações cumprido.</li>';
+    if (cp !== null && cp < 100) h += '<li>Painel coberto em ' + pct(cp) + ': quais médicos-chave ainda não foram visitados?</li>';
+    h += '</ul></div>';
+  }
+  h += '</div><div class="col">' + notasHtml(b.id) + '</div></div>';
+  h += '<div class="s-foot">Fonte: Velos — Produtividade EMS (GD), mesmo dado da seção CRM Chave do dashboard.</div>';
+  return h;
+}
+
+function sB7(b){
+  var d = ST.d.distrito, jor = {}; ST.d.jornada.forEach(function(j){ jor[j.setor_id] = j.classificacao; });
+  var reps = ST.d.reps.filter(function(r){ return r.vago !== 'True'; });
+  var grupos = {Destaque:[], Performance:[], Start:[], 'Sem classificação':[]};
+  reps.forEach(function(r){ var k = jor[r.setor_id]; (grupos[k] || grupos['Sem classificação']).push(r); });
+  var trat = reps.filter(function(r){ var p = num(r.prod); return p !== null && p < 100; });
+  var h = hdr(b) + '<div class="s-body"><div class="col"><div class="kpis">';
+  ['Destaque','Performance','Start'].forEach(function(k){
+    var g = grupos[k], ps = g.map(function(r){ return num(r.prod); }).filter(function(x){ return x !== null; });
+    var m = ps.length ? ps.reduce(function(a, c){ return a + c; }, 0) / ps.length : null;
+    h += kpi(k, g.length, 'prod. média ' + pct(m), k === 'Destaque' ? 'ok' : (k === 'Performance' ? 'warn' : 'crit'));
+  });
+  h += '</div><div><h3>Representantes por estágio</h3><table class="t"><thead><tr><th>Representante</th><th style="text-align:center">Jornada</th><th>Produtividade</th><th>Cob. painel</th></tr></thead><tbody>';
+  ['Destaque','Performance','Start','Sem classificação'].forEach(function(k){
+    grupos[k].slice().sort(function(a, c){ return (num(c.prod) || 0) - (num(a.prod) || 0); }).forEach(function(r){
+      var p = num(r.prod);
+      h += '<tr><td>' + esc(r.nome) + '</td><td style="text-align:center">' + (k === 'Sem classificação' ? '<span style="color:#9ca3af">—</span>' : '<span class="tag ' + k + '">' + k + '</span>') + '</td>' +
+        '<td><span class="pct ' + cls(p) + '">' + pct(p) + '</span>' + bar(p, cls(p)) + '</td><td>' + pct(num(r.cob_painel)) + '</td></tr>';
+    });
+  });
+  h += '</tbody></table></div></div>';
+  h += '<div class="col narrow"><div class="pts"><b>Tratativas — quem está abaixo de 100%</b><ul>';
+  h += trat.length ? trat.map(function(r){ return '<li>' + esc(r.nome) + ' — ' + (jor[r.setor_id] || 'sem classificação') + ', ' + pct(num(r.prod)) + '</li>'; }).join('') : '<li>Nenhum representante abaixo de 100% de produtividade.</li>';
+  h += '</ul></div>' + notasHtml(b.id, 'Tratativas combinadas') + '</div></div>';
+  h += '<div class="s-foot">Estágio = "Posição atual" da Jornada da Evolução (snapshot mais recente no dashboard, não é mensal). Produtividade = MDV do mês.</div>';
+  return h;
+}
+
+function medCls(m){ return String(m || '').toUpperCase().replace('Ç', 'C').replace('Ã', 'A').replace('Í', 'I'); }
+function sB8(b){
+  var d = ST.d.distrito, pex = ST.d.pex.filter(function(p){ return p.distrito_id === d.distrito_id; });
+  var ant = {}; ST.d.pexAnt.forEach(function(p){ ant[p.setor_id] = p; });
+  var h = hdr(b) + '<div class="s-body"><div class="col">';
+  if (!pex.length){ h += '<div class="empty">PEX de ' + ST.mes + ' ainda não disponível no dashboard.</div></div><div class="col">' + notasHtml(b.id) + '</div></div>'; return h; }
+  var sim = (PEX_SIMULADO[ST.reg] || []).indexOf(ST.mes) >= 0;
+  if (sim) h += '<div class="aviso">⚠️ SIMULADO — pontuação estimada a partir dos dados do mês. Não é o resultado oficial do PEX.</div>';
+  var cont = {}; pex.forEach(function(p){ var k = medCls(p.medalha); cont[k] = (cont[k] || 0) + 1; });
+  var pts = pex.map(function(p){ return num(p.pts); }).filter(function(x){ return x !== null; });
+  var media = pts.length ? pts.reduce(function(a, c){ return a + c; }, 0) / pts.length : null;
+  var medalhistas = (cont.OURO || 0) + (cont.PRATA || 0) + (cont.BRONZE || 0);
+  h += '<div class="kpis">' + kpi('PEX médio', f1(media), pex.length + ' reps avaliados') + kpi('Ouro', cont.OURO || 0, '', 'ok') + kpi('Prata', cont.PRATA || 0) + kpi('Bronze', cont.BRONZE || 0) +
+    kpi('Atenção / Crítico', (cont.ATENCAO || 0) + (cont.CRITICO || 0), '', ((cont.ATENCAO || 0) + (cont.CRITICO || 0)) ? 'crit' : 'ok') + '</div>';
+  h += '<div><table class="t"><thead><tr><th>Representante</th><th>Pontos</th><th style="text-align:center">Medalha</th>' + (ST.mesAnt ? '<th style="text-align:center">' + ST.mesAnt + '</th><th>Δ pts</th>' : '') + '</tr></thead><tbody>';
+  pex.slice().sort(function(a, c){ return num(c.pts) - num(a.pts); }).forEach(function(p){
+    var a = ant[p.setor_id], dp = a ? num(p.pts) - num(a.pts) : null;
+    h += '<tr><td>' + esc(p.nome) + '</td><td><b>' + f1(num(p.pts)) + '</b></td><td style="text-align:center"><span class="tag ' + medCls(p.medalha) + '">' + esc(p.medalha) + '</span></td>';
+    if (ST.mesAnt) h += '<td style="text-align:center">' + (a ? '<span class="tag ' + medCls(a.medalha) + '">' + esc(a.medalha) + '</span>' : '—') + '</td><td>' + (dp === null ? '—' : (dp >= 0 ? '+' : '') + f1(dp)) + '</td>';
+    h += '</tr>';
+  });
+  h += '</tbody></table></div></div>';
+  var caiu = pex.filter(function(p){ var a = ant[p.setor_id]; return a && num(p.pts) - num(a.pts) <= -5; });
+  var risco = pex.filter(function(p){ var k = medCls(p.medalha); return k === 'ATENCAO' || k === 'CRITICO'; });
+  h += '<div class="col narrow"><div class="pts"><b>Pontos para a conversa</b><ul><li>' + medalhistas + ' de ' + pex.length + ' representantes medalhistas.</li>';
+  if (risco.length) h += '<li>Em atenção/crítico: ' + risco.map(function(p){ return esc(p.nome) + ' (' + f1(num(p.pts)) + ')'; }).join('; ') + '</li>';
+  if (caiu.length) h += '<li>Queda de 5 pts ou mais vs ' + ST.mesAnt + ': ' + caiu.map(function(p){ return esc(p.nome); }).join(', ') + '</li>';
+  h += '</ul></div>' + notasHtml(b.id) + '</div></div>';
+  return h;
+}
+
+function sFim(b){
+  var h = hdr(b) + '<div class="s-body"><div class="col">' +
+    notasHtml('fim-comb', 'Combinados da reunião', 'Um combinado por linha: o quê · responsável (GD, GRD ou GD + GRD) · prazo') + '</div>';
+  var prox = MESES[(MESES.indexOf(ST.mes) + 1) % 12];
+  h += '<div class="col"><div class="pts"><b>Próxima N4</b><ul><li>Data prevista: ' + prox + '/2026</li><li>Todo combinado precisa de responsável e prazo.</li><li>Opinião ou constatação não é combinado: só ação acordada.</li></ul></div>' +
+    notasHtml('fim-prox', 'Pontos de atenção para verificar na próxima N4', 'O que precisa ser conferido no próximo mês…') + '</div></div>';
+  h += '<div class="s-foot">As anotações desta apresentação ficam só neste navegador — a ata oficial continua sendo gerada a partir da transcrição da reunião.</div>';
+  return h;
+}
+
+function slideHtml(b){
+  if (!ST.d.distrito) return '<div class="s-body"><div class="empty" style="margin:auto">Selecione um GD para montar a apresentação.</div></div>';
+  switch (b.id){
+    case 'capa': return sCapa();
+    case 'b1': return sSemDado(b, 'Os combinados da N4 anterior ficam na ata (Notion, página "ATA 2026"). Abra a ata de ' + (ST.mesAnt || 'mês anterior') + ' deste GD e passe item a item.',
+      ['Cada combinado da reunião anterior: executado, em andamento ou não executado?', 'O que não foi executado: qual foi o impedimento e qual o novo prazo?', 'Algum combinado se repete há mais de um mês?']);
+    case 'b2': return sB2(b);
+    case 'b3': return sB3(b);
+    case 'b4': return sB4(b);
+    case 'b5': return sSemDado(b, 'Consultório Virtual ainda não é carregado no dashboard.',
+      ['Quantos médicos do distrito estão ativos no Consultório Virtual?', 'Quais representantes usaram a ferramenta no mês e com que resultado?', 'O que trava o uso e o que o GD vai fazer a respeito?']);
+    case 'b6': return sSemDado(b, 'A Trilha de Capacitação (do GD e do distrito) ainda não é carregada no dashboard.',
+      ['Trilha do GD: o que foi concluído no mês e o que está pendente?', 'Trilha do distrito: quem está em dia e quem está atrasado?', 'Qual capacitação tem mais impacto nas marcas-chave agora?']);
+    case 'b7': return sB7(b);
+    case 'b8': return sB8(b);
+    case 'fim': return sFim(b);
+  }
+  return '';
+}
+
+function render(){
+  var st = $('stage'), dots = $('dots'), hs = '', hd = '';
+  BLOCOS.forEach(function(b, i){
+    hs += '<section class="slide' + (i === ST.slide ? ' on' : '') + '" data-i="' + i + '">' + slideHtml(b) + '</section>';
+    hd += '<button class="dot' + (i === ST.slide ? ' on' : '') + '" data-go="' + i + '" title="' + b.nome + '">' + b.tag + '</button>';
+  });
+  st.innerHTML = hs; dots.innerHTML = hd;
+  // embrulha o conteúdo de cada slide para poder reduzir a escala quando não couber
+  document.querySelectorAll('.s-body').forEach(function(b){
+    var f = document.createElement('div'); f.className = 'fit';
+    while (b.firstChild) f.appendChild(b.firstChild);
+    b.appendChild(f);
+  });
+  $('cnt').textContent = (ST.slide + 1) + ' / ' + BLOCOS.length;
+  $('btn-prev').disabled = ST.slide === 0; $('btn-next').disabled = ST.slide === BLOCOS.length - 1;
+  ajustar();
+}
+// Slide sem rolagem: se o conteúdo do slide ativo passar da altura, reduz a
+// escala até caber (mínimo 60%).
+function ajustar(){
+  var b = document.querySelector('.slide.on .s-body'), f = b && b.querySelector('.fit');
+  if (!f) return;
+  var cs = getComputedStyle(b), disp = b.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+  function aplicar(z){ f.style.zoom = z; f.style.width = (100 / z) + '%'; f.style.height = (disp / z) + 'px'; }
+  aplicar(1);
+  for (var i = 0; i < 5; i++){
+    var z = parseFloat(f.style.zoom) || 1;
+    // altura do conteúdo (maior coluna), na escala atual
+    var alt = 0; [].forEach.call(f.children, function(c){ alt = Math.max(alt, c.scrollHeight); });
+    if (alt * z <= disp + 1 || z <= 0.6) break;
+    aplicar(Math.max(0.6, disp / alt * 0.985));
+  }
+}
+window.addEventListener('resize', ajustar);
+function ir(i){
+  ST.slide = Math.max(0, Math.min(BLOCOS.length - 1, i));
+  document.querySelectorAll('.slide').forEach(function(s){ s.classList.toggle('on', +s.getAttribute('data-i') === ST.slide); });
+  document.querySelectorAll('.dot').forEach(function(d){ d.classList.toggle('on', +d.getAttribute('data-go') === ST.slide); });
+  $('cnt').textContent = (ST.slide + 1) + ' / ' + BLOCOS.length;
+  $('btn-prev').disabled = ST.slide === 0; $('btn-next').disabled = ST.slide === BLOCOS.length - 1;
+  ajustar();
+}
+
+// ── carga ──
+function carregando(v, txt){ $('loading').style.display = v ? 'flex' : 'none'; if (txt) $('loading').textContent = txt; }
+
+async function carregarRegional(){
+  carregando(true, 'Carregando meses…');
+  $('lnk-dash').href = ST.reg === 'LESTE' ? 'leste.html' : 'index.html';
+  var cfg = await fetchAba(ST.reg === 'LESTE' ? 'config_LESTE' : 'config');
+  var meses = [], padrao = null;
+  cfg.forEach(function(r){ if (r.chave === 'meses_disponiveis') meses = r.valor.split(',').map(function(s){ return s.trim(); }); if (r.chave === 'mes_padrao') padrao = r.valor; });
+  if (!meses.length) meses = MESES.slice(0, 9);
+  if (meses.indexOf(ST.mes) < 0) ST.mes = padrao && meses.indexOf(padrao) >= 0 ? padrao : meses[meses.length - 1];
+  $('sel-mes').innerHTML = meses.map(function(m){ return '<option' + (m === ST.mes ? ' selected' : '') + '>' + m + '</option>'; }).join('');
+  await carregarMes();
+}
+async function carregarMes(){
+  carregando(true, 'Carregando distritos…');
+  ST.mesAnt = mesAnterior(ST.mes);
+  ST.distritos = await fetchAba(aba('distritos', ST.mes));
+  if (!ST.distritos.some(function(d){ return d.distrito_id === ST.gd; })) ST.gd = ST.distritos.length ? ST.distritos[0].distrito_id : null;
+  $('sel-gd').innerHTML = ST.distritos.map(function(d){ return '<option value="' + d.distrito_id + '"' + (d.distrito_id === ST.gd ? ' selected' : '') + '>' + esc(d.nm) + ' (' + d.linha + ')</option>'; }).join('');
+  await carregarGd();
+}
+async function carregarGd(){
+  ST.d = {};
+  var d = ST.distritos.filter(function(x){ return x.distrito_id === ST.gd; })[0];
+  if (!d){ render(); carregando(false); return; }
+  carregando(true, 'Carregando dados de ' + d.nm + '…');
+  var L = d.linha, m = ST.mes, a = ST.mesAnt, s = sfx();
+  var nomes = {
+    reps: aba('reps', m), prodDist: 'produtos_dist_' + L + s + '_' + m, prodRep: 'produtos_rep_' + L + s + '_' + m,
+    crm: aba('crm', m), visitas: 'visitas_' + L + s + '_' + m, pex: aba('pex', m), jornada: 'jornada' + s
+  };
+  if (a){ nomes.prodDistAnt = 'produtos_dist_' + L + s + '_' + a; nomes.pexAnt = aba('pex', a); nomes.crmAnt = aba('crm', a); nomes.distAnt = aba('distritos', a); }
+  var ks = Object.keys(nomes), res = {};
+  for (var i = 0; i < ks.length; i++) res[ks[i]] = await fetchAba(nomes[ks[i]]); // em série, para não estourar a cota do Sheets
+  ST.d = {
+    distrito: d, reps: res.reps.filter(function(r){ return r.distrito_id === d.distrito_id; }),
+    prodDist: res.prodDist, prodRep: res.prodRep, crm: res.crm, visitas: res.visitas, pex: res.pex, jornada: res.jornada,
+    prodDistAnt: res.prodDistAnt || [], pexAnt: res.pexAnt || [], crmAnt: res.crmAnt || [],
+    distritoAnt: (res.distAnt || []).filter(function(x){ return x.distrito_id === d.distrito_id; })[0] || null
+  };
+  render(); carregando(false);
+}
+
+document.addEventListener('click', function(e){
+  var t = e.target.closest('[data-go]'); if (t) ir(+t.getAttribute('data-go'));
+});
+document.addEventListener('input', function(e){
+  var b = e.target.getAttribute && e.target.getAttribute('data-nota'); if (b) notaSet(b, e.target.value);
+});
+document.addEventListener('keydown', function(e){
+  if (/TEXTAREA|SELECT|INPUT/.test(e.target.tagName)) return;
+  if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); ir(ST.slide + 1); }
+  if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); ir(ST.slide - 1); }
+  if (e.key === 'Home') ir(0);
+  if (e.key === 'End') ir(BLOCOS.length - 1);
+});
+$('btn-prev').onclick = function(){ ir(ST.slide - 1); };
+$('btn-next').onclick = function(){ ir(ST.slide + 1); };
+$('sel-reg').onchange = function(){ ST.reg = this.value; ST.gd = null; ST.slide = 0; carregarRegional().catch(erro); };
+$('sel-mes').onchange = function(){ ST.mes = this.value; carregarMes().catch(erro); };
+$('sel-gd').onchange = function(){ ST.gd = this.value; carregarGd().catch(erro); };
+function erro(e){ carregando(false); $('stage').innerHTML = '<section class="slide on"><div class="s-body"><div class="empty" style="margin:auto"><b>Erro ao carregar</b><br>' + esc(e.message) + '</div></div></section>'; }
+
+(async function(){
+  try {
+    var q = new URLSearchParams(location.search);
+    if ((q.get('regional') || '').toUpperCase() === 'LESTE') ST.reg = 'LESTE';
+    $('sel-reg').value = ST.reg;
+    var res = await fetch('config.json?t=' + Date.now(), {cache:'no-store'});
+    if (!res.ok) throw new Error('config.json não encontrado.');
+    CONFIG = await res.json();
+    await carregarRegional();
+  } catch(e){ erro(e); }
+})();
+</script>
+</body>
+</html>
