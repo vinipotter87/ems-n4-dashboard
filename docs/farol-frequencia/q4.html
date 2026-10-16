@@ -1,0 +1,571 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Q4 · Qualificação de painel · Farol da Frequência</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@200;400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#1F2D44; --navy-2:#1C2D46; --azul:#B6E4FA; --gelo:#DFF1FB; --aco:#5787A2;
+  --bg:#F3F9FD; --card:#FFFFFF; --line:#D6E6F0; --text:#1F2D44; --muted:#5787A2;
+  --verde:#1E9E62; --amarelo:#E3A008; --laranja:#E8701A; --vermelho:#D23F3F; --cinza:#56606B;
+  --verde-bg:#E3F5EC; --amarelo-bg:#FDF3D7; --laranja-bg:#FDE9DA; --vermelho-bg:#FBE3E3; --cinza-bg:#E7EAED;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'Sora',system-ui,-apple-system,'Segoe UI',sans-serif;font-size:13px;line-height:1.45}
+.num{font-variant-numeric:tabular-nums}
+button,select,input{font:inherit;color:inherit}
+
+.hdr{background:var(--navy);color:#fff;position:relative;overflow:hidden}
+.hdr::before,.hdr::after{content:"";position:absolute;border-radius:50%;background:var(--navy-2);filter:brightness(1.35);opacity:.55}
+.hdr::before{width:260px;height:260px;right:-60px;top:-120px}
+.hdr::after{width:170px;height:170px;right:130px;top:10px}
+.hdr-in{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:20px 24px;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.hdr img{height:20px;display:block}
+.hdr-sep{width:1px;height:38px;background:var(--aco)}
+.hdr h1{margin:0;font-size:21px;font-weight:700}
+.hdr h1 span{color:var(--azul);font-weight:200}
+.hdr p{margin:3px 0 0;color:var(--gelo);font-size:12px}
+.voltar{margin-left:auto;color:var(--azul);border:1px solid var(--aco);border-radius:999px;padding:6px 14px;text-decoration:none;font-size:12px;font-weight:600}
+.voltar:hover{background:var(--navy-2)}
+
+.bar{position:sticky;top:0;z-index:5;background:#fff;border-bottom:1px solid var(--line)}
+.bar-in{max-width:1400px;margin:0 auto;padding:10px 24px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.tabs{display:flex;background:var(--gelo);border-radius:999px;padding:3px}
+.tabs button{border:0;background:none;padding:6px 16px;border-radius:999px;cursor:pointer;color:var(--muted);font-weight:600}
+.tabs button.on{background:var(--navy);color:#fff}
+.tabs a{display:inline-block;padding:6px 16px;border-radius:999px;color:var(--muted);font-weight:600;text-decoration:none;border-left:1px solid var(--line);margin-left:3px}
+.tabs a:hover,.tabs a.on{background:var(--navy);color:#fff}
+.bar select{border:1px solid var(--line);border-radius:8px;padding:6px 10px;background:#fff;max-width:100%}
+.bar .sp{flex:1}
+.legend{display:flex;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:11px}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:middle}
+
+main{max-width:1400px;margin:0 auto;padding:20px 24px 60px}
+h2{font-size:15px;margin:26px 0 10px}
+h2 small{font-weight:400;color:var(--muted);font-size:12px;margin-left:6px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px}
+
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.kpi{padding:14px 16px;border-left:5px solid var(--line)}
+.kpi .lb{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.kpi .vl{font-size:26px;font-weight:700;margin-top:2px}
+.kpi .sb{font-size:11.5px;color:var(--muted)}
+
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th{font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap;background:#FAFDFF;position:sticky;top:0}
+td{padding:8px 10px;border-bottom:1px solid #EDF4F8;vertical-align:middle}
+tr.click{cursor:pointer}
+tr.click:hover td{background:#F5FAFD}
+td.r,th.r{text-align:right}
+td.c,th.c{text-align:center}
+.cod{color:var(--muted);font-size:11px}
+
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;vertical-align:middle;margin-right:6px}
+.pct{font-weight:700}
+.stack{display:flex;height:10px;border-radius:5px;overflow:hidden;min-width:140px;background:var(--cinza-bg)}
+.stack span{display:block;height:100%}
+.delta{font-size:11px;font-weight:600}
+.delta.up{color:var(--verde)} .delta.dn{color:var(--vermelho)} .delta.eq{color:var(--muted)}
+
+.tag{display:inline-block;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:600;white-space:nowrap}
+.s-emdia{background:var(--verde-bg);color:var(--verde)}
+.s-margem{background:var(--amarelo-bg);color:#9A6B00}
+.s-recuperar{background:var(--laranja-bg);color:#B5530C}
+.s-critico{background:var(--vermelho-bg);color:var(--vermelho)}
+.s-zerado{background:var(--cinza-bg);color:var(--cinza)}
+.b0{font-size:10px;color:var(--aco);border:1px solid var(--line);border-radius:4px;padding:0 4px;margin-left:6px}
+
+.plano{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.passo{padding:14px 16px;display:flex;gap:12px;align-items:flex-start}
+.passo .n{font-size:24px;font-weight:700;min-width:44px;text-align:center;border-radius:10px;padding:4px 0}
+.passo b{display:block;font-size:13px}
+.passo p{margin:2px 0 0;color:var(--muted);font-size:12px}
+
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+.chips button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 11px;cursor:pointer;font-size:12px}
+.chips button.on{background:var(--navy);border-color:var(--navy);color:#fff}
+.chips input{border:1px solid var(--line);border-radius:999px;padding:4px 12px;margin-left:auto;min-width:200px}
+.chk{width:16px;height:16px;cursor:pointer;accent-color:var(--verde)}
+tr.feito td{opacity:.45}
+.vis{display:inline-flex;gap:3px}
+.vis i{width:8px;height:14px;border-radius:2px;background:var(--cinza-bg)}
+.vis i.ok{background:var(--navy)}
+.note{font-size:11.5px;color:var(--muted);margin-top:8px}
+.spark{display:block}
+.btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 12px;cursor:pointer}
+.vazio{padding:30px;text-align:center;color:var(--muted)}
+
+.g-garantido{background:var(--verde-bg);color:var(--verde)}
+.g-proteger{background:var(--amarelo-bg);color:#9A6B00}
+.g-conquistar{background:var(--laranja-bg);color:#B5530C}
+.g-possivel{background:#FFF1E6;color:#B5530C;border:1px dashed #E8A06A}
+.g-reconstruir{background:var(--vermelho-bg);color:var(--vermelho)}
+.g-q4{background:var(--cinza-bg);color:var(--cinza)}
+.estr{padding:18px 20px;border-left:5px solid var(--navy)}
+.estr h3{margin:0 0 4px;font-size:15px}
+.estr .lead{margin:0 0 12px;color:var(--muted)}
+.estr ol{margin:0;padding-left:20px}
+.estr li{margin:0 0 9px}
+.estr li b{color:var(--navy)}
+.estr .qs{color:var(--muted);font-size:12px}
+.grupos{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.grupo{padding:14px 16px;cursor:pointer;border-top:4px solid var(--line)}
+.grupo:hover{box-shadow:0 2px 10px rgba(31,45,68,.08)}
+.grupo .t{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.grupo .t b{font-size:13px}
+.grupo .t span{font-size:24px;font-weight:700}
+.grupo p{margin:4px 0 0;font-size:12px;color:var(--muted)}
+.grupo .qs{margin-top:6px;font-size:11px;color:var(--muted)}
+.grupo .fq{margin-top:3px;color:var(--navy);font-weight:600}
+.regras .corpo li small{display:block;color:var(--muted);margin-top:2px}
+.regras{margin-top:12px;padding:0}
+.regras summary{cursor:pointer;padding:12px 16px;font-size:13px;font-weight:600;color:var(--navy);list-style:none;display:flex;align-items:center;gap:8px}
+.regras summary::-webkit-details-marker{display:none}
+.regras summary::before{content:'▸';font-size:12px;color:var(--muted)}
+.regras[open] summary::before{content:'▾'}
+.regras summary small{font-weight:400;color:var(--muted)}
+.regras .corpo{padding:0 16px 14px;font-size:12.5px;color:var(--text);display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.regras .corpo h4{margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.regras .corpo p{margin:0 0 8px}
+.regras .corpo ul,.regras .corpo ol{margin:0 0 8px;padding-left:18px}
+.regras .corpo li{margin:0 0 5px}
+.regras .corpo .tag{display:inline-block;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:600;margin-right:4px}
+.regras table.mini{border-collapse:collapse;font-size:12px;margin:4px 0 8px}
+.regras table.mini th,.regras table.mini td{border:1px solid var(--line);padding:3px 8px;text-align:center}
+.regras table.mini th{background:var(--gelo);font-weight:600}
+@media (max-width:700px){.regras .corpo{grid-template-columns:1fr}}
+.proj{font-weight:700}
+.proj small{font-weight:400;color:var(--muted)}
+.acao{font-size:12px}
+table.linhas tr.sel td{background:var(--gelo)}
+table.linhas tr.tot td{border-top:2px solid var(--line);background:#FAFDFF}
+.tit-acao{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.btn-xl{margin-left:auto;background:var(--navy);color:#fff;border-color:var(--navy);font-weight:600}
+.btn-xl:disabled{opacity:.6;cursor:wait}
+.acao small{display:block;color:var(--muted);font-size:11px}
+@media (max-width:700px){
+  .hdr-in,.bar-in,main{padding-left:16px;padding-right:16px}
+  .chips input{margin-left:0;min-width:0;width:100%}
+  .hide-m{display:none}
+}
+@media print{
+  .bar,.hdr::before,.hdr::after,.noprint{display:none!important}
+  body{background:#fff}
+  .card{border-color:#ccc}
+  th{position:static}
+}
+/* ---- Q4 · Qualificação de painel ---- */
+.tabs a{display:inline-block;padding:6px 16px;border-radius:999px;color:var(--muted);font-weight:600;text-decoration:none;border-right:1px solid var(--line);margin-right:3px}
+.tabs a:hover{background:#fff;color:var(--navy)}
+.g-sai{background:var(--vermelho-bg);color:var(--vermelho)}
+.g-entra{background:var(--verde-bg);color:var(--verde)}
+.g-gold{background:var(--amarelo-bg);color:#9A6B00}
+.g-block{background:var(--cinza-bg);color:var(--cinza)}
+.g-q4{background:var(--cinza-bg);color:var(--cinza)}
+.pont{font-weight:700;font-variant-numeric:tabular-nums}
+.ganho{color:var(--verde);font-weight:700}
+.sub{color:var(--muted);font-size:11px;display:block}
+.troca td.sep{border-left:2px solid var(--line)}
+.esp-tag{display:inline-block;background:var(--gelo);color:var(--navy);border-radius:6px;padding:0 6px;font-size:11px;font-weight:600}
+.estr ul{margin:0;padding-left:20px}
+.estr li{margin:0 0 7px}
+.regras{margin-top:12px;padding:0}
+.regras summary{cursor:pointer;padding:12px 16px;font-size:13px;font-weight:600;color:var(--navy);list-style:none;display:flex;align-items:center;gap:8px}
+.regras summary::-webkit-details-marker{display:none}
+.regras summary::before{content:'▸';font-size:12px;color:var(--muted)}
+.regras[open] summary::before{content:'▾'}
+.regras summary small{font-weight:400;color:var(--muted)}
+.regras .corpo{padding:0 16px 14px;font-size:12.5px;color:var(--text);display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.regras .corpo h4{margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.regras .corpo p{margin:0 0 8px}
+.regras .corpo ul,.regras .corpo ol{margin:0 0 8px;padding-left:18px}
+.regras .corpo li{margin:0 0 5px}
+@media (max-width:700px){.regras .corpo{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header class="hdr"><div class="hdr-in">
+  <img src="assets/logo-grupo-ems.png" alt="Grupo EMS">
+  <div class="hdr-sep"></div>
+  <div><h1>Q4 · Qualificação de painel <span>· Regional SPI OESTE</span></h1><p id="sub"></p></div>
+  <a href="como-ler.html#s9" class="voltar">? Como ler</a>
+  <a id="voltar" href="../index.html" class="voltar" style="margin-left:0">← Dashboard N4</a>
+</div></header>
+
+<div class="bar"><div class="bar-in">
+  <div class="tabs"><a id="voltaFarol" href="index.html">🚦 Farol</a><button data-v="regional" class="on">Linha</button><button data-v="gd">Distrito (GD)</button><button data-v="setor">Setor (rep)</button></div>
+  <select id="fLinha" title="Linha"></select>
+  <select id="fDist"></select>
+  <select id="fSetor"></select>
+  <span class="sp"></span>
+  <div class="legend"><span><i style="background:var(--vermelho)"></i>Sai (Q4)</span><span><i style="background:var(--verde)"></i>Entra (oportunidade)</span><span><i style="background:var(--amarelo)"></i>Gold list: manter</span></div>
+</div></div>
+
+<main id="app"></main>
+
+<script src="dados/manifest.js"></script>
+<script src="dados/q4/manifest.js"></script>
+<script>
+const MAN = window.Q4_MANIFEST;
+const app = document.getElementById('app');
+const fLinha = document.getElementById('fLinha'), fDist = document.getElementById('fDist'), fSetor = document.getElementById('fSetor');
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const f1 = v => (Math.round(v * 10) / 10).toFixed(1).replace('.', ',');
+const f2 = v => (Math.round(v * 100) / 100).toFixed(2).replace('.', ',');
+const nfmt = n => Number(n).toLocaleString('pt-BR');
+const pct = (a, b) => b ? a / b * 100 : 0;
+const distDe = cod => cod.slice(0, 6) + '000';
+const fmtData = s => s ? s.split('-').reverse().join('/') : '';
+const nomeCurto = n => { const p = String(n).trim().split(/\s+/); return p.length > 1 ? `${p[0]} ${p[p.length - 1]}` : p[0]; };
+
+document.getElementById('sub').textContent = `Painel e oportunidades do Power BI Qualificação do Painel (${fmtData(MAN.data)}) · frequência ${MAN.janela} · Q4 não pontua no PEX: trocar por médico de fora do painel com pontuação maior`;
+fLinha.innerHTML = MAN.linhas.map(l => `<option value="${l.chave}">${esc(l.linha)}</option>`).join('');
+
+// ---- Regra da troca ------------------------------------------------------
+// Sai: todo Q4 do painel, do pior para o melhor (block list primeiro, depois menor pontuação, maior
+// sobreposição, menos visitas). Gold list não sai. Entra: oportunidade (não visitado) do mesmo setor,
+// da maior para a menor pontuação (menor sobreposição desempata); block list não entra.
+// Pareamento 1 para 1: cada entrada pega o pior Q4 ainda livre com pontuação menor que a dela,
+// preferindo a mesma especialidade. Sem Q4 pior que ela, não há troca.
+let D, SET, porSetor;
+function preparar(chave) {
+  D = window.Q4_DADOS[chave];
+  porSetor = {};
+  Object.keys(D.setores).forEach(c => porSetor[c] = { q4: [], op: [] });
+  D.q4.forEach(r => porSetor[r[0]].q4.push({ cod: r[0], crm: r[1], nome: r[2], esp: r[3], pont: r[4], sobrep: r[5], gold: r[6], block: r[7], obj: r[8], real: r[9], freq: r[10] }));
+  D.op.forEach(r => porSetor[r[0]].op.push({ cod: r[0], crm: r[1], nome: r[2], esp: r[3], pont: r[4], sobrep: r[5], block: r[6], cidade: r[7] }));
+  SET = Object.keys(D.setores).sort().map(cod => ({ cod, rep: D.setores[cod], dist: distDe(cod), linha: D.linha, ...trocas(cod) }));
+}
+function trocas(cod) {
+  const { q4, op } = porSetor[cod];
+  const [n, soma, nq4] = D.painel[cod] || [0, 0, 0];
+  const gold = q4.filter(m => m.gold), bloq = op.filter(m => m.block);
+  const sai = q4.filter(m => !m.gold).sort((a, b) => (b.block ? 1 : 0) - (a.block ? 1 : 0) || a.pont - b.pont || b.sobrep - a.sobrep || (a.real ?? 9) - (b.real ?? 9));
+  const entra = op.filter(m => !m.block).sort((a, b) => b.pont - a.pont || a.sobrep - b.sobrep || a.nome.localeCompare(b.nome));
+  const livres = [...sai], pares = [];
+  entra.forEach(e => {
+    const abaixo = livres.filter(m => m.pont < e.pont);
+    if (!abaixo.length) { e.semTroca = true; return; }
+    const alvo = abaixo.find(m => m.esp === e.esp) || abaixo[0];
+    livres.splice(livres.indexOf(alvo), 1);
+    pares.push({ sai: alvo, entra: e, ganho: e.pont - alvo.pont, mesmaEsp: alvo.esp === e.esp });
+  });
+  const ganho = pares.reduce((t, p) => t + p.ganho, 0);
+  return { n, nq4, pq4: pct(nq4, n), pont: n ? soma / n : 0, pontDepois: n ? (soma + ganho) / n : 0, ganho,
+           pares, saiLivre: livres, entraLivre: entra.filter(e => e.semTroca), gold, bloq, op: op.length, trocas: pares.length,
+           mesmaEsp: pares.filter(p => p.mesmaEsp).length };
+}
+const soma = sets => {
+  const a = { n: 0, nq4: 0, somaPont: 0, ganho: 0, trocas: 0, op: 0, gold: 0, bloq: 0, saiLivre: 0, entraLivre: 0, mesmaEsp: 0 };
+  sets.forEach(s => { a.n += s.n; a.nq4 += s.nq4; a.somaPont += s.pont * s.n; a.ganho += s.ganho; a.trocas += s.trocas; a.op += s.op; a.gold += s.gold.length; a.bloq += s.bloq.length; a.saiLivre += s.saiLivre.length; a.entraLivre += s.entraLivre.length; a.mesmaEsp += s.mesmaEsp; });
+  a.pq4 = pct(a.nq4, a.n); a.pont = a.n ? a.somaPont / a.n : 0; a.pontDepois = a.n ? (a.somaPont + a.ganho) / a.n : 0;
+  return a;
+};
+const nomeGD = d => (D.distritos[d] || '').trim() || '—';
+
+// ---- Estado ----------------------------------------------------------------
+const st = { view: 'regional', linha: 'NEXUS', setor: '', dist: '', filtro: 'trocas', busca: '' };
+try { Object.assign(st, JSON.parse(localStorage.getItem('farol-q4-ui') || '{}')); } catch (e) {}
+const qsLinha = new URLSearchParams(location.search).get('linha');
+if (qsLinha) st.linha = qsLinha;
+if (!MAN.linhas.some(l => l.chave === st.linha)) st.linha = MAN.linhas[0].chave;
+const salvaUI = () => { try { localStorage.setItem('farol-q4-ui', JSON.stringify({ view: st.view, linha: st.linha, setor: st.setor, dist: st.dist })); } catch (e) {} };
+
+// ---- Componentes --------------------------------------------------------------
+const kpi = (lb, vl, sb, cor = 'var(--line)') => `<div class="card kpi" style="border-left-color:${cor}"><div class="lb">${lb}</div><div class="vl">${vl}</div><div class="sb">${sb}</div></div>`;
+const seta = (a, b) => `<span class="pont">${f2(a)}</span> <small>→</small> <span class="pont" style="color:var(--verde)">${f2(b)}</span>`;
+const tag = (cls, t) => `<span class="tag ${cls}">${t}</span>`;
+const espTag = e => `<span class="esp-tag">${esc(e || '—')}</span>`;
+const visitas = m => m.obj == null ? '<span class="sub">sem dado de frequência</span>' : `${m.real} de ${m.obj} · Freq. ${m.freq}%`;
+function topEsp(pares, lado, k = 3) {
+  const c = {}; pares.forEach(p => { const e = p[lado].esp || '—'; c[e] = (c[e] || 0) + 1; });
+  return Object.entries(c).sort((a, b) => b[1] - a[1]).slice(0, k).map(([e, n]) => `${e} (${n})`).join(', ');
+}
+function regras() {
+  return `
+  <details class="card regras">
+    <summary>Como a troca é sugerida <small>· regras desta aba</small></summary>
+    <div class="corpo">
+      <div>
+        <h4>1. Por que mexer no Q4</h4>
+        <p>Q4 é o quartil que não pontua no PEX e não entra na meta de frequência (90% dos Q1–Q3). Em média, 3 de cada 5 médicos do painel são Q4. Cada Q4 trocado por um médico de maior pontuação sobe a qualidade do painel sem aumentar o número de médicos.</p>
+        <h4>2. De onde vêm os dados</h4>
+        <p>Power BI "Qualificação do Painel Médico", página Análise de Oportunidade, UGN SPI: a tabela <b>Painel Velos (Visitado)</b> traz a pontuação, o quartil, a sobreposição, Gold list e Block list de cada médico do painel; a tabela <b>Médicos Oportunidade (Não Visitado)</b> traz os médicos do setor que ainda não estão no painel, com pontuação e sobreposição. A frequência (visitas ${D.janela}) vem do Farol.</p>
+        <h4>3. Quem sai</h4>
+        <p>Todo Q4 do painel é candidato, do pior para o melhor: primeiro quem está na Block list (não aceita visita, faleceu, aposentou, endereço não encontrado), depois a menor pontuação, a maior sobreposição (outros reps já visitam) e, por fim, menos visitas no ciclo. <b>Gold list não sai</b> (professor, líder de opinião, referência): aparece à parte como "manter".</p>
+      </div>
+      <div>
+        <h4>4. Quem entra</h4>
+        <p>Oportunidade do <b>mesmo setor</b>, da maior para a menor pontuação; empate, a menor sobreposição. Quem está na Block list não entra.</p>
+        <h4>5. A troca, 1 para 1</h4>
+        <p>Cada oportunidade, na ordem, pega o pior Q4 ainda livre com pontuação <b>menor</b> que a dela, preferindo a <b>mesma especialidade</b>. Se nenhum Q4 for pior que ela, não há troca (a entrada fica listada como "sem troca"). O <b>ganho</b> é a diferença de pontuação entre quem entra e quem sai; a pontuação média do painel "depois" supõe todas as trocas feitas.</p>
+        <h4>6. O que fazer com a lista</h4>
+        <p>O rep valida cada troca (conhece o médico, acesso, rota) e leva ao GD. A exclusão e a inclusão são feitas no processo normal de qualificação do painel; esta aba só prepara a proposta. Tantas trocas quantas houver: o rep escolhe quantas executa por ciclo.</p>
+      </div>
+    </div>
+  </details>`;
+}
+
+// ---- Visão: Linha (regional) --------------------------------------------------
+function quadroLinhas() {
+  const cab = '<th class="r">Painel</th><th class="r">Q4</th><th class="r">% Q4</th><th class="r">Oportunidades</th><th class="r">Trocas</th><th>Pontuação média</th><th class="r">Ganho</th>';
+  const linhaTR = (nome, a, attrs = '', cls = '') => `<tr class="click ${cls}" ${attrs}><td><b>${esc(nome)}</b></td><td class="r num">${nfmt(a.n)}</td><td class="r num">${nfmt(a.nq4)}</td><td class="r num">${f1(a.pq4)}%</td><td class="r num">${nfmt(a.op)}</td><td class="r num"><b>${nfmt(a.trocas)}</b></td><td>${seta(a.pont, a.pontDepois)}</td><td class="r num ganho">+${f2(a.ganho / (a.n || 1))}</td></tr>`;
+  return `
+  <h2 style="margin-top:0">Linhas da regional <small>Q4 no painel e oportunidades de troca · clique para abrir a linha</small></h2>
+  <div class="card tw"><table class="linhas">
+    <thead><tr><th>Linha</th>${cab}</tr></thead>
+    <tbody>${MAN.linhas.map(l => `<tr class="click ${l.chave === st.linha ? 'sel' : ''}" data-linha="${l.chave}"><td><b>${esc(l.linha)}</b><span class="sub">${l.setores} setores</span></td><td class="r num">${nfmt(l.painel)}</td><td class="r num">${nfmt(l.q4)}</td><td class="r num">${f1(pct(l.q4, l.painel))}%</td><td class="r num">${nfmt(l.op)}</td>${(r => `<td class="r num">${r ? `<b>${nfmt(r.trocas)}</b>` : '<span class="sub">…</span>'}</td><td>${r ? seta(r.pont, r.pontDepois) : `<span class="pont">${f2(l.pontMedia)}</span>`}</td><td class="r num">${r ? `<span class="ganho">+${f2(r.ganho / (r.n || 1))}</span>` : ''}</td>`)(l.chave === st.linha ? soma(SET) : resumoDe(l.chave))}</tr>`).join('')}</tbody>
+  </table></div>`;
+}
+function viewRegional() {
+  const a = soma(SET);
+  const dists = [...new Set(SET.map(s => s.dist))].sort().map(d => ({ d, ...soma(SET.filter(s => s.dist === d)) }));
+  const cab = '<th class="r">Painel</th><th class="r">Q4</th><th class="r">% Q4</th><th class="r">Oportunidades</th><th class="r">Trocas</th><th>Pontuação média</th><th class="r">Ganho / médico</th>';
+  return `
+  ${quadroLinhas()}
+  <h2>${esc(D.linha)} <small>regional SPI · ${SET.length} setores</small></h2>
+  <div class="kpis">
+    ${kpi('Q4 no painel', `${f1(a.pq4)}%`, `${nfmt(a.nq4)} de ${nfmt(a.n)} médicos`, 'var(--cinza)')}
+    ${kpi('Oportunidades (fora do painel)', nfmt(a.op), `${nfmt(a.bloq)} em block list não entram`, 'var(--verde)')}
+    ${kpi('Trocas sugeridas', nfmt(a.trocas), `${nfmt(a.mesmaEsp)} na mesma especialidade`, 'var(--navy)')}
+    ${kpi('Pontuação média do painel', seta(a.pont, a.pontDepois), 'hoje → com todas as trocas', 'var(--verde)')}
+    ${kpi('Gold list no Q4', nfmt(a.gold), 'ficam no painel (manter)', 'var(--amarelo)')}
+  </div>
+  ${regras()}
+  <h2>Por distrito <small>clique para abrir o distrito</small></h2>
+  <div class="card tw"><table>
+    <thead><tr><th>Distrito · GD</th>${cab}</tr></thead>
+    <tbody>${dists.map(x => `<tr class="click" data-dist="${x.d}"><td><b>${esc(nomeGD(x.d))}</b><span class="sub">${x.d}</span></td><td class="r num">${nfmt(x.n)}</td><td class="r num">${nfmt(x.nq4)}</td><td class="r num">${f1(x.pq4)}%</td><td class="r num">${nfmt(x.op)}</td><td class="r num"><b>${nfmt(x.trocas)}</b></td><td>${seta(x.pont, x.pontDepois)}</td><td class="r num ganho">+${f2(x.ganho / (x.n || 1))}</td></tr>`).join('')}</tbody>
+  </table></div>
+  <h2>Setores <small>do maior para o menor número de trocas · clique para abrir o setor</small></h2>
+  <div class="card tw"><table>
+    <thead><tr><th>#</th><th>Setor · Representante</th>${cab}</tr></thead>
+    <tbody>${[...SET].sort((x, y) => y.trocas - x.trocas || y.ganho - x.ganho).map((s, i) => `<tr class="click" data-setor="${s.cod}"><td class="num">${i + 1}</td><td><b>${esc(s.rep)}</b><span class="sub">${s.cod} · ${esc(nomeGD(s.dist))}</span></td><td class="r num">${nfmt(s.n)}</td><td class="r num">${nfmt(s.nq4)}</td><td class="r num">${f1(s.pq4)}%</td><td class="r num">${nfmt(s.op)}</td><td class="r num"><b>${nfmt(s.trocas)}</b></td><td>${seta(s.pont, s.pontDepois)}</td><td class="r num ganho">+${f2(s.ganho / (s.n || 1))}</td></tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+// ---- Visão: Distrito (GD) ---------------------------------------------------------
+function viewGD() {
+  const d = st.dist, sets = SET.filter(s => s.dist === d), a = soma(sets);
+  const ordem = [...sets].sort((x, y) => y.trocas - x.trocas || y.ganho - x.ganho);
+  const top = ordem.slice(0, 3), semOp = sets.filter(s => !s.op), muitoQ4 = [...sets].sort((x, y) => y.pq4 - x.pq4).slice(0, 3);
+  const pares = sets.flatMap(s => s.pares);
+  const lista = (arr, f) => arr.map(f).join(', ');
+  const it = [
+    `<b>Volume:</b> ${nfmt(a.trocas)} trocas possíveis no distrito, ${nfmt(a.mesmaEsp)} na mesma especialidade. Com todas feitas, a pontuação média do painel vai de ${f2(a.pont)} para ${f2(a.pontDepois)}.`,
+    top.length ? `<b>Onde começar:</b> ${lista(top, s => `<b>${esc(nomeCurto(s.rep))}</b> (${s.trocas} trocas, +${f2(s.ganho / (s.n || 1))} por médico)`)}. São os setores com mais oportunidades acima dos Q4.` : '',
+    `<b>Painel mais pesado em Q4:</b> ${lista(muitoQ4, s => `${esc(nomeCurto(s.rep))} (${f1(s.pq4)}%)`)}. Mesmo sem oportunidade suficiente, vale revisar quem está com pontuação zero e sem visita.`,
+    pares.length ? `<b>Especialidades que entram:</b> ${topEsp(pares, 'entra')}. <b>Que saem:</b> ${topEsp(pares, 'sai')}.` : '',
+    semOp.length ? `<b>Sem oportunidade mapeada:</b> ${lista(semOp, s => esc(nomeCurto(s.rep)))}. Nesses setores a qualificação depende de prospectar médicos fora da base.` : '',
+    a.gold ? `<b>Gold list no Q4:</b> ${nfmt(a.gold)} médicos ficam no painel mesmo em Q4 (professor, líder de opinião, referência).` : '',
+  ].filter(Boolean);
+  return `
+  <div class="kpis">
+    ${kpi('Q4 no painel', `${f1(a.pq4)}%`, `${nfmt(a.nq4)} de ${nfmt(a.n)} médicos`, 'var(--cinza)')}
+    ${kpi('Oportunidades', nfmt(a.op), `${nfmt(a.bloq)} em block list`, 'var(--verde)')}
+    ${kpi('Trocas sugeridas', nfmt(a.trocas), `≈ ${Math.ceil(a.trocas / (sets.length || 1))} por setor`, 'var(--navy)')}
+    ${kpi('Pontuação média do painel', seta(a.pont, a.pontDepois), 'hoje → com todas as trocas', 'var(--verde)')}
+  </div>
+  <h2 class="tit-acao">${esc(nomeGD(d))} <small>${d} · ${esc(D.linha)}</small><button class="btn btn-xl noprint" id="baixar">⬇ Baixar planilha do GD</button></h2>
+  <div class="card estr"><h3>Qualificação do painel no distrito</h3><ul>${it.map(i => `<li>${i}</li>`).join('')}</ul></div>
+  ${regras()}
+  <h2>Setores <small>clique para abrir a lista de trocas do rep</small></h2>
+  <div class="card tw"><table>
+    <thead><tr><th>Setor · Representante</th><th class="r">Painel</th><th class="r">Q4</th><th class="r">% Q4</th><th class="r">Oportunidades</th><th class="r">Trocas</th><th class="r hide-m">Mesma esp.</th><th>Pontuação média</th><th class="r">Ganho / médico</th><th class="hide-m">Entram (top)</th></tr></thead>
+    <tbody>${ordem.map(s => `<tr class="click" data-setor="${s.cod}"><td><b>${esc(s.rep)}</b><span class="sub">${s.cod}</span></td><td class="r num">${nfmt(s.n)}</td><td class="r num">${nfmt(s.nq4)}</td><td class="r num">${f1(s.pq4)}%</td><td class="r num">${nfmt(s.op)}</td><td class="r num"><b>${nfmt(s.trocas)}</b></td><td class="r num hide-m">${nfmt(s.mesmaEsp)}</td><td>${seta(s.pont, s.pontDepois)}</td><td class="r num ganho">+${f2(s.ganho / (s.n || 1))}</td><td class="hide-m acao">${topEsp(s.pares, 'entra') || '—'}</td></tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+// ---- Visão: Setor (rep) -----------------------------------------------------------
+function viewSetor() {
+  const s = SET.find(x => x.cod === st.setor); if (!s) return '<div class="vazio">Setor sem dados.</div>';
+  const doDist = SET.filter(x => x.dist === s.dist).sort((x, y) => y.trocas - x.trocas);
+  const pos = doDist.findIndex(x => x.cod === s.cod) + 1;
+  const b = st.busca.trim().toLowerCase();
+  const bate = m => !b || [m.nome, m.crm, m.esp, m.cidade].some(v => String(v || '').toLowerCase().includes(b));
+  const chip = (k, nome, n) => `<button data-f="${k}" class="${st.filtro === k ? 'on' : ''}">${nome} <span class="num">${n}</span></button>`;
+  const it = [
+    s.trocas ? `<b>${s.trocas} trocas possíveis</b> (${s.mesmaEsp} na mesma especialidade). Fazendo todas, a pontuação média do painel vai de ${f2(s.pont)} para ${f2(s.pontDepois)}. Comece pelas de maior ganho, no topo da lista.` : `<b>Nenhuma troca possível:</b> ${s.op ? 'as oportunidades do setor não têm pontuação maior que os Q4 do painel' : 'o setor não tem oportunidade mapeada'}. Revise os Q4 com pontuação zero e sem visita e prospecte fora da base.`,
+    s.pares.length ? `<b>Entram:</b> ${topEsp(s.pares, 'entra')}. <b>Saem:</b> ${topEsp(s.pares, 'sai')}.` : '',
+    s.saiLivre.length ? `<b>${s.saiLivre.length} Q4 continuam sem substituto</b> (${s.saiLivre.filter(m => m.block).length} em block list, ${s.saiLivre.filter(m => m.real === 0).length} sem visita em ${D.janela}). Candidatos a sair mesmo sem entrada, se o painel estiver grande.` : '',
+    s.entraLivre.length ? `<b>${s.entraLivre.length} oportunidades sem troca:</b> pontuação igual ou menor que os Q4 que restaram. Só entram se o painel puder crescer.` : '',
+    s.gold.length ? `<b>Gold list:</b> ${s.gold.map(m => esc(nomeCurto(m.nome))).join(', ')} ${s.gold.length > 1 ? 'são' : 'é'} Q4 mas ${s.gold.length > 1 ? 'ficam' : 'fica'} no painel.` : '',
+    `<b>Como validar:</b> para cada troca, confira se conhece o médico que entra (endereço, acesso), se o que sai tem motivo para ficar (relacionamento, potencial não capturado) e leve a lista ao GD. A exclusão e a inclusão seguem o processo normal de qualificação.`,
+  ].filter(Boolean);
+  const F = st.filtro;
+  let corpo = '';
+  if (F === 'trocas') {
+    const rows = s.pares.filter(p => bate(p.sai) || bate(p.entra));
+    corpo = `<table class="troca">
+      <thead><tr><th class="c">#</th><th>Sai (Q4)</th><th class="hide-m">Esp.</th><th class="r">Pont.</th><th class="r hide-m">Sobrep.</th><th class="hide-m">Visitas ${D.janela}</th><th class="sep">Entra (oportunidade)</th><th class="hide-m">Esp.</th><th class="r">Pont.</th><th class="r hide-m">Sobrep.</th><th class="r">Ganho</th></tr></thead>
+      <tbody>${rows.map((p, i) => `<tr><td class="c num">${i + 1}</td><td>${tag('g-sai', 'Sai')} <b>${esc(p.sai.nome)}</b><span class="sub">${esc(p.sai.crm)}${p.sai.block ? ' · ' + esc(p.sai.block) : ''}</span></td><td class="hide-m">${espTag(p.sai.esp)}</td><td class="r pont">${f2(p.sai.pont)}</td><td class="r num hide-m">${p.sai.sobrep}</td><td class="hide-m">${visitas(p.sai)}</td><td class="sep">${tag('g-entra', 'Entra')} <b>${esc(p.entra.nome)}</b><span class="sub">${esc(p.entra.crm)} · ${esc(p.entra.cidade)}</span></td><td class="hide-m">${espTag(p.entra.esp)}${p.mesmaEsp ? '' : ' <span class="sub">outra esp.</span>'}</td><td class="r pont">${f2(p.entra.pont)}</td><td class="r num hide-m">${p.entra.sobrep}</td><td class="r ganho">+${f2(p.ganho)}</td></tr>`).join('') || '<tr><td colspan="11" class="vazio">Nenhuma troca.</td></tr>'}</tbody></table>`;
+  } else if (F === 'sai') {
+    const rows = s.saiLivre.filter(bate);
+    corpo = `<table><thead><tr><th class="c">#</th><th>Médico (Q4 sem substituto)</th><th>Esp.</th><th class="r">Pont.</th><th class="r">Sobrep.</th><th>Visitas ${D.janela}</th><th>Observação</th></tr></thead>
+      <tbody>${rows.map((m, i) => `<tr><td class="c num">${i + 1}</td><td><b>${esc(m.nome)}</b><span class="sub">${esc(m.crm)}</span></td><td>${espTag(m.esp)}</td><td class="r pont">${f2(m.pont)}</td><td class="r num">${m.sobrep}</td><td>${visitas(m)}</td><td class="acao">${m.block ? tag('g-block', esc(m.block)) : m.real === 0 ? 'Sem visita no ciclo: candidato a sair mesmo sem entrada' : 'Manter até surgir oportunidade melhor'}</td></tr>`).join('') || '<tr><td colspan="7" class="vazio">Todos os Q4 têm substituto.</td></tr>'}</tbody></table>`;
+  } else if (F === 'entra') {
+    const rows = s.entraLivre.filter(bate);
+    corpo = `<table><thead><tr><th class="c">#</th><th>Médico (oportunidade sem troca)</th><th>Esp.</th><th class="r">Pont.</th><th class="r">Sobrep.</th><th>Cidade</th><th>Observação</th></tr></thead>
+      <tbody>${rows.map((m, i) => `<tr><td class="c num">${i + 1}</td><td><b>${esc(m.nome)}</b><span class="sub">${esc(m.crm)}</span></td><td>${espTag(m.esp)}</td><td class="r pont">${f2(m.pont)}</td><td class="r num">${m.sobrep}</td><td>${esc(m.cidade)}</td><td class="acao">Pontuação igual ou menor que os Q4 restantes: só entra se o painel crescer</td></tr>`).join('') || '<tr><td colspan="7" class="vazio">Todas as oportunidades têm troca.</td></tr>'}</tbody></table>`;
+  } else if (F === 'q4') {
+    const rows = porSetor[s.cod].q4.filter(bate).sort((a, b2) => a.pont - b2.pont);
+    corpo = `<table><thead><tr><th class="c">#</th><th>Médico (Q4 do painel)</th><th>Esp.</th><th class="r">Pont.</th><th class="r">Sobrep.</th><th>Visitas ${D.janela}</th><th>Situação</th></tr></thead>
+      <tbody>${rows.map((m, i) => { const p = s.pares.find(x => x.sai === m); return `<tr><td class="c num">${i + 1}</td><td><b>${esc(m.nome)}</b><span class="sub">${esc(m.crm)}</span></td><td>${espTag(m.esp)}</td><td class="r pont">${f2(m.pont)}</td><td class="r num">${m.sobrep}</td><td>${visitas(m)}</td><td class="acao">${m.gold ? tag('g-gold', 'Gold list · manter') + ' <span class="sub">' + esc(m.gold) + '</span>' : p ? tag('g-sai', 'Sai') + ` por ${esc(nomeCurto(p.entra.nome))} (+${f2(p.ganho)})` : m.block ? tag('g-block', esc(m.block)) : 'Sem substituto'}</td></tr>`; }).join('')}</tbody></table>`;
+  } else if (F === 'op') {
+    const rows = porSetor[s.cod].op.filter(bate).sort((a, b2) => b2.pont - a.pont);
+    corpo = `<table><thead><tr><th class="c">#</th><th>Médico (oportunidade)</th><th>Esp.</th><th class="r">Pont.</th><th class="r">Sobrep.</th><th>Cidade</th><th>Situação</th></tr></thead>
+      <tbody>${rows.map((m, i) => { const p = s.pares.find(x => x.entra === m); return `<tr><td class="c num">${i + 1}</td><td><b>${esc(m.nome)}</b><span class="sub">${esc(m.crm)}</span></td><td>${espTag(m.esp)}</td><td class="r pont">${f2(m.pont)}</td><td class="r num">${m.sobrep}</td><td>${esc(m.cidade)}</td><td class="acao">${m.block ? tag('g-block', esc(m.block)) : p ? tag('g-entra', 'Entra') + ` no lugar de ${esc(nomeCurto(p.sai.nome))} (+${f2(p.ganho)})` : 'Sem troca'}</td></tr>`; }).join('')}</tbody></table>`;
+  }
+  return `
+  <div class="kpis">
+    ${kpi('Q4 no painel', `${f1(s.pq4)}%`, `${nfmt(s.nq4)} de ${nfmt(s.n)} médicos`, 'var(--cinza)')}
+    ${kpi('Oportunidades', nfmt(s.op), `${s.bloq.length} em block list`, 'var(--verde)')}
+    ${kpi('Trocas sugeridas', nfmt(s.trocas), `${s.mesmaEsp} na mesma especialidade`, 'var(--navy)')}
+    ${kpi('Pontuação média do painel', seta(s.pont, s.pontDepois), 'hoje → com todas as trocas', 'var(--verde)')}
+    ${kpi('Posição no distrito', `${pos}º/${doDist.length}`, `em trocas possíveis · ${esc(nomeGD(s.dist))}`)}
+  </div>
+  <h2 class="tit-acao">${esc(s.rep)} <small>${s.cod} · ${esc(D.linha)}</small><button class="btn btn-xl noprint" id="baixar">⬇ Baixar planilha do rep</button></h2>
+  <div class="card estr"><h3>Qualificação do painel: proposta para o setor</h3><ul>${it.map(i => `<li>${i}</li>`).join('')}</ul></div>
+  ${regras()}
+  <h2>Lista</h2>
+  <div class="chips noprint">
+    ${chip('trocas', 'Trocas sugeridas', s.trocas)}
+    ${chip('sai', 'Q4 sem substituto', s.saiLivre.length)}
+    ${chip('entra', 'Oportunidade sem troca', s.entraLivre.length)}
+    ${chip('q4', 'Todos os Q4', s.nq4)}
+    ${chip('op', 'Todas as oportunidades', s.op)}
+    <button class="btn" id="imprimir">🖨 Imprimir</button>
+    <input id="busca" placeholder="Buscar médico, CRM, especialidade ou cidade" value="${esc(st.busca)}">
+  </div>
+  <div class="card tw">${corpo}</div>`;
+}
+
+// ---- Render + navegação ----------------------------------------------------------------
+function render() {
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.v === st.view));
+  fDist.style.display = st.view === 'regional' ? 'none' : '';
+  fSetor.style.display = st.view === 'setor' ? '' : 'none';
+  fLinha.value = st.linha; fDist.value = st.dist; fSetor.value = st.setor;
+  document.getElementById('voltaFarol').href = `index.html`;
+  app.innerHTML = st.view === 'regional' ? viewRegional() : st.view === 'gd' ? viewGD() : viewSetor();
+  salvaUI();
+}
+function abreLinha(chave) {
+  const pronto = () => {
+    preparar(chave);
+    st.linha = chave;
+    if (!SET.some(s => s.cod === st.setor)) st.setor = SET[0].cod;
+    const dists = [...new Set(SET.map(s => s.dist))].sort();
+    if (!dists.includes(st.dist)) st.dist = dists[0];
+    fDist.innerHTML = dists.map(d => `<option value="${d}">${d} · ${esc(nomeGD(d))}</option>`).join('');
+    fSetor.innerHTML = dists.map(d => `<optgroup label="${d} · ${esc(nomeGD(d))}">${SET.filter(s => s.dist === d).map(s => `<option value="${s.cod}">${s.cod} · ${esc(s.rep)}</option>`).join('')}</optgroup>`).join('');
+    render();
+  };
+  if (window.Q4_DADOS && window.Q4_DADOS[chave]) return pronto();
+  app.innerHTML = '<div class="vazio">Carregando a linha…</div>';
+  const sc = document.createElement('script');
+  sc.src = `dados/q4/${chave}.js?v=${MAN.data}`;
+  sc.onload = () => { pronto(); carregaDemais(); };
+  sc.onerror = () => { app.innerHTML = `<div class="vazio">Não encontrei dados/q4/${chave}.js. Rode gerar_q4.py.</div>`; };
+  document.head.appendChild(sc);
+}
+// As outras linhas carregam em segundo plano, uma de cada vez, para a tabela regional mostrar as trocas de todas.
+const RESUMO = {};   // chave → soma(SET) da linha
+function resumoDe(chave) {
+  if (RESUMO[chave]) return RESUMO[chave];
+  if (!window.Q4_DADOS || !window.Q4_DADOS[chave]) return null;
+  const guardaD = D, guardaSET = SET, guardaPor = porSetor;
+  preparar(chave); RESUMO[chave] = soma(SET);
+  D = guardaD; SET = guardaSET; porSetor = guardaPor;
+  return RESUMO[chave];
+}
+let carregando = false;
+function carregaDemais() {
+  if (carregando) return;
+  const falta = MAN.linhas.map(l => l.chave).find(c => !(window.Q4_DADOS && window.Q4_DADOS[c]));
+  if (!falta) return;
+  carregando = true;
+  const sc = document.createElement('script');
+  sc.src = `dados/q4/${falta}.js?v=${MAN.data}`;
+  sc.onload = sc.onerror = () => { carregando = false; if (st.view === 'regional') render(); carregaDemais(); };
+  document.head.appendChild(sc);
+}
+document.querySelector('.tabs').addEventListener('click', e => { const v = e.target.dataset.v; if (v) { st.view = v; render(); } });
+fLinha.addEventListener('change', () => abreLinha(fLinha.value));
+fDist.addEventListener('change', () => { st.dist = fDist.value; render(); });
+fSetor.addEventListener('change', () => { st.setor = fSetor.value; st.busca = ''; st.filtro = 'trocas'; render(); });
+app.addEventListener('click', e => {
+  if (e.target.id === 'imprimir') { window.print(); return; }
+  if (e.target.id === 'baixar') { baixarPlanilha(e.target); return; }
+  const f = e.target.closest('[data-f]');
+  if (f) { st.filtro = f.dataset.f; render(); return; }
+  const tr = e.target.closest('tr');
+  if (tr && tr.dataset.linha) { abreLinha(tr.dataset.linha); return; }
+  if (tr && tr.dataset.setor) { st.setor = tr.dataset.setor; st.view = 'setor'; st.filtro = 'trocas'; st.busca = ''; render(); scrollTo(0, 0); return; }
+  if (tr && tr.dataset.dist) { st.dist = tr.dataset.dist; st.view = 'gd'; render(); scrollTo(0, 0); }
+});
+app.addEventListener('input', e => {
+  if (e.target.id !== 'busca') return;
+  st.busca = e.target.value; const pos = e.target.selectionStart;
+  render(); const b = document.getElementById('busca'); b.focus(); b.setSelectionRange(pos, pos);
+});
+
+// ---- Planilha (.xlsx) ----------------------------------------------------------------
+function carregaExcel() {
+  if (window.ExcelJS) return Promise.resolve();
+  return new Promise((ok, erro) => { const sc = document.createElement('script'); sc.src = 'assets/exceljs.min.js'; sc.onload = ok; sc.onerror = () => erro(new Error('Não encontrei assets/exceljs.min.js')); document.head.appendChild(sc); });
+}
+const XLC = { navy: 'FF1F2D44', gelo: 'FFDFF1FB', linha: 'FFD6E6F0', zebra: 'FFF7FBFE', sai: 'FFFBE3E3', entra: 'FFE3F5EC', gold: 'FFFDF3D7' };
+function aba(wb, nome, titulo, sub, cols, rows, cor = i => null) {
+  const ws = wb.addWorksheet(nome.slice(0, 31), { views: [{ state: 'frozen', ySplit: 4 }] });
+  ws.mergeCells(1, 1, 1, cols.length); ws.getCell(1, 1).value = titulo;
+  ws.getCell(1, 1).font = { name: 'Calibri', size: 14, bold: true, color: { argb: 'FFFFFFFF' } }; ws.getCell(1, 1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XLC.navy } };
+  ws.getRow(1).height = 24;
+  ws.mergeCells(2, 1, 2, cols.length); ws.getCell(2, 1).value = sub; ws.getCell(2, 1).font = { name: 'Calibri', size: 10, color: { argb: 'FF5787A2' } };
+  cols.forEach((c, i) => { const cell = ws.getCell(4, i + 1); cell.value = c.t; cell.font = { name: 'Calibri', bold: true, color: { argb: XLC.navy } }; cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XLC.gelo } }; cell.border = { bottom: { style: 'thin', color: { argb: XLC.linha } } }; ws.getColumn(i + 1).width = c.w || 14; if (c.n) ws.getColumn(i + 1).numFmt = c.n; });
+  rows.forEach((r, i) => { const row = ws.addRow(r); const c = cor(r, i); row.eachCell(cell => { cell.font = { name: 'Calibri', size: 10 }; if (c) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: c } }; else if (i % 2) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XLC.zebra } }; }); });
+  ws.autoFilter = { from: { row: 4, column: 1 }, to: { row: 4, column: cols.length } };
+  return ws;
+}
+const nomeArq = (...p) => 'Q4_Qualificacao_' + p.map(x => String(x).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w]+/g, '_')).join('_') + '.xlsx';
+async function baixarPlanilha(btn) {
+  btn.disabled = true; const txt = btn.textContent; btn.textContent = 'Gerando…';
+  try {
+    await carregaExcel();
+    const wb = new ExcelJS.Workbook(); wb.creator = 'Farol da Frequência · Q4 Qualificação de painel';
+    const sets = st.view === 'setor' ? [SET.find(s => s.cod === st.setor)] : SET.filter(s => s.dist === st.dist);
+    const titulo = st.view === 'setor' ? `${sets[0].cod} · ${sets[0].rep}` : `${st.dist} · ${nomeGD(st.dist)}`;
+    const sub = `Q4 · Qualificação de painel · ${D.linha} · dados ${fmtData(D.data)} · frequência ${D.janela} · gerado em ${new Date().toLocaleDateString('pt-BR')}`;
+    const a = soma(sets);
+    aba(wb, 'Resumo', titulo, sub,
+      [{ t: 'Setor', w: 10 }, { t: 'Representante', w: 32 }, { t: 'Painel', w: 9 }, { t: 'Q4', w: 8 }, { t: '% Q4', w: 8, n: '0.0' }, { t: 'Oportunidades', w: 14 }, { t: 'Trocas', w: 9 }, { t: 'Mesma esp.', w: 11 }, { t: 'Pont. hoje', w: 11, n: '0.00' }, { t: 'Pont. depois', w: 12, n: '0.00' }, { t: 'Ganho/médico', w: 13, n: '0.00' }],
+      [...sets.map(s => [s.cod, s.rep, s.n, s.nq4, s.pq4, s.op, s.trocas, s.mesmaEsp, s.pont, s.pontDepois, s.ganho / (s.n || 1)]),
+       ['TOTAL', '', a.n, a.nq4, a.pq4, a.op, a.trocas, a.mesmaEsp, a.pont, a.pontDepois, a.ganho / (a.n || 1)]]);
+    aba(wb, 'Trocas sugeridas', titulo, sub,
+      [{ t: 'Setor', w: 10 }, { t: 'Rep', w: 24 }, { t: '#', w: 5 }, { t: 'Sai (Q4)', w: 34 }, { t: 'CRM sai', w: 12 }, { t: 'Esp. sai', w: 9 }, { t: 'Pont. sai', w: 10, n: '0.00' }, { t: 'Sobrep. sai', w: 11 }, { t: `Visitas ${D.janela}`, w: 14 }, { t: 'Block list', w: 22 }, { t: 'Entra (oportunidade)', w: 34 }, { t: 'CRM entra', w: 12 }, { t: 'Esp. entra', w: 10 }, { t: 'Pont. entra', w: 11, n: '0.00' }, { t: 'Sobrep. entra', w: 12 }, { t: 'Cidade', w: 18 }, { t: 'Ganho', w: 8, n: '0.00' }, { t: 'Mesma esp.', w: 10 }, { t: 'Executar? (S/N)', w: 14 }, { t: 'Observação', w: 30 }],
+      sets.flatMap(s => s.pares.map((p, i) => [s.cod, s.rep, i + 1, p.sai.nome, p.sai.crm, p.sai.esp, p.sai.pont, p.sai.sobrep, p.sai.obj == null ? '' : `${p.sai.real} de ${p.sai.obj} (${p.sai.freq}%)`, p.sai.block || '', p.entra.nome, p.entra.crm, p.entra.esp, p.entra.pont, p.entra.sobrep, p.entra.cidade, p.ganho, p.mesmaEsp ? 'Sim' : 'Não', '', ''])));
+    aba(wb, 'Q4 do painel', titulo, sub,
+      [{ t: 'Setor', w: 10 }, { t: 'Rep', w: 24 }, { t: 'Médico', w: 34 }, { t: 'CRM', w: 12 }, { t: 'Esp.', w: 9 }, { t: 'Pontuação', w: 11, n: '0.00' }, { t: 'Sobreposição', w: 12 }, { t: `Visitas ${D.janela}`, w: 14 }, { t: 'Gold list', w: 22 }, { t: 'Block list', w: 24 }, { t: 'Situação', w: 40 }],
+      sets.flatMap(s => porSetor[s.cod].q4.slice().sort((x, y) => x.pont - y.pont).map(m => { const p = s.pares.find(x => x.sai === m); return [s.cod, s.rep, m.nome, m.crm, m.esp, m.pont, m.sobrep, m.obj == null ? '' : `${m.real} de ${m.obj} (${m.freq}%)`, m.gold || '', m.block || '', m.gold ? 'Gold list: manter' : p ? `Sai por ${p.entra.nome} (+${f2(p.ganho)})` : 'Sem substituto']; })),
+      r => r[8] ? XLC.gold : r[10].startsWith('Sai') ? XLC.sai : null);
+    aba(wb, 'Oportunidades', titulo, sub,
+      [{ t: 'Setor', w: 10 }, { t: 'Rep', w: 24 }, { t: 'Médico', w: 34 }, { t: 'CRM', w: 12 }, { t: 'Esp.', w: 9 }, { t: 'Pontuação', w: 11, n: '0.00' }, { t: 'Sobreposição', w: 12 }, { t: 'Cidade', w: 18 }, { t: 'Block list', w: 24 }, { t: 'Situação', w: 40 }],
+      sets.flatMap(s => porSetor[s.cod].op.slice().sort((x, y) => y.pont - x.pont).map(m => { const p = s.pares.find(x => x.entra === m); return [s.cod, s.rep, m.nome, m.crm, m.esp, m.pont, m.sobrep, m.cidade, m.block || '', m.block ? 'Block list: não entra' : p ? `Entra no lugar de ${p.sai.nome} (+${f2(p.ganho)})` : 'Sem troca']; })),
+      r => r[9].startsWith('Entra') ? XLC.entra : null);
+    const buf = await wb.xlsx.writeBuffer();
+    const url = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+    const a2 = document.createElement('a'); a2.href = url; a2.download = nomeArq(D.linha, st.view === 'setor' ? `${sets[0].cod}_${sets[0].rep}` : `${st.dist}_${nomeGD(st.dist)}`); a2.click();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  } catch (e) { alert('Não consegui gerar a planilha: ' + e.message); }
+  btn.disabled = false; btn.textContent = txt;
+}
+
+if (location.port === '8747' || location.protocol === 'file:' && !/ems-n4-dashboard/.test(location.pathname)) document.getElementById('voltar').remove();
+abreLinha(st.linha);
+</script>
+</body>
+</html>

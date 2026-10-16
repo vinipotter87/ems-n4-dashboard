@@ -36,6 +36,8 @@ button,select,input{font:inherit;color:inherit}
 .tabs{display:flex;background:var(--gelo);border-radius:999px;padding:3px}
 .tabs button{border:0;background:none;padding:6px 16px;border-radius:999px;cursor:pointer;color:var(--muted);font-weight:600}
 .tabs button.on{background:var(--navy);color:#fff}
+.tabs a{display:inline-block;padding:6px 16px;border-radius:999px;color:var(--muted);font-weight:600;text-decoration:none;border-left:1px solid var(--line);margin-left:3px}
+.tabs a:hover,.tabs a.on{background:var(--navy);color:#fff}
 .bar select{border:1px solid var(--line);border-radius:8px;padding:6px 10px;background:#fff;max-width:100%}
 .bar .sp{flex:1}
 .legend{display:flex;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:11px}
@@ -168,7 +170,7 @@ table.linhas tr.tot td{border-top:2px solid var(--line);background:#FAFDFF}
 </div></header>
 
 <div class="bar"><div class="bar-in">
-  <div class="tabs"><button data-v="regional" class="on">Regional</button><button data-v="gd">Estratégia do GD</button><button data-v="setor">Estratégia do rep</button></div>
+  <div class="tabs"><button data-v="regional" class="on">Regional</button><button data-v="gd">Estratégia do GD</button><button data-v="setor">Estratégia do rep</button><a id="tabQ4" href="q4.html">Q4 · Qualificação de painel</a></div>
   <select id="fLinha" title="Linha"></select>
   <select id="fDist"></select>
   <select id="fSetor"></select>
@@ -577,6 +579,7 @@ function abreLinha(chave) {
 
 document.querySelector('.tabs').addEventListener('click', e => { const v = e.target.dataset.v; if (v) { st.view = v; render(); } });
 fLinha.addEventListener('change', () => abreLinha(fLinha.value));
+fLinha.addEventListener('change', () => { document.getElementById('tabQ4').href = `q4.html?linha=${fLinha.value}`; });
 fDist.addEventListener('change', () => { st.dist = fDist.value; render(); });
 fSetor.addEventListener('change', () => { st.setor = fSetor.value; st.busca = ''; st.filtro = 'plano'; render(); });
 

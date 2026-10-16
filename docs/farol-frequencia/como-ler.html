@@ -78,7 +78,7 @@ kbd{font:inherit;background:#FAFDFF;border:1px solid var(--line);border-radius:6
 </div></header>
 
 <div class="bar"><div class="bar-in">
-  <a href="#s1">O que mede</a><a href="#s2">Dados</a><a href="#s3">Frequência</a><a href="#s4">Projeção</a><a href="#s5">Grupos</a><a href="#s6">Visões</a><a href="#s7">Rotina</a><a href="#s8">Perguntas</a>
+  <a href="#s1">O que mede</a><a href="#s2">Dados</a><a href="#s3">Frequência</a><a href="#s4">Projeção</a><a href="#s5">Grupos</a><a href="#s6">Visões</a><a href="#s7">Rotina</a><a href="#s8">Perguntas</a><a href="#s9">Aba Q4</a>
 </div></div>
 
 <main>
@@ -224,6 +224,29 @@ kbd{font:inherit;background:#FAFDFF;border:1px solid var(--line);border-radius:6
     <dt>Marquei o ✓ e o colega não vê.</dt>
     <dd>A marcação fica salva só no navegador de quem marcou. Para compartilhar, use a planilha baixada.</dd>
   </dl>
+</section>
+
+<section id="s9">
+  <h2><span class="n">9</span>Aba Q4 · Qualificação de painel</h2>
+  <p class="lead">Os Q4 não pontuam no PEX nem entram na meta de frequência. A aba Q4 sugere, setor a setor, <b>trocar médicos Q4 do painel por médicos de fora do painel com pontuação maior</b>, sem aumentar o número de médicos.</p>
+  <h3>De onde vêm os dados</h3>
+  <p>Power BI <b>Qualificação do Painel Médico</b>, página Análise de Oportunidade, filtro UGN = SPI: a tabela <b>Painel Velos (Visitado)</b> dá a pontuação, o quartil, a sobreposição, Gold list e Block list de cada médico do painel; a tabela <b>Médicos Oportunidade (Não Visitado)</b> dá os médicos do setor que não estão no painel, com pontuação e sobreposição. As visitas do ciclo vêm do Farol.</p>
+  <h3>As regras da troca</h3>
+  <table>
+    <thead><tr><th>Quem</th><th>Critério</th></tr></thead>
+    <tbody>
+      <tr><td><span class="tag g-reconstruir">Sai</span></td><td>Todo Q4 do painel é candidato, do pior para o melhor: Block list primeiro (não aceita visita, faleceu, aposentou, endereço não encontrado), depois menor pontuação, maior sobreposição e menos visitas no ciclo. <b>Gold list não sai</b> (professor, líder de opinião, referência) e aparece como "manter".</td></tr>
+      <tr><td><span class="tag g-garantido">Entra</span></td><td>Oportunidade do <b>mesmo setor</b>, da maior para a menor pontuação; empate, a menor sobreposição. Block list não entra.</td></tr>
+      <tr><td><b>Troca 1 para 1</b></td><td>Cada oportunidade, na ordem, pega o pior Q4 ainda livre com pontuação <b>menor</b> que a dela, preferindo a <b>mesma especialidade</b>. Sem Q4 pior que ela, não há troca. O <b>ganho</b> é a diferença de pontuação; a média "depois" supõe todas as trocas feitas.</td></tr>
+    </tbody>
+  </table>
+  <h3>Como ler</h3>
+  <ul>
+    <li><b>Linha:</b> as 10 linhas com painel, Q4, % Q4, oportunidades, trocas possíveis e pontuação média hoje → depois. Abaixo, por distrito e por setor, do maior para o menor número de trocas.</li>
+    <li><b>Distrito (GD):</b> onde começar (setores com mais trocas e maior ganho por médico), painéis mais pesados em Q4, especialidades que entram e saem, setores sem oportunidade mapeada.</li>
+    <li><b>Setor (rep):</b> a lista de trocas com quem sai (pontuação, sobreposição, visitas do ciclo) e quem entra (pontuação, sobreposição, cidade), mais os Q4 sem substituto, as oportunidades sem troca e as listas completas. "Baixar planilha" gera o Excel com a coluna "Executar? (S/N)" para o rep validar com o GD.</li>
+  </ul>
+  <p>A aba <b>prepara a proposta</b>; a exclusão e a inclusão continuam no processo normal de qualificação do painel. O rep decide quantas trocas executa por ciclo.</p>
 </section>
 
 </main>
