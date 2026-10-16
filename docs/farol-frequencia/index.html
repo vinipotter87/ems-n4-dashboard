@@ -89,6 +89,10 @@ td.c,th.c{text-align:center}
 .chips button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 11px;cursor:pointer;font-size:12px}
 .chips button.on{background:var(--navy);border-color:var(--navy);color:#fff}
 .chips input{border:1px solid var(--line);border-radius:999px;padding:4px 12px;margin-left:auto;min-width:200px}
+.chips.esp{margin-top:-4px}
+.chips.esp .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-right:2px}
+.chips.esp button{font-size:11.5px;padding:3px 10px}
+.chips.esp button .num{opacity:.75}
 .chk{width:16px;height:16px;cursor:pointer;accent-color:var(--verde)}
 tr.feito td{opacity:.45}
 .vis{display:inline-flex;gap:3px}
@@ -260,7 +264,7 @@ function preparar(chave) {
 const nomeGD = d => (D.distritos[d] || '').trim() || '—';
 
 // ---- Estado ---------------------------------------------------------------
-const st = { view: 'regional', linha: 'NEXUS', setor: '', dist: '', filtro: 'plano', busca: '', distSel: null };
+const st = { view: 'regional', linha: 'NEXUS', setor: '', dist: '', filtro: 'plano', busca: '', distSel: null, esp: '' };
 try { Object.assign(st, JSON.parse(localStorage.getItem('farol-freq-ui') || '{}')); } catch (e) {}
 if (!MAN.linhas.some(l => l.chave === st.linha)) st.linha = MAN.linhas[0].chave;
 const salvaUI = () => { try { localStorage.setItem('farol-freq-ui', JSON.stringify({ view: st.view, linha: st.linha, setor: st.setor, dist: st.dist })); } catch (e) {} };
@@ -395,7 +399,14 @@ function viewSetor() {
   const filtros = { plano: m => m.meta && PLANO.includes(m.g), q4: m => !m.meta, todos: () => true };
   ORDEM.forEach(k => filtros[k] = m => m.meta && m.g === k);
   const q = st.busca.trim().toLowerCase();
-  const lista = meds.filter(filtros[st.filtro] || filtros.plano)
+  // especialidades dos médicos do filtro atual (chips), com contagem
+  const base = meds.filter(filtros[st.filtro] || filtros.plano);
+  const espN = {}; base.forEach(m => { const e = m.esp || '—'; espN[e] = (espN[e] || 0) + 1; });
+  const esps = Object.keys(espN).sort((a, b) => espN[b] - espN[a] || a.localeCompare(b));
+  if (st.esp && !espN[st.esp]) st.esp = '';
+  const E = st.esp;
+  const lista = base
+    .filter(m => !E || (m.esp || '—') === E)
     .filter(m => !q || m.nome.toLowerCase().includes(q) || m.id.toLowerCase().includes(q) || m.esp.toLowerCase().includes(q))
     .sort((a, b) => (b.meta - a.meta) || ORDEM.indexOf(a.g) - ORDEM.indexOf(b.g) || (QORD[a.q] || 9) - (QORD[b.q] || 9) || a.nome.localeCompare(b.nome));
   const feitosPlano = meds.filter(m => m.meta && PLANO.includes(m.g) && feitos.has(m.id)).length;
@@ -428,6 +439,10 @@ function viewSetor() {
     ${chip('todos', 'Todos', s.n + s.q4n)}
     <button class="btn" id="imprimir">🖨 Imprimir</button>
     <input id="busca" placeholder="Buscar médico, CRM ou especialidade" value="${esc(st.busca)}">
+  </div>
+  <div class="chips esp noprint"><span class="lbl">Especialidade</span>
+    <button data-esp="" class="${E ? '' : 'on'}">Todas <span class="num">${base.length}</span></button>
+    ${esps.map(e => `<button data-esp="${esc(e)}" class="${E === e ? 'on' : ''}">${esc(e)} <span class="num">${espN[e]}</span></button>`).join('')}
   </div>
   <div class="card tw"><table>
     <thead><tr><th class="c noprint" title="Visitado/agendado no ciclo">✓</th><th>Médico</th><th class="hide-m">Especialidade</th><th class="c">Quartil</th>
@@ -581,13 +596,15 @@ document.querySelector('.tabs').addEventListener('click', e => { const v = e.tar
 fLinha.addEventListener('change', () => abreLinha(fLinha.value));
 fLinha.addEventListener('change', () => { document.getElementById('tabQ4').href = `q4.html?linha=${fLinha.value}`; });
 fDist.addEventListener('change', () => { st.dist = fDist.value; render(); });
-fSetor.addEventListener('change', () => { st.setor = fSetor.value; st.busca = ''; st.filtro = 'plano'; render(); });
+fSetor.addEventListener('change', () => { st.setor = fSetor.value; st.busca = ''; st.filtro = 'plano'; st.esp = ''; render(); });
 
 app.addEventListener('click', e => {
   if (e.target.id === 'limpaDist') { e.preventDefault(); st.distSel = null; render(); return; }
   if (e.target.id === 'imprimir') { window.print(); return; }
   if (e.target.id === 'baixar') { baixarPlanilha(e.target); return; }
   if (e.target.classList.contains('chk')) return;
+  const be = e.target.closest('[data-esp]');
+  if (be) { st.esp = be.dataset.esp; render(); return; }
   const f = e.target.closest('[data-f]');
   if (f) { st.filtro = f.dataset.f; render(); if (f.classList.contains('grupo')) document.querySelector('.chips').scrollIntoView({ behavior: 'smooth' }); return; }
   const tr = e.target.closest('tr');
