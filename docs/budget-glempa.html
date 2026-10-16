@@ -210,6 +210,7 @@ table.led-tbl tbody tr.gl-inativo .pc-bar-track{opacity:.4}
 
 <div id="modal-root"></div>
 
+<script src="assets/gate.js"></script>
 <script>
 // ── GLEMPA — prescritores EMPA (Jardiance) YTD jan–jul/2026 ─────────────
 // Base "Prescritores EMPA - YTD 2026 - Jan a Jul", recortada na SPI OESTE:
@@ -332,7 +333,7 @@ async function fetchAba(aba, tentativa){
 }
 
 async function carregarLancamentos(){
-  var registros = await fetchAba(TAB_NAME);
+  var registros = await GATE.ler(TAB_NAME);
   // um mesmo id gravado mais de uma vez (retry do Apps Script) conta uma vez só
   var vistos = {};
   registros = registros.filter(function(r){ if (!r.id || !vistos[r.id]){ vistos[r.id] = true; return true; } return false; });
@@ -350,7 +351,7 @@ async function carregarLancamentos(){
 // Sem essa checagem, o retry ou um novo clique gravavam a linha 2-3 vezes.
 async function jaGravadoNoSheet(operacao, id){
   try {
-    var regs = await fetchAba(TAB_NAME);
+    var regs = await GATE.ler(TAB_NAME);
     var existe = regs.some(function(r){ return String(r.id) === String(id); });
     return operacao === 'delete' ? !existe : (operacao === 'add' && existe);
   } catch (e) { return false; }
@@ -359,7 +360,6 @@ async function jaGravadoNoSheet(operacao, id){
 function enviarAoSheet(operacao, dados, tentativa){
   tentativa = tentativa || 0;
   var payload = {
-    token: CONFIG.budget_token,
     acao: operacao, // 'add' | 'edit' | 'delete'
     id: dados.id, gd: dados.gd, linha: dados.linha, produto: dados.produto,
     crm: dados.crm, medico: dados.medico, valor: dados.valor,
@@ -376,17 +376,7 @@ function enviarAoSheet(operacao, dados, tentativa){
       throw new Error('O Google Sheets não respondeu corretamente após algumas tentativas. Clique em "🔄 Atualizar" para conferir se o lançamento entrou antes de tentar de novo.');
     });
   }
-  return fetch(CONFIG.budget_webapp_url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify(payload)
-  }).then(function(r){ return r.text(); }).then(function(texto){
-    try {
-      return JSON.parse(texto);
-    } catch (e) {
-      return falhou();
-    }
-  }, falhou);
+  return GATE.enviar(payload).then(function(resp){ return resp; }, function(e){ if (e.sessao) throw e; return falhou(); });
 }
 
 async function recarregar(){
@@ -823,7 +813,10 @@ async function init(){
     if (!res.ok) throw new Error('config.json não encontrado.');
     CONFIG = await res.json();
     if (!CONFIG.spreadsheet_id || !CONFIG.api_key) throw new Error('SPREADSHEET_ID ou API_KEY não configurados em config.json.');
-    BACKEND_PRONTO = !!(CONFIG.budget_webapp_url && CONFIG.budget_token);
+    mostrarLoading(false); // página inteira em área restrita
+    if (!(await GATE.garantir('Budget Glempa Consultor', { cheia: true, texto: 'Digite a senha para abrir os lançamentos.' }))) return;
+    mostrarLoading(true);
+    BACKEND_PRONTO = GATE.liberado();
 
     setLoadingTxt('Carregando lançamentos…');
     STATE.lancamentos = await carregarLancamentos();

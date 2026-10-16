@@ -1277,6 +1277,29 @@ def conectar_sheets():
     return gc, sh
 
 
+def conectar_sheets_restrito():
+    """
+    Planilha PRIVADA com as abas sensíveis (budget_lancamentos — atas, planos e
+    budget — e tendencias_*). Desde out/2026 essas abas não ficam mais na planilha
+    pública do dashboard: o navegador só chega nelas pelo Apps Script
+    (apps-script/gate-webapp.gs), que confere a senha. Scripts que escrevem
+    nessas abas usam esta conexão, nunca conectar_sheets().
+    """
+    import gspread
+    import google.auth
+
+    sid = os.getenv("SPREADSHEET_ID_RESTRITO")
+    if not sid:
+        raise SystemExit("SPREADSHEET_ID_RESTRITO não definido no .env (planilha privada de atas/planos/budget/tendências).")
+    SCOPES = [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive.readonly"
+    ]
+    creds, _ = google.auth.default(scopes=SCOPES)
+    gc = gspread.authorize(creds)
+    return gc, gc.open_by_key(sid)
+
+
 # ── Main ───────────────────────────────────────────────────────────────────────
 
 def criar_stubs_sem_produtividade(mes: str, rep_nex: list, rep_vit: list, regional: str = "SPI") -> tuple[list, list]:

@@ -252,6 +252,7 @@ tr.ip-ch td{background:#fffdf5}tr.ip-ch td.n{font-weight:800;color:#78350f}
 <div class="stage" id="stage"></div>
 <div class="nav"><button class="btn" id="b-prev">← Anterior</button><div class="dots" id="dots"></div><span id="cnt"></span><button class="btn" id="b-next">Próximo →</button></div>
 
+<script src="assets/gate.js"></script>
 <script src="farol-frequencia/farol-core.js"></script>
 <script src="farol-frequencia/dados/freq_q13.js"></script>
 <script>
@@ -372,7 +373,7 @@ async function abrir(){
   ST.previa = null; ST.edit = null; ST.alvo = 'ant';
   if (ST.modelo === 'historico'){ // consolidado: carrega todos os distritos; o filtro por GD fica dentro da página
     // os planos partem do último mês fechado: é com ele que o histórico é montado
-    ST.mes = MES_FECHADO; ST.dF = null; HIST.filtro = esc0; HIST.dist = {}; ST.lanc = await fetchAba('budget_lancamentos', true);
+    ST.mes = MES_FECHADO; ST.dF = null; HIST.filtro = esc0; HIST.dist = {}; ST.lanc = await GATE.ler('budget_lancamentos');
     for (var k = 0; k < ST.distritos.length; k++){ $('montando').textContent = 'Carregando ' + (k + 1) + ' de ' + ST.distritos.length + ' GDs…'; HIST.dist[ST.distritos[k].distrito_id] = await carregarDistrito(ST.distritos[k], ST.mes); }
     ST.gd = esc0 || (ST.distritos[0] || {}).distrito_id; ST.d = HIST.dist[ST.gd];
     return telaHistorico();
@@ -380,7 +381,7 @@ async function abrir(){
   ST.gd = esc0;
   var d = ST.distritos.filter(function(x){ return x.distrito_id === ST.gd; })[0];
   if (!d) return telaEntrada();
-  ST.lanc = await fetchAba('budget_lancamentos', true);
+  ST.lanc = await GATE.ler('budget_lancamentos');
   ST.d = await carregarDistrito(d, ST.mes);
   ST.dF = ST.mes === MES_FECHADO ? ST.d : (ST.modelo === 'individual' ? await carregarDistrito(d, MES_FECHADO) : null); // base dos planos
   if (ST.modelo === 'individual') telaReps(); else montar();
@@ -1234,10 +1235,9 @@ function docReg(crm){ var gd = 'N4:' + ST.gd, rs = ST.lanc.filter(function(l){ r
 async function docGravar(crm, doc, apagar){ // doc = {titulo, arquivo, texto}; falha aqui não desfaz a ata já salva
   var reg = docReg(crm), d = ST.d.dist; if (apagar && !reg) return;
   try {
-    var env = { token: CONFIG.budget_token, acao: apagar ? 'delete' : (reg ? 'edit' : 'add'), id: reg ? reg.id : 'rpd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), gd: 'N4:' + ST.gd, linha: d.linha,
+    var env = { acao: apagar ? 'delete' : (reg ? 'edit' : 'add'), id: reg ? reg.id : 'rpd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), gd: 'N4:' + ST.gd, linha: d.linha,
       produto: 'RPS_ATA_DOC', crm: crm, medico: ST.modelo === 'individual' ? repSel().nome : d.nm, valor: 0, acao_lancamento: doc ? JSON.stringify(doc) : '', data: hoje(), criadoEm: reg ? reg.criadoEm : Date.now().toString() };
-    var r = await fetch(CONFIG.budget_webapp_url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(env) });
-    var resp = JSON.parse(await r.text()); if (!resp.ok) throw new Error(resp.erro || 'falha desconhecida');
+    var resp = await GATE.enviar(env); if (!resp.ok) throw new Error(resp.erro || 'falha desconhecida');
     espelhar(env);
   } catch(e){ console.warn('Texto completo da ata não foi salvo.', e.message); var st = ataSt(); if (st) st.textContent = 'Combinados salvos, mas o texto completo da ata não foi gravado: ' + e.message; }
 }
@@ -1280,17 +1280,16 @@ async function ataArquivo(input){
 }
 async function ataGravar(ata, apagar){
   var reg = ataReg(), st = ataSt(), d = ST.d.dist;
-  if (!(CONFIG.budget_webapp_url && CONFIG.budget_token)){ if (st) st.textContent = 'Gravação indisponível nesta página.'; return false; }
+  if (!GATE.liberado()){ if (st) st.textContent = 'Gravação indisponível nesta página.'; return false; }
   if (st) st.textContent = 'Salvando…';
   if (ata && ST.alvo === 'atual') ata.daReuniao = true;
   var env = null;
   try {
-    var r = await fetch(CONFIG.budget_webapp_url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(env = {
-      token: CONFIG.budget_token, acao: apagar ? 'delete' : (reg ? 'edit' : 'add'), id: reg ? reg.id : 'rps' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-      gd: 'N4:' + ST.gd, linha: d.linha, produto: 'RPS_ATA', crm: reg ? reg.crm : (ST.alvo === 'atual' ? ataChave() : ataEscopo() + ataDataAnt(ata)), medico: ST.modelo === 'individual' ? repSel().nome : d.nm, valor: 0, acao_lancamento: ata ? JSON.stringify(ata) : '', data: hoje(), criadoEm: reg ? reg.criadoEm : Date.now().toString() }) });
-    var resp = JSON.parse(await r.text()); if (!resp.ok) throw new Error(resp.erro || 'falha desconhecida');
+    var resp = await GATE.enviar(env = {
+      acao: apagar ? 'delete' : (reg ? 'edit' : 'add'), id: reg ? reg.id : 'rps' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      gd: 'N4:' + ST.gd, linha: d.linha, produto: 'RPS_ATA', crm: reg ? reg.crm : (ST.alvo === 'atual' ? ataChave() : ataEscopo() + ataDataAnt(ata)), medico: ST.modelo === 'individual' ? repSel().nome : d.nm, valor: 0, acao_lancamento: ata ? JSON.stringify(ata) : '', data: hoje(), criadoEm: reg ? reg.criadoEm : Date.now().toString() }); if (!resp.ok) throw new Error(resp.erro || 'falha desconhecida');
   } catch(e){ if (st) st.textContent = 'Não foi possível salvar: ' + e.message; return false; }
-  ST.lanc = await fetchAba('budget_lancamentos', true); espelhar(env);
+  ST.lanc = await GATE.ler('budget_lancamentos'); espelhar(env);
   if (apagar) await docGravar(env.crm, null, true);
   else if (ST.doc && ST.doc.texto){ var dc = ST.doc; ST.doc = null; dc.titulo = ata.titulo; await docGravar(env.crm, dc, false); }
   return true;
@@ -1330,7 +1329,7 @@ async function copiarPromptAta(btn){
 }
 function desenharAtaDe(alvo){
   var box = ataBox(alvo); if (!box) return;
-  var pode = !!(CONFIG.budget_webapp_url && CONFIG.budget_token), reg = ataRegDe(alvo), salva = null; if (reg) try { salva = JSON.parse(reg.acao); } catch(e){}
+  var pode = !!GATE.liberado(), reg = ataRegDe(alvo), salva = null; if (reg) try { salva = JSON.parse(reg.acao); } catch(e){}
   var meu = (ST.alvo || 'ant') === alvo, ed = meu && !!ST.edit, previa = meu && !ed && !!ST.previa, ata = ed ? ST.edit : (previa ? ST.previa : salva), h = '', A = "ataAlvo('" + alvo + "');";
   var up = '<input type="file" accept="application/pdf,.pdf" style="display:none" onchange="' + A + 'ataArquivo(this)">';
   var digitar = '<button class="b2" style="padding:8px 14px" onclick="' + A + 'ST.edit={titulo:\'' + (alvo === 'atual' ? 'Combinados da RPS de ' + dataBr(ST.data) : 'Combinados da RPS anterior') + '\',data:\'\',itens:[{n:1,texto:\'\',resp:\'\',prazo:\'\',status:\'Pendente\'}]};desenharAta()">Digitar os combinados</button>';
@@ -1743,7 +1742,7 @@ async function planoAcompanhar(ch, d, reg, dataRps){ // cria a base (planos anti
   return mudou ? await gravarLinha(reg, d) : false;
 }
 async function acompanharPlanos(){ // RPS individual: roda ao montar o deck do representante
-  if (!(CONFIG.budget_webapp_url && CONFIG.budget_token)) return;
+  if (!GATE.liberado()) return;
   var ab = planosAbertos(ST.setor), gravou = false;
   for (var i = 0; i < ab.length; i++) if (await planoAcompanhar(ab[i].ch, ab[i].p, ab[i].reg, ST.data)) gravou = true;
   if (gravou) andRedesenhar();
@@ -1844,7 +1843,7 @@ function desenharAndamento(){
 }
 function desenharAndamentoEm(box, ab, qual){
   if (!box) return;
-  var pode = !!(CONFIG.budget_webapp_url && CONFIG.budget_token), h = '';
+  var pode = !!GATE.liberado(), h = '';
   if (!ab.length) h = '<div class="vazio"><b>Nenhum plano ' + qual + ' em andamento</b>Os planos salvos para este representante voltam aqui a cada RPS, até serem encerrados.</div>';
   ab.forEach(function(o){ var p = o.p, id = o.reg.id, evs = evolDados(o.ch, p, medir(o.ch)), feitas = (p.acoes || []).filter(function(a){ return a.status === 'Concluída'; }).length;
     // plano que não tem mais o slide "Plano — X" (já está em andamento): a edição acontece aqui mesmo
@@ -1893,7 +1892,7 @@ function planoDesenhar(ch, editar, rasc){
   var box = $('plano-' + ch), info = planoInfo(ch); if (!box || !info) return;
   if (box.getAttribute('data-inline') && editar !== true){ // edição embutida no slide de planos em andamento: fecha e volta o cartão
     box.style.display = 'none'; box.innerHTML = ''; var cd = $('and-card-' + ch); if (cd) cd.style.display = ''; if (ST.slides.length) ajustar(); return; }
-  var pode = !!(CONFIG.budget_webapp_url && CONFIG.budget_token), reg = planoReg(ch), salvo = planoDados(ch), ed = pode && (editar === true || (!salvo && !info.opcional)), q = "'" + ch + "'", h = '';
+  var pode = !!GATE.liberado(), reg = planoReg(ch), salvo = planoDados(ch), ed = pode && (editar === true || (!salvo && !info.opcional)), q = "'" + ch + "'", h = '';
   if (ed){
     var p = rasc || salvo || { problema: info.problema, kpis: info.kpis.slice(), porques: [], acoes: [{}] }; if (!p.acoes || !p.acoes.length) p.acoes = [{}];
     h += '<div class="ph">🧭 Plano — ' + info.titulo + ' <span>5 porquês + 5W2H</span></div><label class="pl">Problema</label><textarea data-f="problema" rows="2">' + esc(p.problema) + '</textarea>';
@@ -1926,12 +1925,11 @@ function planoDesenhar(ch, editar, rasc){
 async function planoEnviar(ch, plano, apagar){ var reg = planoReg(ch), st = $('plano-st-' + ch), r0 = repSel();
   if (st) st.textContent = 'Salvando…';
   var env = null;
-  try { var r = await fetch(CONFIG.budget_webapp_url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(env = { token: CONFIG.budget_token, acao: apagar ? 'delete' : (reg ? 'edit' : 'add'),
+  try { var resp = await GATE.enviar(env = { acao: apagar ? 'delete' : (reg ? 'edit' : 'add'),
       id: reg ? reg.id : 'rpp' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), gd: 'N4:' + ST.gd, linha: ST.d.dist.linha, produto: 'RPS_PLANO', crm: reg ? reg.crm : 'rpsi|' + ST.setor + '|' + ch + '|' + MES_FECHADO,
-      medico: r0.nome, valor: 0, acao_lancamento: plano ? JSON.stringify(plano) : '', data: hoje(), criadoEm: reg ? reg.criadoEm : Date.now().toString() }) });
-    var resp = JSON.parse(await r.text()); if (!resp.ok) throw new Error(resp.erro || 'falha desconhecida');
+      medico: r0.nome, valor: 0, acao_lancamento: plano ? JSON.stringify(plano) : '', data: hoje(), criadoEm: reg ? reg.criadoEm : Date.now().toString() }); if (!resp.ok) throw new Error(resp.erro || 'falha desconhecida');
   } catch(e){ if (st) st.textContent = 'Não foi possível salvar: ' + e.message; return false; }
-  ST.lanc = await fetchAba('budget_lancamentos', true); espelhar(env); return true; }
+  ST.lanc = await GATE.ler('budget_lancamentos'); espelhar(env); return true; }
 async function planoSalvar(ch){ var p = planoLer(ch), st = $('plano-st-' + ch); function er(m){ st.textContent = m; st.style.color = 'var(--red)'; }
   if (!p.problema) return er('Descreva o problema.'); if (p.porques.length < 3) return er('Preencha pelo menos 3 porquês.');
   if (!p.raiz) return er('Escreva a causa raiz, sintetizando os porquês.');
@@ -1997,9 +1995,8 @@ var HIST = { aba: 'planos', filtro: '', dist: null }; // dist[distrito_id] = dad
 
 async function gravarLinha(reg, obj){ // regrava o JSON de uma linha existente (status de ação ou de combinado)
   try {
-    var r = await fetch(CONFIG.budget_webapp_url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ token: CONFIG.budget_token, acao: 'edit', id: reg.id, gd: reg.gd, linha: reg.linha,
-      produto: reg.produto, crm: reg.crm, medico: reg.medico, valor: 0, acao_lancamento: JSON.stringify(obj), data: reg.data, criadoEm: reg.criadoEm }) });
-    var resp = JSON.parse(await r.text()); if (!resp.ok) throw new Error(resp.erro || 'falha desconhecida');
+    var resp = await GATE.enviar({ acao: 'edit', id: reg.id, gd: reg.gd, linha: reg.linha,
+      produto: reg.produto, crm: reg.crm, medico: reg.medico, valor: 0, acao_lancamento: JSON.stringify(obj), data: reg.data, criadoEm: reg.criadoEm }); if (!resp.ok) throw new Error(resp.erro || 'falha desconhecida');
     reg.acao = JSON.stringify(obj); return true;
   } catch(e){ alert('Não foi possível gravar: ' + e.message); return false; }
 }
@@ -2020,7 +2017,7 @@ function histExigidos(){
 
 function telaHistorico(){ // consolidado da regional, com filtro por GD (HIST.filtro = '' → todos)
   ST.slides = [];
-  var pode = !!(CONFIG.budget_webapp_url && CONFIG.budget_token);
+  var pode = !!GATE.liberado();
   var todos = ST.distritos.filter(function(d){ return HIST.dist && HIST.dist[d.distrito_id]; });
   if (HIST.filtro && !todos.some(function(d){ return d.distrito_id === HIST.filtro; })) HIST.filtro = '';
   var gds = todos.filter(function(d){ return !HIST.filtro || d.distrito_id === HIST.filtro; }), varios = gds.length > 1;
@@ -2164,6 +2161,8 @@ window.addEventListener('resize', function(){ if (ST.slides.length) ajustar(); }
   try {
     var res = await fetch('config.json?t=' + Date.now(), {cache:'no-store'}); if (!res.ok) throw new Error('config.json não encontrado.');
     CONFIG = await res.json();
+    // página inteira em área restrita (atas e planos de RPS)
+    if (!(await GATE.garantir('Copiloto de RPS', { cheia: true, texto: 'Digite a senha para abrir o copiloto.' }))) return;
     if ($('b-dash')) $('b-dash').href = REG_PAG;
     if (REG === 'LESTE') document.title = document.title + ' — Leste';
     var cfg = await fetchAba('config'), padrao = null;

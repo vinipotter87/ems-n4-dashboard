@@ -75,12 +75,6 @@ td{padding:8px 9px;border-bottom:1px solid var(--border);vertical-align:top;line
 </head>
 <body class="tema-claro">
 
-<div class="trava" id="trava"><form id="trava-form" autocomplete="off">
-  <h2>🔒 Atas de N4</h2><p>Digite a senha para abrir as atas.</p>
-  <input id="trava-senha" type="password" inputmode="numeric" placeholder="••••" autocomplete="new-password" autofocus>
-  <button type="submit">Entrar</button><div class="err" id="trava-err"></div>
-</form></div>
-
 <div class="hdr">
   <div class="logo"><img src="assets/logo-grupo-ems.png" alt="Grupo EMS"></div>
   <div><h1>📄 Atas de N4</h1><p><span id="pg-reg">Regional SPI Oeste</span> · atas completas das reuniões N4 (GRD × GD) organizadas pelo mês da reunião</p></div>
@@ -100,6 +94,7 @@ td{padding:8px 9px;border-bottom:1px solid var(--border);vertical-align:top;line
   <div class="doc" id="doc"><div class="vazio"><b>Escolha uma ata na lista</b>O texto completo aparece aqui.</div></div>
 </div>
 
+<script src="assets/gate.js"></script>
 <script>
 // ── Atas de N4 ───────────────────────────────────────────────────
 // Leitura das atas de N4 que os GDs anexam no modo apresentação do dashboard
@@ -137,7 +132,7 @@ async function fetchAba(aba, tent){
 
 async function carregar(){
   $('lista').innerHTML = '<div class="vazio">Carregando atas…</div>';
-  var linhas = await fetchAba(TAB), docs = {};
+  var linhas = await GATE.ler(TAB), docs = {};
   if (!Object.keys(GDS).length){ // nomes dos GDs: último mês com a aba de distritos
     var cfg = await fetchAba('config'), meses = MESES.slice();
     cfg.forEach(function(r){ if (r.chave === 'meses_disponiveis') meses = r.valor.split(',').map(function(s){ return s.trim(); }); });
@@ -233,28 +228,16 @@ $('f-busca').addEventListener('input', desenharLista);
 $('btn-atualizar').addEventListener('click', function(){ carregar().catch(erro); });
 function erro(e){ $('lista').innerHTML = '<div class="vazio"><b>Erro ao carregar</b>' + esc(e.message) + '</div>'; }
 
-// Senha de acesso: só a hash fica no código (a página é pública no GitHub Pages).
-// A senha é pedida toda vez que a página abre (nada fica lembrado no navegador).
-var SENHA_HASH = '55595a6e5cfc81858117b2737ed72bedb96f5a3aa35be330b2b8912c5601c0be';
-async function hashSenha(t){
-  var b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t));
-  return Array.from(new Uint8Array(b)).map(function(x){ return x.toString(16).padStart(2, '0'); }).join('');
-}
-async function iniciar(){
-  $('trava').style.display = 'none';
+// Acesso restrito: a senha é conferida no servidor (apps-script/gate-webapp.gs) e as
+// atas vêm de uma planilha privada — nada fica no HTML nem na planilha pública.
+(async function(){
   try {
     var res = await fetch('config.json?t=' + Date.now(), {cache:'no-store'}); if (!res.ok) throw new Error('config.json não encontrado.');
     CONFIG = await res.json();
+    if (!(await GATE.garantir('Atas de N4', { cheia: true, texto: 'Digite a senha para abrir as atas.' }))) return;
     await carregar();
   } catch(e){ erro(e); }
-}
-try { sessionStorage.removeItem('atas_n4_ok'); } catch(e){} // limpa a liberação da versão anterior
-$('trava-form').addEventListener('submit', async function(ev){
-  ev.preventDefault();
-  if (await hashSenha($('trava-senha').value.trim()) === SENHA_HASH){
-    iniciar();
-  } else { $('trava-err').textContent = 'Senha incorreta.'; $('trava-senha').value = ''; $('trava-senha').focus(); }
-});
+})();
 </script>
 </body>
 </html>

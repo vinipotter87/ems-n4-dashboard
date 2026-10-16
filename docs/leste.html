@@ -953,6 +953,7 @@ body.apres-on{overflow:hidden}
   <!-- Conteúdo injetado dinamicamente -->
 </div>
 
+<script src="assets/gate.js"></script>
 <script>
 // ══════════════════════════════════════════════════════════════════
 //  EMS N4 Dashboard v5 — Dynamic (reads from Google Sheets)
@@ -1345,11 +1346,19 @@ var BUDGET_LANC = null; // null = ainda não carregou / falhou
 
 async function carregarBudget() {
   try {
-    BUDGET_LANC = await fetchAba('budget_lancamentos');
+    BUDGET_LANC = GATE.liberado() ? await GATE.ler('budget_lancamentos') : null; // área restrita: só com a senha
   } catch(e) {
     BUDGET_LANC = null;
     console.warn('Aba budget_lancamentos indisponível — resumo de budget fica sem o utilizado.', e.message);
   }
+}
+
+// Área restrita: sem sessão o card mostra só a verba e um botão de senha
+async function budgetDesbloquear() {
+  if (!(await GATE.garantir('Budget — verba tática', { cancelavel: true, texto: 'Os lançamentos ficam em área restrita. Digite a senha para ver o utilizado.' }))) return;
+  await carregarBudget();
+  var el = document.getElementById('budget-resumo');
+  if (el) el.outerHTML = renderBudgetResumo();
 }
 
 function renderBudgetResumo() {
@@ -1364,13 +1373,13 @@ function renderBudgetResumo() {
       '<div style="font-size:18px;font-weight:800;color:' + (cor || 'var(--text)') + '">' + val + '</div></div>';
   }
 
-  var html = '<div class="kpi" style="margin-bottom:22px;border-top-color:var(--orange)">';
+  var html = '<div class="kpi" id="budget-resumo" style="margin-bottom:22px;border-top-color:var(--orange)">';
   html += '<div style="display:flex;align-items:center;gap:26px;flex-wrap:wrap">';
   html += '<div style="min-width:150px"><div style="font-size:13px;font-weight:800">💰 Budget — verba tática</div>' +
     '<div class="kpi-sub">' + (prefixo ? gds[0] : 'Regional LESTE · 4 GDs') + ' · acumulado</div></div>';
   html += bloco('Total', brl(verba));
   if (BUDGET_LANC === null) {
-    html += bloco('Utilizado', '—') + '<div class="kpi-sub">lançamentos indisponíveis no momento</div>';
+    html += bloco('Utilizado', '—') + (GATE.liberado() ? '<div class="kpi-sub">lançamentos indisponíveis no momento</div>' : '<button class="gate-btn" onclick="budgetDesbloquear()">🔒 Senha para ver o utilizado</button>');
   } else {
     var usado = BUDGET_LANC.filter(function(l){ return l.produto !== 'GLEMPA' && gds.indexOf(l.gd) >= 0; })
       .reduce(function(t, l){ return t + (parseFloat(l.valor) || 0); }, 0);
@@ -2572,7 +2581,7 @@ function apresPlanoObjetivoHtml(p) { // no plano salvo: métrica, base e objetiv
   return h + '</div>';
 }
 async function apresPlanoResultados() { // grava o realizado do mês fechado nos planos em vigor que têm objetivo para ele
-  if (!(CONFIG && CONFIG.budget_webapp_url && CONFIG.budget_token)) return;
+  if (!GATE.liberado()) return;
   var mp = apresMesPlano(), mudou = false;
   for (var i = 0; i < APRES_PLANOS.length; i++) {
     var info = APRES_PLANOS[i], reg = apresPlanoReg(info.chave), p = apresPlanoDados(info.chave);
@@ -2581,7 +2590,7 @@ async function apresPlanoResultados() { // grava o realizado do mês fechado nos
     v = Math.round(v * 100) / 100; p.resultados = p.resultados || {};
     if (p.resultados[mp] && Math.abs(p.resultados[mp].v - v) < 0.005) continue;
     p.resultados[mp] = { v: v, data: apresHoje() };
-    var env = { token: CONFIG.budget_token, acao: 'edit', id: reg.id, gd: reg.gd, linha: reg.linha, produto: reg.produto, crm: reg.crm, medico: reg.medico, valor: 0, acao_lancamento: JSON.stringify(p), data: reg.data, criadoEm: reg.criadoEm };
+    var env = { acao: 'edit', id: reg.id, gd: reg.gd, linha: reg.linha, produto: reg.produto, crm: reg.crm, medico: reg.medico, valor: 0, acao_lancamento: JSON.stringify(p), data: reg.data, criadoEm: reg.criadoEm };
     try { await apresAtaEnviar(env); apresEspelhar(env); mudou = true; } catch (e) { console.warn('Resultado do plano não foi gravado.', e.message); }
   }
   if (mudou) APRES_PLANOS.forEach(function(pl) { apresPlanoDesenhar(pl.chave, false); });
@@ -2718,7 +2727,7 @@ function apresPlanoAcao(chave, delta, idx) {
 function apresPlanoDesenhar(chave, editar, rascunho) {
   var box = document.getElementById('ap-plano-' + chave), info = apresPlanoInfo(chave);
   if (!box || !info) return;
-  var pronto = !!(CONFIG && CONFIG.budget_webapp_url && CONFIG.budget_token);
+  var pronto = !!GATE.liberado();
   var reg = apresPlanoReg(chave), salvo = apresPlanoDados(chave);
   var modoEdicao = pronto && (editar === true || !salvo);
   var q = "'" + chave + "'", h = '';
@@ -2767,7 +2776,7 @@ function apresPlanoDesenhar(chave, editar, rascunho) {
 async function apresPlanoEnviar(chave, plano, apagar) {
   var reg = apresPlanoReg(chave), d = ((window._D || {}).distritos || [])[0] || {}, st = document.getElementById('ap-plano-st-' + chave);
   var payload = {
-    token: CONFIG.budget_token, acao: apagar ? 'delete' : (reg ? 'edit' : 'add'),
+    acao: apagar ? 'delete' : (reg ? 'edit' : 'add'),
     id: reg ? reg.id : 'n4p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
     gd: 'N4:' + DISTRITO_FILTRO, linha: d.linha || '', produto: APRES_PLANO_PROD, crm: reg ? reg.crm : chave + '|' + apresMesPlano(),
     medico: d.nm || '', valor: 0, acao_lancamento: plano ? JSON.stringify(plano) : '',
@@ -2775,8 +2784,7 @@ async function apresPlanoEnviar(chave, plano, apagar) {
   };
   if (st) st.textContent = 'Salvando…';
   try {
-    var r = await fetch(CONFIG.budget_webapp_url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) });
-    var resp = JSON.parse(await r.text());
+    var resp = await GATE.enviar(payload);
     if (!resp.ok) throw new Error(resp.erro || 'falha desconhecida');
   } catch (e) { if (st) st.textContent = 'Não foi possível salvar: ' + e.message; return false; }
   await carregarBudget(); apresEspelhar(payload);
@@ -3041,8 +3049,7 @@ function apresEspelhar(env) {
   if (i >= 0) BUDGET_LANC[i] = l; else BUDGET_LANC.push(l);
 }
 async function apresAtaEnviar(env) {
-  var r = await fetch(CONFIG.budget_webapp_url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(env) });
-  var resp = JSON.parse(await r.text());
+  var resp = await GATE.enviar(env);
   if (!resp.ok) throw new Error(resp.erro || 'falha desconhecida');
 }
 function apresAtaDocReg(crm) {
@@ -3055,7 +3062,7 @@ async function apresAtaGravar(ata, apagar) {
   if (ata && APRES_ATA_ALVO === 'atual') ata.daReuniao = true;
   var mAnt = MES_ORDER[MES_ORDER.indexOf(MES_ATUAL) - 1] || MES_ATUAL; // ata antiga anexada direto no slide 2
   var payload = {
-    token: CONFIG.budget_token, acao: apagar ? 'delete' : (reg ? 'edit' : 'add'),
+    acao: apagar ? 'delete' : (reg ? 'edit' : 'add'),
     id: reg ? reg.id : 'n4a' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
     gd: 'N4:' + DISTRITO_FILTRO, linha: d.linha || '', produto: APRES_ATA_PROD, crm: reg ? reg.crm : 'ata|' + (APRES_ATA_ALVO === 'atual' ? MES_ATUAL : mAnt),
     medico: ata ? ata.titulo : '', valor: 0, acao_lancamento: ata ? JSON.stringify(ata) : '',
@@ -3068,7 +3075,7 @@ async function apresAtaGravar(ata, apagar) {
   // texto completo, na mesma chave; falha aqui não desfaz os combinados já salvos
   var doc = apresAtaDocReg(payload.crm), texto = APRES_ATA_TEXTO; APRES_ATA_TEXTO = null;
   if (apagar ? doc : texto) {
-    var envDoc = { token: CONFIG.budget_token, acao: apagar ? 'delete' : (doc ? 'edit' : 'add'), id: doc ? doc.id : 'n4d' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    var envDoc = { acao: apagar ? 'delete' : (doc ? 'edit' : 'add'), id: doc ? doc.id : 'n4d' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
       gd: payload.gd, linha: payload.linha, produto: APRES_ATA_DOC, crm: payload.crm, medico: payload.medico, valor: 0,
       acao_lancamento: apagar ? '' : JSON.stringify({ titulo: ata.titulo, arquivo: ata.arquivo || '', texto: texto }), data: apresHoje(), criadoEm: doc ? doc.criadoEm : Date.now().toString() };
     try { await apresAtaEnviar(envDoc); apresEspelhar(envDoc); } catch (e) { console.warn('Texto completo da ata não foi salvo.', e.message); }
@@ -3132,7 +3139,7 @@ function apresAtaDesenhar() { apresAtaDesenharDe('ant'); apresAtaDesenharDe('atu
 function apresAtaDesenharDe(alvo) {
   var box = apresAtaBox(alvo);
   if (!box) return;
-  var pronto = !!(CONFIG && CONFIG.budget_webapp_url && CONFIG.budget_token);
+  var pronto = !!GATE.liberado();
   var reg = apresAtaRegDe(alvo), salva = null; if (reg) try { salva = JSON.parse(reg.acao); } catch (e) {}
   var meu = APRES_ATA_ALVO === alvo, editando = meu && !!APRES_ATA_EDIT, previa = meu && !editando && !!APRES_ATA_PREVIA;
   var ata = editando ? APRES_ATA_EDIT : (previa ? APRES_ATA_PREVIA : salva), A = "apresAtaAlvo('" + alvo + "');";
@@ -3201,18 +3208,10 @@ function apresRaiz() {
   return r;
 }
 
-// A gravação de atas e planos usa o mesmo web app do Budget. O endereço e o token
-// ficam só no config.json (o config-leste.json não os tem); a apresentação lê de lá.
-async function apresCredenciais() {
-  if (CONFIG.budget_webapp_url && CONFIG.budget_token) return;
-  try {
-    var c = await (await fetch('config.json?t=' + Date.now(), { cache: 'no-store' })).json();
-    if (c.spreadsheet_id === CONFIG.spreadsheet_id) { CONFIG.budget_webapp_url = c.budget_webapp_url; CONFIG.budget_token = c.budget_token; }
-  } catch (e) { console.warn('Gravação de atas e planos indisponível.', e.message); }
-}
-
 async function apresAbrir() {
-  await apresCredenciais();
+  // atas e planos ficam em área restrita: pede a senha antes de montar a apresentação
+  if (!(await GATE.garantir('Apresentação N4', { cancelavel: true, texto: 'As atas e os planos ficam em área restrita. Digite a senha para abrir a apresentação.' }))) return;
+  if (BUDGET_LANC === null) await carregarBudget();
   if (VIEW_ATUAL !== 'principal') await trocarMes(MES_ATUAL);
   await apresCarregarAlloc();
   try { await carregarMes(apresMesFechado()); } catch (e) { console.warn('Mês fechado indisponível — planos usam o mês da tela.', e.message); } // base dos planos

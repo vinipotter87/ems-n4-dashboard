@@ -82,6 +82,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
 
 <div class="main" id="main-content"></div>
 
+<script src="assets/gate.js"></script>
 <script>
 var CONFIG = {};
 
@@ -222,6 +223,9 @@ async function init() {
     var res = await fetch('config.json?t=' + Date.now(), { cache: 'no-store' });
     if (!res.ok) throw new Error('config.json não encontrado.');
     CONFIG = await res.json();
+    mostrarLoading(false); // página em área restrita (leitura só do GRD/GN)
+    if (!(await GATE.garantir('Radar de Tendências N4', { cheia: true, texto: 'Digite a senha para abrir o radar.' }))) return;
+    mostrarLoading(true);
     if (!CONFIG.spreadsheet_id || !CONFIG.api_key) {
       throw new Error('SPREADSHEET_ID ou API_KEY não configurados em config.json.');
     }
@@ -255,7 +259,7 @@ async function init() {
     var cicloEncontrado = meses[meses.length - 1] || '';
     for (var i = 0; i < candidatos.length; i++) {
       try {
-        var rows = await fetchAba('tendencias_' + candidatos[i]);
+        var rows = await GATE.ler('tendencias_' + candidatos[i]);
         if (rows.length) { registros = rows; cicloEncontrado = candidatos[i]; break; }
       } catch(e) { /* aba ainda não existe para esse ciclo — tenta o anterior */ }
     }

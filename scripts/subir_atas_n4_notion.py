@@ -29,7 +29,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry-run", action="store_true", dest="dry")
     a = ap.parse_args()
-    gc, sh = ingest.conectar_sheets()
+    gc, sh = ingest.conectar_sheets_restrito()  # planilha privada (área restrita)
     ws = sh.worksheet("budget_lancamentos")
     vals = ws.get_all_values()
     cab = vals[0]

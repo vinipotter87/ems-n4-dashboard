@@ -115,3 +115,31 @@ URL do dashboard: `https://SEU_USUARIO.github.io/ems-n4-dashboard`
 
 Após o checklist: repita `pipeline.py --mes {MES}` para FEV, MAR e ABR.
 A partir do próximo mês, rode apenas uma vez por mês quando os dados chegarem.
+
+---
+
+## PARTE 7 — Área restrita (atas, planos, budget, tendências)
+
+Desde out/2026 as abas sensíveis **não ficam na planilha pública** do dashboard:
+
+| Onde | O quê | Quem lê |
+|---|---|---|
+| Planilha pública (`SPREADSHEET_ID`) | KPIs, produtos, visitas, CRM, mercado… | qualquer página, via API key (leitura pública) |
+| Planilha privada (`SPREADSHEET_ID_RESTRITO`) | `budget_lancamentos` (atas N4/RPS, planos, budget, classificações) e `tendencias_*` | só o Apps Script `apps-script/gate-webapp.gs`, depois de conferir a senha |
+
+A senha antiga das páginas de atas era só visual (hash no HTML e planilha pública):
+qualquer um lia as abas direto pela API. Agora o navegador chama o gate
+(`config.json` → `gate_url`), que valida a senha **no servidor** e devolve só a aba
+pedida; a sessão vale 6 h na aba do navegador (`sessionStorage`). O módulo
+compartilhado pelas páginas é `docs/assets/gate.js`.
+
+Deploy do gate: seguir o cabeçalho de `apps-script/gate-webapp.gs` (planilha
+**privada** → Extensões → Apps Script → propriedade `SENHA` → implantar como App da
+Web → colar a URL em `gate_url`). Depois, arquivar a implantação antiga do
+`budget-webapp` na planilha pública. Nunca voltar `budget_token`/`budget_webapp_url`
+para o `config.json`.
+
+Scripts Python que escrevem nessas abas usam `ingest.conectar_sheets_restrito()`
+(`subir_atas_n4_notion.py` aqui e `publicar_tendencias.py` no SQUAD N4), que lê
+`SPREADSHEET_ID_RESTRITO` do `.env`. A service account precisa ser Editor também
+na planilha privada.

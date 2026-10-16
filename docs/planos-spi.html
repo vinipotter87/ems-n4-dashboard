@@ -88,6 +88,7 @@ select.st{cursor:pointer}
 
 <div class="main" id="main"><div class="vazio">Carregando planos…</div></div>
 
+<script src="assets/gate.js"></script>
 <script>
 // ── Planos SPI ───────────────────────────────────────────────────
 // Consolida os planos que os GDs preenchem no modo apresentação do
@@ -194,10 +195,9 @@ async function mudarStatus(id, k, sel){
   p.acoes[k].status = novo; p.bruto.acoes = p.acoes;
   sel.disabled = true;
   try {
-    var r = await fetch(CONFIG.budget_webapp_url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({
-      token: CONFIG.budget_token, acao: 'edit', id: p.reg.id, gd: p.reg.gd, linha: p.reg.linha, produto: p.reg.produto, crm: p.reg.crm,
-      medico: p.reg.medico, valor: 0, acao_lancamento: JSON.stringify(p.bruto), data: p.reg.data, criadoEm: p.reg.criadoEm }) });
-    var resp = JSON.parse(await r.text());
+    var resp = await GATE.enviar({
+      acao: 'edit', id: p.reg.id, gd: p.reg.gd, linha: p.reg.linha, produto: p.reg.produto, crm: p.reg.crm,
+      medico: p.reg.medico, valor: 0, acao_lancamento: JSON.stringify(p.bruto), data: p.reg.data, criadoEm: p.reg.criadoEm });
     if (!resp.ok) throw new Error(resp.erro || 'falha desconhecida');
     p.reg.acao = JSON.stringify(p.bruto);
   } catch(e){
@@ -285,8 +285,9 @@ async function carregar(){
       if (!res.ok) throw new Error('config.json não encontrado.');
       CONFIG = await res.json();
     }
-    PODE_GRAVAR = !!(CONFIG.budget_webapp_url && CONFIG.budget_token);
-    PLANOS = lerPlanos(await fetchAba(TAB));
+    if (!(await GATE.garantir('Planos SPI', { cheia: true, texto: 'Digite a senha para abrir os planos.' }))) return;
+    PODE_GRAVAR = GATE.liberado();
+    PLANOS = lerPlanos(await GATE.ler(TAB));
     montarFiltros();
     render();
   } catch(e){
