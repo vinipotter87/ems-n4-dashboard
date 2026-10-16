@@ -371,7 +371,8 @@ function telaEntrada(){
 // e qualquer gravação exigem a senha (sessão do gate).
 async function lancRps(){
   if (GATE.liberado()){ try { return await GATE.ler('budget_lancamentos'); } catch(e){ if (!e.sessao) throw e; } }
-  return GATE.lerAberto();
+  try { return await GATE.lerAberto(); }
+  catch(e){ console.warn('Combinados indisponíveis (gate): ' + e.message); return []; } // o copiloto abre mesmo assim, sem as atas
 }
 function rpsBotaoSenha(){ var b = $('b-senha'); if (b) b.style.display = GATE.pronto() && !GATE.liberado() ? '' : 'none'; }
 async function rpsDesbloquear(){
