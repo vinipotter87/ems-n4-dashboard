@@ -1010,7 +1010,7 @@ body.apres-on{overflow:hidden}
   <!-- Conteúdo injetado dinamicamente -->
 </div>
 
-<script src="assets/gate.js?v=20261016c"></script>
+<script src="assets/gate.js?v=20261016d"></script>
 <script>
 // ══════════════════════════════════════════════════════════════════
 //  EMS N4 Dashboard v5 — Dynamic (reads from Google Sheets)
@@ -10358,7 +10358,8 @@ window.addEventListener('message', function(e) {
   if (e.data.mercadoTopo) { var h = document.querySelector('.hdr'); window.scrollTo({ top: Math.max(0, f.getBoundingClientRect().top + window.scrollY - (h ? h.offsetHeight : 0) - 8), behavior: 'smooth' }); }
 });
 
-init();
+// Página inteira em área restrita: a tela de senha cobre tudo antes de qualquer carregamento.
+GATE.garantir('Dashboard N4', { cheia: true, texto: 'Digite a senha para abrir o dashboard.' }).then(function (ok) { if (ok) init(); });
 </script>
 </body>
 </html>

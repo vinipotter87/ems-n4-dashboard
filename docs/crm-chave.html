@@ -133,6 +133,7 @@ table.crm-tbl tbody tr:hover{background:#EEF6F5}
 <div class="main" id="main-content"></div>
 
 <script id="preview-data" type="application/json">__PREVIEW_DATA__</script>
+<script src="assets/gate.js?v=20261016d"></script>
 <script>
 var CONFIG = {};
 var TAB_NAME = 'crm_chave_prescricao';
@@ -482,7 +483,7 @@ async function init() {
   mostrarLoading(false);
 }
 
-init();
+GATE.garantir('CRM Chave — Prescrição', { cheia: true, texto: 'Digite a senha para abrir a página.' }).then(function (ok) { if (ok) init(); });
 </script>
 </body>
 </html>

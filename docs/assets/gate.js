@@ -3,8 +3,10 @@
  * Essas abas ficam numa planilha PRIVADA; o navegador não lê nem grava nelas
  * direto. Tudo passa pelo Apps Script de apps-script/gate-webapp.gs (URL em
  * config.json → "gate_url"), que confere a senha no servidor e devolve só o
- * que foi pedido. A senha nunca fica no HTML. A sessão (token) vive em
- * sessionStorage: vale nesta aba do navegador até ela ser fechada, ou 6 h.
+ * que foi pedido. A senha nunca fica no HTML. A sessão (token) fica em
+ * localStorage e vale em todas as abas do navegador por até 6 h (o servidor
+ * também expira). Páginas em subpasta definem window.GATE_BASE = '../' antes
+ * de carregar este arquivo, pra achar o config.json.
  *
  * Uso nas páginas:
  *   await GATE.garantir('Atas de N4');  // mostra a tela de senha se preciso
@@ -16,17 +18,26 @@
 var GATE = (function () {
   var URL = null, TOKEN = null, CFG = null;
   var CHAVE = 'ems_gate_token';
-  try { TOKEN = sessionStorage.getItem(CHAVE) || null; } catch (e) { TOKEN = null; }
+  function lerGuardado() {
+    try { sessionStorage.removeItem(CHAVE); } catch (e) {} // versão anterior guardava por aba
+    try {
+      var raw = localStorage.getItem(CHAVE); if (!raw) return null;
+      var o = JSON.parse(raw);
+      if (!o || !o.t || (o.exp && Date.now() > o.exp)) { localStorage.removeItem(CHAVE); return null; }
+      return o.t;
+    } catch (e) { return null; }
+  }
+  TOKEN = lerGuardado();
 
-  function guardar(t) {
+  function guardar(t, seg) {
     TOKEN = t;
-    try { if (t) sessionStorage.setItem(CHAVE, t); else sessionStorage.removeItem(CHAVE); } catch (e) {}
+    try { if (t) localStorage.setItem(CHAVE, JSON.stringify({ t: t, exp: Date.now() + (seg || 6 * 3600) * 1000 })); else localStorage.removeItem(CHAVE); } catch (e) {}
   }
 
   // lê config.json uma vez (mesma pasta das páginas) só pra pegar gate_url
   function config() {
     if (CFG) return CFG;
-    CFG = fetch('config.json?t=' + Date.now(), { cache: 'no-store' })
+    CFG = fetch((window.GATE_BASE || '') + 'config.json?t=' + Date.now(), { cache: 'no-store' })
       .then(function (r) { if (!r.ok) throw new Error('config.json não encontrado.'); return r.json(); })
       .then(function (c) { URL = c.gate_url || null; return c; })
       .catch(function (e) { CFG = null; throw e; });
@@ -63,7 +74,7 @@ var GATE = (function () {
   async function entrar(senha) {
     var r = await chamar({ acao: 'login', senha: String(senha || '') });
     if (!r.ok) throw new Error(r.erro || 'senha incorreta');
-    guardar(r.token);
+    guardar(r.token, r.expiraEm);
     return true;
   }
 
@@ -162,9 +173,31 @@ var GATE = (function () {
     return pendente;
   }
 
+  // tela cheia opaca imediata (sem esperar rede), usada enquanto a sessão guardada é conferida
+  function cobrir(titulo) {
+    css();
+    var box = document.createElement('div');
+    box.className = 'gate-trava cheia';
+    box.innerHTML = '<form><h2>🔒 ' + (titulo || 'Acesso restrito') + '</h2><p>Conferindo acesso…</p></form>';
+    document.body.appendChild(box);
+    return box;
+  }
+
+  // confere no servidor se o token guardado ainda vale (aba inexistente permitida: resposta vazia e rápida)
+  async function validar() {
+    if (!TOKEN) return false;
+    try { var r = await chamar({ acao: 'ler', token: TOKEN, aba: 'tendencias_ZZZ' }); return !!r.ok; }
+    catch (e) { return e.sessao ? false : !!TOKEN; } // falha de rede não derruba a sessão
+  }
+
   async function garantir(titulo, opts) {
+    opts = opts || {};
+    if (opts.cheia) { // página inteira restrita: cobre já, antes de qualquer carregamento
+      if (TOKEN) { var tela = cobrir(titulo); var ok = await validar(); tela.remove(); if (ok) return true; }
+      var p = pedirSenha(titulo, opts); config().catch(function () {}); return p;
+    }
     try { await config(); } catch (e) {}
-    if (!URL) { if (opts && opts.silencioso) return false; throw new Error('Acesso restrito não configurado (gate_url ausente em config.json).'); }
+    if (!URL) { if (opts.silencioso) return false; throw new Error('Acesso restrito não configurado (gate_url ausente em config.json).'); }
     if (TOKEN) return true;
     return pedirSenha(titulo, opts);
   }
@@ -173,6 +206,7 @@ var GATE = (function () {
   return {
     garantir: garantir, pedirSenha: pedirSenha, entrar: entrar, sair: sair, ler: ler, lerAberto: lerAberto, gravar: gravar, enviar: enviar,
     liberado: function () { return !!TOKEN; },
+    validar: validar,
     pronto: function () { return !!URL; },
     config: config,
     esqueceu: function () { guardar(null); }
