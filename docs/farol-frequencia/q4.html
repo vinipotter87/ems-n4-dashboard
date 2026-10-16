@@ -160,6 +160,9 @@ table.linhas tr.tot td{border-top:2px solid var(--line);background:#FAFDFF}
 }
 /* ---- Q4 · Qualificação de painel ---- */
 #fEsp{border-color:var(--navy);color:var(--navy);font-weight:600}
+.chips.esp{margin-bottom:6px}
+.chips.esp .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-right:2px}
+.chips.esp button .num{opacity:.75}
 .tabs a{display:inline-block;padding:6px 16px;border-radius:999px;color:var(--muted);font-weight:600;text-decoration:none;border-right:1px solid var(--line);margin-right:3px}
 .tabs a:hover{background:#fff;color:var(--navy)}
 .g-sai{background:var(--vermelho-bg);color:var(--vermelho)}
@@ -194,7 +197,6 @@ table.linhas tr.tot td{border-top:2px solid var(--line);background:#FAFDFF}
   <div class="hdr-sep"></div>
   <div><h1>Q4 · Qualificação de painel <span>· Regional SPI OESTE</span></h1><p id="sub"></p></div>
   <a href="como-ler.html#s9" class="voltar">? Como ler</a>
-  <a id="voltar" href="../index.html" class="voltar" style="margin-left:0">← Dashboard N4</a>
 </div></header>
 
 <div class="bar"><div class="bar-in">
@@ -446,7 +448,11 @@ function viewSetor() {
   <h2 class="tit-acao">${esc(s.rep)} <small>${s.cod} · ${esc(D.linha)}</small><button class="btn btn-xl noprint" id="baixar">⬇ Baixar planilha do rep</button></h2>
   <div class="card estr"><h3>Qualificação do painel: proposta para o setor</h3><ul>${it.map(i => `<li>${i}</li>`).join('')}</ul></div>
   ${regras()}
-  <h2>${E ? `Trocas em ${esc(E)}` : 'Lista'}${E ? ` <small>${nTr} trocas sugeridas · ${soEsp(porSetor[s.cod].q4).length} Q4 no painel · ${soEsp(porSetor[s.cod].op).length} oportunidades · <a href="#" id="limpaEsp">ver todas as especialidades</a></small>` : ' <small>escolha a especialidade no seletor da barra de cima</small>'}</h2>
+  <h2>${E ? `Trocas em ${esc(E)}` : 'Lista'}${E ? ` <small>${nTr} trocas sugeridas · ${soEsp(porSetor[s.cod].q4).length} Q4 no painel · ${soEsp(porSetor[s.cod].op).length} oportunidades · <a href="#" id="limpaEsp">ver todas as especialidades</a></small>` : ' <small>clique numa especialidade para filtrar</small>'}</h2>
+  <div class="chips esp noprint"><span class="lbl">Especialidade</span>
+    <button data-esp="" class="${E ? '' : 'on'}">Todas <span class="num">${s.trocas}</span></button>
+    ${esps.map(e => `<button data-esp="${esc(e)}" class="${E === e ? 'on' : ''}" title="${espN[e].tr} trocas · ${espN[e].q4} Q4 · ${espN[e].op} oportunidades">${esc(e)} <span class="num">${espN[e].tr}</span></button>`).join('')}
+  </div>
   <div class="chips noprint">
     ${chip('trocas', 'Trocas sugeridas', nTr)}
     ${chip('sai', 'Q4 sem substituto', soEsp(s.saiLivre).length)}
@@ -517,6 +523,8 @@ fSetor.addEventListener('change', () => { st.setor = fSetor.value; st.busca = ''
 fEsp.addEventListener('change', () => { st.esp = fEsp.value; render(); });
 app.addEventListener('click', e => {
   if (e.target.id === 'limpaEsp') { e.preventDefault(); st.esp = ''; render(); return; }
+  const be = e.target.closest('[data-esp]');
+  if (be) { st.esp = be.dataset.esp; render(); return; }
   if (e.target.id === 'imprimir') { window.print(); return; }
   if (e.target.id === 'baixar') { baixarPlanilha(e.target); return; }
   const f = e.target.closest('[data-f]');
@@ -582,7 +590,6 @@ async function baixarPlanilha(btn) {
   btn.disabled = false; btn.textContent = txt;
 }
 
-if (location.port === '8747' || location.protocol === 'file:' && !/ems-n4-dashboard/.test(location.pathname)) document.getElementById('voltar').remove();
 abreLinha(st.linha);
 </script>
 </body>
