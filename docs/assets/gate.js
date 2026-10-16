@@ -47,8 +47,14 @@ var GATE = (function () {
     }
     var resp;
     try { resp = JSON.parse(texto); } catch (e) {
-      if (tent < 2) { await new Promise(function (ok) { setTimeout(ok, 900 * (tent + 1)); }); return chamar(body, tent + 1); }
+      if (tent < 3) { await new Promise(function (ok) { setTimeout(ok, 900 * (tent + 1)); }); return chamar(body, tent + 1); }
       throw new Error('Resposta inválida do servidor de dados restritos.');
+    }
+    // De vez em quando o redirecionamento do Apps Script entrega à página a resposta
+    // de um GET ("use POST") em vez da do POST que ela fez. É transitório: refaz o POST.
+    if (!resp.ok && resp.erro === 'use POST') {
+      if (tent < 3) { await new Promise(function (ok) { setTimeout(ok, 900 * (tent + 1)); }); return chamar(body, tent + 1); }
+      throw new Error('O servidor de dados restritos não respondeu direito. Clique em Atualizar para tentar de novo.');
     }
     if (!resp.ok && resp.erro === 'sessao') { guardar(null); var err = new Error('Sessão expirada — digite a senha de novo.'); err.sessao = true; throw err; }
     return resp;
