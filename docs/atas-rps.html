@@ -61,12 +61,26 @@ td{padding:8px 9px;border-bottom:1px solid var(--border);vertical-align:top;line
 .aviso{background:#fef9c3;color:#854d0e;font-size:12.5px;font-weight:700;padding:10px 14px;border-radius:8px;margin-bottom:14px;line-height:1.5}
 .vazio{text-align:center;color:var(--gray);padding:60px 20px;line-height:1.7}
 .vazio b{display:block;font-size:16px;color:var(--text)}
+.trava{position:fixed;inset:0;z-index:1000;background:#ECEDF0;display:flex;align-items:center;justify-content:center;padding:16px}
+.trava form{background:#fff;border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,.12);padding:28px 30px;width:100%;max-width:340px;text-align:center}
+.trava h2{font-size:17px;font-weight:800;color:var(--brand-d);margin-bottom:6px}
+.trava p{font-size:12.5px;color:var(--gray);margin-bottom:16px}
+.trava input{width:100%;border:1.5px solid var(--border);border-radius:8px;padding:10px 12px;font-size:18px;text-align:center;letter-spacing:6px}
+.trava input:focus{outline:none;border-color:var(--brand)}
+.trava button{width:100%;margin-top:12px;background:var(--brand);color:#fff;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:800;cursor:pointer}
+.trava .err{color:var(--red);font-size:12px;font-weight:700;margin-top:10px;min-height:16px}
 @media(max-width:1000px){body{display:block;height:auto}.cols{grid-template-columns:1fr}.lista{max-height:320px}}
 @media print{.hdr a,.bar,.prompt,.lista,.doc .cab button{display:none}.cols{display:block;padding:0}.doc{box-shadow:none;overflow:visible;padding:0}body{background:#fff;display:block}}
 </style>
 <link rel="stylesheet" href="tema-ems-sub.css">
 </head>
 <body class="tema-claro">
+
+<div class="trava" id="trava"><form id="trava-form" autocomplete="off">
+  <h2>🔒 Atas de RPS</h2><p>Digite a senha para abrir as atas.</p>
+  <input id="trava-senha" type="password" inputmode="numeric" placeholder="••••" autofocus>
+  <button type="submit">Entrar</button><div class="err" id="trava-err"></div>
+</form></div>
 
 <div class="hdr">
   <div class="logo"><img src="assets/logo-grupo-ems.png" alt="Grupo EMS"></div>
@@ -234,13 +248,31 @@ $('f-busca').addEventListener('input', desenharLista);
 $('btn-atualizar').addEventListener('click', function(){ carregar().catch(erro); });
 function erro(e){ $('lista').innerHTML = '<div class="vazio"><b>Erro ao carregar</b>' + esc(e.message) + '</div>'; }
 
-(async function(){
+// Senha de acesso: só a hash fica no código (a página é pública no GitHub Pages).
+// Depois de acertar, a aba lembra até ser fechada.
+var SENHA_HASH = '55595a6e5cfc81858117b2737ed72bedb96f5a3aa35be330b2b8912c5601c0be';
+async function hashSenha(t){
+  var b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t));
+  return Array.from(new Uint8Array(b)).map(function(x){ return x.toString(16).padStart(2, '0'); }).join('');
+}
+async function iniciar(){
+  $('trava').style.display = 'none';
   try {
     var res = await fetch('config.json?t=' + Date.now(), {cache:'no-store'}); if (!res.ok) throw new Error('config.json não encontrado.');
     CONFIG = await res.json();
     await carregar();
   } catch(e){ erro(e); }
-})();
+}
+var liberado = false;
+try { liberado = sessionStorage.getItem('atas_rps_ok') === SENHA_HASH; } catch(e){}
+if (liberado) iniciar();
+else $('trava-form').addEventListener('submit', async function(ev){
+  ev.preventDefault();
+  if (await hashSenha($('trava-senha').value.trim()) === SENHA_HASH){
+    try { sessionStorage.setItem('atas_rps_ok', SENHA_HASH); } catch(e){}
+    iniciar();
+  } else { $('trava-err').textContent = 'Senha incorreta.'; $('trava-senha').value = ''; $('trava-senha').focus(); }
+});
 </script>
 </body>
 </html>
