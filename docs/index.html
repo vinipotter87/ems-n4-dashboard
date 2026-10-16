@@ -390,6 +390,12 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
 .cota-table th.th-sub-ytd{text-align:right;border-left:1px solid #ddd6fe;padding:4px 8px;font-weight:600;text-transform:none;letter-spacing:0;color:#7c3aed}
 .cota-table td{padding:5px 8px;border-bottom:1px solid #f5f5f5;text-align:right;vertical-align:middle}
 .cota-table td.td-label{text-align:left;font-weight:600;padding:5px 10px}
+/* Coluna do nome fixa: só os números rolam na horizontal (cores de linha abaixo continuam valendo) */
+.cota-table th.th-label,.cota-table td.td-label{position:sticky;left:0;z-index:1;background:#fff;box-shadow:2px 0 4px -2px rgba(0,0,0,.15)}
+.cota-table th.th-label{z-index:2;background:var(--light)}
+/* Faixas NEXUS/VITAL ocupam a largura toda: a célula não fixa, só o rótulo dela */
+.cota-table td.td-label[colspan]{position:static;box-shadow:none}
+.cota-sep-lbl{position:sticky;left:10px;display:inline-block}
 .cota-table td.td-mes-sep{border-left:1px solid #f0f0f0}
 .cota-table td.td-ytd{border-left:2px solid #7c3aed;background:#faf9ff}
 .cota-table td.td-ytd-pct{border-left:1px solid #ddd6fe;background:#faf9ff;font-weight:700}
@@ -6301,10 +6307,10 @@ function renderCotaTableDist(meses, distritos) {
     return row;
   }
   // Separador NEXUS
-  html += '<tr class="row-nexus"><td class="td-label" colspan="' + (meses.length * 3 + 4) + '" style="font-size:9.5px;letter-spacing:.8px;padding:6px 10px">NEXUS</td></tr>';
+  html += '<tr class="row-nexus"><td class="td-label" colspan="' + (meses.length * 3 + 4) + '" style="font-size:9.5px;letter-spacing:.8px;padding:6px 10px"><span class="cota-sep-lbl">NEXUS</span></td></tr>';
   nexusDists.forEach(function(d, i) { html += distRow(d, 'NEXUS', i, 0, '', ANUAL_NEXUS_COLORS); });
   // Separador VITAL
-  html += '<tr class="row-vital"><td class="td-label" colspan="' + (meses.length * 3 + 4) + '" style="font-size:9.5px;letter-spacing:.8px;padding:6px 10px">VITAL</td></tr>';
+  html += '<tr class="row-vital"><td class="td-label" colspan="' + (meses.length * 3 + 4) + '" style="font-size:9.5px;letter-spacing:.8px;padding:6px 10px"><span class="cota-sep-lbl">VITAL</span></td></tr>';
   vitalDists.forEach(function(d, i) { html += distRow(d, 'VITAL', 0, i, '', ANUAL_VITAL_COLORS); });
   html += '</tbody></table></div>';
   return html;
@@ -6712,7 +6718,7 @@ function renderCotaIncrementoTable(meses, distritos) {
   html += '<tr class="row-vital"><td class="td-label">↳ VITAL</td>' + _incrRowCells(meses, function(m){ return getCotaReg(m, 'VITAL'); }) + '</tr>';
 
   // Distritos NEXUS
-  html += '<tr class="row-nexus"><td class="td-label" colspan="' + (nDataCols + 1) + '" style="font-size:9.5px;letter-spacing:.8px;padding:6px 10px">NEXUS — distritos</td></tr>';
+  html += '<tr class="row-nexus"><td class="td-label" colspan="' + (nDataCols + 1) + '" style="font-size:9.5px;letter-spacing:.8px;padding:6px 10px"><span class="cota-sep-lbl">NEXUS — distritos</span></td></tr>';
   nexusDists.forEach(function(d, i) {
     var cor = ANUAL_NEXUS_COLORS[i % ANUAL_NEXUS_COLORS.length];
     html += '<tr class="row-dist' + cotaRowCls(d) + '"><td class="td-label"><span style="display:inline-flex;align-items:center;gap:6px">' +
@@ -6722,7 +6728,7 @@ function renderCotaIncrementoTable(meses, distritos) {
   });
 
   // Distritos VITAL
-  html += '<tr class="row-vital"><td class="td-label" colspan="' + (nDataCols + 1) + '" style="font-size:9.5px;letter-spacing:.8px;padding:6px 10px">VITAL — distritos</td></tr>';
+  html += '<tr class="row-vital"><td class="td-label" colspan="' + (nDataCols + 1) + '" style="font-size:9.5px;letter-spacing:.8px;padding:6px 10px"><span class="cota-sep-lbl">VITAL — distritos</span></td></tr>';
   vitalDists.forEach(function(d, i) {
     var cor = ANUAL_VITAL_COLORS[i % ANUAL_VITAL_COLORS.length];
     html += '<tr class="row-dist' + cotaRowCls(d) + '"><td class="td-label"><span style="display:inline-flex;align-items:center;gap:6px">' +
