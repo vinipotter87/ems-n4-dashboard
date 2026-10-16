@@ -395,6 +395,9 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
 /* Faixas NEXUS/VITAL ocupam a largura toda: a célula não fixa, só o rótulo dela */
 .cota-table td.td-label[colspan]{position:static;box-shadow:none}
 .cota-sep-lbl{position:sticky;left:10px;display:inline-block}
+/* Tabela de reps: caixa com rolagem própria, meses fixos no topo e nome fixo à esquerda */
+.cota-rep-scroll{max-height:70vh;overflow:auto}
+.cota-rep-scroll thead{position:sticky;top:0;z-index:3}
 .cota-table td.td-mes-sep{border-left:1px solid #f0f0f0}
 .cota-table td.td-ytd{border-left:2px solid #7c3aed;background:#faf9ff}
 .cota-table td.td-ytd-pct{border-left:1px solid #ddd6fe;background:#faf9ff;font-weight:700}
@@ -5696,7 +5699,7 @@ function renderCotaTableRep(meses, distritos) {
   }
   function val(m, s, k) { var a = porMes[m][s]; return a ? a[k] : 0; }
 
-  var html = '<div class="cota-table-wrap"><table class="cota-table">';
+  var html = '<div class="cota-table-wrap cota-rep-scroll"><table class="cota-table">';
   html += '<thead><tr>';
   html += '<th class="th-label" rowspan="2">Distrito / Representante</th>';
   meses.forEach(function(m) {
