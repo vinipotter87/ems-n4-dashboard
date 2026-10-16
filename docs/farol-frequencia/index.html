@@ -118,6 +118,8 @@ tr.feito td{opacity:.45}
 .grupo .t span{font-size:24px;font-weight:700}
 .grupo p{margin:4px 0 0;font-size:12px;color:var(--muted)}
 .grupo .qs{margin-top:6px;font-size:11px;color:var(--muted)}
+.grupo .fq{margin-top:3px;color:var(--navy);font-weight:600}
+.regras .corpo li small{display:block;color:var(--muted);margin-top:2px}
 .regras{margin-top:12px;padding:0}
 .regras summary{cursor:pointer;padding:12px 16px;font-size:13px;font-weight:600;color:var(--navy);list-style:none;display:flex;align-items:center;gap:8px}
 .regras summary::-webkit-details-marker{display:none}
@@ -175,7 +177,7 @@ table.linhas tr.tot td{border-top:2px solid var(--line);background:#FAFDFF}
 
 <main id="app"></main>
 
-<script src="farol-core.js"></script>
+<script src="farol-core.js?v=2026-10-16"></script>
 <script src="dados/manifest.js"></script>
 <script>
 // ---- Regras: ficam em farol-core.js (compartilhadas com a RPS) ------------
@@ -221,6 +223,7 @@ function regras() {
         <p>A frequência olha os últimos 5 ciclos (${D.janela}). Quando ${CICLO} virar, ${SAI} sai da janela e ${CICLO} entra. Para cada médico, <b>objetivo</b> = ciclos da janela em que ele estava no painel (até 5) e <b>realizado</b> = visitas feitas nesses ciclos.</p>
         <h4>3. Quando o médico tem frequência</h4>
         <p>É o critério do Power BI: Freq. ≥80%. Na prática, as visitas precisam passar de 60% do objetivo, ou seja:</p>
+        <p>A coluna Freq. do Power BI é visitas ÷ objetivo arredondado para cima em degraus de 20% (2 de 3 e 3 de 4 viram 80%). Cada card de grupo mostra quantos médicos estão em cada Freq. hoje.</p>
         <table class="mini"><tr><th>Ciclos no painel</th><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td></tr><tr><th>Visitas necessárias</th>${precisa}</tr></table>
         <h4>4. Melhor e pior caso</h4>
         <p>O export não informa o mês de cada visita. Quando ${SAI} sai da janela, não dá para saber se a visita que some era de ${SAI}. Por isso cada médico é avaliado no <b>pior caso</b> (a visita mais antiga era de ${SAI} e se perde) e no <b>melhor caso</b> (ela fica). A projeção do farol é a faixa entre os dois.</p>
@@ -229,11 +232,11 @@ function regras() {
         <h4>5. O grupo de cada médico para ${CICLO}</h4>
         <p>Testado nesta ordem; o médico entra no primeiro que valer:</p>
         <ol>
-          <li>${tag('garantido')} continua com frequência em ${CICLO} <b>mesmo sem visita</b>, até no pior caso. Só manter a rotina.</li>
-          <li>${tag('proteger')} <b>tem frequência hoje</b> e 1 visita em ${CICLO} garante que continua, mesmo no pior caso. Sem visita, pode sair.</li>
-          <li>${tag('conquistar')} <b>não tem frequência hoje</b>, mas 1 visita em ${CICLO} coloca na frequência mesmo no pior caso. Ganho certo.</li>
-          <li>${tag('possivel')} 1 visita em ${CICLO} só coloca na frequência no melhor caso, ou seja, se ${SAI} ficou sem visita. Vale conferir o histórico do médico.</li>
-          <li>${tag('reconstruir')} nem com visita em ${CICLO} entra. Visitando todo ciclo a partir de agora, entra na frequência em 2 a 4 ciclos (a lista mostra a faixa de cada um).</li>
+          <li>${tag('garantido')} continua com frequência em ${CICLO} <b>mesmo sem visita</b>, até no pior caso. Só manter a rotina.<small>Freq. hoje: <b>100%</b>. Visitou em todos os ciclos da janela (5 de 5, 4 de 4, 3 de 3). Mesmo perdendo a visita de ${SAI}, sobram 4 de 5.</small></li>
+          <li>${tag('proteger')} <b>tem frequência hoje</b> e 1 visita em ${CICLO} garante que continua, mesmo no pior caso. Sem visita, pode sair.<small>Freq. hoje: <b>80%</b>. Faltou 1 visita na janela (4 de 5, 3 de 4, 2 de 3). Se a visita que some for a de ${SAI}, cai para 3 de 5 (60%) e perde a frequência.</small></li>
+          <li>${tag('conquistar')} <b>não tem frequência hoje</b>, mas 1 visita em ${CICLO} coloca na frequência mesmo no pior caso. Ganho certo.<small>Freq. hoje: <b>60%</b>. Médico com só 2 ciclos no painel e 1 visita (1 de 2); com ${CICLO} vira 2 de 3, que já é frequência. Caso raro.</small></li>
+          <li>${tag('possivel')} 1 visita em ${CICLO} só coloca na frequência no melhor caso, ou seja, se ${SAI} ficou sem visita. Vale conferir o histórico do médico.<small>Freq. hoje: <b>60%</b> (3 de 5). Com ${CICLO} fica 4 de 5 (80%) se ${SAI} não tinha visita, ou continua 3 de 5 se tinha.</small></li>
+          <li>${tag('reconstruir')} nem com visita em ${CICLO} entra. Visitando todo ciclo a partir de agora, entra na frequência em 2 a 4 ciclos (a lista mostra a faixa de cada um).<small>Freq. hoje: <b>0% a 60%</b>. No máximo 2 visitas em 5 ciclos (0%, 20%, 40%), ou 1 de 3, 1 de 4 e 2 de 4 (40–60%). Uma visita só não chega a 4 de 5.</small></li>
         </ol>
         <h4>6. O que vira ação</h4>
         <p>A lista "Visitar em ${CICLO}" junta Proteger, Conquistar e Possível: são as visitas que mudam o farol já no próximo ciclo. Reconstruir é trabalho de médio prazo; Garantido não precisa de visita para o indicador.</p>
@@ -271,6 +274,7 @@ const projCel = a => `<span class="dot" style="background:${corFarol(a.projMax)}
   Math.abs(a.projMax - a.projMin) < 0.05 ? f1(a.projMax) + '%' : `${f1(a.projMin)}–${f1(a.projMax)}%`}</span>`;
 const kpi = (lb, vl, sb, cor) => `<div class="card kpi" style="border-left-color:${cor || 'var(--line)'}"><div class="lb">${lb}</div><div class="vl num">${vl}</div><div class="sb">${sb}</div></div>`;
 const qs = o => QUARTIS_META.filter(q => o[q]).map(q => `${q}: ${o[q]}`).join(' · ') || '—';
+const fq = o => { const ks = Object.keys(o || {}).map(Number).sort((a, b) => a - b); return ks.length ? 'Freq. hoje · ' + ks.map(k => `${k}%: ${o[k]}`).join(' · ') : ''; };
 const faixa = (a, b) => `${f1(a)}${Math.abs(b - a) < 0.05 ? '' : '–' + f1(b)}%`;
 
 function oQueFazer(m) {
@@ -409,7 +413,7 @@ function viewSetor() {
   <div class="grupos">${ORDEM.map(k => `
     <div class="card grupo" data-f="${k}" style="border-top-color:${GRUPOS[k].cor}">
       <div class="t"><b>${GRUPOS[k].nome}</b><span class="num">${s[k]}</span></div>
-      <p>${GRUPOS[k].dica(CICLO)}</p><div class="qs">${qs(s[k + 'Q'])}</div></div>`).join('')}
+      <p>${GRUPOS[k].dica(CICLO)}</p><div class="qs">${qs(s[k + 'Q'])}</div><div class="qs fq">${fq(s[k + 'F'])}</div></div>`).join('')}
   </div>
   ${regras()}
 

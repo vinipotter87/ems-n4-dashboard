@@ -54,10 +54,11 @@ window.FarolCore = (function () {
 
   function agrega(lista) {
     const a = { n: 0, cf: 0, q4n: 0, q4cf: 0, zerado: 0, Q1: 0, Q2: 0, Q3: 0 };
-    ORDEM.forEach(g => { a[g] = 0; a[g + 'Q'] = { Q1: 0, Q2: 0, Q3: 0 }; });
+    ORDEM.forEach(g => { a[g] = 0; a[g + 'Q'] = { Q1: 0, Q2: 0, Q3: 0 }; a[g + 'F'] = {}; });   // gF = médicos por Freq. hoje (0, 20 … 100)
     lista.forEach(m => {
       if (!m.meta) { a.q4n++; a.q4cf += m.cf; return; }
       a.n++; a.cf += m.cf; a[m.g]++; a[m.g + 'Q'][m.q]++;
+      a[m.g + 'F'][m.freq] = (a[m.g + 'F'][m.freq] || 0) + 1;
       if (m.real === 0) a.zerado++;
     });
     a.p = pct(a.cf, a.n);
