@@ -159,6 +159,7 @@ table.linhas tr.tot td{border-top:2px solid var(--line);background:#FAFDFF}
   th{position:static}
 }
 /* ---- Q4 · Qualificação de painel ---- */
+.chips select{border:1px solid var(--line);border-radius:999px;padding:5px 10px;background:#fff;font:inherit;font-size:12px;color:var(--navy);max-width:100%}
 .tabs a{display:inline-block;padding:6px 16px;border-radius:999px;color:var(--muted);font-weight:600;text-decoration:none;border-right:1px solid var(--line);margin-right:3px}
 .tabs a:hover{background:#fff;color:var(--navy)}
 .g-sai{background:var(--vermelho-bg);color:var(--vermelho)}
@@ -268,7 +269,7 @@ const soma = sets => {
 const nomeGD = d => (D.distritos[d] || '').trim() || '—';
 
 // ---- Estado ----------------------------------------------------------------
-const st = { view: 'regional', linha: 'NEXUS', setor: '', dist: '', filtro: 'trocas', busca: '' };
+const st = { view: 'regional', linha: 'NEXUS', setor: '', dist: '', filtro: 'trocas', busca: '', esp: '' };
 try { Object.assign(st, JSON.parse(localStorage.getItem('farol-q4-ui') || '{}')); } catch (e) {}
 const qsLinha = new URLSearchParams(location.search).get('linha');
 if (qsLinha) st.linha = qsLinha;
@@ -386,8 +387,20 @@ function viewSetor() {
   const doDist = SET.filter(x => x.dist === s.dist).sort((x, y) => y.trocas - x.trocas);
   const pos = doDist.findIndex(x => x.cod === s.cod) + 1;
   const b = st.busca.trim().toLowerCase();
-  const bate = m => !b || [m.nome, m.crm, m.esp, m.cidade].some(v => String(v || '').toLowerCase().includes(b));
+  const E = st.esp;
+  const bate = m => (!E || (m.esp || '—') === E) && (!b || [m.nome, m.crm, m.esp, m.cidade].some(v => String(v || '').toLowerCase().includes(b)));
+  const batePar = p => (!E || (p.sai.esp || '—') === E || (p.entra.esp || '—') === E) && (!b || bate(p.sai) || bate(p.entra));
   const chip = (k, nome, n) => `<button data-f="${k}" class="${st.filtro === k ? 'on' : ''}">${nome} <span class="num">${n}</span></button>`;
+  // especialidades do setor (Q4 do painel + oportunidades), com contagem
+  const espN = {};
+  porSetor[s.cod].q4.forEach(m => { const e = m.esp || '—'; espN[e] = espN[e] || { q4: 0, op: 0, tr: 0 }; espN[e].q4++; });
+  porSetor[s.cod].op.forEach(m => { const e = m.esp || '—'; espN[e] = espN[e] || { q4: 0, op: 0, tr: 0 }; espN[e].op++; });
+  s.pares.forEach(p => { const a = p.sai.esp || '—', c = p.entra.esp || '—'; espN[a].tr++; if (c !== a) espN[c].tr++; });
+  const esps = Object.keys(espN).sort((x, y) => espN[y].tr - espN[x].tr || espN[y].op - espN[x].op || x.localeCompare(y));
+  if (E && !espN[E]) st.esp = '';
+  const selEsp = `<select id="fEsp" title="Especialidade"><option value="">Todas as especialidades</option>${esps.map(e => `<option value="${esc(e)}" ${st.esp === e ? 'selected' : ''}>${esc(e)} · ${espN[e].tr} trocas · ${espN[e].q4} Q4 · ${espN[e].op} oport.</option>`).join('')}</select>`;
+  const nTr = s.pares.filter(p => !E || (p.sai.esp || '—') === E || (p.entra.esp || '—') === E).length;
+  const soEsp = arr => E ? arr.filter(m => (m.esp || '—') === E) : arr;
   const it = [
     s.trocas ? `<b>${s.trocas} trocas possíveis</b> (${s.mesmaEsp} na mesma especialidade). Fazendo todas, a pontuação média do painel vai de ${f2(s.pont)} para ${f2(s.pontDepois)}. Comece pelas de maior ganho, no topo da lista.` : `<b>Nenhuma troca possível:</b> ${s.op ? 'as oportunidades do setor não têm pontuação maior que os Q4 do painel' : 'o setor não tem oportunidade mapeada'}. Revise os Q4 com pontuação zero e sem visita e prospecte fora da base.`,
     s.pares.length ? `<b>Entram:</b> ${topEsp(s.pares, 'entra')}. <b>Saem:</b> ${topEsp(s.pares, 'sai')}.` : '',
@@ -399,7 +412,7 @@ function viewSetor() {
   const F = st.filtro;
   let corpo = '';
   if (F === 'trocas') {
-    const rows = s.pares.filter(p => bate(p.sai) || bate(p.entra));
+    const rows = s.pares.filter(batePar);
     corpo = `<table class="troca">
       <thead><tr><th class="c">#</th><th>Sai (Q4)</th><th class="hide-m">Esp.</th><th class="r">Pont.</th><th class="r hide-m">Sobrep.</th><th class="hide-m">Visitas ${D.janela}</th><th class="sep">Entra (oportunidade)</th><th class="hide-m">Esp.</th><th class="r">Pont.</th><th class="r hide-m">Sobrep.</th><th class="r">Ganho</th></tr></thead>
       <tbody>${rows.map((p, i) => `<tr><td class="c num">${i + 1}</td><td>${tag('g-sai', 'Sai')} <b>${esc(p.sai.nome)}</b><span class="sub">${esc(p.sai.crm)}${p.sai.block ? ' · ' + esc(p.sai.block) : ''}</span></td><td class="hide-m">${espTag(p.sai.esp)}</td><td class="r pont">${f2(p.sai.pont)}</td><td class="r num hide-m">${p.sai.sobrep}</td><td class="hide-m">${visitas(p.sai)}</td><td class="sep">${tag('g-entra', 'Entra')} <b>${esc(p.entra.nome)}</b><span class="sub">${esc(p.entra.crm)} · ${esc(p.entra.cidade)}</span></td><td class="hide-m">${espTag(p.entra.esp)}${p.mesmaEsp ? '' : ' <span class="sub">outra esp.</span>'}</td><td class="r pont">${f2(p.entra.pont)}</td><td class="r num hide-m">${p.entra.sobrep}</td><td class="r ganho">+${f2(p.ganho)}</td></tr>`).join('') || '<tr><td colspan="11" class="vazio">Nenhuma troca.</td></tr>'}</tbody></table>`;
@@ -431,13 +444,14 @@ function viewSetor() {
   <h2 class="tit-acao">${esc(s.rep)} <small>${s.cod} · ${esc(D.linha)}</small><button class="btn btn-xl noprint" id="baixar">⬇ Baixar planilha do rep</button></h2>
   <div class="card estr"><h3>Qualificação do painel: proposta para o setor</h3><ul>${it.map(i => `<li>${i}</li>`).join('')}</ul></div>
   ${regras()}
-  <h2>Lista</h2>
+  <h2>Lista${E ? ` <small>especialidade ${esc(E)} · <a href="#" id="limpaEsp">todas</a></small>` : ''}</h2>
   <div class="chips noprint">
-    ${chip('trocas', 'Trocas sugeridas', s.trocas)}
-    ${chip('sai', 'Q4 sem substituto', s.saiLivre.length)}
-    ${chip('entra', 'Oportunidade sem troca', s.entraLivre.length)}
-    ${chip('q4', 'Todos os Q4', s.nq4)}
-    ${chip('op', 'Todas as oportunidades', s.op)}
+    ${chip('trocas', 'Trocas sugeridas', nTr)}
+    ${chip('sai', 'Q4 sem substituto', soEsp(s.saiLivre).length)}
+    ${chip('entra', 'Oportunidade sem troca', soEsp(s.entraLivre).length)}
+    ${chip('q4', 'Todos os Q4', soEsp(porSetor[s.cod].q4).length)}
+    ${chip('op', 'Todas as oportunidades', soEsp(porSetor[s.cod].op).length)}
+    ${selEsp}
     <button class="btn" id="imprimir">🖨 Imprimir</button>
     <input id="busca" placeholder="Buscar médico, CRM, especialidade ou cidade" value="${esc(st.busca)}">
   </div>
@@ -497,8 +511,10 @@ function carregaDemais() {
 document.querySelector('.tabs').addEventListener('click', e => { const v = e.target.dataset.v; if (v) { st.view = v; render(); } });
 fLinha.addEventListener('change', () => abreLinha(fLinha.value));
 fDist.addEventListener('change', () => { st.dist = fDist.value; render(); });
-fSetor.addEventListener('change', () => { st.setor = fSetor.value; st.busca = ''; st.filtro = 'trocas'; render(); });
+fSetor.addEventListener('change', () => { st.setor = fSetor.value; st.busca = ''; st.filtro = 'trocas'; st.esp = ''; render(); });
+app.addEventListener('change', e => { if (e.target.id === 'fEsp') { st.esp = e.target.value; render(); } });
 app.addEventListener('click', e => {
+  if (e.target.id === 'limpaEsp') { e.preventDefault(); st.esp = ''; render(); return; }
   if (e.target.id === 'imprimir') { window.print(); return; }
   if (e.target.id === 'baixar') { baixarPlanilha(e.target); return; }
   const f = e.target.closest('[data-f]');
