@@ -17,9 +17,10 @@
  */
 var GATE = (function () {
   var URL = null, TOKEN = null, CFG = null;
-  // Papel da sessão: 'spi' (senha SPI, abre tudo) ou 'leste' (senha da Leste, só o que é da
-  // Leste). A página diz o que exige em window.GATE_PAPEL ('spi' se não disser) ou em
-  // opts.papel; a sessão 'spi' satisfaz qualquer exigência.
+  // Papel da sessão: 'spi' (senha SPI, abre tudo), 'leste' (senha da Leste, só o que é da
+  // Leste) ou 'glempa' (senha do Budget Glempa Consultor, só os lançamentos GLEMPA). A página
+  // diz o que exige em window.GATE_PAPEL ('spi' se não disser) ou em opts.papel; a sessão
+  // 'spi' satisfaz qualquer exigência.
   var PAPEL = null, EXP = 0;
   var CHAVE = 'ems_gate_token';
   function lerGuardado() {
@@ -75,7 +76,10 @@ var GATE = (function () {
       throw new Error('O servidor de dados restritos não respondeu direito. Clique em Atualizar para tentar de novo.');
     }
     if (!resp.ok && resp.erro === 'sessao') { guardar(null); var err = new Error('Sessão expirada — digite a senha de novo.'); err.sessao = true; throw err; }
-    if (!resp.ok && resp.erro === 'negado') { var errN = new Error('Sem permissão: a senha da Leste só alcança registros da Leste.'); errN.negado = true; throw errN; }
+    if (!resp.ok && resp.erro === 'negado') {
+      var errN = new Error(PAPEL === 'glempa' ? 'Sem permissão: a senha do Budget Glempa só alcança os lançamentos do Glempa.' : 'Sem permissão: a senha da Leste só alcança registros da Leste.');
+      errN.negado = true; throw errN;
+    }
     return resp;
   }
 
@@ -143,20 +147,27 @@ var GATE = (function () {
     '.gate-trava button[disabled]{opacity:.6;cursor:default}' +
     '.gate-trava button.volta{background:transparent;color:var(--gray,#6b7280);margin-top:6px;font-weight:700}' +
     '.gate-trava .err{color:var(--red,#c8102e);font-size:12px;font-weight:700;margin-top:10px;min-height:16px}' +
-    '.gate-links{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;padding:14px 16px}' +
-    '.gate-links span{font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--gray,#6b7280);margin-right:4px}' +
+    '.gate-links{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:8px 22px;flex-wrap:wrap;padding:14px 16px}' +
+    '.gate-links .grp{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}' +
+    '.gate-links b{font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--gray,#6b7280);margin-right:4px}' +
+    '.gate-links a.senha{border-color:#c9d6f2;background:#f4f7fd}' +
     '.gate-links a{display:inline-block;background:#fff;border:1.5px solid var(--border,#e5e7eb);border-radius:999px;padding:7px 14px;font-size:12.5px;font-weight:700;color:var(--brand-d,#0b2a5b);text-decoration:none}' +
     '.gate-links a:hover{border-color:var(--brand,#1d4ed8)}' +
     '.gate-btn{background:var(--brand,#1d4ed8);color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:11.5px;font-weight:800;cursor:pointer;white-space:nowrap}';
   var cssOk = false;
   function css() { if (cssOk) return; cssOk = true; var s = document.createElement('style'); s.textContent = CSS; document.head.appendChild(s); }
 
-  // barra no topo da tela cheia com as páginas que abrem sem senha (opts.links = [{r, h}])
-  function barraLinks(links) {
+  // barra no topo da tela cheia: as páginas que abrem sem senha (opts.links = [{r, h}]) e,
+  // depois, as que têm senha própria (opts.linksSenha = [{r, h}]), cada grupo com seu rótulo
+  function grupoLinks(rotulo, links, classe) {
     if (!links || !links.length) return '';
-    return '<div class="gate-links"><span>Sem senha</span>' + links.map(function (l) {
-      return '<a href="' + l.h + '">' + l.r + '</a>';
-    }).join('') + '</div>';
+    return '<span class="grp"><b>' + rotulo + '</b>' + links.map(function (l) {
+      return '<a' + (classe ? ' class="' + classe + '"' : '') + ' href="' + l.h + '">' + l.r + '</a>';
+    }).join('') + '</span>';
+  }
+  function barraLinks(links, linksSenha) {
+    var html = grupoLinks('Sem senha', links) + grupoLinks('Senha própria', linksSenha, 'senha');
+    return html ? '<div class="gate-links">' + html + '</div>' : '';
   }
 
   var pendente = null;
@@ -170,7 +181,7 @@ var GATE = (function () {
     pendente = new Promise(function (resolve) {
       var box = document.createElement('div');
       box.className = 'gate-trava' + (opts.cheia ? ' cheia' : '');
-      box.innerHTML = barraLinks(opts.links) + '<form autocomplete="off"><h2>🔒 ' + (titulo || 'Acesso restrito') + '</h2>' +
+      box.innerHTML = barraLinks(opts.links, opts.linksSenha) + '<form autocomplete="off"><h2>🔒 ' + (titulo || 'Acesso restrito') + '</h2>' +
         '<p>' + (opts.texto || 'Digite a senha para abrir.') + '</p>' +
         '<input type="password" autocomplete="current-password" placeholder="senha" autofocus>' +
         '<button type="submit">Entrar</button>' +
@@ -197,7 +208,7 @@ var GATE = (function () {
     css();
     var box = document.createElement('div');
     box.className = 'gate-trava cheia';
-    box.innerHTML = barraLinks(opts && opts.links) + '<form><h2>🔒 ' + (titulo || 'Acesso restrito') + '</h2><p>Conferindo acesso…</p></form>';
+    box.innerHTML = barraLinks(opts && opts.links, opts && opts.linksSenha) + '<form><h2>🔒 ' + (titulo || 'Acesso restrito') + '</h2><p>Conferindo acesso…</p></form>';
     document.body.appendChild(box);
     return box;
   }

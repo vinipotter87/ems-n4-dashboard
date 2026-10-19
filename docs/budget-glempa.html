@@ -210,7 +210,7 @@ table.led-tbl tbody tr.gl-inativo .pc-bar-track{opacity:.4}
 
 <div id="modal-root"></div>
 
-<script src="assets/gate.js?v=20261016g"></script>
+<script src="assets/gate.js?v=20261019"></script>
 <script>
 // ── GLEMPA — prescritores EMPA (Jardiance) YTD jan–jul/2026 ─────────────
 // Base "Prescritores EMPA - YTD 2026 - Jan a Jul", recortada na SPI OESTE:
@@ -813,8 +813,9 @@ async function init(){
     if (!res.ok) throw new Error('config.json não encontrado.');
     CONFIG = await res.json();
     if (!CONFIG.spreadsheet_id || !CONFIG.api_key) throw new Error('SPREADSHEET_ID ou API_KEY não configurados em config.json.');
-    mostrarLoading(false); // página inteira em área restrita
-    if (!(await GATE.garantir('Budget Glempa Consultor', { cheia: true, texto: 'Digite a senha para abrir os lançamentos.' }))) return;
+    mostrarLoading(false); // página inteira em área restrita, com senha própria (a senha SPI também abre)
+    window.GATE_PAPEL = 'glempa';
+    if (!(await GATE.garantir('Budget Glempa Consultor', { cheia: true, texto: 'Digite a senha do Budget Glempa Consultor.', linksSenha: [{ r: '🗺️ Dashboard N4', h: 'index.html' }] }))) return;
     mostrarLoading(true);
     BACKEND_PRONTO = GATE.liberado();
 

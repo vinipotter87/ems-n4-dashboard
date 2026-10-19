@@ -11,7 +11,7 @@
  * gravar qualquer linha. A senha nunca fica no código nem no repositório.
  *
  * O que o script faz (POST JSON, Content-Type text/plain pra não ter preflight):
- *   {acao:'login', senha, papel?}        → {ok, token, papel}  sessão de 6 h ('spi' ou 'leste')
+ *   {acao:'login', senha, papel?}        → {ok, token, papel}  sessão de 6 h ('spi', 'leste' ou 'glempa')
  *   {acao:'sessao', token}               → {ok, papel}   confere a sessão guardada
  *   {acao:'ler', token, aba}             → {ok, values}  linhas cruas da aba
  *   {acao:'ler_aberto'}  (sem senha)     → {ok, values}  só registros de RPS (PRODUTOS_ABERTOS)
@@ -21,7 +21,7 @@
  *   {acao:'sair', token}                 → {ok}
  * Resposta {ok:false, erro:'sessao'} = token inválido/expirado → a página
  * pede a senha de novo; {erro:'negado'} = sessão válida mas sem permissão
- * (papel Leste em registro da SPI) → a página só avisa.
+ * (papel Leste em registro da SPI, papel Glempa fora dos lançamentos GLEMPA) → a página só avisa.
  *
  * COMO IMPLANTAR (uma vez só) — na planilha PRIVADA, não na pública:
  * 1. Abra a planilha "EMS N4 — Dados restritos" no Google Sheets.
@@ -43,7 +43,7 @@
  * Sempre que editar este código: Implantar → Gerenciar implantações →
  * Editar → Nova versão (senão a URL continua rodando o código antigo).
  * Pra trocar a senha: só mudar a propriedade SENHA (as sessões abertas
- * continuam válidas por até 6 h).
+ * continuam válidas por até 6 h). O mesmo vale pra SENHA_LESTE e SENHA_GLEMPA.
  */
 
 // ID da planilha PRIVADA. Se o projeto foi criado por Extensões → Apps Script
@@ -78,6 +78,12 @@ function gdsLeste() {
   var m = {}; lista.forEach(function (n) { m[n.toLowerCase()] = true; }); return m;
 }
 function ehLeste(gd, mapa) { gd = String(gd || ''); return /^N4:(1105|1165)/.test(gd) || !!mapa[gd.toLowerCase()]; }
+// Papel 'glempa' (19/10/2026): a propriedade SENHA_GLEMPA abre só a página Budget Glempa
+// Consultor (budget-glempa.html) — na aba budget_lancamentos, apenas os lançamentos e
+// classificações do Glempa (produto GLEMPA / GLEMPA_CLASSIF). Pensada pra consultora,
+// que não deve ver atas, planos nem a verba tática dos GDs.
+var PRODUTOS_GLEMPA = { 'GLEMPA': true, 'GLEMPA_CLASSIF': true };
+function ehGlempa(produto) { return !!PRODUTOS_GLEMPA[String(produto || '')]; }
 
 function doGet() {
   return resposta({ ok: false, erro: 'use POST' });
@@ -94,7 +100,7 @@ function doPost(e) {
   if (acao === 'login') return login(body);
   if (acao === 'ler_aberto') return lerAberto();
 
-  var sessao = sessaoValida(body.token); // false, 'spi' ou 'leste'
+  var sessao = sessaoValida(body.token); // false, 'spi', 'leste' ou 'glempa'
   if (acao === 'add' || acao === 'edit' || acao === 'delete') return gravar(body, sessao);
   if (!sessao) return resposta({ ok: false, erro: 'sessao' });
   if (acao === 'sessao') return resposta({ ok: true, papel: sessao });
@@ -109,13 +115,16 @@ function cache() { return CacheService.getScriptCache(); }
 
 function login(body) {
   var props = PropertiesService.getScriptProperties();
-  var senhaSpi = props.getProperty('SENHA') || '', senhaLeste = props.getProperty('SENHA_LESTE') || '';
-  var papel = body.papel === 'leste' ? 'leste' : 'spi'; // o que a página pede
+  var senhaSpi = props.getProperty('SENHA') || '', senhaLeste = props.getProperty('SENHA_LESTE') || '', senhaGlempa = props.getProperty('SENHA_GLEMPA') || '';
+  var papel = body.papel === 'leste' || body.papel === 'glempa' ? body.papel : 'spi'; // o que a página pede
   if (senhaSpi.length < SENHA_MIN) {
     return resposta({ ok: false, erro: 'o gate ainda não tem senha configurada (propriedade SENHA, mínimo ' + SENHA_MIN + ' caracteres)' });
   }
   if (papel === 'leste' && senhaLeste.length < SENHA_MIN) {
     return resposta({ ok: false, erro: 'a senha da Leste ainda não foi configurada (propriedade SENHA_LESTE, mínimo ' + SENHA_MIN + ' caracteres)' });
+  }
+  if (papel === 'glempa' && senhaGlempa.length < SENHA_MIN) {
+    return resposta({ ok: false, erro: 'a senha do Budget Glempa ainda não foi configurada (propriedade SENHA_GLEMPA, mínimo ' + SENHA_MIN + ' caracteres)' });
   }
   var falhas = Number(cache().get('falhas') || 0);
   if (falhas >= MAX_FALHAS) return resposta({ ok: false, erro: 'muitas tentativas — aguarde 1 hora' });
@@ -123,6 +132,7 @@ function login(body) {
   var tentativa = String(body.senha || ''), concedido = null;
   if (iguais(tentativa, senhaSpi)) concedido = 'spi';                       // a senha SPI abre tudo
   else if (papel === 'leste' && iguais(tentativa, senhaLeste)) concedido = 'leste';
+  else if (papel === 'glempa' && iguais(tentativa, senhaGlempa)) concedido = 'glempa';
   if (!concedido) {
     cache().put('falhas', String(falhas + 1), JANELA_SEG);
     Utilities.sleep(ATRASO_ERRO_MS); // desacelera chute em série
@@ -134,7 +144,7 @@ function login(body) {
   return resposta({ ok: true, token: token, papel: concedido, expiraEm: SESSAO_SEG });
 }
 
-// devolve o papel da sessão ('spi' ou 'leste') ou false
+// devolve o papel da sessão ('spi', 'leste' ou 'glempa') ou false
 function sessaoValida(token) {
   if (!token || typeof token !== 'string' || token.length < 32) return false;
   var p = cache().get('tok:' + token);
@@ -166,6 +176,10 @@ function ler(body, papel) {
     var mapa = gdsLeste(), ig = values[0].indexOf('gd'), out = [values[0]];
     for (var i = 1; i < values.length; i++) if (ehLeste(values[i][ig], mapa)) out.push(values[i]);
     values = out;
+  } else if (papel === 'glempa') { // só os lançamentos do Glempa
+    var ipg = values[0].indexOf('produto'), outG = [values[0]];
+    for (var j = 1; j < values.length; j++) if (ehGlempa(values[j][ipg])) outG.push(values[j]);
+    values = outG;
   }
   return resposta({ ok: true, values: values });
 }
@@ -215,6 +229,12 @@ function executar(body, sessao) {
     if (acao === 'edit' || acao === 'delete') {
       var liL = encontrarLinha(sheet, body.id);
       if (liL >= 0 && !ehLeste(sheet.getRange(liL, 2).getValue(), mapaL)) return resposta({ ok: false, erro: 'negado' });
+    }
+  } else if (sessao === 'glempa') { // sessão do Glempa só mexe em lançamentos GLEMPA / GLEMPA_CLASSIF
+    if ((acao === 'add' || acao === 'edit') && !ehGlempa(body.produto)) return resposta({ ok: false, erro: 'negado' });
+    if (acao === 'edit' || acao === 'delete') {
+      var liG = encontrarLinha(sheet, body.id);
+      if (liG >= 0 && !ehGlempa(sheet.getRange(liG, 4).getValue())) return resposta({ ok: false, erro: 'negado' });
     }
   }
 

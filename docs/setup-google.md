@@ -135,7 +135,9 @@ compartilhado pelas páginas é `docs/assets/gate.js`.
 
 Deploy do gate: seguir o cabeçalho de `apps-script/gate-webapp.gs` (planilha
 **privada** → Extensões → Apps Script → propriedade `SENHA` → implantar como App da
-Web → colar a URL em `gate_url`). Depois, arquivar a implantação antiga do
+Web → colar a URL em `gate_url`). Senhas por papel, todas em Propriedades do script:
+`SENHA` (SPI, abre tudo), `SENHA_LESTE` (só `leste.html` e registros da Leste) e
+`SENHA_GLEMPA` (só `budget-glempa.html` e os lançamentos GLEMPA / GLEMPA_CLASSIF). Depois, arquivar a implantação antiga do
 `budget-webapp` na planilha pública. Nunca voltar `budget_token`/`budget_webapp_url`
 para o `config.json`.
 
