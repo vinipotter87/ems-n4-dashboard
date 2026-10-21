@@ -11,7 +11,7 @@
  * gravar qualquer linha. A senha nunca fica no código nem no repositório.
  *
  * O que o script faz (POST JSON, Content-Type text/plain pra não ter preflight):
- *   {acao:'login', senha, papel?}        → {ok, token, papel}  sessão de 6 h ('spi', 'leste' ou 'glempa')
+ *   {acao:'login', senha, papel?}        → {ok, token, papel}  sessão de 6 h ('spi', 'leste', 'glempa' ou 'grd')
  *   {acao:'sessao', token}               → {ok, papel}   confere a sessão guardada
  *   {acao:'ler', token, aba}             → {ok, values}  linhas cruas da aba
  *   {acao:'ler_aberto'}  (sem senha)     → {ok, values}  só registros de RPS (PRODUTOS_ABERTOS)
@@ -43,7 +43,7 @@
  * Sempre que editar este código: Implantar → Gerenciar implantações →
  * Editar → Nova versão (senão a URL continua rodando o código antigo).
  * Pra trocar a senha: só mudar a propriedade SENHA (as sessões abertas
- * continuam válidas por até 6 h). O mesmo vale pra SENHA_LESTE e SENHA_GLEMPA.
+ * continuam válidas por até 6 h). O mesmo vale pra SENHA_LESTE, SENHA_GLEMPA e SENHA_GRD.
  */
 
 // ID da planilha PRIVADA. Se o projeto foi criado por Extensões → Apps Script
@@ -84,6 +84,9 @@ function ehLeste(gd, mapa) { gd = String(gd || ''); return /^N4:(1105|1165)/.tes
 // que não deve ver atas, planos nem a verba tática dos GDs.
 var PRODUTOS_GLEMPA = { 'GLEMPA': true, 'GLEMPA_CLASSIF': true };
 function ehGlempa(produto) { return !!PRODUTOS_GLEMPA[String(produto || '')]; }
+// Papel 'grd' (21/10/2026): a propriedade SENHA_GRD é a senha pessoal do GRD. Só ela abre a
+// página de atas de N4 (docs/atas-grd-*.html, sem link no dashboard) — a senha SPI do time
+// NÃO abre essa página. Nas leituras e gravações o papel 'grd' vale como 'spi' (vê tudo).
 
 function doGet() {
   return resposta({ ok: false, erro: 'use POST' });
@@ -100,7 +103,7 @@ function doPost(e) {
   if (acao === 'login') return login(body);
   if (acao === 'ler_aberto') return lerAberto();
 
-  var sessao = sessaoValida(body.token); // false, 'spi', 'leste' ou 'glempa'
+  var sessao = sessaoValida(body.token); // false, 'spi', 'leste', 'glempa' ou 'grd'
   if (acao === 'add' || acao === 'edit' || acao === 'delete') return gravar(body, sessao);
   if (!sessao) return resposta({ ok: false, erro: 'sessao' });
   if (acao === 'sessao') return resposta({ ok: true, papel: sessao });
@@ -115,8 +118,8 @@ function cache() { return CacheService.getScriptCache(); }
 
 function login(body) {
   var props = PropertiesService.getScriptProperties();
-  var senhaSpi = props.getProperty('SENHA') || '', senhaLeste = props.getProperty('SENHA_LESTE') || '', senhaGlempa = props.getProperty('SENHA_GLEMPA') || '';
-  var papel = body.papel === 'leste' || body.papel === 'glempa' ? body.papel : 'spi'; // o que a página pede
+  var senhaSpi = props.getProperty('SENHA') || '', senhaLeste = props.getProperty('SENHA_LESTE') || '', senhaGlempa = props.getProperty('SENHA_GLEMPA') || '', senhaGrd = props.getProperty('SENHA_GRD') || '';
+  var papel = body.papel === 'leste' || body.papel === 'glempa' || body.papel === 'grd' ? body.papel : 'spi'; // o que a página pede
   if (senhaSpi.length < SENHA_MIN) {
     return resposta({ ok: false, erro: 'o gate ainda não tem senha configurada (propriedade SENHA, mínimo ' + SENHA_MIN + ' caracteres)' });
   }
@@ -126,11 +129,15 @@ function login(body) {
   if (papel === 'glempa' && senhaGlempa.length < SENHA_MIN) {
     return resposta({ ok: false, erro: 'a senha do Budget Glempa ainda não foi configurada (propriedade SENHA_GLEMPA, mínimo ' + SENHA_MIN + ' caracteres)' });
   }
+  if (papel === 'grd' && senhaGrd.length < SENHA_MIN) {
+    return resposta({ ok: false, erro: 'a senha do GRD ainda não foi configurada (propriedade SENHA_GRD, mínimo ' + SENHA_MIN + ' caracteres)' });
+  }
   var falhas = Number(cache().get('falhas') || 0);
   if (falhas >= MAX_FALHAS) return resposta({ ok: false, erro: 'muitas tentativas — aguarde 1 hora' });
 
   var tentativa = String(body.senha || ''), concedido = null;
-  if (iguais(tentativa, senhaSpi)) concedido = 'spi';                       // a senha SPI abre tudo
+  if (papel === 'grd') { if (iguais(tentativa, senhaGrd)) concedido = 'grd'; } // página do GRD: só a senha do GRD (a SPI não abre)
+  else if (iguais(tentativa, senhaSpi)) concedido = 'spi';                  // a senha SPI abre tudo
   else if (papel === 'leste' && iguais(tentativa, senhaLeste)) concedido = 'leste';
   else if (papel === 'glempa' && iguais(tentativa, senhaGlempa)) concedido = 'glempa';
   if (!concedido) {
@@ -144,7 +151,7 @@ function login(body) {
   return resposta({ ok: true, token: token, papel: concedido, expiraEm: SESSAO_SEG });
 }
 
-// devolve o papel da sessão ('spi', 'leste' ou 'glempa') ou false
+// devolve o papel da sessão ('spi', 'leste', 'glempa' ou 'grd') ou false
 function sessaoValida(token) {
   if (!token || typeof token !== 'string' || token.length < 32) return false;
   var p = cache().get('tok:' + token);
@@ -166,7 +173,7 @@ function iguais(a, b) {
 function ler(body, papel) {
   var aba = String(body.aba || '');
   if (!ABAS_PERMITIDAS.test(aba)) return resposta({ ok: false, erro: 'aba não permitida: ' + aba });
-  if (papel !== 'spi' && aba !== ABA_BUDGET) return resposta({ ok: false, erro: 'negado' }); // tendências é só SPI
+  if (papel !== 'spi' && papel !== 'grd' && aba !== ABA_BUDGET) return resposta({ ok: false, erro: 'negado' }); // tendências é só SPI/GRD
   var sheet = planilha().getSheetByName(aba);
   if (!sheet) return resposta({ ok: true, values: [] }); // mesma semântica do 400 da API: aba inexistente = vazia
   var lastRow = sheet.getLastRow(), lastCol = sheet.getLastColumn();

@@ -1010,7 +1010,7 @@ body.apres-on{overflow:hidden}
   <!-- Conteúdo injetado dinamicamente -->
 </div>
 
-<script src="assets/gate.js?v=20261019"></script>
+<script src="assets/gate.js?v=20261021"></script>
 <script>
 // ══════════════════════════════════════════════════════════════════
 //  EMS N4 Dashboard v5 — Dynamic (reads from Google Sheets)
@@ -3612,7 +3612,7 @@ var APRES_ATA_PREVIA = null; // ata lida do PDF que não pôde ser gravada, agua
 // fluxo) e valem como combinados anteriores inclusive no próprio mês. APRES_ATA_ALVO diz em
 // qual caixa a ação acontece: 'ant' (#ap-ata) ou 'atual' (#ap-ata-nova). Além dos combinados
 // (N4_ATA), o upload grava o texto integral da ata em outra linha (N4_ATA_DOC, mesma chave),
-// lido pela página atas-n4.html.
+// lido pela página atas-grd-91bdae8082.html (só do GRD, sem link no dashboard).
 var APRES_ATA_ALVO = 'ant', APRES_ATA_TEXTO = null;
 function apresAtaAlvo(a) { APRES_ATA_ALVO = a; }
 function apresAtaBox(alvo) { return document.getElementById((alvo || APRES_ATA_ALVO) === 'atual' ? 'ap-ata-nova' : 'ap-ata'); }
@@ -3698,7 +3698,7 @@ async function apresAtaLerPdf(buffer) {
 
 // Texto integral da ata N4: linhas do PDF agrupadas pela altura; títulos de seção (em maiúsculas)
 // e de bloco (B1 — …) em parágrafos próprios; a tabela "COMBINADOS DA REUNIÃO" vira o marcador
-// [[COMBINADOS]], que a página atas-n4.html troca pelos combinados estruturados com o status.
+// [[COMBINADOS]], que a página atas-grd-91bdae8082.html troca pelos combinados estruturados com o status.
 var APRES_ATA_TOPO = /^(RESUMO DA REUNI[ÃA]O|O QUE FOI DISCUTIDO POR BLOCO|IDEIAS E INICIATIVAS.*|COMBINADOS DA REUNI[ÃA]O|PR[ÓO]XIMA N4)$/;
 async function apresAtaLerTexto(buffer) {
   await apresAtaCarregarPdfJs();
@@ -3869,7 +3869,7 @@ function apresAtaDesenharDe(alvo) {
     if (previa) h += '<div class="ap-ata-aviso">A ata foi lida, mas não foi possível salvar. Confira os combinados e clique em "Salvar combinados" para tentar de novo.</div>';
     else if (editando) h += '<div class="ap-ata-aviso">Modo edição: ajuste o texto, o responsável e o prazo; use ✕ para excluir um combinado.</div>';
     else if (alvo === 'atual') h += '<div class="ap-ata-aviso" style="background:#f0fdf4;color:#166534;border-color:#bbf7d0">✓ Ata salva' + (reg && apresAtaDocReg(reg.crm) ? ' completa' : '') + '. Na próxima N4 estes combinados aparecem no slide 2 ("Combinados anteriores"). ' +
-      (reg ? '<a href="atas-n4.html?id=' + reg.id + (/leste/i.test(location.pathname) ? '&regional=LESTE' : '') + '" target="_blank" style="color:#166534">Abrir a ata completa ↗</a>' : '') + '</div>';
+      (reg && GATE.papel() === 'grd' ? '<a href="atas-grd-91bdae8082.html?id=' + reg.id + (/leste/i.test(location.pathname) ? '&regional=LESTE' : '') + '" target="_blank" style="color:#166534">Abrir a ata completa ↗</a>' : '') + '</div>';
     var comStatus = alvo === 'ant'; // o status é cobrado na N4 seguinte
     h += '<div class="visitas-table-wrap"><table class="visitas-table ap-ata-tb"><thead><tr><th style="width:44px">#</th><th class="th-gd">Combinado</th><th style="width:' + (editando ? 150 : 110) + 'px">Responsável</th><th style="width:' + (editando ? 220 : 190) + 'px">Prazo</th>' +
       (editando ? '<th style="width:60px"></th>' : (comStatus ? '<th style="width:170px">Status</th>' : '')) + '</tr></thead><tbody>';
@@ -4273,8 +4273,7 @@ function renderCycleBar(meses, mesAtual) {
     '<button class="cycle-btn gloss-btn cb-fim' + (isGloss ? ' active' : '') + '" onclick="abrirGlossario()">📖 Glossário</button>';
   var n4 =
     '<button class="cycle-btn apres-btn" onclick="apresAbrir()" title="Mostra as seções do distrito uma por tela">▶ Apresentação N4</button>' +
-    '<button class="cycle-btn gov-btn" onclick="window.location.href=\'planos-spi.html\'" title="Todos os planos dos GDs preenchidos na apresentação">📋 Planos SPI</button>' +
-    '<button class="cycle-btn gov-btn" onclick="window.location.href=\'atas-n4.html\'" title="Atas completas das N4 anexadas na apresentação">📄 Atas de N4</button>';
+    '<button class="cycle-btn gov-btn" onclick="window.location.href=\'planos-spi.html\'" title="Todos os planos dos GDs preenchidos na apresentação">📋 Planos SPI</button>';
   var rps =
     '<button class="cycle-btn gov-btn" onclick="window.location.href=\'rps.html\'" title="Apresentação da RPS do GD com o time">📅 Copiloto de RPS</button>' +
     '<button class="cycle-btn gov-btn" onclick="window.location.href=\'atas-rps.html\'" title="Atas completas das RPS anexadas pelos GDs">📄 Atas de RPS</button>';

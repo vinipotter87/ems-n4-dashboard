@@ -18,9 +18,9 @@
 var GATE = (function () {
   var URL = null, TOKEN = null, CFG = null;
   // Papel da sessão: 'spi' (senha SPI, abre tudo), 'leste' (senha da Leste, só o que é da
-  // Leste) ou 'glempa' (senha do Budget Glempa Consultor, só os lançamentos GLEMPA). A página
-  // diz o que exige em window.GATE_PAPEL ('spi' se não disser) ou em opts.papel; a sessão
-  // 'spi' satisfaz qualquer exigência.
+  // Leste), 'glempa' (senha do Budget Glempa Consultor, só os lançamentos GLEMPA) ou 'grd'
+  // (senha pessoal do GRD: abre tudo, inclusive a página de atas de N4, que a 'spi' NÃO abre).
+  // A página diz o que exige em window.GATE_PAPEL ('spi' se não disser) ou em opts.papel.
   var PAPEL = null, EXP = 0;
   var CHAVE = 'ems_gate_token';
   function lerGuardado() {
@@ -40,7 +40,8 @@ var GATE = (function () {
     try { if (t) localStorage.setItem(CHAVE, JSON.stringify({ t: t, exp: EXP, papel: PAPEL })); else localStorage.removeItem(CHAVE); } catch (e) {}
   }
   function papelExigido(opts) { return (opts && opts.papel) || window.GATE_PAPEL || 'spi'; }
-  function temPapel(req) { return !!TOKEN && (PAPEL === 'spi' || PAPEL === req); }
+  function satisfaz(papel, req) { return papel === req || papel === 'grd' || (papel === 'spi' && req !== 'grd'); }
+  function temPapel(req) { return !!TOKEN && satisfaz(PAPEL, req); }
 
   // lê config.json uma vez (mesma pasta das páginas) só pra pegar gate_url
   function config() {
@@ -86,6 +87,8 @@ var GATE = (function () {
   async function entrar(senha, papel) {
     var r = await chamar({ acao: 'login', senha: String(senha || ''), papel: papel || papelExigido() });
     if (!r.ok) throw new Error(r.erro || 'senha incorreta');
+    // o servidor pode conceder outro papel (ex.: gate antigo tratando 'grd' como 'spi'): só vale se alcança a página
+    if (!satisfaz(r.papel || 'spi', papel || papelExigido())) throw new Error('Esta senha não abre esta página.');
     guardar(r.token, r.expiraEm, r.papel);
     return true;
   }

@@ -136,8 +136,12 @@ compartilhado pelas páginas é `docs/assets/gate.js`.
 Deploy do gate: seguir o cabeçalho de `apps-script/gate-webapp.gs` (planilha
 **privada** → Extensões → Apps Script → propriedade `SENHA` → implantar como App da
 Web → colar a URL em `gate_url`). Senhas por papel, todas em Propriedades do script:
-`SENHA` (SPI, abre tudo), `SENHA_LESTE` (só `leste.html` e registros da Leste) e
-`SENHA_GLEMPA` (só `budget-glempa.html` e os lançamentos GLEMPA / GLEMPA_CLASSIF). Depois, arquivar a implantação antiga do
+`SENHA` (SPI, abre tudo), `SENHA_LESTE` (só `leste.html` e registros da Leste),
+`SENHA_GLEMPA` (só `budget-glempa.html` e os lançamentos GLEMPA / GLEMPA_CLASSIF) e
+`SENHA_GRD` (senha pessoal do GRD: a única que abre a página de atas de N4,
+`docs/atas-grd-*.html`, que não tem link no dashboard; a senha SPI não abre essa página).
+Toda mudança no `.gs` exige publicar uma **nova versão** da implantação (Implantar →
+Gerenciar implantações → editar → Nova versão), senão a URL continua rodando o código antigo. Depois, arquivar a implantação antiga do
 `budget-webapp` na planilha pública. Nunca voltar `budget_token`/`budget_webapp_url`
 para o `config.json`.
 

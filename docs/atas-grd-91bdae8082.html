@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="robots" content="noindex">
+<meta name="robots" content="noindex, nofollow">
 <title>EMS | Atas de N4</title>
 <style>
 :root{--red:#C8102E;--gray:#6B7280;--light:#F3F4F6;--border:#E5E7EB;--brand:#0057B8;--brand-d:#003D82;--text:#111827}
@@ -94,7 +94,7 @@ td{padding:8px 9px;border-bottom:1px solid var(--border);vertical-align:top;line
   <div class="doc" id="doc"><div class="vazio"><b>Escolha uma ata na lista</b>O texto completo aparece aqui.</div></div>
 </div>
 
-<script src="assets/gate.js?v=20261019"></script>
+<script src="assets/gate.js?v=20261021"></script>
 <script>
 // ── Atas de N4 ───────────────────────────────────────────────────
 // Leitura das atas de N4 que os GDs anexam no modo apresentação do dashboard
@@ -103,11 +103,12 @@ td{padding:8px 9px;border-bottom:1px solid var(--border);vertical-align:top;line
 // "ata|<mês da apresentação>": produto N4_ATA guarda os combinados (com status)
 // e produto N4_ATA_DOC guarda o texto integral extraído do PDF. Atas anexadas
 // antes de o texto integral existir têm só os combinados. A mesma página serve
-// às duas regionais: atas-n4.html (SPI Oeste) e atas-n4.html?regional=LESTE.
-// Página somente de leitura.
+// às duas regionais: atas-grd-91bdae8082.html (SPI Oeste) e ?regional=LESTE.
+// Página somente de leitura, sem link a partir do dashboard (endereço só do GRD) e
+// aberta apenas com a senha do GRD (papel 'grd' no gate) — a senha SPI do time não abre.
 var TAB = 'budget_lancamentos', MESES = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
 var REGIONAL_LESTE = /[?&]regional=leste(&|$)/i.test(window.location.search);
-window.GATE_PAPEL = REGIONAL_LESTE ? 'leste' : 'spi'; // qual senha a página exige
+window.GATE_PAPEL = 'grd'; // só a senha pessoal do GRD abre esta página (nas duas regionais)
 var CONFIG = {}, ATAS = [], GDS = {}, SEL = null, ABERTOS = null;
 var NOME_MES = {JAN:'Janeiro',FEV:'Fevereiro',MAR:'Março',ABR:'Abril',MAI:'Maio',JUN:'Junho',JUL:'Julho',AGO:'Agosto',SET:'Setembro',OUT:'Outubro',NOV:'Novembro',DEZ:'Dezembro'};
 var TOPO = /^(RESUMO DA REUNI[ÃA]O|O QUE FOI DISCUTIDO POR BLOCO|IDEIAS E INICIATIVAS.*|COMBINADOS DA REUNI[ÃA]O|PR[ÓO]XIMA N4)$/;
@@ -235,7 +236,7 @@ function erro(e){ $('lista').innerHTML = '<div class="vazio"><b>Erro ao carregar
   try {
     var res = await fetch('config.json?t=' + Date.now(), {cache:'no-store'}); if (!res.ok) throw new Error('config.json não encontrado.');
     CONFIG = await res.json();
-    if (!(await GATE.garantir('Atas de N4', { cheia: true, texto: 'Digite a senha para abrir as atas.' }))) return;
+    if (!(await GATE.garantir('Atas de N4', { cheia: true, texto: 'Digite a senha do GRD para abrir as atas.' }))) return;
     await carregar();
   } catch(e){ erro(e); }
 })();
