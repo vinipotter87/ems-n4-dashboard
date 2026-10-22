@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>EMS | Planos RPS</title>
+<style>
+:root{--red:#C8102E;--orange:#E87722;--green:#15693A;--dark:#111827;--gray:#6B7280;--light:#F3F4F6;--border:#E5E7EB;--brand:#0057B8;--brand-d:#003D82;--text:#111827}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,-apple-system,Arial,sans-serif;background:#ECEDF0;color:var(--text);font-size:13px}
+button,select,input{font-family:inherit}
+.hdr{background:linear-gradient(135deg,var(--brand-d),var(--brand));color:#fff;padding:16px 28px;display:flex;align-items:center;gap:16px}
+.logo{background:#fff;color:var(--brand);font-weight:900;font-size:16px;padding:5px 11px;border-radius:7px}
+.hdr h1{font-size:19px;font-weight:800}
+.hdr p{font-size:12px;opacity:.85;margin-top:2px}
+.hdr .sp{flex:1}
+.hdr a{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);color:#fff;text-decoration:none;font-size:12px;font-weight:700;padding:6px 14px;border-radius:20px;white-space:nowrap}
+.bar{background:#fff;border-bottom:1px solid var(--border);padding:10px 28px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;position:sticky;top:0;z-index:5}
+.bar label{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)}
+.bar select,.bar input{border:1.5px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12.5px;background:#fff}
+.bar select.alerta{border-color:#fca5a5;background:#fef2f2;color:#b91c1c;font-weight:700}
+.bar input{min-width:220px}
+.bar button{background:#fff;border:1.5px solid var(--border);border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;color:var(--brand);cursor:pointer}
+.bar .sp{flex:1}
+.main{padding:20px 28px 40px}
+.kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-bottom:18px}
+.kpi{background:#fff;border-radius:12px;border-top:4px solid var(--brand);padding:12px 16px;box-shadow:0 1px 6px rgba(0,0,0,.06)}
+.kpi.crit{border-top-color:#ef4444;background:#fff5f5}.kpi.ok{border-top-color:#22c55e}.kpi.warn{border-top-color:#f59e0b}
+.kpi .l{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)}
+.kpi .v{font-size:26px;font-weight:800;line-height:1.2}
+.kpi.crit .v{color:#b91c1c}
+.kpi .s{font-size:11.5px;color:var(--gray)}
+.card{background:#fff;border-radius:12px;box-shadow:0 1px 6px rgba(0,0,0,.06);padding:16px 18px;margin-bottom:18px}
+.card.desv{border:1.5px solid #fecaca}
+.card h2{font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--brand-d);margin-bottom:10px}
+.card h2 small{font-weight:600;text-transform:none;letter-spacing:0;color:var(--gray);margin-left:8px}
+.card h2 .cnt{display:inline-block;background:#fee2e2;color:#991b1b;border-radius:20px;padding:2px 10px;font-size:11.5px;margin-left:8px;letter-spacing:0;text-transform:none}
+.card h2 .cnt.ok{background:#dcfce7;color:#166534}
+table{width:100%;border-collapse:collapse}
+th{background:#f1f5f9;color:#334155;font-size:10px;text-transform:uppercase;letter-spacing:.4px;padding:8px 9px;text-align:left;font-weight:800}
+td{padding:8px 9px;border-bottom:1px solid var(--border);vertical-align:top;line-height:1.45}
+td.c,th.c{text-align:center}
+tr.clic{cursor:pointer}tr.clic:hover td{background:#f8fafc}
+tr.sem td{background:#fff7f7}
+.gd{font-weight:700}
+.rep{font-weight:700}.rep .nota{font-weight:600}
+.tag{display:inline-block;font-size:10px;font-weight:800;border-radius:20px;padding:2px 9px;white-space:nowrap}
+.tag.fund{background:#e0f2fe;color:#075985}.tag.marca{background:#fef3c7;color:#92400e}
+.tag.NEXUS{background:#e0e7ff;color:#3730a3}.tag.VITAL{background:#fce7f3;color:#9d174d}
+.tag.gd{background:#eff6ff;color:#1e3a8a;font-weight:800}
+.p{font-weight:800;white-space:nowrap}.p.ok{color:#15803d}.p.warn{color:#b45309}.p.crit{color:#b91c1c}
+.dv{display:inline-block;background:#fee2e2;color:#991b1b;font-size:11px;font-weight:700;border-radius:6px;padding:2px 8px;margin:1px 4px 1px 0;white-space:nowrap}
+.dv b{font-weight:900}
+.semp{display:inline-block;background:#b91c1c;color:#fff;font-size:11px;font-weight:800;border-radius:8px;padding:4px 10px;white-space:nowrap}
+.comp{display:inline-block;background:#f0fdf4;color:#166534;border:1.5px solid #86efac;font-size:11px;font-weight:800;border-radius:8px;padding:3px 10px;white-space:nowrap}
+.comp small{display:block;font-weight:600;color:#15803d}
+.st{display:inline-block;font-family:inherit;font-size:11.5px;font-weight:800;border-radius:8px;padding:4px 9px;border:1.5px solid;white-space:nowrap}
+select.st{cursor:pointer}
+.st.pend{color:#b45309;border-color:#fcd34d;background:#fffbeb}
+.st.and{color:#1d4ed8;border-color:#93c5fd;background:#eff6ff}
+.st.ok{color:#15803d;border-color:#86efac;background:#f0fdf4}
+.st.nao{color:#b91c1c;border-color:#fca5a5;background:#fef2f2}
+.plano{border:1px solid var(--border);border-left:5px solid var(--brand);border-radius:10px;margin-bottom:12px;overflow:hidden}
+.plano.enc{border-left-color:#9ca3af}
+.plano summary{list-style:none;cursor:pointer;padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fafbfc}
+.plano summary::-webkit-details-marker{display:none}
+.plano summary b{font-size:13.5px}
+.plano summary .raiz{flex:1;min-width:240px;color:var(--gray);font-size:12px}
+.plano summary .raiz i{font-style:normal;font-weight:800;color:#b91c1c}
+.plano .corpo{padding:12px 14px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:18px}
+.plano .prob{grid-column:1/-1;background:#f8fafc;border-radius:8px;padding:8px 12px}
+.sub{display:block;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--gray);margin-bottom:4px}
+.pq{border-left:3px solid #cbd5e1;padding:2px 0 2px 10px;margin-bottom:6px}
+.pq i{display:block;font-style:normal;font-size:10px;font-weight:800;text-transform:uppercase;color:var(--gray)}
+.pq.raiz{border-left-color:#ef4444;background:#fef2f2;border-radius:0 8px 8px 0;padding:6px 10px;font-weight:700}
+.pq.raiz i{color:#b91c1c}
+.kp{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.kp span{background:#fee2e2;color:#991b1b;font-size:10.5px;font-weight:700;border-radius:20px;padding:2px 9px}
+.ev{display:inline-block;background:#f3f4f6;border-radius:8px;padding:3px 9px;font-size:11.5px;margin:2px 0}
+.ev i{display:block;font-style:normal;font-size:9.5px;font-weight:800;text-transform:uppercase;color:var(--gray)}
+.evs{display:inline-block;color:#9ca3af;margin:0 4px;font-weight:800}
+.vazio{text-align:center;color:var(--gray);padding:40px 20px;line-height:1.7}
+.vazio b{display:block;font-size:16px;color:var(--text)}
+.vazio.mini{padding:18px 10px}
+.nota{font-size:11px;color:var(--gray);line-height:1.5;margin-top:4px}
+.aviso{background:#fff7ed;color:#9a3412;border-radius:8px;padding:8px 12px;font-size:12px;margin-bottom:14px;line-height:1.5}
+.aviso button{background:#fff;border:1.5px solid #fdba74;border-radius:7px;padding:4px 10px;font-size:11.5px;font-weight:800;color:#9a3412;cursor:pointer;margin-left:6px}
+.lk{color:var(--brand);font-weight:700;text-decoration:none;white-space:nowrap}
+@media(max-width:1200px){.kpis{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:1000px){.kpis{grid-template-columns:repeat(2,1fr)}.plano .corpo{grid-template-columns:1fr}}
+@media print{.bar{position:static}.bar button,.hdr a{display:none}details.plano{break-inside:avoid}}
+</style>
+<link rel="stylesheet" href="tema-ems-sub.css">
+</head>
+<body class="tema-claro">
+
+<div class="hdr">
+  <div class="logo"><img src="assets/logo-grupo-ems.png" alt="Grupo EMS"></div>
+  <div><h1 id="pg-tit">📋 Planos RPS</h1><p><span id="pg-reg">Regional SPI Oeste</span> · planos de ação dos representantes (5 porquês + 5W2H) preenchidos na RPS individual pelo GD · desvios do mês fechado sem plano em andamento</p></div>
+  <div class="sp"></div>
+  <a href="rps.html" id="pg-rps">📅 Copiloto de RPS</a>
+  <a href="index.html" id="pg-volta">← Voltar ao Dashboard</a>
+</div>
+
+<div class="bar">
+  <label for="f-desv">Desvios</label>
+  <select id="f-desv"><option value="">Todos</option><option value="sem">Só desvios sem plano</option><option value="com">Só desvios com plano</option></select>
+  <label for="f-sit">Situação</label>
+  <select id="f-sit"><option value="aberto">Em andamento</option><option value="">Todos</option><option value="atingido">Encerrados — objetivo atingido</option><option value="nao">Encerrados — não atingido</option></select>
+  <label for="f-mes">Mês-base</label><select id="f-mes"></select>
+  <label for="f-gd">GD</label><select id="f-gd"></select>
+  <label for="f-tipo">Plano</label>
+  <select id="f-tipo"><option value="">Todos</option><option value="fund">Fundamentos</option><option value="marca">Marca-chave</option></select>
+  <label for="f-status">Status</label>
+  <select id="f-status"><option value="">Todos</option><option>Pendente</option><option>Em andamento</option><option>Concluída</option><option>Não realizada</option></select>
+  <input id="f-busca" type="search" placeholder="Buscar em representante, problema, causa ou ação">
+  <span class="sp"></span>
+  <button id="btn-senha" style="display:none" title="Com a senha dá para marcar o status das ações">🔒 Senha</button>
+  <button id="btn-atualizar">🔄 Atualizar</button>
+</div>
+
+<div class="main" id="main"><div class="vazio">Carregando planos…</div></div>
+
+<script src="assets/gate.js?v=20261021"></script>
+<script src="assets/rps-regras.js?v=20261022"></script>
+<script src="farol-frequencia/dados/freq_q13.js"></script>
+<script>
+// ── Planos RPS ───────────────────────────────────────────────────
+// Consolida os planos que os GDs preenchem com cada representante na RPS
+// individual do Copiloto de RPS (rps.html). É a página irmã de planos-spi.html
+// (planos de N4 dos GDs): mesma leitura, mas o plano aqui é do representante.
+// Cada plano é 1 linha da aba budget_lancamentos com produto = RPS_PLANO,
+// gd = "N4:<distrito_id>", medico = nome do representante,
+// crm = "rpsi|<setor_id>|<plano>|<mês-base>" e o conteúdo em JSON no campo
+// "acao" (problema, 5 porquês, causa raiz, ações 5W2H com status, métrica,
+// objetivo por mês × realizado, data da próxima revisão, encerramento).
+// O conteúdo do plano só se edita no Copiloto; aqui se acompanha a execução:
+// cada ação tem um status, gravado de volta no mesmo JSON.
+// Leitura sem senha (regra do Copiloto, 16/10/2026: os registros de RPS são
+// abertos); marcar status pede a senha, como no Histórico do time.
+//
+// Desvios × planos: a página também lê os KPIs do último mês FECHADO (reps,
+// produtos por rep, PEX, Farol da frequência e sobreposição — as mesmas fontes
+// do Copiloto, cada uma no último mês que tem dado) e aplica a regra única de
+// assets/rps-regras.js: qualquer indicador de execução em desvio exige um
+// plano de Fundamentos; cada marca-chave abaixo de 100% da cota exige um
+// plano daquela marca. Desvio sem plano EM ANDAMENTO fica sinalizado.
+var TAB = 'budget_lancamentos', PROD = 'RPS_PLANO';
+var MESES = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+var W = [['oque','O quê'],['porque','Por quê'],['onde','Onde'],['quando','Quando'],['quem','Quem'],['como','Como'],['quanto','Quanto custa']];
+var STATUS = ['Pendente', 'Em andamento', 'Concluída', 'Não realizada'];
+var COR = { 'Pendente': 'pend', 'Em andamento': 'and', 'Concluída': 'ok', 'Não realizada': 'nao' };
+var CONFIG = {}, PLANOS = [], PODE_GRAVAR = false, GDS = {}; // GDS[distrito_id] = {nm, ab, linha}
+var CACHE = {};
+var DESV = { carregando: true, erro: null, itens: [], ref: null }; // desvios do mês fechado cruzados com os planos
+
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function dataBr(iso){ var x = String(iso || '').split('-'); return x.length === 3 ? x[2] + '/' + x[1] + '/' + x[0] : ''; }
+function hoje(){ var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+function brl(v){ return v === null || v === undefined || isNaN(v) ? '—' : 'R$ ' + Math.round(v).toLocaleString('pt-BR'); }
+function p1(v){ return v === null || v === undefined || isNaN(v) ? '—' : (+v).toFixed(1).replace('.', ',') + '%'; }
+function num(v){ return RpsRegras.num(v); }
+function mesAnt(m){ var i = MESES.indexOf(m); return i > 0 ? MESES[i - 1] : null; }
+// A mesma página serve às duas regionais: planos-rps.html (SPI Oeste) e planos-rps.html?regional=LESTE (Leste)
+var REGIONAL_LESTE = /[?&]regional=leste(&|$)/i.test(window.location.search);
+var REG_PAG = REGIONAL_LESTE ? 'leste.html' : 'index.html';
+window.GATE_PAPEL = REGIONAL_LESTE ? 'leste' : 'spi'; // qual senha o botão 🔒 pede
+var HOJE = hoje();
+// planos e desvios partem do último mês FECHADO (o anterior ao do calendário), como no Copiloto
+var MES_FECHADO = (function(){ var i = new Date().getMonth(); return MESES[i > 0 ? i - 1 : 0]; })();
+function ehSpi(distrito){ return (REGIONAL_LESTE ? /^(1105|1165)/ : /^(1103|1163)/).test(distrito); }
+if (REGIONAL_LESTE){ document.title = 'EMS | Planos RPS — Leste'; $('pg-reg').textContent = 'Regional Leste'; $('pg-volta').href = 'leste.html'; $('pg-rps').href = 'rps.html?regional=LESTE'; }
+
+// mesmas regras do Copiloto para a métrica do plano
+function fmtMet(nome, v){ return v === null || v === undefined || isNaN(v) ? '—' : (+v).toFixed(1).replace('.', ',') + (/^PEX/.test(nome) ? ' pts' : '%'); }
+function metricaInv(nome){ return /^Sobreposi/.test(nome); } // quanto menor, melhor
+function nomeMetrica(p){ return p.tipo === 'fund' ? (p.metrica || '') : 'Cobertura da cota'; }
+function planoTitulo(ch){ return ch === 'fund' ? 'Fundamentos' : ch === 'fund2' ? 'Fundamentos — 2º plano' : ch.replace(/^marca-/, '').replace(/_/g, ' '); }
+function criadoDe(reg){ var t = Number(reg.criadoEm); if (!t) return reg.data || ''; var d = new Date(t); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+function prazoVencido(p){ return !!(p.objetivos.length && !p.encerrado && p.objetivos.every(function(o){ return p.resultados[o.mes] && !p.resultados[o.mes].parcial; })); }
+function revisaoTag(p){
+  if (p.encerrado) return '<span class="p ' + (p.encerrado.resultado === 'atingido' ? 'ok' : 'crit') + '">encerrado em ' + dataBr(p.encerrado.data) + ' — ' + (p.encerrado.resultado === 'atingido' ? 'objetivo atingido' : 'não atingido') + '</span>';
+  if (!p.revisao) return '<span class="p warn">sem data de revisão</span>';
+  if (p.revisao < HOJE) return '<span class="p crit">revisão atrasada — era ' + dataBr(p.revisao) + '</span>';
+  if (p.revisao === HOJE) return '<span class="p warn">revisão hoje — ' + dataBr(p.revisao) + '</span>';
+  return '<span class="p ok">próxima revisão ' + dataBr(p.revisao) + '</span>';
+}
+function revisaoAtrasada(p){ return !p.encerrado && !!p.revisao && p.revisao < HOJE; }
+// métrica, base e objetivo × realizado de cada mês do plano (gravados pelo Copiloto)
+function metaHtml(p){
+  var nome = nomeMetrica(p);
+  if (p.metrica && p.objetivos.length){
+    var inv = metricaInv(nome), b = null;
+    if (p.base){ if (p.tipo === 'fund'){ var bi = (p.base.inds || []).filter(function(i){ return i.nome === p.metrica; })[0]; b = bi ? bi.n : null; } else b = p.base.cob; }
+    return '<div class="kp" style="margin-top:8px"><span style="background:#e0f2fe;color:#075985">' + esc(nome) + (inv ? ' (quanto menor, melhor)' : '') + ' · base ' + esc(p.mesBase) + ': ' + fmtMet(nome, b) + '</span>' +
+      p.objetivos.map(function(o){ var r = p.resultados[o.mes], bateu = r ? (inv ? r.v <= o.alvo : r.v >= o.alvo) : null;
+        return '<span style="background:' + (r ? (r.parcial ? '#fef3c7;color:#92400e' : (bateu ? '#dcfce7;color:#166534' : '#fee2e2;color:#991b1b')) : '#f3f4f6;color:#374151') + '">' + esc(o.mes) + ': objetivo ' + fmtMet(nome, o.alvo) + (r ? ' · realizado ' + fmtMet(nome, r.v) + (r.parcial ? ' (parcial)' : (bateu ? ' ✓' : ' ✗')) : ' · aguardando') + '</span>'; }).join('') +
+      (prazoVencido(p) ? '<span style="background:#fee2e2;color:#991b1b">prazo encerrado em ' + esc(p.objetivos[p.objetivos.length - 1].mes) + ' — encerrar o plano no Copiloto</span>' : '') + '</div>';
+  }
+  // plano anterior ao objetivo por mês: mostra a base e as medições de cada RPS, se houver
+  if (!p.base) return '<div class="nota" style="margin-top:8px">Sem métrica e objetivo por mês — plano anterior a esse recurso.</div>';
+  var serie = [p.base].concat(p.medicoes || []);
+  function rot(m, k){ return (k === 0 ? 'Base · ' : 'RPS ') + dataBr(m.rps || m.data).slice(0, 5); }
+  var chips;
+  if (p.tipo === 'fund'){
+    var marc = p.kpis, nomes = (p.base.inds || []).map(function(i){ return i.nome; }).filter(function(n){ return !marc.length || marc.indexOf(n) >= 0; });
+    chips = nomes.map(function(n){ return '<div><b style="font-size:11.5px">' + esc(n) + '</b>: ' + serie.map(function(m, k){ var i = (m.inds || []).filter(function(x){ return x.nome === n; })[0]; return '<span class="ev"><i>' + rot(m, k) + (i && i.mes ? ' · dado de ' + esc(i.mes) : '') + '</i>' + (i ? esc(i.txt) : '—') + '</span>'; }).join('<span class="evs">→</span>') + '</div>'; }).join('');
+  } else {
+    chips = '<div><b style="font-size:11.5px">Realizado e % da cota</b>: ' + serie.map(function(m, k){ return '<span class="ev"><i>' + rot(m, k) + (m.mes ? ' · dado de ' + esc(m.mes) : '') + '</i>' + (m.real === null || m.real === undefined ? '—' : brl(m.real) + ' · ' + p1(m.cob)) + '</span>'; }).join('<span class="evs">→</span>') + '</div>';
+  }
+  return '<div style="margin-top:8px"><span class="sub">Evolução desde o plano</span>' + chips + '</div>';
+}
+
+// ── leitura do Sheets (abas públicas, mesma API do Copiloto) ──
+// nomes das abas da Leste (mesma regra do Copiloto)
+function abaReg(aba){
+  if (!REGIONAL_LESTE) return aba;
+  var m;
+  if ((m = /^(distritos|reps|pex|crm)_([A-Z]{3})$/.exec(aba))) return m[1] + '_LESTE_' + m[2];
+  if ((m = /^(produtos|produtos_dist|produtos_rep)_(NEXUS|VITAL)_([A-Z]{3})$/.exec(aba))) return m[1] + '_' + m[2] + '_LESTE_' + m[3];
+  return aba;
+}
+async function fetchAba(aba, tent){
+  aba = abaReg(aba);
+  if (CACHE[aba]) return CACHE[aba];
+  tent = tent || 0;
+  var res = await fetch('https://sheets.googleapis.com/v4/spreadsheets/' + CONFIG.spreadsheet_id + '/values/' + encodeURIComponent(aba) + '?key=' + CONFIG.api_key, {cache:'no-store'});
+  if (res.status === 429 && tent < 6){ await new Promise(function(r){ setTimeout(r, 600 * Math.pow(1.8, tent)); }); return fetchAba(aba, tent + 1); }
+  if (!res.ok){ if (res.status === 400) CACHE[aba] = []; return []; } // 400 = aba não existe
+  var rows = (await res.json()).values || [];
+  if (rows.length < 2) return (CACHE[aba] = []);
+  var h = rows[0];
+  return (CACHE[aba] = rows.slice(1).map(function(r){ var o = {}; h.forEach(function(k, i){ o[k] = r[i] !== undefined ? r[i] : ''; }); return o; }));
+}
+// último mês (até "mes", 6 para trás) em que a aba tem o dado pedido — os resultados atrasam em relação ao mês
+async function ultimaAba(nomeDe, mes, tem){
+  for (var m = mes, n = 0; m && n < 6; m = mesAnt(m), n++){ var rows = await fetchAba(nomeDe(m)); if (tem(rows)) return { mes: m, rows: rows }; }
+  return { mes: mes, rows: [] };
+}
+// nome do GD de cada distrito: aba distritos_<mês> mais recente que exista (a linha do plano só guarda o id)
+async function carregarGds(){
+  if (Object.keys(GDS).length) return;
+  var meses = (CONFIG.meses_disponiveis || []).slice().sort(function(a, b){ return MESES.indexOf(b) - MESES.indexOf(a); });
+  var hojeM = MESES[new Date().getMonth()]; if (meses.indexOf(hojeM) < 0) meses.unshift(hojeM); // os exports mensais podem estar à frente do config
+  if (meses.indexOf(MES_FECHADO) < 0) meses.splice(1, 0, MES_FECHADO);
+  for (var i = 0; i < meses.length && i < 6; i++){
+    var rows = await fetchAba('distritos_' + meses[i]);
+    if (rows.length){ rows.forEach(function(d){ if (d.distrito_id) GDS[d.distrito_id] = { nm: d.nm || d.distrito_id, ab: d.ab || '', linha: (d.linha || '').toUpperCase() }; }); return; }
+  }
+}
+function gdNome(distrito){ var g = GDS[distrito]; return g ? g.nm : 'Distrito ' + distrito; }
+function gdAb(distrito){ var g = GDS[distrito]; return g ? (g.ab || g.nm.split(' ')[0]) : distrito; }
+
+// leitura dos planos: com sessão lê a aba inteira (igual ao Copiloto); sem sessão, só os registros abertos de RPS
+async function lerLinhas(){
+  if (GATE.liberado()){ try { return await GATE.ler(TAB); } catch(e){ if (!e.sessao) throw e; } }
+  return GATE.lerAberto();
+}
+
+// linha da planilha → plano
+function lerPlanos(linhas){
+  var out = [];
+  linhas.forEach(function(l){
+    if (l.produto !== PROD || String(l.gd).indexOf('N4:') !== 0) return;
+    var distrito = String(l.gd).slice(3);
+    if (!ehSpi(distrito)) return;
+    var p; try { p = JSON.parse(l.acao); } catch(e){ return; }
+    if (!p) return;
+    var partes = String(l.crm).split('|'); if (partes[0] !== 'rpsi') return;
+    var setor = partes[1] || '', chave = partes[2] || '', mes = partes[3] || '';
+    var fund = /^fund/.test(chave);
+    var pl = {
+      distrito: distrito, gd: gdNome(distrito), gdAb: gdAb(distrito), linha: (l.linha || (GDS[distrito] || {}).linha || '').toUpperCase(),
+      setor: setor, rep: l.medico || setor, chave: chave, mes: p.mesBase || mes, tipo: fund ? 'fund' : 'marca', titulo: planoTitulo(chave),
+      problema: p.problema || '', kpis: p.kpis || [], porques: p.porques || [], raiz: p.raiz || (p.porques || [])[(p.porques || []).length - 1] || '', raizPropria: !!p.raiz,
+      acoes: p.acoes || [], criado: criadoDe(l), data: l.data, revisao: p.revisao || '', revisoes: p.revisoes || [], encerrado: p.encerrado || null,
+      metrica: p.metrica || '', mesBase: p.mesBase || mes, base: p.base || null, medicoes: p.medicoes || [], objetivos: p.objetivos || [], resultados: p.resultados || {},
+      reg: l, bruto: p // linha original e JSON completo, para regravar o status
+    };
+    pl.acoes.forEach(function(a){ if (STATUS.indexOf(a.status) < 0) a.status = 'Pendente'; });
+    out.push(pl);
+  });
+  return out.sort(function(a, b){
+    return (a.encerrado ? 1 : 0) - (b.encerrado ? 1 : 0) || (MESES.indexOf(b.mes) - MESES.indexOf(a.mes)) || a.linha.localeCompare(b.linha) || a.gd.localeCompare(b.gd) || a.rep.localeCompare(b.rep) || (a.tipo === b.tipo ? a.titulo.localeCompare(b.titulo) : (a.tipo === 'fund' ? -1 : 1));
+  });
+}
+
+// ── desvios do mês fechado × planos em andamento ──
+// Snapshots de sobreposição e meses com PEX simulado ficam dentro do index.html (leste.html), como no Copiloto
+async function carregarExtra(){
+  var ex = { sobrep: {}, pexSim: [] };
+  try {
+    var txt = await (await fetch(REG_PAG + '?t=' + Date.now(), {cache:'no-store'})).text();
+    function bloco(nome){ var a = txt.indexOf('var ' + nome + ' = {'); if (a < 0) return ''; return txt.substring(a, txt.indexOf('};', a)); }
+    function pares(b){ var o = {}, re = /([A-Z]{3}):\s*`([^`]*)`/g, m; while ((m = re.exec(b))) o[m[1]] = m[2].trim().split(/\r?\n/); return o; }
+    ex.sobrep = pares(bloco('SOBREP_REPS_RAW'));
+    var np = bloco('NOTAS_PEX_POR_MES'), re2 = /'([A-Z]{3})'\s*:/g, m2; while ((m2 = re2.exec(np))) ex.pexSim.push(m2[1]);
+  } catch(e){ console.warn('Sobreposição indisponível.', e.message); }
+  return ex;
+}
+// plano em andamento do rep para a chave exigida ('fund' aceita fund e fund2, como no Copiloto)
+function planoAberto(setor, chave){
+  return PLANOS.filter(function(p){ return !p.encerrado && p.setor === setor && (chave === 'fund' ? p.tipo === 'fund' : p.chave === chave); })
+    .sort(function(a, b){ return b.criado.localeCompare(a.criado); })[0] || null;
+}
+async function carregarDesvios(){
+  DESV = { carregando: true, erro: null, itens: [], ref: null };
+  try {
+    var m = MES_FECHADO, q13 = window.FAROL_Q13 || {};
+    // em série, por causa da cota do Sheets (mesmas fontes e mesmo "último mês com dado" do Copiloto)
+    var uR = await ultimaAba(function(x){ return 'reps_' + x; }, m, function(rows){ return rows.some(function(r){ return ehSpi(r.distrito_id) && num(r.prod) !== null; }); });
+    var uX = await ultimaAba(function(x){ return 'pex_' + x; }, m, function(rows){ return rows.some(function(r){ return ehSpi(r.distrito_id); }); });
+    var uP = {};
+    for (var L of ['NEXUS', 'VITAL']) uP[L] = await ultimaAba(function(x){ return 'produtos_rep_' + L + '_' + x; }, m, function(rows){ return rows.some(function(r){ return ehSpi(r.distrito_id); }); });
+    var ex = await carregarExtra();
+    var reps = uR.rows.filter(function(r){ return ehSpi(r.distrito_id) && r.vago !== 'True'; });
+    var pex = uX.rows.filter(function(r){ return ehSpi(r.distrito_id); });
+    var cob = {}; ['NEXUS', 'VITAL'].forEach(function(L){ cob[L] = RpsRegras.cobertura(uP[L].rows.filter(function(r){ return ehSpi(r.distrito_id); }), RpsRegras.marcas(L, uP[L].mes)); });
+    // frequência (Q1–Q3, do Farol) e sobreposição têm snapshots em meses diferentes: por distrito, o mais recente até o mês fechado
+    var refFreq = {}, refSob = {};
+    function refDe(pref, temMes){ for (var mf = m, nf = 0; mf && nf < 6; mf = mesAnt(mf), nf++) if (temMes(mf)) return mf; return null; }
+    Object.keys(GDS).forEach(function(d){ var pref = d.substring(0, 6);
+      refFreq[d] = refDe(pref, function(mf){ return Object.keys((q13[mf] || {}).setores || {}).some(function(k){ return k.substring(0, 6) === pref; }); });
+      refSob[d] = refDe(pref, function(mf){ return (ex.sobrep[mf] || []).some(function(l){ return l.substring(0, 6) === pref; }); }); });
+    var itens = [];
+    reps.forEach(function(r){
+      var d = r.distrito_id, L = String(r.linha || (GDS[d] || {}).linha || '').toUpperCase(), setor = r.setor_id;
+      var f = refFreq[d] ? RpsRegras.q13(((q13[refFreq[d]] || {}).setores || {})[setor]) : null;
+      var s = refSob[d] ? RpsRegras.sobrep((ex.sobrep[refSob[d]] || []).filter(function(x){ return x.split('|')[0] === setor; })[0]) : null;
+      var px = pex.filter(function(x){ return x.setor_id === setor; })[0] || null;
+      var inds = RpsRegras.fundamentos(r, f, s, px, ex.pexSim.indexOf(uX.mes) >= 0);
+      var eu = ((cob[L] || { reps: [] }).reps.filter(function(x){ return x.setor === setor; })[0]) || { m: {}, abaixo: [] };
+      RpsRegras.exigidos(inds, eu).forEach(function(e){
+        var chave = e[0], tipo = chave === 'fund' ? 'fund' : 'marca', det;
+        if (tipo === 'fund') det = inds.filter(function(i){ return i.desvio; }).map(function(i){ return { t: i.nome, v: i.valor + (i.quad ? ' ' + i.quad : ''), meta: i.meta }; });
+        else { var mk = eu.abaixo.filter(function(a){ return RpsRegras.chaveMarca(a.m) === chave; })[0]; det = [{ t: 'Cobertura da cota', v: p1(mk.cob), meta: '≥ 100%', falta: mk.falta }]; }
+        itens.push({ distrito: d, gd: gdNome(d), gdAb: gdAb(d), linha: L, setor: setor, rep: r.nome || setor, chave: chave, tipo: tipo, titulo: e[1], det: det, plano: planoAberto(setor, chave) });
+      });
+    });
+    itens.sort(function(a, b){ return (a.plano ? 1 : 0) - (b.plano ? 1 : 0) || a.linha.localeCompare(b.linha) || a.gd.localeCompare(b.gd) || a.rep.localeCompare(b.rep) || (a.tipo === b.tipo ? a.titulo.localeCompare(b.titulo) : (a.tipo === 'fund' ? -1 : 1)); });
+    var fr = {}, so = {}; Object.keys(refFreq).forEach(function(d){ if (refFreq[d]) fr[refFreq[d]] = 1; if (refSob[d]) so[refSob[d]] = 1; });
+    DESV = { carregando: false, erro: null, itens: itens, nReps: reps.length,
+      ref: { reps: uR.mes, pex: uX.mes + (ex.pexSim.indexOf(uX.mes) >= 0 ? ' (simulado)' : ''), prod: ['NEXUS', 'VITAL'].map(function(L){ return L + ' ' + uP[L].mes; }).join(' / '), freq: Object.keys(fr).join('/') || '—', sob: Object.keys(so).join('/') || '—' } };
+    if (!reps.length) DESV.erro = 'Sem a aba de representantes do mês fechado (' + m + ') nem dos 5 meses anteriores.';
+  } catch(e){ DESV.carregando = false; DESV.erro = e.message || String(e); }
+}
+
+function filtrados(){
+  var sit = $('f-sit').value, mes = $('f-mes').value, gd = $('f-gd').value, tipo = $('f-tipo').value, st = $('f-status').value, q = $('f-busca').value.trim().toLowerCase();
+  return PLANOS.filter(function(p){
+    if (sit === 'aberto' && p.encerrado) return false;
+    if (sit === 'atingido' && !(p.encerrado && p.encerrado.resultado === 'atingido')) return false;
+    if (sit === 'nao' && !(p.encerrado && p.encerrado.resultado !== 'atingido')) return false;
+    if (mes && p.mes !== mes) return false;
+    if (gd && p.distrito !== gd) return false;
+    if (tipo && p.tipo !== tipo) return false;
+    if (st && !p.acoes.some(function(a){ return a.status === st; })) return false;
+    if (q){
+      var txt = [p.gd, p.rep, p.setor, p.titulo, p.problema, p.raiz, p.metrica].concat(p.porques, p.kpis, p.acoes.map(function(a){ return W.map(function(w){ return a[w[0]] || ''; }).join(' '); })).join(' ').toLowerCase();
+      if (txt.indexOf(q) < 0) return false;
+    }
+    return true;
+  });
+}
+// desvios no filtro: Desvios (sem/com plano), GD, tipo de plano e busca; situação, mês-base e status são dos planos
+function desviosFiltrados(){
+  var dv = $('f-desv').value, gd = $('f-gd').value, tipo = $('f-tipo').value, q = $('f-busca').value.trim().toLowerCase();
+  return DESV.itens.filter(function(i){
+    if (dv === 'sem' && i.plano) return false;
+    if (dv === 'com' && !i.plano) return false;
+    if (gd && i.distrito !== gd) return false;
+    if (tipo && i.tipo !== tipo) return false;
+    if (q){ var txt = [i.gd, i.rep, i.setor, i.titulo].concat(i.det.map(function(x){ return x.t; })).join(' ').toLowerCase(); if (txt.indexOf(q) < 0) return false; }
+    return true;
+  });
+}
+
+function montarFiltros(){
+  var meses = [], gds = {};
+  PLANOS.forEach(function(p){ if (p.mes && meses.indexOf(p.mes) < 0) meses.push(p.mes); gds[p.distrito] = p.gd + ' (' + p.linha + ')'; });
+  DESV.itens.forEach(function(i){ gds[i.distrito] = i.gd + ' (' + i.linha + ')'; });
+  meses.sort(function(a, b){ return MESES.indexOf(b) - MESES.indexOf(a); });
+  var mAtual = $('f-mes').value, gAtual = $('f-gd').value;
+  $('f-mes').innerHTML = '<option value="">Todos</option>' + meses.map(function(m){ return '<option value="' + m + '">' + m + '/2026</option>'; }).join('');
+  $('f-gd').innerHTML = '<option value="">Todos</option>' + Object.keys(gds).sort(function(a, b){ return gds[a].localeCompare(gds[b]); }).map(function(d){ return '<option value="' + d + '">' + esc(gds[d]) + '</option>'; }).join('');
+  // planos em andamento atravessam os meses: abre em "Todos" os meses, só os em andamento
+  $('f-mes').value = mAtual && meses.indexOf(mAtual) >= 0 ? mAtual : '';
+  $('f-gd').value = gds[gAtual] ? gAtual : '';
+}
+
+// seletor de status de uma ação (ou só o rótulo, sem a senha)
+function seletor(p, k){
+  var a = p.acoes[k];
+  if (!PODE_GRAVAR) return '<span class="st ' + COR[a.status] + '">' + a.status + '</span>';
+  return '<select class="st ' + COR[a.status] + '" onchange="mudarStatus(\'' + p.reg.id + '\',' + k + ',this)">' +
+    STATUS.map(function(s){ return '<option' + (s === a.status ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>';
+}
+async function mudarStatus(id, k, sel){
+  var p = PLANOS.filter(function(x){ return x.reg.id === id; })[0];
+  if (!p) return;
+  var antes = p.acoes[k].status, novo = sel.value;
+  p.acoes[k].status = novo; p.bruto.acoes = p.acoes;
+  sel.disabled = true;
+  try {
+    var resp = await GATE.enviar({
+      acao: 'edit', id: p.reg.id, gd: p.reg.gd, linha: p.reg.linha, produto: p.reg.produto, crm: p.reg.crm,
+      medico: p.reg.medico, valor: 0, acao_lancamento: JSON.stringify(p.bruto), data: p.reg.data, criadoEm: p.reg.criadoEm });
+    if (!resp.ok) throw new Error(resp.erro || 'falha desconhecida');
+    p.reg.acao = JSON.stringify(p.bruto);
+  } catch(e){
+    p.acoes[k].status = antes;
+    alert('Não foi possível gravar o status: ' + e.message);
+  }
+  render();
+}
+
+function kpi(l, v, s, cls){ return '<div class="kpi' + (cls ? ' ' + cls : '') + '"><div class="l">' + l + '</div><div class="v">' + v + '</div><div class="s">' + s + '</div></div>'; }
+function botaoSenha(){ $('btn-senha').style.display = GATE.pronto() && !PODE_GRAVAR ? '' : 'none'; }
+async function desbloquear(){
+  if (!(await GATE.garantir('Planos RPS — marcar status', { cancelavel: true, texto: 'Ver os planos é livre. Para marcar o status das ações, digite a senha.' }))) return;
+  carregar();
+}
+
+// card "Desvios × planos": uma linha por representante e item em desvio, com o plano em andamento ou o alerta
+function cardDesvios(){
+  var tit = 'Desvios × planos';
+  if (DESV.carregando) return '<div class="card desv"><h2>' + tit + ' <small>mês fechado ' + MES_FECHADO + '/2026</small></h2><div class="vazio mini">Carregando os KPIs do mês fechado (representantes, produtos, PEX, frequência e sobreposição)…</div></div>';
+  if (DESV.erro && !DESV.itens.length) return '<div class="card desv"><h2>' + tit + '</h2><div class="vazio mini"><b>Não deu para calcular os desvios</b>' + esc(DESV.erro) + '<br><button class="st and" onclick="recarregarDesvios()" style="cursor:pointer;margin-top:8px">Tentar de novo</button></div></div>';
+  var ds = desviosFiltrados(), sem = ds.filter(function(i){ return !i.plano; }).length;
+  var fontes = 'dados: reps ' + DESV.ref.reps + ' · produtos ' + DESV.ref.prod + ' · PEX ' + DESV.ref.pex + ' · frequência ' + DESV.ref.freq + ' · sobreposição ' + DESV.ref.sob;
+  var fund = ds.filter(function(i){ return i.tipo === 'fund'; }), prod = ds.filter(function(i){ return i.tipo === 'marca'; });
+  var semF = fund.filter(function(i){ return !i.plano; }).length, semP = prod.filter(function(i){ return !i.plano; }).length;
+  var h = '<div class="card desv"><h2>' + tit + '<span class="cnt' + (sem ? '' : ' ok') + '">' + (sem ? sem + ' sem plano · ' + semF + ' em fundamentos · ' + semP + ' em produtos' : 'todos com plano') + '</span><small>regra do Copiloto sobre o mês fechado (' + MES_FECHADO + '/2026): indicador de execução fora da meta exige plano de Fundamentos; marca-chave abaixo de 100% da cota exige plano da marca · ' + esc(fontes) + '</small></h2>';
+  if (!ds.length) return h + '<div class="vazio mini"><b>' + (DESV.itens.length ? 'Nenhum desvio neste filtro' : 'Nenhum desvio no mês fechado') + '</b>' + (DESV.itens.length ? 'Ajuste o filtro de desvios, o GD ou a busca.' : 'Todos os ' + DESV.nReps + ' representantes estão na meta nos fundamentos e nas marcas-chave.') + '</div></div>';
+  var copiloto = (REGIONAL_LESTE ? 'rps.html?regional=LESTE' : 'rps.html');
+  function tdRep(i){ return '<td class="rep">' + esc(i.rep) + '<div class="nota">' + esc(i.setor) + ' · <span class="tag ' + i.linha + '">' + i.linha + '</span></div></td><td><span class="tag gd">' + esc(i.gdAb) + '</span></td>'; }
+  function tdPlano(i){ var pl = i.plano;
+    return '<td>' + (pl ? '<span class="comp">✓ ' + esc(pl.titulo) + ' · desde ' + dataBr(pl.criado) + '<small>' + (pl.acoes.filter(function(a){ return a.status === 'Concluída'; }).length) + ' de ' + pl.acoes.length + ' ações concluídas · ' + (pl.revisao ? (revisaoAtrasada(pl) ? 'revisão atrasada (' + dataBr(pl.revisao) + ')' : 'revisão ' + dataBr(pl.revisao)) : 'sem data de revisão') + '</small></span>' : '<span class="semp">✗ sem plano</span>') + '</td>' +
+      '<td><a class="lk" href="' + copiloto + '" target="_blank" title="Abrir o Copiloto: Individual → GD ' + esc(i.gdAb) + ' → ' + esc(i.rep) + '">' + (pl ? 'Revisar no Copiloto ↗' : 'Criar no Copiloto ↗') + '</a></td>'; }
+  // resumo: quantos desvios sem plano por indicador (fundamentos) ou por marca (produtos)
+  function resumo(lista, chaveDe, rotulo){ var c = {}, t = {}; lista.forEach(function(i){ chaveDe(i).forEach(function(k){ t[k] = (t[k] || 0) + 1; if (!i.plano) c[k] = (c[k] || 0) + 1; }); });
+    var ks = Object.keys(t).sort(function(a, b){ return (c[b] || 0) - (c[a] || 0) || t[b] - t[a]; }); if (!ks.length) return '';
+    return '<div class="kp" style="margin:0 0 10px"><span style="background:#f3f4f6;color:#374151">' + rotulo + '</span>' + ks.map(function(k){ return '<span style="background:' + (c[k] ? '#fee2e2;color:#991b1b' : '#dcfce7;color:#166534') + '">' + esc(k) + ' <b>' + (c[k] || 0) + '</b> sem plano de ' + t[k] + '</span>'; }).join('') + '</div>'; }
+
+  // ── bloco 1: Fundamentos (indicadores de execução) ──
+  if (fund.length){
+    h += '<h2 style="margin-top:4px"><span class="tag fund" style="font-size:11px;padding:3px 10px">Fundamentos</span><span class="cnt' + (semF ? '' : ' ok') + '">' + (semF ? semF + ' sem plano' : 'todos com plano') + ' · ' + fund.length + ' representante' + (fund.length === 1 ? '' : 's') + ' em desvio</span><small>execução: produtividade, coberturas Q1, Q2, Q3, Q1-Q3 e painel, frequência Q1–Q3, sobreposição e PEX (a Cobertura Q4 é só informativa e não entra) · um plano de Fundamentos cobre todos os indicadores do representante</small></h2>';
+    h += resumo(fund, function(i){ return i.det.map(function(x){ return x.t.replace(' (simulado)', ''); }); }, 'Por indicador');
+    h += '<table style="margin-bottom:18px"><thead><tr><th>Representante</th><th>GD</th><th>Indicadores em desvio no mês fechado</th><th>Plano de Fundamentos em andamento</th><th></th></tr></thead><tbody>';
+    fund.forEach(function(i){ h += '<tr' + (i.plano ? '' : ' class="sem"') + '>' + tdRep(i) + '<td>' + i.det.map(function(x){ return '<span class="dv" title="meta ' + esc(x.meta) + '">' + esc(x.t) + ' <b>' + esc(x.v) + '</b> · meta ' + esc(x.meta) + '</span>'; }).join(' ') + '</td>' + tdPlano(i) + '</tr>'; });
+    h += '</tbody></table>';
+  }
+  // ── bloco 2: Produtos (marcas-chave abaixo de 100% da cota) ──
+  if (prod.length){
+    var repsP = {}; prod.forEach(function(i){ repsP[i.setor] = 1; });
+    h += '<h2 style="margin-top:4px"><span class="tag marca" style="font-size:11px;padding:3px 10px">Produtos — marcas-chave</span><span class="cnt' + (semP ? '' : ' ok') + '">' + (semP ? semP + ' sem plano' : 'todos com plano') + ' · ' + prod.length + ' marca' + (prod.length === 1 ? '' : 's') + ' em desvio em ' + Object.keys(repsP).length + ' representante' + (Object.keys(repsP).length === 1 ? '' : 's') + '</span><small>cobertura da cota abaixo de 100% no mês fechado · cada marca abaixo da cota pede o seu próprio plano</small></h2>';
+    h += resumo(prod, function(i){ return [i.titulo]; }, 'Por marca');
+    h += '<table><thead><tr><th>Representante</th><th>GD</th><th>Marca-chave</th><th class="c">Cobertura da cota</th><th class="c">Falta (R$)</th><th>Plano da marca em andamento</th><th></th></tr></thead><tbody>';
+    prod.forEach(function(i){ var x = i.det[0] || {}; h += '<tr' + (i.plano ? '' : ' class="sem"') + '>' + tdRep(i) + '<td><span class="tag marca">' + esc(i.titulo) + '</span></td><td class="c"><span class="p crit">' + esc(x.v) + '</span><div class="nota">meta ≥ 100%</div></td><td class="c">' + (x.falta ? brl(x.falta) : '—') + '</td>' + tdPlano(i) + '</tr>'; });
+    h += '</tbody></table>';
+  }
+  h += '<div class="nota">Plano "em andamento" = salvo na RPS individual e ainda não encerrado, de qualquer mês-base. Fundamentos: um plano cobre todos os indicadores em desvio (máximo de 2 em andamento por representante). Marca-chave: cada marca abaixo da cota pede o seu plano.</div></div>';
+  return h;
+}
+function recarregarDesvios(){ render(); carregarDesvios().then(function(){ montarFiltros(); render(); }); }
+
+function render(){
+  var main = $('main');
+  var ps = filtrados();
+  var stF = $('f-status').value, sitF = $('f-sit').value;
+  var dsTodos = DESV.itens, semTodos = dsTodos.filter(function(i){ return !i.plano; }).length;
+  $('f-desv').className = semTodos ? 'alerta' : '';
+  if (!PLANOS.length && !dsTodos.length && !DESV.carregando){
+    main.innerHTML = (DESV.erro ? cardDesvios() : '') + '<div class="card vazio"><b>Nenhum plano preenchido ainda</b>Os planos aparecem aqui quando um GD salva o plano de Fundamentos ou de uma marca-chave de um representante na RPS individual (📅 Copiloto de RPS → Individual).</div>';
+    return;
+  }
+  function acoesDe(p){ return p.acoes.map(function(a, k){ return {a: a, k: k}; }).filter(function(x){ return !stF || x.a.status === stF; }); }
+  var nAcoes = ps.reduce(function(t, p){ return t + acoesDe(p).length; }, 0);
+  var cont = {}; ps.forEach(function(p){ p.acoes.forEach(function(a){ cont[a.status] = (cont[a.status] || 0) + 1; }); });
+  var totAc = ps.reduce(function(t, p){ return t + p.acoes.length; }, 0), conc = cont['Concluída'] || 0;
+  var reps = {}, gds = {}; ps.forEach(function(p){ reps[p.distrito + '|' + p.setor] = 1; gds[p.distrito] = 1; });
+  var nFund = ps.filter(function(p){ return p.tipo === 'fund'; }).length;
+  var abertos = ps.filter(function(p){ return !p.encerrado; }).length, atras = ps.filter(revisaoAtrasada).length, venc = ps.filter(prazoVencido).length;
+  var ds = desviosFiltrados(), sem = ds.filter(function(i){ return !i.plano; }).length;
+  var semF = ds.filter(function(i){ return !i.plano && i.tipo === 'fund'; }).length, semP = sem - semF;
+
+  var h = '';
+  if (!PODE_GRAVAR) h += '<div class="aviso">Sem a senha dá para ver tudo; marcar o status das ações pede a senha.<button onclick="desbloquear()">🔒 Senha</button></div>';
+  h += '<div class="kpis">' +
+    kpi('Desvios sem plano', DESV.carregando ? '…' : sem, DESV.carregando ? 'calculando sobre o mês fechado' : (DESV.erro && !dsTodos.length ? 'não foi possível calcular' : (ds.length ? (sem ? semF + ' em fundamentos · ' + semP + ' em produtos · ' : '') + ds.length + ' desvios em ' + MES_FECHADO + ' · ' + (ds.length - sem) + ' com plano' : 'nenhum desvio em ' + MES_FECHADO + ' no filtro')), DESV.carregando ? '' : (sem ? 'crit' : 'ok')) +
+    kpi('Planos', ps.length, (sitF === 'aberto' ? 'em andamento' : abertos + ' em andamento · ' + (ps.length - abertos) + ' encerrados') + ' · ' + nFund + ' fundamentos · ' + (ps.length - nFund) + ' marca-chave') +
+    kpi('Representantes com plano', Object.keys(reps).length, 'em ' + Object.keys(gds).length + ' GD' + (Object.keys(gds).length === 1 ? '' : 's') + (REGIONAL_LESTE ? ' da Leste' : ' da SPI')) +
+    kpi('Ações (5W2H)', totAc, (cont['Pendente'] || 0) + ' pendentes · ' + (cont['Em andamento'] || 0) + ' em andamento') +
+    kpi('Execução', (totAc ? Math.round(conc / totAc * 100) : 0) + '%', conc + ' de ' + totAc + ' ações concluídas' + (cont['Não realizada'] ? ' · ' + cont['Não realizada'] + ' não realizadas' : ''), totAc && conc === totAc ? 'ok' : '') +
+    kpi('Revisões atrasadas', atras, (atras ? 'data de revisão já passou e o plano segue aberto' : 'nenhum plano com revisão vencida') + (venc ? ' · ' + venc + ' com prazo encerrado — encerrar no Copiloto' : ''), atras || venc ? 'crit' : 'ok') + '</div>';
+
+  h += cardDesvios();
+
+  if (!ps.length){ main.innerHTML = h + '<div class="card vazio"><b>Nenhum plano neste filtro</b>Ajuste a situação, o mês-base, o GD ou a busca.</div>'; return; }
+
+  // 1. visão por GD (planos no filtro + desvios sem plano do GD)
+  var porGd = {};
+  function gdDe(p){ return porGd[p.distrito] = porGd[p.distrito] || { gd: p.gd, linha: p.linha, reps: {}, pl: 0, ab: 0, ating: 0, nao: 0, ac: 0, conc: 0, atras: 0, sem: 0, dsv: 0, semF: 0, dsvF: 0, semP: 0, dsvP: 0 }; }
+  ps.forEach(function(p){ var g = gdDe(p);
+    g.reps[p.setor] = 1; g.pl++; if (!p.encerrado) g.ab++; else if (p.encerrado.resultado === 'atingido') g.ating++; else g.nao++;
+    g.ac += p.acoes.length; g.conc += p.acoes.filter(function(a){ return a.status === 'Concluída'; }).length; if (revisaoAtrasada(p)) g.atras++; });
+  ds.forEach(function(i){ var g = gdDe(i); g.dsv++; if (!i.plano) g.sem++; if (i.tipo === 'fund'){ g.dsvF++; if (!i.plano) g.semF++; } else { g.dsvP++; if (!i.plano) g.semP++; } });
+  function celSem(s, t){ return DESV.carregando ? '…' : (s ? '<span class="semp">' + s + ' de ' + t + '</span>' : '<span class="p ok">0' + (t ? ' de ' + t : '') + '</span>'); }
+  h += '<div class="card"><h2>Visão por GD <small>clique na linha para ver só aquele GD · desvios sem plano em fundamentos e em produtos (marcas-chave)</small></h2><table><thead><tr><th>GD</th><th>Linha</th><th class="c">Fundamentos sem plano</th><th class="c">Produtos sem plano</th><th class="c">Reps com plano</th><th class="c">Planos</th><th class="c">Em andamento</th><th class="c">Encerrados</th><th class="c">Ações concluídas</th><th class="c">Revisões atrasadas</th></tr></thead><tbody>';
+  Object.keys(porGd).sort(function(a, b){ return porGd[b].sem - porGd[a].sem || porGd[a].linha.localeCompare(porGd[b].linha) || porGd[a].gd.localeCompare(porGd[b].gd); }).forEach(function(d){
+    var g = porGd[d];
+    h += '<tr class="clic" onclick="$(\'f-gd\').value=\'' + d + '\';render()" title="Ver só este GD"><td class="gd">' + esc(g.gd) + '</td><td><span class="tag ' + g.linha + '">' + g.linha + '</span></td>' +
+      '<td class="c">' + celSem(g.semF, g.dsvF) + '</td><td class="c">' + celSem(g.semP, g.dsvP) + '</td>' +
+      '<td class="c"><b>' + Object.keys(g.reps).length + '</b></td><td class="c">' + g.pl + '</td><td class="c">' + g.ab + '</td>' +
+      '<td class="c">' + (g.ating + g.nao ? '<span class="p ok">' + g.ating + ' ✓</span> · <span class="p crit">' + g.nao + ' ✗</span>' : '—') + '</td>' +
+      '<td class="c">' + (g.ac ? g.conc + ' de ' + g.ac + ' · ' + Math.round(g.conc / g.ac * 100) + '%' : '—') + '</td><td class="c">' + (g.atras ? '<span class="p crit">' + g.atras + '</span>' : '<span class="p ok">0</span>') + '</td></tr>';
+  });
+  h += '</tbody></table><div class="nota">"Fundamentos sem plano" conta representantes com indicador de execução fora da meta e sem plano de Fundamentos; "Produtos sem plano" conta marcas-chave abaixo da cota sem plano da marca (um representante pode ter várias). As duas seguem o filtro de desvios do topo; as demais colunas seguem os filtros de situação, mês-base e status dos planos.</div></div>';
+
+  // 2. todas as ações
+  h += '<div class="card"><h2>Ações <small>' + nAcoes + ' no filtro atual' + (PODE_GRAVAR ? ' · marque o status conforme a execução' : '') + '</small></h2><table><thead><tr><th>GD</th><th>Representante</th><th>Plano</th><th>Causa raiz</th><th>O quê</th><th>Quem</th><th>Quando</th><th>Como</th><th>Quanto custa</th><th>Status</th></tr></thead><tbody>';
+  ps.forEach(function(p){
+    var as = acoesDe(p);
+    as.forEach(function(x, i){
+      var a = x.a;
+      h += '<tr>' + (i === 0 ? '<td rowspan="' + as.length + '"><span class="tag gd">' + esc(p.gdAb) + '</span></td><td class="rep" rowspan="' + as.length + '">' + esc(p.rep) + '<div class="nota">' + esc(p.setor) + ' · base ' + esc(p.mes) + '/2026</div></td>' +
+        '<td rowspan="' + as.length + '"><span class="tag ' + p.tipo + '">' + esc(p.titulo) + '</span>' + (p.encerrado ? '<div class="nota">encerrado</div>' : '') + '</td><td rowspan="' + as.length + '">' + esc(p.raiz || '—') + '</td>' : '') +
+        '<td>' + (esc(a.oque) || '—') + '</td><td>' + (esc(a.quem) || '—') + '</td><td>' + (esc(a.quando) || '—') + '</td><td>' + (esc(a.como) || '—') + '</td><td>' + (esc(a.quanto) || '—') + '</td>' +
+        '<td>' + seletor(p, x.k) + '</td></tr>';
+    });
+  });
+  h += '</tbody></table></div>';
+
+  // 3. planos completos
+  h += '<div class="card"><h2>Planos completos <small>clique para abrir o problema, os 5 porquês, o objetivo e o 5W2H</small></h2>';
+  ps.forEach(function(p){
+    h += '<details class="plano' + (p.encerrado ? ' enc' : '') + '"><summary><b>' + esc(p.rep) + '</b><span class="tag gd">' + esc(p.gdAb) + '</span><span class="tag ' + p.linha + '">' + p.linha + '</span><span class="tag ' + p.tipo + '">' + esc(p.titulo) + '</span>' +
+      '<span class="raiz"><i>Causa raiz:</i> ' + esc(p.raiz || '—') + '</span>' + revisaoTag(p) + '<span class="nota">base ' + esc(p.mes) + '/2026 · criado em ' + dataBr(p.criado) + ' · ' + p.acoes.length + ' ação(ões)</span></summary>' +
+      '<div class="corpo"><div class="prob"><span class="sub">Problema</span>' + esc(p.problema) + (p.kpis.length ? '<div class="kp">' + p.kpis.map(function(k){ return '<span>' + esc(k) + '</span>'; }).join('') + '</div>' : '') + metaHtml(p) + '</div>' +
+      '<div><span class="sub">5 porquês</span>' + p.porques.map(function(t, k){ var r = !p.raizPropria && k === p.porques.length - 1; return '<div class="pq' + (r ? ' raiz' : '') + '"><i>' + (r ? 'Causa raiz' : (k + 1) + 'º por quê') + '</i>' + esc(t) + '</div>'; }).join('') + (p.raizPropria ? '<div class="pq raiz"><i>Causa raiz</i>' + esc(p.raiz) + '</div>' : '') +
+      (p.revisoes.length ? '<div class="nota" style="margin-top:8px">Revisões feitas: ' + p.revisoes.map(dataBr).join(' · ') + '</div>' : '') + '</div>' +
+      '<div><span class="sub">Plano de ação — 5W2H</span><table><thead><tr>' + W.map(function(w){ return '<th>' + w[1] + '</th>'; }).join('') + '<th>Status</th></tr></thead><tbody>' +
+      p.acoes.map(function(a, k){ return '<tr>' + W.map(function(w){ return '<td>' + (esc(a[w[0]]) || '—') + '</td>'; }).join('') + '<td>' + seletor(p, k) + '</td></tr>'; }).join('') + '</tbody></table></div></div></details>';
+  });
+  h += '</div>';
+  main.innerHTML = h;
+}
+
+async function carregar(){
+  $('main').innerHTML = '<div class="vazio">Carregando planos…</div>';
+  try {
+    if (!CONFIG.spreadsheet_id){
+      var res = await fetch((REGIONAL_LESTE ? 'config-leste.json' : 'config.json') + '?t=' + Date.now(), {cache:'no-store'});
+      if (!res.ok) throw new Error('config.json não encontrado.');
+      CONFIG = await res.json();
+      if (!CONFIG.gate_url){ var r2 = await fetch('config.json?t=' + Date.now(), {cache:'no-store'}); if (r2.ok) CONFIG.gate_url = (await r2.json()).gate_url; }
+    }
+    await GATE.config();
+    if (GATE.liberado()) await GATE.validar();
+    PODE_GRAVAR = GATE.liberado();
+    botaoSenha();
+    var pGds = carregarGds().catch(function(e){ console.warn('Nomes dos GDs indisponíveis.', e.message); });
+    var linhas = await lerLinhas();
+    await pGds;
+    PLANOS = lerPlanos(linhas);
+    montarFiltros();
+    render(); // planos na tela já; os desvios (várias abas do Sheets) chegam em seguida
+    CACHE = {}; // dados do mês podem ter mudado desde o último Atualizar
+    await carregarDesvios();
+    montarFiltros();
+    render();
+  } catch(e){
+    $('main').innerHTML = '<div class="card vazio"><b>Erro ao carregar</b>' + esc(e.message) + '</div>';
+  }
+}
+
+['f-desv','f-sit','f-mes','f-gd','f-tipo','f-status'].forEach(function(id){ $(id).onchange = render; });
+$('f-busca').oninput = render;
+$('btn-atualizar').onclick = carregar;
+$('btn-senha').onclick = desbloquear;
+carregar();
+</script>
+</body>
+</html>
