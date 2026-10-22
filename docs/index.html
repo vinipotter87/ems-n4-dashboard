@@ -940,6 +940,31 @@ body.apres-on{overflow:hidden}
 .ap-plano{background:#fff;border:1px solid var(--border);border-left:5px solid var(--brand);border-radius:10px;padding:12px 16px}
 .ap-fund-nota{font-size:12.5px;color:var(--gray);background:#fff;border:1px dashed var(--border);border-radius:10px;padding:10px 14px}
 .ap-plano-ok{background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;border-radius:10px;padding:16px 18px;font-size:14px;font-weight:700}
+/* slide "Planos dos representantes (RPS)" da apresentação */
+.ap-rp-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:12px}
+.ap-rp-kpi{background:#fff;border-radius:10px;border-top:4px solid var(--brand);padding:9px 12px}
+.ap-rp-kpi.crit{border-top-color:#ef4444;background:#fff5f5}.ap-rp-kpi.ok{border-top-color:#22c55e}.ap-rp-kpi.warn{border-top-color:#f59e0b}
+.ap-rp-kpi .l{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray)}
+.ap-rp-kpi .v{font-size:24px;font-weight:800;line-height:1.2}.ap-rp-kpi.crit .v{color:#b91c1c}
+.ap-rp-kpi .s{font-size:11px;color:var(--gray)}
+.ap-rp-card{background:#fff;border-radius:12px;padding:12px 14px}
+.ap-rp-t{font-size:12.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--brand-d);margin-bottom:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.ap-rp-t small{font-weight:600;text-transform:none;letter-spacing:0;color:var(--gray)}
+.ap-rp-t a{margin-left:auto;font-size:12px;font-weight:800;color:#2563eb;text-decoration:none;text-transform:none;letter-spacing:0;white-space:nowrap}
+.ap-rp-tbl{width:100%;border-collapse:collapse}
+.ap-rp-tbl th{background:#f1f5f9;color:#334155;font-size:10px;text-transform:uppercase;letter-spacing:.4px;padding:7px 8px;text-align:left;font-weight:800;white-space:nowrap}
+.ap-rp-tbl td{padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:middle;line-height:1.4;font-size:12.5px}
+.ap-rp-tbl td.c,.ap-rp-tbl th.c{text-align:center}
+.ap-rp-tbl tr.sem td{background:#fff7f7}
+.ap-rp-rep{font-weight:700;white-space:nowrap}.ap-rp-rep small{display:block;font-weight:600;color:var(--gray);font-size:10.5px}
+.ap-rp-tag{display:inline-block;font-size:10.5px;font-weight:800;border-radius:20px;padding:3px 10px;white-space:nowrap;margin:2px 4px 2px 0}
+.ap-rp-tag.fund{background:#e0f2fe;color:#075985}.ap-rp-tag.marca{background:#fef3c7;color:#92400e}.ap-rp-tag.nada{background:#f3f4f6;color:#6b7280;font-weight:700}
+.ap-rp-dv{display:inline-block;background:#fee2e2;color:#991b1b;font-size:10.5px;font-weight:700;border-radius:6px;padding:2px 8px;margin:2px 4px 2px 0;white-space:nowrap}
+.ap-rp-dv.m{background:#fef3c7;color:#92400e}
+.ap-rp-tbl .ok{color:#15803d;font-weight:800}.ap-rp-tbl .warn{color:#b45309;font-weight:800}.ap-rp-tbl .crit{color:#b91c1c;font-weight:800}
+.ap-rp-bar{display:inline-block;width:56px;height:7px;background:#e5e7eb;border-radius:4px;overflow:hidden;vertical-align:middle;margin-left:6px}
+.ap-rp-bar i{display:block;height:100%;background:#22c55e}
+.ap-rp-nota{font-size:10.5px;color:var(--gray);line-height:1.5;margin-top:8px}
 .ap-plano-h{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:800;color:var(--brand-d);margin-bottom:8px}
 .ap-plano-h span:not(.ap-diag-acoes){font-size:11px;font-weight:600;color:var(--gray)}
 .ap-plano-l{display:block;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--gray);margin:9px 0 4px}
@@ -1012,6 +1037,7 @@ body.apres-on{overflow:hidden}
 </div>
 
 <script src="assets/gate.js?v=20261021"></script>
+<script src="assets/rps-regras.js?v=20261022"></script>
 <script>
 // ══════════════════════════════════════════════════════════════════
 //  EMS N4 Dashboard v5 — Dynamic (reads from Google Sheets)
@@ -3355,6 +3381,112 @@ function apresFundamentos() {
 
 // Grupos (slides) dos planos. O plano fica sempre no slide seguinte ao dos
 // números: Fundamentos → Plano — Fundamentos; Marca-chave X → Plano — X.
+// ── Planos dos representantes (RPS) ─────────────────────────────────
+// Slide do Bloco 1, logo antes do plano de Fundamentos do GD: os planos em
+// andamento de cada representante do distrito no Copiloto de RPS (linhas
+// RPS_PLANO de budget_lancamentos, já carregadas com a senha) cruzados com os
+// desvios do último mês fechado pela regra única de assets/rps-regras.js — a
+// mesma do Copiloto e da página Planos RPS. Racional (Vinicius, 22/10/2026):
+// o plano do GD vem depois de ver o que ele já tratou com cada representante.
+function apresRepsPlanosGrupo() {
+  if (typeof RpsRegras === 'undefined' || !DISTRITO_FILTRO) return [];
+  var D = apresDadosPlano(), mesP = apresMesPlano();
+  var reps = (D.reps || []).filter(function(r) { return r.vago !== 'True' && r.vago !== true && r.vago !== '1'; });
+  if (!reps.length) return [];
+  var dist = (D.distritos || [])[0] || {}, linha = String(dist.linha || reps[0].linha || '').toUpperCase(), prefixo = DISTRITO_FILTRO.substring(0, 6);
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function dataBr(iso) { var x = String(iso || '').split('-'); return x.length === 3 ? x[2] + '/' + x[1] + '/' + x[0] : ''; }
+  function isoDe(d) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+  function criadoDe(l) { var t = Number(l.criadoEm); return t ? isoDe(new Date(t)) : (l.data || ''); }
+  var hoje = isoDe(new Date());
+
+  // planos RPS do distrito (um por setor × chave × mês-base; só os em andamento interessam aqui)
+  var planos = (BUDGET_LANC || []).map(function(l) {
+    if (l.produto !== 'RPS_PLANO' || l.gd !== 'N4:' + DISTRITO_FILTRO) return null;
+    var x = String(l.crm).split('|'); if (x[0] !== 'rpsi') return null;
+    var p; try { p = JSON.parse(l.acao); } catch (e) { return null; } if (!p) return null;
+    return { setor: x[1], chave: x[2], tipo: /^fund/.test(x[2]) ? 'fund' : 'marca', titulo: x[2] === 'fund' ? 'Fundamentos' : x[2] === 'fund2' ? 'Fundamentos (2º)' : x[2].replace(/^marca-/, '').replace(/_/g, ' '), p: p, criado: criadoDe(l) };
+  }).filter(Boolean);
+  function abertos(setor) { return planos.filter(function(o) { return o.setor === setor && !o.p.encerrado; }).sort(function(a, b) { return a.criado.localeCompare(b.criado); }); }
+
+  // desvios do mês fechado, pela regra do Copiloto (frequência e sobreposição: último snapshot até o mês)
+  function mesAnt(m) { var i = MES_ORDER.indexOf(m); return i > 0 ? MES_ORDER[i - 1] : null; }
+  var fq = {}, mesF = null;
+  if (typeof freqSetores === 'function' && typeof freqTem === 'function') {
+    for (var mf = mesP, nf = 0; mf && nf < 6 && !mesF; mf = mesAnt(mf), nf++) if (freqTem(mf) && freqSetores(mf, prefixo).length) mesF = mf;
+    if (mesF) freqSetores(mesF, prefixo).forEach(function(r) { fq[r.setor] = r.cob; });
+  }
+  var sb = {}, mesS = null;
+  if (typeof SOBREP_REPS_RAW !== 'undefined') {
+    for (var ms = mesP, ns = 0; ms && ns < 6 && !mesS; ms = mesAnt(ms), ns++) { var raw = SOBREP_REPS_RAW[ms]; if (raw && ('\n' + raw.trim()).indexOf('\n' + prefixo) >= 0) mesS = ms; }
+    if (mesS) SOBREP_REPS_RAW[mesS].trim().split('\n').forEach(function(l) { var s = l.split('|')[0]; if (s.substring(0, 6) === prefixo) sb[s] = l.trim(); });
+  }
+  // produtos por representante: o mês fechado, ou o mês mais recente já carregado que tenha o distrito
+  var prodRows = [], mesProd = null;
+  for (var mp = mesP, np = 0; mp && np < 6 && !mesProd; mp = mesAnt(mp), np++) {
+    var C = DADOS_CACHE[mp]; if (!C) continue;
+    var rows = (linha === 'VITAL' ? C.prodRepVit : C.prodRepNex) || [];
+    rows = rows.filter(function(r) { return r.distrito_id === DISTRITO_FILTRO; });
+    if (rows.length) { prodRows = rows; mesProd = mp; }
+  }
+  var cob = RpsRegras.cobertura(prodRows, RpsRegras.marcas(linha, mesProd || mesP));
+  var pexSim = typeof NOTAS_PEX_POR_MES !== 'undefined' && !!NOTAS_PEX_POR_MES[mesP];
+
+  var linhas = [], nComPlano = 0, nPlanos = 0, nFund = 0, acTot = 0, acConc = 0, revAtras = 0, revSem = 0, dsvSem = 0, dsvSemF = 0, dsvSemP = 0, dsvCom = 0;
+  reps.forEach(function(r) {
+    var setor = r.setor_id;
+    var f = fq[setor] !== undefined && fq[setor] !== null ? { cob: fq[setor] } : null;
+    var s = sb[setor] ? RpsRegras.sobrep(sb[setor]) : null;
+    var px = (D.pex || []).filter(function(x) { return x.setor_id === setor; })[0] || null;
+    var inds = RpsRegras.fundamentos(r, f, s, px, pexSim);
+    var eu = cob.reps.filter(function(x) { return x.setor === setor; })[0] || { m: {}, abaixo: [] };
+    var exig = RpsRegras.exigidos(inds, eu), ab = abertos(setor);
+    if (ab.length) nComPlano++;
+    nPlanos += ab.length; nFund += ab.filter(function(o) { return o.tipo === 'fund'; }).length;
+    var chips = ab.map(function(o) { acTot += (o.p.acoes || []).length; acConc += (o.p.acoes || []).filter(function(a) { return a.status === 'Concluída'; }).length;
+      return '<span class="ap-rp-tag ' + o.tipo + '">' + esc(o.titulo) + ' · desde ' + dataBr(o.criado).slice(0, 5) + '</span>'; }).join('');
+    var ac = ab.reduce(function(t, o) { return t + (o.p.acoes || []).length; }, 0), acOk = ab.reduce(function(t, o) { return t + (o.p.acoes || []).filter(function(a) { return a.status === 'Concluída'; }).length; }, 0);
+    var revs = ab.map(function(o) { return o.p.revisao || ''; });
+    var revHtml = '—';
+    if (ab.length) {
+      var comData = revs.filter(Boolean).sort(), semData = revs.length - comData.length, atras = comData.filter(function(d) { return d < hoje; });
+      revAtras += atras.length; revSem += semData;
+      revHtml = (atras.length ? '<span class="crit">atrasada — era ' + dataBr(atras[0]) + '</span>' : (comData.length ? '<span class="ok">' + dataBr(comData[0]) + '</span>' : '')) +
+        (semData ? (comData.length ? '<br>' : '') + '<span class="warn">' + semData + ' plano' + (semData > 1 ? 's' : '') + ' sem data</span>' : '');
+    }
+    // desvio sem plano em andamento: Fundamentos (qualquer indicador) e cada marca-chave abaixo da cota
+    var semPlano = [];
+    exig.forEach(function(e) {
+      var tem = ab.some(function(o) { return e[0] === 'fund' ? o.tipo === 'fund' : o.chave === e[0]; });
+      if (tem) { dsvCom++; return; }
+      dsvSem++;
+      if (e[0] === 'fund') { dsvSemF++; semPlano.push('<span class="ap-rp-dv">Fundamentos · ' + inds.filter(function(i) { return i.desvio; }).map(function(i) { return esc(i.nome.replace(' (PEX)', '').replace(' (simulado)', '').replace('Cobertura ', '').replace('Produtividade (MDV)', 'MDV').replace('Sobreposição Nexus × Vital', 'sobrep.')) + ' ' + esc(i.valor); }).join(' · ') + '</span>'); }
+      else { dsvSemP++; var mk = eu.abaixo.filter(function(a) { return RpsRegras.chaveMarca(a.m) === e[0]; })[0]; semPlano.push('<span class="ap-rp-dv m">' + esc(e[1]) + ' ' + (mk ? mk.cob.toFixed(1).replace('.', ',') + '%' : '') + '</span>'); }
+    });
+    linhas.push('<tr' + (semPlano.length ? ' class="sem"' : '') + '><td class="ap-rp-rep">' + esc(r.nome) + '<small>' + esc(setor) + '</small></td>' +
+      '<td>' + (chips || '<span class="ap-rp-tag nada">nenhum</span>') + '</td>' +
+      '<td class="c">' + (ab.length ? acOk + ' de ' + ac + '<span class="ap-rp-bar"><i style="width:' + (ac ? Math.round(acOk / ac * 100) : 0) + '%"></i></span>' : '—') + '</td>' +
+      '<td>' + revHtml + '</td>' +
+      '<td>' + (semPlano.length ? semPlano.join(' ') : (exig.length ? '<span class="ok">✓ todos com plano</span>' : '<span class="ok">✓ sem desvio</span>')) + '</td></tr>');
+  });
+
+  function kpi(l, v, s, cls) { return '<div class="ap-rp-kpi' + (cls ? ' ' + cls : '') + '"><div class="l">' + l + '</div><div class="v">' + v + '</div><div class="s">' + s + '</div></div>'; }
+  var fontes = 'reps ' + mesP + (mesProd && mesProd !== mesP ? ' · produtos ' + mesProd : '') + ' · PEX ' + mesP + (pexSim ? ' (simulado)' : '') + ' · frequência ' + (mesF || '—') + ' · sobreposição ' + (mesS || '—');
+  var el = document.createElement('div');
+  el.innerHTML = '<div class="ap-rp-kpis">' +
+    kpi('Representantes com plano', nComPlano + ' de ' + reps.length, 'plano em andamento no Copiloto de RPS') +
+    kpi('Planos em andamento', nPlanos, nFund + ' fundamentos · ' + (nPlanos - nFund) + ' marca-chave') +
+    kpi('Execução das ações', (acTot ? Math.round(acConc / acTot * 100) : 0) + '%', acConc + ' de ' + acTot + ' ações concluídas', acTot && acConc === acTot ? 'ok' : (acTot ? 'warn' : '')) +
+    kpi('Revisões', revAtras + revSem, (revAtras ? revAtras + ' atrasada' + (revAtras > 1 ? 's' : '') : 'nenhuma atrasada') + (revSem ? ' · ' + revSem + ' sem data' : ''), revAtras ? 'crit' : (revSem ? 'warn' : 'ok')) +
+    kpi('Desvios sem plano', dsvSem, dsvSem ? dsvSemF + ' em fundamentos · ' + dsvSemP + ' em produtos' : (dsvCom ? 'todos os desvios com plano' : 'nenhum desvio em ' + mesP), dsvSem ? 'crit' : 'ok') + '</div>' +
+    '<div class="ap-rp-card"><div class="ap-rp-t">Por representante <small>plano em andamento = salvo na RPS individual e não encerrado · desvio = regra do Copiloto sobre ' + mesP + '/2026 (mês fechado)</small>' +
+    '<a href="rps.html' + (typeof REGIONAL_LESTE !== 'undefined' && REGIONAL_LESTE ? '?regional=LESTE' : '') + '" target="_blank">📅 Abrir no Copiloto ↗</a></div>' +
+    '<table class="ap-rp-tbl"><thead><tr><th>Representante</th><th>Planos em andamento</th><th class="c">Ações</th><th>Próxima revisão</th><th>Desvios sem plano</th></tr></thead><tbody>' + linhas.join('') + '</tbody></table>' +
+    '<div class="ap-rp-nota">Linha destacada = representante com desvio sem plano em andamento. Fundamentos: um plano cobre todos os indicadores em desvio (Cobertura Q4 não entra). Marca-chave: cada marca abaixo de 100% da cota pede o seu plano. Dados: ' + esc(fontes) + '.</div></div>';
+  return [{ chave: '', nome: 'Planos dos representantes (RPS)', nodes: [el],
+    msg: (dsvSem ? dsvSem + ' desvio' + (dsvSem > 1 ? 's' : '') + ' sem plano · ' : 'Todos os desvios com plano · ') + nComPlano + ' de ' + reps.length + ' reps com plano em andamento' }];
+}
+
 function apresPlanoFundGrupo() {
   var inds = apresFundamentos(), desv = inds.filter(function(i) { return i.desvio; });
   var h = '<div class="ap-fund">' + inds.map(function(i) {
@@ -3976,7 +4108,7 @@ function apresMontar() {
   function rankFund(g) { for (var r = 0; r < ORDEM_FUND.length; r++) if (ORDEM_FUND[r].test(g.nome)) return r; return ORDEM_FUND.length; }
   var fundOrd = equipe.concat(fund).map(function(g, i) { return { g: g, i: i }; })
     .sort(function(a, b) { return (rankFund(a.g) - rankFund(b.g)) || (a.i - b.i); }).map(function(x) { return x.g; });
-  var fundTodos = fundOrd.concat(apresPlanoFundGrupo(), budget);
+  var fundTodos = fundOrd.concat(apresRepsPlanosGrupo(), apresPlanoFundGrupo(), budget); // planos dos reps (RPS) vêm antes do plano do GD
   // Bloco 2 (pedido do Vinicius): sai o slide "Prescrição — marcas-chave do distrito" e o
   // "Market share — cota e market share por setor" vem logo depois do atingimento por representante
   prod = prod.filter(function(g) { return !/^prescrição — marcas-chave do distrito/i.test(g.nome); });
@@ -4010,7 +4142,7 @@ function apresMontar() {
   });
   function divisor(k, titulo, sub, itens) { return { chave: '', nome: titulo, nodes: [], msg: ' ', divisor: { k: k, sub: sub, itens: itens } }; }
   var grupos = abre.concat(
-    fundTodos.length ? [divisor('Bloco 1', 'Fundamentos', 'Execução do distrito: equipe, jornada, PEX, matriz, visitas e CRM, plano de fundamentos e Budget.', fundTodos)] : [], fundTodos,
+    fundTodos.length ? [divisor('Bloco 1', 'Fundamentos', 'Execução do distrito: equipe, jornada, PEX, matriz, visitas e CRM, planos dos representantes (RPS), plano de fundamentos e Budget.', fundTodos)] : [], fundTodos,
     prod.length ? [divisor('Bloco 2', 'Produtos', 'Resultado das marcas: cota, mercado, concorrentes, setores e planos das marcas abaixo da cota.', prod)] : [], prod);
   var fimIni = grupos.length; // a partir daqui é o fechamento (plano de ação e ata)
   var fimEl = document.createElement('div'); fimEl.id = 'ap-plano-final';
