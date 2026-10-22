@@ -8987,15 +8987,14 @@ function mkRxConcBloco(d, refs, marca, rotulo) {
     if (nossa.pp !== null && d.ant) frase += ' Contra ' + d.ant + ': <span class="' + cor(nossa.pp) + '">' + pp(nossa.pp) + '</span>.';
   } else frase += marca + ' sem receita neste recorte. Líder: <b>' + lider.produto + '</b> (' + mkPct(lider.share) + ').';
   var mex = d.lista.filter(function(p) { return !p.ems && p.pp !== null && ((p.share || 0) >= 1 || Math.abs(p.pp) >= 1); }).sort(function(a, b) { return b.pp - a.pp; });
-  if (mex.length && mex[0].pp > 0.05) frase += ' Concorrente que mais ganhou receita: <b>' + mex[0].produto + '</b> <span class="mkc-neg">' + pp(mex[0].pp) + '</span>.';
+  if (mex.length && mex[0].pp > 0.05) frase += ' Concorrente que mais ganhou receita: <b>' + mex[0].produto + '</b> <span class="mkc-pos">' + pp(mex[0].pp) + '</span>.';
   refs.forEach(function(r) { var nr = r.d.lista.filter(function(p) { return p.nossa; })[0]; if (nr) frase += ' ' + r.rot + ': ' + nr.pos + 'ª, com ' + mkPct(nr.share) + '.'; });
   var top = d.lista.slice(0, 5); if (nossa && top.indexOf(nossa) < 0) top.push(nossa);
   var resto = d.lista.filter(function(p) { return top.indexOf(p) < 0; }), maxSh = Math.max.apply(null, top.map(function(p) { return p.share || 0; })) || 1;
   var tit = 'Prescrição <small>share de receitas · ' + d.mes + '/2026' + (rotulo ? ' · ' + rotulo : '') + '</small>', t = '<table class="mkc-tbl"><thead><tr><th>#</th><th>Marca</th><th>Share de Rx</th>' + refs.map(function(r) { return '<th>' + r.rot + '</th>'; }).join('') + (d.ant ? '<th>' + d.ant + '</th><th>Contra ' + d.ant + '</th>' : '') + '</tr></thead><tbody>';
   top.forEach(function(p) {
     var m = /^(.*?)\s*\(([^)]*)\)\s*$/.exec(p.produto || '');
-    // para concorrente, ganhar receita é ruim para nós: a cor segue a nossa ótica
-    var bom = p.pp === null ? '' : cor(p.ems ? p.pp : -p.pp);
+    var bom = p.pp === null ? '' : cor(p.pp);
     t += '<tr class="' + (p.nossa ? 'nossa' : '') + '"><td><span class="mks-rank mkd-pos' + Math.min(p.pos, 4) + '">' + p.pos + 'º</span></td><td>' + (m ? m[1] + '<span class="mkc-lab">' + m[2] + '</span>' : p.produto) + '</td>' +
       '<td><b>' + mkPct(p.share) + '</b><div class="mkc-bar" style="width:' + Math.max(3, Math.round((p.share || 0) / maxSh * 100)) + '%"></div></td>' +
       refs.map(function(r) { var q = r.d.por[p.produto]; return '<td class="mkc-ref">' + (q && q.share !== null ? mkPct(q.share) : '—') + '</td>'; }).join('') +
@@ -9103,8 +9102,8 @@ function renderConcorrentes(cod, linhaFiltro, mostrarLinha) {
       .sort(function(a, b) { return b.d - a.d; });
     if (mexeram.length) {
       var sobe = mexeram[0], cai = mexeram[mexeram.length - 1];
-      if (sobe.d > 0.05) frase += ' Concorrente que mais ganhou: <b>' + sobe.p.produto + '</b> <span class="mks-dn">' + mkConcPP(sobe.d) + '</span>.';
-      if (cai.d < -0.05 && cai !== sobe) frase += ' Que mais perdeu: <b>' + cai.p.produto + '</b> <span class="mks-up">' + mkConcPP(cai.d) + '</span>.';
+      if (sobe.d > 0.05) frase += ' Concorrente que mais ganhou: <b>' + sobe.p.produto + '</b> <span class="mks-up">' + mkConcPP(sobe.d) + '</span>.';
+      if (cai.d < -0.05 && cai !== sobe) frase += ' Que mais perdeu: <b>' + cai.p.produto + '</b> <span class="mks-dn">' + mkConcPP(cai.d) + '</span>.';
     }
     if (ref && ref.tem) {
       var nr = ref.lista.filter(function(p) { return p.nossa; })[0];
@@ -9122,9 +9121,7 @@ function renderConcorrentes(cod, linhaFiltro, mostrarLinha) {
       (meses.length > 1 ? '<th>Desde ' + meses[0] + '</th>' : '') + '<th>Cresc. mês</th></tr></thead><tbody>';
     top.forEach(function(p) {
       var d = delta(p), pr = ref ? ref.por[p.produto] : null;
-      // para concorrente, ganhar share é ruim para nós: a cor do chip segue a nossa ótica
       var chip = d === null ? '<span style="color:#ccc">—</span>' : mkChip(d);
-      if (d !== null && !p.ems) chip = chip.replace('mk-chip up', 'mk-chip down@').replace('mk-chip down"', 'mk-chip up"').replace('down@', 'down');
       h += '<tr class="' + (p.nossa ? 'nossa' : '') + '"><td><span class="mks-rank mkd-pos' + Math.min(p.pos, 4) + '">' + p.pos + 'º</span></td>' +
         '<td>' + mkConcNome(p.produto) + '</td><td>' + mkRS(p.valor).replace('R$ ', '') + '</td>' +
         '<td><b>' + mkPct(p.share) + '</b><div class="mkc-bar" style="width:' + Math.max(3, Math.round((p.share || 0) / maxSh * 100)) + '%"></div></td>' +
@@ -9174,9 +9171,9 @@ function renderConcorrentes(cod, linhaFiltro, mostrarLinha) {
   };
 }
 var MKC_NOTA_RX = '<p style="font-size:11px;color:var(--gray);margin:8px 0 0"><b>Prescrição</b> = share de receitas de cada marca no mercado (receitas que os médicos do painel fizeram), com o share do mês anterior ao lado. ' +
-  'A sigla ao lado do nome é o laboratório, como aparece no Raio X. Para concorrente, ganhar receita aparece em vermelho (ruim para nós). Fonte: Raio X, Prescrição | Análise de Concorrentes.</p>';
+  'A sigla ao lado do nome é o laboratório, como aparece no Raio X. Cor pelo movimento no mercado: <span class="mks-up">verde</span> = a marca ganhou share, <span class="mks-dn">vermelho</span> = perdeu, seja ela nossa ou concorrente. Fonte: Raio X, Prescrição | Análise de Concorrentes.</p>';
 var MKC_NOTA_MS = '<p style="font-size:11px;color:var(--gray);margin:8px 0 0"><b>Market share</b> = demanda: share entre marcas = venda da marca ÷ venda de todas as marcas do mercado (preço fábrica), sem o genérico. ' +
-  '“Desde” = mudança desse share contra o primeiro ciclo do gráfico, em pontos percentuais: <span class="mks-up">verde</span> é bom para nós (nossa marca ganhou ou o concorrente perdeu), <span class="mks-dn">vermelho</span> é ruim. ' +
+  '“Desde” = mudança desse share contra o primeiro ciclo do gráfico, em pontos percentuais: <span class="mks-up">verde</span> = a marca ganhou share, <span class="mks-dn">vermelho</span> = perdeu, seja ela nossa ou concorrente. ' +
   'Cresc. mês = venda contra o mês anterior. Fonte: Raio X, Demanda | Análise de Concorrentes.</p>';
 
 // Painel do distrito / slide da Apresentação N4 (tipo 'rx' = prescrição, 'dem' = demanda / market share)

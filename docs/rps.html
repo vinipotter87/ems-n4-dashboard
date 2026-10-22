@@ -604,15 +604,14 @@ function mkRxConcBloco(d, refs, marca, rotulo) {
     if (nossa.pp !== null && d.ant) frase += ' Contra ' + d.ant + ': <span class="' + cor(nossa.pp) + '">' + pp(nossa.pp) + '</span>.';
   } else frase += marca + ' sem receita neste recorte. Líder: <b>' + lider.produto + '</b> (' + mkPct(lider.share) + ').';
   var mex = d.lista.filter(function(p) { return !p.ems && p.pp !== null && ((p.share || 0) >= 1 || Math.abs(p.pp) >= 1); }).sort(function(a, b) { return b.pp - a.pp; });
-  if (mex.length && mex[0].pp > 0.05) frase += ' Concorrente que mais ganhou receita: <b>' + mex[0].produto + '</b> <span class="mkc-neg">' + pp(mex[0].pp) + '</span>.';
+  if (mex.length && mex[0].pp > 0.05) frase += ' Concorrente que mais ganhou receita: <b>' + mex[0].produto + '</b> <span class="mkc-pos">' + pp(mex[0].pp) + '</span>.';
   refs.forEach(function(r) { var nr = r.d.lista.filter(function(p) { return p.nossa; })[0]; if (nr) frase += ' ' + r.rot + ': ' + nr.pos + 'ª, com ' + mkPct(nr.share) + '.'; });
   var top = d.lista.slice(0, 5); if (nossa && top.indexOf(nossa) < 0) top.push(nossa);
   var resto = d.lista.filter(function(p) { return top.indexOf(p) < 0; }), maxSh = Math.max.apply(null, top.map(function(p) { return p.share || 0; })) || 1;
   var tit = 'Prescrição <small>share de receitas · ' + d.mes + '/2026' + (rotulo ? ' · ' + rotulo : '') + '</small>', t = '<table class="mkc-tbl"><thead><tr><th>#</th><th>Marca</th><th>Share de Rx</th>' + refs.map(function(r) { return '<th>' + r.rot + '</th>'; }).join('') + (d.ant ? '<th>' + d.ant + '</th><th>Contra ' + d.ant + '</th>' : '') + '</tr></thead><tbody>';
   top.forEach(function(p) {
     var m = /^(.*?)\s*\(([^)]*)\)\s*$/.exec(p.produto || '');
-    // para concorrente, ganhar receita é ruim para nós: a cor segue a nossa ótica
-    var bom = p.pp === null ? '' : cor(p.ems ? p.pp : -p.pp);
+    var bom = p.pp === null ? '' : cor(p.pp);
     t += '<tr class="' + (p.nossa ? 'nossa' : '') + '"><td><span class="mk-rank p' + Math.min(p.pos, 4) + '">' + p.pos + 'º</span></td><td>' + (m ? m[1] + '<span class="mkc-lab">' + m[2] + '</span>' : p.produto) + '</td>' +
       '<td><b>' + mkPct(p.share) + '</b><div class="mkc-bar" style="width:' + Math.max(3, Math.round((p.share || 0) / maxSh * 100)) + '%"></div></td>' +
       refs.map(function(r) { var q = r.d.por[p.produto]; return '<td class="mkc-ref">' + (q && q.share !== null ? mkPct(q.share) : '—') + '</td>'; }).join('') +
@@ -642,8 +641,8 @@ function mkConcHtml(nivel, cod, refs){
     var mex = rivais.map(function(p){ return { p: p, d: delta(p) }; }).filter(function(x){ return x.d !== null && (x.p.share >= 1 || Math.abs(x.d) >= 1); }).sort(function(a, b){ return b.d - a.d; });
     if (mex.length){
       var sobe = mex[0], cai = mex[mex.length - 1];
-      if (sobe.d > 0.05) frase += ' Concorrente que mais ganhou: <b>' + sobe.p.produto + '</b> <span class="mkc-neg">' + mkPP(sobe.d) + ' pp</span>.';
-      if (cai.d < -0.05 && cai !== sobe) frase += ' Que mais perdeu: <b>' + cai.p.produto + '</b> <span class="mkc-pos">' + mkPP(cai.d) + ' pp</span>.';
+      if (sobe.d > 0.05) frase += ' Concorrente que mais ganhou: <b>' + sobe.p.produto + '</b> <span class="mkc-pos">' + mkPP(sobe.d) + ' pp</span>.';
+      if (cai.d < -0.05 && cai !== sobe) frase += ' Que mais perdeu: <b>' + cai.p.produto + '</b> <span class="mkc-neg">' + mkPP(cai.d) + ' pp</span>.';
     }
     rf.forEach(function(r){ var nr = r.d.lista.filter(function(p){ return p.nossa; })[0]; if (nr) frase += ' ' + r.rot + ': ' + nr.pos + 'ª, com ' + mkPct(nr.share) + '.'; });
     var top = at.lista.slice(0, 5); if (nossa && top.indexOf(nossa) < 0) top.push(nossa);
@@ -664,7 +663,7 @@ function mkConcHtml(nivel, cod, refs){
       '<div class="mkc-bloco ms"><div class="mkc-bloco-t">Market share <small>demanda · venda em preço fábrica · ' + ciclo + '/2026</small></div><div class="mkc-insight">' + frase + '</div>' + '<table class="mkc-tbl"><thead><tr><th>#</th><th>Marca</th><th>Venda R$</th><th>Share marcas</th>' + rf.map(function(r){ return '<th>' + r.rot + '</th>'; }).join('') +
       (meses.length > 1 ? '<th>Desde ' + meses[0] + '</th>' : '') + '<th>Cresc. mês</th></tr></thead><tbody>';
     top.forEach(function(p){
-      var d = delta(p), m = /^(.*?)\s*\(([^)]*)\)\s*$/.exec(p.produto), bom = d === null ? '' : cor(p.ems ? d : -d);
+      var d = delta(p), m = /^(.*?)\s*\(([^)]*)\)\s*$/.exec(p.produto), bom = d === null ? '' : cor(d);
       h += '<tr class="' + (p.nossa ? 'nossa' : '') + '"><td><span class="mk-rank p' + Math.min(p.pos, 4) + '">' + p.pos + 'º</span></td><td>' + (m ? m[1] + '<span class="mkc-lab">' + m[2] + '</span>' : p.produto) + '</td><td>' + mkCurto(p.valor) + '</td>' +
         '<td><b>' + mkPct(p.share) + '</b><div class="mkc-bar" style="width:' + Math.max(3, Math.round((p.share || 0) / maxSh * 100)) + '%"></div></td>' +
         rf.map(function(r){ var q = r.d.por[p.produto]; return '<td class="mkc-ref">' + (q && q.share !== null ? mkPct(q.share) : '—') + '</td>'; }).join('') +
