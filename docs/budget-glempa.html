@@ -181,12 +181,13 @@ table.led-tbl tbody tr.gl-inativo .pc-bar-track{opacity:.4}
   <button type="button" class="view-tab" id="tab-consultor" data-aba="91030300">🧑‍💼 Consultores — setores 9103</button>
   <button type="button" class="view-tab" id="tab-michael" data-aba="11630400">📍 Distrito Michael — setores 1163</button>
   <button type="button" class="view-tab" id="tab-glyxambi" data-aba="GLYX">💊 Glyxambi — setores 1163</button>
+  <button type="button" class="view-tab" id="tab-tatico" data-aba="TATICO">🧩 Tático Extra Glempa — setores 1163</button>
 </div>
 
 <div class="filtro-bar" id="bar-glempa">
   <span class="filtro-bar-label">Setor:</span>
   <select class="sel" id="gl-setor" style="min-width:300px"></select>
-  <span class="filtro-bar-label">Classificação:</span>
+  <span class="filtro-bar-label" id="gl-status-lbl">Classificação:</span>
   <select class="sel" id="gl-status">
     <option value="">Todas</option>
     <option value="FATO">Fato</option>
@@ -246,6 +247,19 @@ var GLEMPA_ABA_CONSULTOR = '91030300', GLEMPA_ABA_SOBRA = '11630400';
 // Terceira aba: prescritores de Jardiance/Glyxambi nos setores Vital — é a
 // única que reúne mais de um distrito (os quatro da regional).
 var GLEMPA_ABA_GLYX = 'GLYX';
+// Quarta aba (22/10/2026): "Tático Extra Glempa" — médicos mapeados pelos GDs na planilha
+// "Médicos para Investimento Glempa SPI 100 & 200" (65 CRMs, setores 1163). t = REL (ações de
+// relacionamento, R$ 1.000 por CRM) ou RPA (honorário de R$ 1.500 ou R$ 2.000, conforme a
+// planilha, em v). O setor fica como veio da planilha (os do Michael são 1163050x) e o
+// agrupamento é pelo distrito do GD. Sem classificação fato/fake: a verba vale para todos.
+// Lançamentos com produto GLEMPA_TATICO — verba separada da aba Distrito Michael (5 CRMs
+// estão nas duas) e liberada no Apps Script para a senha do Glempa. a="T" marca a aba.
+var GLEMPA_ABA_TATICO = 'TATICO', GLEMPA_PROD_TATICO = 'GLEMPA_TATICO';
+var GLEMPA_TATICO_TIPO = { REL: { nome: 'Relacionamento', cor: 'background:#DBEAFE;color:#1D4ED8' }, RPA: { nome: 'RPA', cor: 'background:#FFEDD5;color:#C2410C' } };
+var GLEMPA_TATICO_MEDICOS = [{"d":"11630100","s":"11630101","m":"Marcelo Coradin","c":"PR0023469","t":"REL","v":1000,"a":"T"},{"d":"11630100","s":"11630101","m":"Ana Silvia Machado","c":"PR0018647","t":"REL","v":1000,"a":"T"},{"d":"11630100","s":"11630102","m":"ANDREA DURSO PANERARI","c":"PR0020292","t":"REL","v":1000,"a":"T"},{"d":"11630100","s":"11630103","m":"CLAUDIA NASCIMENTO MONTEMOR","c":"PR0019286","t":"RPA","v":1500,"a":"T"},{"d":"11630100","s":"11630103","m":"TACIANA SAYURI HATANAKA","c":"PR0024746","t":"RPA","v":1500,"a":"T"},{"d":"11630100","s":"11630105","m":"Juliana Bartolli Valverde","c":"PR0037341","t":"REL","v":1000,"a":"T"},{"d":"11630100","s":"11630105","m":"Sonia Cristina Chain Martins","c":"PR0014534","t":"REL","v":1000,"a":"T"},{"d":"11630100","s":"11630106","m":"Amelia Alves do Nascimento","c":"SP0134065","t":"REL","v":1000,"a":"T"},{"d":"11630100","s":"11630106","m":"Carolina de Castro Rocha Betonico","c":"SP0114494","t":"REL","v":1000,"a":"T"},{"d":"11630100","s":"11630107","m":"VALDINEI GARCIA","c":"SP0110331","t":"REL","v":1000,"a":"T"},{"d":"11630100","s":"11630107","m":"WANEZA MENEZES PRIMO","c":"SP0136344","t":"REL","v":1000,"a":"T"},{"d":"11630100","s":"11630108","m":"Angelo Fraxino","c":"PR0009896","t":"REL","v":1000,"a":"T"},{"d":"11630100","s":"11630108","m":"Gisele Toyama","c":"PR0021508","t":"REL","v":1000,"a":"T"},{"d":"11630100","s":"11630109","m":"Antônio Mendes Fontanelli","c":"SP0049834","t":"REL","v":1000,"a":"T"},{"d":"11630100","s":"11630109","m":"Isio Carvalho de Souza","c":"SP0110852","t":"REL","v":1000,"a":"T"},{"d":"11630200","s":"11630201","m":"Ariadne de Martins","c":"SP0150576","t":"REL","v":1000,"a":"T"},{"d":"11630200","s":"11630201","m":"Monique Carmassi de Oliveira","c":"SP0238560","t":"REL","v":1000,"a":"T"},{"d":"11630200","s":"11630202","m":"Henrique Zanqueta Moteiro","c":"SP0183151","t":"RPA","v":2000,"a":"T"},{"d":"11630200","s":"11630202","m":"Camila Mele de Carvalho","c":"SP0084634","t":"RPA","v":1500,"a":"T"},{"d":"11630200","s":"11630204","m":"Cleber Rinaldo Favaro","c":"SP0074209","t":"REL","v":1000,"a":"T"},{"d":"11630200","s":"11630204","m":"Priscila Nascimbeni Matos","c":"SP0121992","t":"RPA","v":2000,"a":"T"},{"d":"11630200","s":"11630206","m":"João Augusto Maciel","c":"SP0056949","t":"RPA","v":2000,"a":"T"},{"d":"11630200","s":"11630206","m":"Rodrigo Serpa Sestito","c":"SP0140535","t":"REL","v":1000,"a":"T"},{"d":"11630200","s":"11630207","m":"Fabiana Shuha","c":"SP0083217","t":"RPA","v":2000,"a":"T"},{"d":"11630200","s":"11630207","m":"Mariana Peixoto Alves","c":"SP0140783","t":"RPA","v":1500,"a":"T"},{"d":"11630200","s":"11630208","m":"Jaqueline Fonseca Rios","c":"MG0035994","t":"RPA","v":1500,"a":"T"},{"d":"11630200","s":"11630208","m":"Ana Carolina Mariz","c":"MG0055467","t":"REL","v":1000,"a":"T"},{"d":"11630200","s":"11630208","m":"Ayres Dumont de Souza","c":"MG0016437","t":"REL","v":1000,"a":"T"},{"d":"11630200","s":"11630208","m":"Welson Alves Ferreira Junior","c":"SP0051056","t":"RPA","v":2000,"a":"T"},{"d":"11630200","s":"11630209","m":"Eduardo Ferreira Jorge","c":"MG0032155","t":"REL","v":1000,"a":"T"},{"d":"11630200","s":"11630210","m":"Michele Versani e Silva","c":"MG0088878","t":"RPA","v":1500,"a":"T"},{"d":"11630200","s":"11630210","m":"Walter Magalhaes","c":"MG0012510","t":"RPA","v":1500,"a":"T"},{"d":"11630400","s":"11630501","m":"Alecsandra Ghannage Massai","c":"SP0058108","t":"RPA","v":2000,"a":"T"},{"d":"11630400","s":"11630501","m":"Caroline Ghannage Massai","c":"SP0176804","t":"RPA","v":2000,"a":"T"},{"d":"11630400","s":"11630501","m":"Laerte de Mello Machado","c":"SP0052649","t":"RPA","v":2000,"a":"T"},{"d":"11630400","s":"11630501","m":"Felipe Henrique Leal Silva","c":"SP0164486","t":"RPA","v":2000,"a":"T"},{"d":"11630400","s":"11630502","m":"Daniel Bruder Costa Ribeiro","c":"SP0145487","t":"RPA","v":2000,"a":"T"},{"d":"11630400","s":"11630502","m":"Filippo Mancini Diotto","c":"SP0169593","t":"RPA","v":2000,"a":"T"},{"d":"11630400","s":"11630502","m":"Thelma Elaine Brasileiro","c":"SP0104938","t":"RPA","v":2000,"a":"T"},{"d":"11630400","s":"11630503","m":"Fabiana Araújo Teixeira","c":"SP0125265","t":"RPA","v":2000,"a":"T"},{"d":"11630400","s":"11630503","m":"Nathan Gustalli","c":"SP0206145","t":"RPA","v":2000,"a":"T"},{"d":"11630400","s":"11630503","m":"Rebeca Esteves Ramiro","c":"SP0151589","t":"RPA","v":2000,"a":"T"},{"d":"11630400","s":"11630503","m":"Aniela Moreira","c":"SP0132797","t":"RPA","v":2000,"a":"T"},{"d":"11630400","s":"11630505","m":"Thaís Ribeiro Mingorance Tozini","c":"SP0149751","t":"RPA","v":2000,"a":"T"},{"d":"11630400","s":"11630505","m":"Antônio Luciano Sickler","c":"SP0031351","t":"RPA","v":2000,"a":"T"},{"d":"11630400","s":"11630505","m":"Paulo Henrique Almada Sacramento","c":"SP0176062","t":"RPA","v":2000,"a":"T"},{"d":"11630400","s":"11630508","m":"Michel de Brito Murad","c":"MG0042888","t":"RPA","v":2000,"a":"T"},{"d":"11630400","s":"11630508","m":"Sérgio Rodrigo Beraldo","c":"MG0034591","t":"RPA","v":2000,"a":"T"},{"d":"11630400","s":"11630508","m":"Júlio César Salles Santos","c":"MG0045384","t":"RPA","v":2000,"a":"T"},{"d":"11630300","s":"11630308","m":"Armando Elias Chamma","c":"SP0080206","t":"REL","v":1000,"a":"T"},{"d":"11630300","s":"11630308","m":"Otávio Marques Freitas Moratória","c":"SP0121293","t":"REL","v":1000,"a":"T"},{"d":"11630300","s":"11630305","m":"Luís Gustavo Ramos","c":"SP0011347","t":"REL","v":1000,"a":"T"},{"d":"11630300","s":"11630305","m":"Flávia Cortese","c":"SP0151156","t":"REL","v":1000,"a":"T"},{"d":"11630300","s":"11630304","m":"André Luís Mancini","c":"SP0138635","t":"REL","v":1000,"a":"T"},{"d":"11630300","s":"11630304","m":"Maria Angélica Massaud Leal","c":"SP0082647","t":"REL","v":1000,"a":"T"},{"d":"11630300","s":"11630303","m":"Carlos Henrique Arouca","c":"SP0086380","t":"REL","v":1000,"a":"T"},{"d":"11630300","s":"11630303","m":"Lygia Delboni","c":"SP0120170","t":"REL","v":1000,"a":"T"},{"d":"11630300","s":"11630301","m":"Tiago Gazonatto Brenga","c":"SP0135229","t":"REL","v":1000,"a":"T"},{"d":"11630300","s":"11630301","m":"Celso Bueno Abujamra","c":"SP0043006","t":"REL","v":1000,"a":"T"},{"d":"11630300","s":"11630302","m":"Dra. Samira Alarcom","c":"SP0086940","t":"REL","v":1000,"a":"T"},{"d":"11630300","s":"11630302","m":"Dr. Carlos Eduardo Grazzia","c":"SP0079098","t":"REL","v":1000,"a":"T"},{"d":"11630300","s":"11630307","m":"José Francisco Júnior","c":"SP0036080","t":"REL","v":1000,"a":"T"},{"d":"11630300","s":"11630307","m":"Fábio Pessoa Souza","c":"SP0142449","t":"REL","v":1000,"a":"T"},{"d":"11630300","s":"11630306","m":"Marcelo de Macedo","c":"SP0100864","t":"REL","v":1000,"a":"T"},{"d":"11630300","s":"11630306","m":"Matheus Bueno de Moraes","c":"SP0161099","t":"REL","v":1000,"a":"T"}];
+function glempaTatico(){ return STATE.aba === GLEMPA_ABA_TATICO; }
+function glempaProduto(){ return glempaTatico() ? GLEMPA_PROD_TATICO : GLEMPA_PROD; } // produto dos lançamentos da aba aberta
+function glempaTipoHtml(m){ var t = GLEMPA_TATICO_TIPO[m.t] || { nome: m.t, cor: '' }; return '<span class="acao-tag" style="white-space:nowrap;' + t.cor + '">' + t.nome + (m.t === 'RPA' ? ' ' + fmtBRL(m.v) : '') + '</span>'; }
 var GLEMPA_MARCAS = {
   J:  { nome: 'Jardiance',     cor: 'background:#DBEAFE;color:#1D4ED8' },
   JD: { nome: 'Jardiance Duo', cor: 'background:#EDE9FE;color:#6D28D9' },
@@ -257,10 +271,11 @@ function glempaMarcasHtml(m){
   }).join('');
 }
 function glempaDistritosDaAba(aba){
-  return aba === GLEMPA_ABA_GLYX ? ['11630100','11630200','11630300','11630400'] : [aba];
+  return aba === GLEMPA_ABA_GLYX || aba === GLEMPA_ABA_TATICO ? ['11630100','11630200','11630300','11630400'] : [aba];
 }
 function glempaDaAba(aba){
   aba = aba || STATE.aba;
+  if (aba === GLEMPA_ABA_TATICO) return GLEMPA_TATICO_MEDICOS;
   // o distrito 11630400 aparece na aba do Michael e na Glyxambi: m.a separa as duas
   return GLEMPA_MEDICOS.filter(function(m){
     return aba === GLEMPA_ABA_GLYX ? m.a === 'G' : (m.d === aba && !m.a);
@@ -283,13 +298,14 @@ var GLEMPA_MEDICOS = [{"d":"91030300","s":"91030301","m":"CHEN YAO HUEI","c":"SP
 
 var TAB_NAME = 'budget_lancamentos';
 var ACOES = ['Almoço/jantar','Cesta de presente','Bloco de receituário','Outros'];
+var ACOES_RPA = ['RPA — palestra/honorário','Outros']; // aba Tático Extra, médicos de RPA
 var CONFIG = {};
 var BACKEND_PRONTO = false;
 
 function uid(){ return 'l' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 
 var STATE = {
-  aba: location.hash === '#michael' ? '11630400' : (location.hash === '#glyxambi' ? 'GLYX' : '91030300'),
+  aba: location.hash === '#michael' ? '11630400' : (location.hash === '#glyxambi' ? 'GLYX' : (location.hash === '#tatico' ? 'TATICO' : '91030300')),
   gl: { setor: '', status: '', situacao: '', busca: '' },
   lancamentos: []
 };
@@ -406,6 +422,9 @@ function render(){
   });
   document.getElementById('pill-gd').textContent = 'GLEMPA · ' + glempaDaAba().length + ' CRMs';
   document.getElementById('pill-lanc').textContent = glempaLancs().filter(function(l){ return daAba[l.crm]; }).length + ' lançamento(s)';
+  document.getElementById('alerta-prazo').innerHTML = glempaTatico()
+    ? '🧩 Tático Extra Glempa — <b>R$ 1.000 por CRM</b> em ações de relacionamento · <b>RPA de R$ 1.500 ou R$ 2.000</b> conforme a planilha · lançamentos com produto GLEMPA_TATICO'
+    : '🎯 GLEMPA — até <b>R$ 1.000,00 por CRM</b> classificado como FATO · ações de relacionamento em <b>setembro e outubro</b>';
   renderGlempaFiltros();
   renderGlempa();
 }
@@ -425,7 +444,7 @@ function ligarBtnRefresh(){
 // ── GLEMPA — acompanhamento por CRM ──────────────────────────────────
 
 function glempaLancs(){
-  return STATE.lancamentos.filter(function(l){ return l.produto === GLEMPA_PROD; });
+  return STATE.lancamentos.filter(function(l){ return l.produto === glempaProduto(); });
 }
 function glempaUsadoPorCrm(){
   var m = {};
@@ -444,7 +463,7 @@ function glempaStatus(med){
   if (!st && glempaClassifTravada(med.c)) st = 'FAKE';
   return st;
 }
-function glempaVerba(med){ return glempaStatus(med) === 'FAKE' ? 0 : GLEMPA_VERBA; }
+function glempaVerba(med){ if (med.a === 'T') return med.v || 0; return glempaStatus(med) === 'FAKE' ? 0 : GLEMPA_VERBA; } // Tático: valor da planilha, sem fato/fake
 
 // Classificação fato/fake TRAVADA (08/10/2026): os CRMs da aba "Distrito
 // Michael" ficam com a classificação como está — ninguém altera mais pela
@@ -507,7 +526,12 @@ function renderGlempaFiltros(){
     return '<option value="' + s + '">' + esc(glempaSetorLabel(s)) + '</option>';
   }).join('');
   sSel.value = f.setor;
-  document.getElementById('gl-status').value = f.status;
+  var tat = glempaTatico(), stSel = document.getElementById('gl-status');
+  document.getElementById('gl-status-lbl').textContent = tat ? 'Tipo:' : 'Classificação:';
+  stSel.innerHTML = tat ? '<option value="">Todos</option><option value="REL">Relacionamento</option><option value="RPA">RPA</option>'
+    : '<option value="">Todas</option><option value="FATO">Fato</option><option value="PEND">A classificar</option><option value="FAKE">Fake</option>';
+  if (f.status && !stSel.querySelector('option[value="' + f.status + '"]')) f.status = '';
+  stSel.value = f.status;
   document.getElementById('gl-situacao').value = f.situacao;
   document.getElementById('gl-busca').value = f.busca;
 
@@ -526,7 +550,7 @@ function renderGlempa(){
   var busca = f.busca.trim().toUpperCase();
   var lista = glempaDaAba().filter(function(m){
     if (f.setor && m.s !== f.setor) return false;
-    if (f.status && (glempaStatus(m) || 'PEND') !== f.status) return false;
+    if (f.status && (glempaTatico() ? m.t : (glempaStatus(m) || 'PEND')) !== f.status) return false;
     var u = usado[m.c] || 0;
     if (f.situacao === 'COM' && !u) return false;
     if (f.situacao === 'SEM' && u) return false;
@@ -536,13 +560,14 @@ function renderGlempa(){
   });
 
   function soma(arr){
-    var t = { n: arr.length, verba: 0, usado: 0, com: 0, fato: 0, fake: 0 };
+    var t = { n: arr.length, verba: 0, usado: 0, com: 0, fato: 0, fake: 0, rel: 0, rpa: 0 };
     arr.forEach(function(m){
       var u = usado[m.c] || 0;
       t.verba += glempaVerba(m); t.usado += u;
       if (u) t.com++;
       if (glempaStatus(m) === 'FATO') t.fato++;
       if (glempaStatus(m) === 'FAKE') t.fake++;
+      if (m.t === 'REL') t.rel++; if (m.t === 'RPA') t.rpa++;
     });
     return t;
   }
@@ -551,8 +576,8 @@ function renderGlempa(){
   var pctTot = tot.verba ? tot.usado / tot.verba * 100 : 0;
 
   var html = '<div class="consol-row">' +
-    '<div class="consol-card"><div class="lbl">CRMs na lista</div><div class="val">' + tot.n + '</div><div class="sub">' + tot.fato + ' fato · ' + tot.fake + ' fake · ' + (tot.n - tot.fato - tot.fake) + ' a classificar</div></div>' +
-    '<div class="consol-card" style="background:linear-gradient(135deg,#374151,#111827)"><div class="lbl">Verba potencial</div><div class="val">' + fmtBRL(tot.verba) + '</div><div class="sub">' + fmtBRL(GLEMPA_VERBA) + ' por CRM (fake não conta)</div></div>' +
+    '<div class="consol-card"><div class="lbl">CRMs na lista</div><div class="val">' + tot.n + '</div><div class="sub">' + (glempaTatico() ? tot.rel + ' relacionamento · ' + tot.rpa + ' RPA' : tot.fato + ' fato · ' + tot.fake + ' fake · ' + (tot.n - tot.fato - tot.fake) + ' a classificar') + '</div></div>' +
+    '<div class="consol-card" style="background:linear-gradient(135deg,#374151,#111827)"><div class="lbl">Verba potencial</div><div class="val">' + fmtBRL(tot.verba) + '</div><div class="sub">' + (glempaTatico() ? 'R$ 1.000 relacionamento · RPA R$ 1.500 ou R$ 2.000' : fmtBRL(GLEMPA_VERBA) + ' por CRM (fake não conta)') + '</div></div>' +
     '<div class="consol-card" style="background:linear-gradient(135deg,#7c2d12,#c2410c)"><div class="lbl">Utilizado</div><div class="val">' + fmtBRL(tot.usado) + '</div><div class="sub">' + tot.com + ' CRM(s) com lançamento · ' + pctTot.toFixed(0) + '%</div></div>' +
     '<div class="consol-card" style="background:linear-gradient(135deg,#1e3a5f,#1d4ed8)"><div class="lbl">Saldo</div><div class="val">' + fmtBRL(saldoTot) + '</div><div class="sub">verba potencial − utilizado</div></div>' +
   '</div>';
@@ -561,7 +586,7 @@ function renderGlempa(){
     html += '<div class="gd-empty">Nenhum médico encontrado para este filtro.</div>';
   }
 
-  var glyx = STATE.aba === GLEMPA_ABA_GLYX, ncol = glyx ? 13 : 11;
+  var glyx = STATE.aba === GLEMPA_ABA_GLYX, tat = glempaTatico(), ncol = tat ? 8 : (glyx ? 13 : 11);
   glempaDistritosDaAba(STATE.aba).forEach(function(d){
     var meds = lista.filter(function(m){ return m.d === d; });
     if (!meds.length) return;
@@ -570,7 +595,7 @@ function renderGlempa(){
       '<span class="gl-dist-sub">' + info.regional + ' · ' + info.linha + '</span>' +
       '<span class="gl-dist-nums">' + t.n + ' CRMs · utilizado ' + fmtBRL(t.usado) + ' · saldo ' + fmtBRL(t.verba - t.usado) + '</span></div>';
     html += '<div class="gl-wrap"><table class="led-tbl"><thead><tr>' +
-      '<th class="txt-left">Médico</th><th>CRM</th><th>Esp.</th><th class="txt-left">Cidade</th>' + (glyx ? '<th class="txt-left">Marcas prescritas</th><th>Px Jardiance</th><th>Px Glyxambi</th>' : '<th>Rx</th>') + '<th>Classif.</th>' +
+      (tat ? '<th class="txt-left">Médico</th><th>CRM</th><th>Tipo</th>' : '<th class="txt-left">Médico</th><th>CRM</th><th>Esp.</th><th class="txt-left">Cidade</th>' + (glyx ? '<th class="txt-left">Marcas prescritas</th><th>Px Jardiance</th><th>Px Glyxambi</th>' : '<th>Rx</th>') + '<th>Classif.</th>') +
       '<th>Verba</th><th>Utilizado</th><th>Saldo</th><th>% usado</th><th>—</th></tr></thead><tbody>';
     var setorAtual = null;
     meds.forEach(function(m){
@@ -589,14 +614,14 @@ function renderGlempa(){
       var clDis = (BACKEND_PRONTO && !clTrav) ? '' : (' disabled' + (clTrav ? ' title="Classificação travada — não pode mais ser alterada"' : ''));
       html += '<tr class="' + (st === 'FAKE' ? 'gl-inativo' : '') + '">' +
         '<td class="txt-left"><b>' + esc(m.m) + '</b></td>' +
-        '<td>' + m.c + '</td><td>' + m.e + '</td>' +
-        '<td class="txt-left">' + esc(m.ci) + '</td>' +
+        '<td>' + m.c + '</td>' + (tat ? '<td>' + glempaTipoHtml(m) + '</td>' : '<td>' + m.e + '</td>') +
+        (tat ? '' : '<td class="txt-left">' + esc(m.ci) + '</td>') +
         (glyx ? '<td class="txt-left">' + glempaMarcasHtml(m) + '</td>' : '') +
-        '<td>' + m.rx + '</td>' + (glyx ? '<td>' + m.g + '</td>' : '') +
-        '<td><span class="cl-group">' +
+        (tat ? '' : '<td>' + m.rx + '</td>' + (glyx ? '<td>' + m.g + '</td>' : '')) +
+        (tat ? '' : '<td><span class="cl-group">' +
           '<button type="button" class="cl-btn fato' + (st === 'FATO' ? ' on' : '') + '" data-action="gl-classif" data-id="' + m.c + '" data-st="FATO"' + clDis + '>Fato</button>' +
           '<button type="button" class="cl-btn fake' + (st === 'FAKE' ? ' on' : '') + '" data-action="gl-classif" data-id="' + m.c + '" data-st="FAKE"' + clDis + '>Fake</button>' +
-        '</span>' + (clTrav ? ' <span title="Classificação travada">🔒</span>' : '') + '</td>' +
+        '</span>' + (clTrav ? ' <span title="Classificação travada">🔒</span>' : '') + '</td>') +
         '<td>' + (verba ? fmtBRL(verba) : '—') + '</td>' +
         '<td class="' + (u ? 'val-cell' : '') + '">' + fmtBRL(u) + '</td>' +
         '<td class="saldo-cell ' + (verba && saldo <= 0 ? 'neg' : '') + '">' + (verba ? fmtBRL(saldo) : '—') + '</td>' +
@@ -614,8 +639,8 @@ function renderGlempa(){
   lista.forEach(function(m){ visiveis[m.c] = m; });
   var lancs = glempaLancs().filter(function(l){ return visiveis[l.crm]; })
     .sort(function(a,b){ return (b.data+b.criadoEm) < (a.data+a.criadoEm) ? -1 : 1; });
-  var orfaos = glempaLancs().filter(function(l){ return !GLEMPA_MEDICOS.some(function(m){ return m.c === l.crm; }); });
-  html += '<div class="tbl-wrap"><div class="tbl-hdr-bar"><h2>📒 Lançamentos GLEMPA</h2>' +
+  var orfaos = glempaLancs().filter(function(l){ return !(glempaTatico() ? GLEMPA_TATICO_MEDICOS : GLEMPA_MEDICOS).some(function(m){ return m.c === l.crm; }); });
+  html += '<div class="tbl-wrap"><div class="tbl-hdr-bar"><h2>📒 Lançamentos ' + glempaProduto() + '</h2>' +
     '<span class="tbl-count">' + lancs.length + ' registro(s)</span>' +
     '<button type="button" class="btn-refresh" id="btn-refresh">🔄 Atualizar</button></div>';
   if (!lancs.length){
@@ -647,10 +672,11 @@ function renderGlempa(){
     '<li><b>Aba Consultores — distrito 91030300 (Identidade):</b> médicos da aba "não visitados" nos setores 99130301 a 99130304, tratados como os setores 91030301 a 91030304 dos quatro consultores. Rx = Rx MAT da planilha; todas as especialidades. "FORA DO PAINEL" = médico que a planilha marca como "não está no painel". Os setores 99130305 a 99130309 do mesmo distrito não entram (sem consultor informado).</li>' +
     '<li><b>Aba Distrito Michael — 11630400 (Vital):</b> é a <b>sobra</b> — só os médicos da aba "base total" (cardiologistas e endocrinologistas) que <b>não</b> estão na lista dos consultores; um CRM nunca aparece nas duas abas. Rx = prescrições de empagliflozina no ano. 1 linha por CRM: quem aparecia no setor do representante e no código do GD ficou só no setor do representante.</li>' +
     '<li><b>Aba Glyxambi — distritos 11630100 a 11630400 (Vital):</b> médicos da aba "Base PX Glyxambi" com Px de Jardiance ou de Glyxambi maior que zero (quem só tem dapagliflozina ou nenhum Px não entra). A planilha lista esses médicos com o representante Nexus (setor 1103xxxx), mas a empagliflozina é trabalhada pela Vital: como os setores das duas linhas são espelhados, cada médico foi colocado no setor Vital equivalente (1163xxxx), com o GD da Vital. "Marcas prescritas" mostra o que cada médico prescreveu (Jardiance, Jardiance Duo, Glyxambi); "Px Jardiance" soma Jardiance e Jardiance Duo, porque a planilha traz um único número para os dois. Quem já está na aba Consultores não se repete aqui; a aba Distrito Michael não muda (nenhum CRM coincide com o distrito 11630400 desta aba).</li>' +
+    '<li><b>Aba Tático Extra Glempa — distritos 11630100 a 11630400 (Vital):</b> os 65 médicos mapeados pelos GDs na planilha "Médicos para Investimento Glempa SPI 100 &amp; 200" (22/10/2026), em dois tipos: <b>Relacionamento</b> (36 CRMs, R$ 1.000 por CRM) e <b>RPA</b> (29 CRMs, R$ 1.500 ou R$ 2.000 cada, conforme a planilha). O setor é o da planilha (os do Michael vêm como 1163050x) e o agrupamento é pelo distrito do GD. Não há classificação fato/fake. Os lançamentos usam o produto <code>GLEMPA_TATICO</code>, com verba separada da aba Distrito Michael — os 5 CRMs que estão nas duas abas têm saldo em cada uma. O CRM "SP0120.170" da planilha entrou como SP0120170.</li>' +
     '<li><b>Verba:</b> ' + fmtBRL(GLEMPA_VERBA) + ' por CRM para ações de relacionamento em setembro e outubro; produto pagante GLEMPA, linha sponsor IDENTIDADE (ou VITAL quando não houver cobertura). A verba vale para CRM classificado como <b>FATO</b> — médico "FAKE" fica sem verba e sem lançamento; "A classificar" aceita lançamento, mas depende da classificação na planilha.</li>' +
     '<li><b>Classificação</b> (fato/fake): marque direto na coluna "Classif." de cada médico — fica gravada no Sheets e vale para todo mundo. Marcar <b>Fake</b> deixa o médico inativo (nome riscado, sem verba e sem lançamento); clicar de novo na opção ativa desmarca e volta para "a classificar". <b>Na aba Distrito Michael a classificação está travada (🔒)</b> desde 08/10/2026 e não pode mais ser alterada; os médicos que estavam sem classificação ficaram como <b>Fake</b>.</li>' +
     '<li><b>Trava:</b> a soma dos lançamentos de um CRM nunca passa de ' + fmtBRL(GLEMPA_VERBA) + '. Os lançamentos ficam na mesma aba <code>budget_lancamentos</code> do Sheets, com produto = GLEMPA, e <b>não</b> entram na conta corrente da verba tática (página Budget).</li>' +
-    (orfaos.length ? '<li style="color:var(--danger)"><b>Atenção:</b> ' + orfaos.length + ' lançamento(s) GLEMPA com CRM fora da lista — confira direto na planilha.</li>' : '') +
+    (orfaos.length ? '<li style="color:var(--danger)"><b>Atenção:</b> ' + orfaos.length + ' lançamento(s) ' + glempaProduto() + ' com CRM fora da lista — confira direto na planilha.</li>' : '') +
   '</ul></div>';
 
   document.getElementById('main').innerHTML = html;
@@ -661,7 +687,7 @@ function abrirModalGlempa(crm, lancamentoId){
   if (!BACKEND_PRONTO) return;
   var editando = lancamentoId ? STATE.lancamentos.filter(function(l){ return l.id === lancamentoId; })[0] : null;
   if (editando) crm = editando.crm;
-  var med = GLEMPA_MEDICOS.filter(function(m){ return m.c === crm; })[0];
+  var med = glempaDaAba().filter(function(m){ return m.c === crm; })[0]; // médico da aba aberta (a Tático tem lista própria)
   if (!med) return;
   var usadoOutros = glempaLancs()
     .filter(function(l){ return l.crm === crm && (!editando || l.id !== editando.id); })
@@ -674,13 +700,13 @@ function abrirModalGlempa(crm, lancamentoId){
   document.getElementById('modal-root').innerHTML = '<div class="modal-bg" id="modal-bg"><div class="modal">' +
     '<h3>' + (editando ? '✏️ Editar lançamento GLEMPA' : '➕ Lançamento GLEMPA') + '</h3>' +
     '<div class="modal-err" id="modal-err"></div>' +
-    '<p style="font-size:12.5px;line-height:1.5;margin-bottom:12px"><b>' + esc(med.m) + '</b><br><span style="color:var(--gray);font-size:11.5px">CRM ' + med.c + ' · ' + med.e + ' · ' + esc(med.ci) + ' · setor ' + med.s + '</span></p>' +
+    '<p style="font-size:12.5px;line-height:1.5;margin-bottom:12px"><b>' + esc(med.m) + '</b><br><span style="color:var(--gray);font-size:11.5px">CRM ' + med.c + ' · ' + (med.a === 'T' ? GLEMPA_TATICO_TIPO[med.t].nome + (med.t === 'RPA' ? ' ' + fmtBRL(med.v) : '') : med.e + ' · ' + esc(med.ci)) + ' · setor ' + med.s + '</span></p>' +
     '<div class="field-row">' +
       '<div class="field"><label>Valor utilizado (R$)</label><input id="f-valor" type="number" step="0.01" min="0.01" max="' + Math.max(0, saldoDisponivel) + '" placeholder="0,00" value="' + (editando ? editando.valor : '') + '"></div>' +
       '<div class="field"><label>Data</label><input id="f-data" type="date" value="' + (editando ? editando.data : hoje) + '"></div>' +
     '</div>' +
     '<div class="field"><label>Ação</label><select id="f-acao">' +
-      ACOES.map(function(a){ return '<option ' + (editando && editando.acao === a ? 'selected' : '') + '>' + a + '</option>'; }).join('') +
+      (med.a === 'T' && med.t === 'RPA' ? ACOES_RPA : ACOES).map(function(a){ return '<option ' + (editando && editando.acao === a ? 'selected' : '') + '>' + a + '</option>'; }).join('') +
     '</select></div>' +
     '<div class="saldo-hint" id="saldo-hint"></div>' +
     '<div class="modal-actions">' +
@@ -722,7 +748,7 @@ function abrirModalGlempa(crm, lancamentoId){
       return;
     }
     var registro = {
-      id: editando ? editando.id : novoId, gd: GLEMPA_DISTRITOS[med.d].gd, linha: GLEMPA_DISTRITOS[med.d].linha.toUpperCase(), produto: GLEMPA_PROD,
+      id: editando ? editando.id : novoId, gd: GLEMPA_DISTRITOS[med.d].gd, linha: GLEMPA_DISTRITOS[med.d].linha.toUpperCase(), produto: glempaProduto(),
       crm: med.c, medico: med.m, valor: valor, acao: document.getElementById('f-acao').value, data: data,
       criadoEm: editando ? editando.criadoEm : novoCriadoEm
     };
@@ -795,7 +821,7 @@ document.querySelectorAll('.view-tab').forEach(function(t){
   t.onclick = function(){
     STATE.aba = t.getAttribute('data-aba');
     STATE.gl = { setor: '', status: '', situacao: '', busca: '' };
-    history.replaceState(null, '', STATE.aba === GLEMPA_ABA_SOBRA ? '#michael' : (STATE.aba === GLEMPA_ABA_GLYX ? '#glyxambi' : location.pathname + location.search));
+    history.replaceState(null, '', STATE.aba === GLEMPA_ABA_SOBRA ? '#michael' : (STATE.aba === GLEMPA_ABA_GLYX ? '#glyxambi' : (STATE.aba === GLEMPA_ABA_TATICO ? '#tatico' : location.pathname + location.search)));
     render();
   };
 });

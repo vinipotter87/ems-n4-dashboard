@@ -82,7 +82,9 @@ function ehLeste(gd, mapa) { gd = String(gd || ''); return /^N4:(1105|1165)/.tes
 // Consultor (budget-glempa.html) — na aba budget_lancamentos, apenas os lançamentos e
 // classificações do Glempa (produto GLEMPA / GLEMPA_CLASSIF). Pensada pra consultora,
 // que não deve ver atas, planos nem a verba tática dos GDs.
-var PRODUTOS_GLEMPA = { 'GLEMPA': true, 'GLEMPA_CLASSIF': true };
+// GLEMPA_TATICO (22/10/2026): lançamentos da aba "Tático Extra Glempa" (médicos mapeados pelos GDs,
+// ações de relacionamento e RPA) — verba separada da aba Distrito Michael, mesma senha.
+var PRODUTOS_GLEMPA = { 'GLEMPA': true, 'GLEMPA_CLASSIF': true, 'GLEMPA_TATICO': true };
 function ehGlempa(produto) { return !!PRODUTOS_GLEMPA[String(produto || '')]; }
 // Papel 'grd' (21/10/2026): a propriedade SENHA_GRD é a senha pessoal do GRD. Só ela abre a
 // página de atas de N4 (docs/atas-grd-*.html, sem link no dashboard) — a senha SPI do time
