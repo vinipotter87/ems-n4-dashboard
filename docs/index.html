@@ -1956,7 +1956,7 @@ function renderCrmChave(crm, mes) {
 // linhas; "todas as linhas" é o mesmo número publicado na Governança.
 // Reps: setor|nome|linha|gd|painel|médicos c/ sobreposição (todas)|médicos Nexus × Vital
 // Distritos: médicos únicos do distrito (inclui o setor do próprio GD).
-var SOBREP_EXPORT = {"JUL": "20/08", "AGO": "24/08", "SET": "28/09", "OUT": "19/10"};
+var SOBREP_EXPORT = {"JUL": "20/08", "AGO": "24/08", "SET": "28/09", "OUT": "22/10"};
 var SOBREP_DIST = {
   JUL: [
     {id:"110301", gd:"Joao Rafael de Franca Nunes Leardini", linha:"NEXUS", painel:2048, todas:566, nv:190},
@@ -1989,14 +1989,14 @@ var SOBREP_DIST = {
     {id:"116304", gd:"Michael Aparecido da Silva Mota", linha:"VITAL", painel:1745, todas:280, nv:96}
   ],
   OUT: [
-    {id:"110301", gd:"Joao Rafael de Franca Nunes Leardini", linha:"NEXUS", painel:2048, todas:363, nv:102},
-    {id:"110302", gd:"Murillo Cesar Barbosa dos Santos", linha:"NEXUS", painel:2293, todas:277, nv:115},
-    {id:"110303", gd:"Geovana Buttignon", linha:"NEXUS", painel:1974, todas:330, nv:126},
-    {id:"110304", gd:"Vanessa Araujo Ferreira Lima", linha:"NEXUS", painel:1675, todas:207, nv:74},
-    {id:"116301", gd:"Fabiano Atanazio Machado", linha:"VITAL", painel:2062, todas:386, nv:102},
-    {id:"116302", gd:"Daniel Antonio Costa", linha:"VITAL", painel:2261, todas:350, nv:115},
-    {id:"116303", gd:"Matheus Landulpho Allonso", linha:"VITAL", painel:2057, todas:346, nv:127},
-    {id:"116304", gd:"Michael Aparecido da Silva Mota", linha:"VITAL", painel:1745, todas:184, nv:73}
+    {id:"110301", gd:"Joao Rafael de Franca Nunes Leardini", linha:"NEXUS", painel:2048, todas:413, nv:118},
+    {id:"110302", gd:"Murillo Cesar Barbosa dos Santos", linha:"NEXUS", painel:2293, todas:315, nv:124},
+    {id:"110303", gd:"Geovana Buttignon", linha:"NEXUS", painel:1974, todas:408, nv:177},
+    {id:"110304", gd:"Vanessa Araujo Ferreira Lima", linha:"NEXUS", painel:1675, todas:294, nv:89},
+    {id:"116301", gd:"Fabiano Atanazio Machado", linha:"VITAL", painel:2062, todas:422, nv:118},
+    {id:"116302", gd:"Daniel Antonio Costa", linha:"VITAL", painel:2261, todas:396, nv:124},
+    {id:"116303", gd:"Matheus Landulpho Allonso", linha:"VITAL", painel:2057, todas:461, nv:178},
+    {id:"116304", gd:"Michael Aparecido da Silva Mota", linha:"VITAL", painel:1745, todas:222, nv:88}
   ]
 };
 // Linha: médicos únicos da linha inteira (confere com "Consolidado por linha" da Governança).
@@ -2004,7 +2004,7 @@ var SOBREP_LINHA = {
   JUL: {NEXUS:{painel:7990, todas:1799, nv:598}, VITAL:{painel:8125, todas:2094, nv:598}},
   AGO: {NEXUS:{painel:7990, todas:1544, nv:671}, VITAL:{painel:8125, todas:1785, nv:671}},
   SET: {NEXUS:{painel:7990, todas:1401, nv:503}, VITAL:{painel:8125, todas:1652, nv:503}},
-  OUT: {NEXUS:{painel:7990, todas:1177, nv:417}, VITAL:{painel:8125, todas:1266, nv:417}}
+  OUT: {NEXUS:{painel:7990, todas:1430, nv:508}, VITAL:{painel:8125, todas:1501, nv:508}}
 };
 var SOBREP_REPS_RAW = {
   JUL: `11030101|Lucas Marchi Grossi|NEXUS|Joao Rafael de Franca Nunes Leardini|252|68|28
@@ -2199,70 +2199,70 @@ var SOBREP_REPS_RAW = {
 11630405|Milton Pereira da Silva Junior|VITAL|Michael Aparecido da Silva Mota|263|76|27
 11630407|Maria Leticia Reis Casemiro|VITAL|Michael Aparecido da Silva Mota|257|45|9
 11630408|Eduardo de Souza Lima|VITAL|Michael Aparecido da Silva Mota|233|68|27`,
-  OUT: `11030101|Lucas Marchi Grossi|NEXUS|Joao Rafael de Franca Nunes Leardini|252|37|10
-11030102|Camila de Souza Lage|NEXUS|Joao Rafael de Franca Nunes Leardini|231|60|7
-11030103|Daniele Argenta Kresta|NEXUS|Joao Rafael de Franca Nunes Leardini|273|58|13
-11030105|Andre Luiz Soares de Moraes|NEXUS|Joao Rafael de Franca Nunes Leardini|248|33|12
-11030106|Gustavo Soncin Rodrigues Teixeira|NEXUS|Joao Rafael de Franca Nunes Leardini|252|52|25
-11030107|Natalia Silva Pile|NEXUS|Joao Rafael de Franca Nunes Leardini|264|30|6
-11030108|Ali Mouhanna|NEXUS|Joao Rafael de Franca Nunes Leardini|275|34|3
-11030109|Grazielli Borges de Freitas|NEXUS|Joao Rafael de Franca Nunes Leardini|253|59|26
-11030201|Isabela Fernanda Moreira|NEXUS|Murillo Cesar Barbosa dos Santos|248|21|14
-11030202|Cezar Rogerio Henrique Junior|NEXUS|Murillo Cesar Barbosa dos Santos|240|43|33
-11030203|Harley Dias de Oliveira|NEXUS|Murillo Cesar Barbosa dos Santos|247|48|10
-11030204|Waldemar Ruza Neto|NEXUS|Murillo Cesar Barbosa dos Santos|258|29|10
-11030206|Eduarda Vazarin Biancho|NEXUS|Murillo Cesar Barbosa dos Santos|277|24|12
-11030207|Leticia Rodrigues dos Santos|NEXUS|Murillo Cesar Barbosa dos Santos|254|46|16
-11030208|Thaislane Beatriz Cardoso Borges|NEXUS|Murillo Cesar Barbosa dos Santos|248|18|10
+  OUT: `11030101|Lucas Marchi Grossi|NEXUS|Joao Rafael de Franca Nunes Leardini|252|42|7
+11030102|Camila de Souza Lage|NEXUS|Joao Rafael de Franca Nunes Leardini|231|59|9
+11030103|Daniele Argenta Kresta|NEXUS|Joao Rafael de Franca Nunes Leardini|273|65|11
+11030105|Andre Luiz Soares de Moraes|NEXUS|Joao Rafael de Franca Nunes Leardini|248|42|20
+11030106|Gustavo Soncin Rodrigues Teixeira|NEXUS|Joao Rafael de Franca Nunes Leardini|252|57|26
+11030107|Natalia Silva Pile|NEXUS|Joao Rafael de Franca Nunes Leardini|264|39|8
+11030108|Ali Mouhanna|NEXUS|Joao Rafael de Franca Nunes Leardini|275|47|13
+11030109|Grazielli Borges de Freitas|NEXUS|Joao Rafael de Franca Nunes Leardini|253|62|24
+11030201|Isabela Fernanda Moreira|NEXUS|Murillo Cesar Barbosa dos Santos|248|28|16
+11030202|Cezar Rogerio Henrique Junior|NEXUS|Murillo Cesar Barbosa dos Santos|240|35|23
+11030203|Harley Dias de Oliveira|NEXUS|Murillo Cesar Barbosa dos Santos|247|51|13
+11030204|Waldemar Ruza Neto|NEXUS|Murillo Cesar Barbosa dos Santos|258|32|12
+11030206|Eduarda Vazarin Biancho|NEXUS|Murillo Cesar Barbosa dos Santos|277|34|23
+11030207|Leticia Rodrigues dos Santos|NEXUS|Murillo Cesar Barbosa dos Santos|254|51|14
+11030208|Thaislane Beatriz Cardoso Borges|NEXUS|Murillo Cesar Barbosa dos Santos|248|21|11
 11030209|Talita Juliana Morais dos Santos|NEXUS|Murillo Cesar Barbosa dos Santos|250|20|6
-11030210|Sinara Leibnitz|NEXUS|Murillo Cesar Barbosa dos Santos|271|27|4
+11030210|Sinara Leibnitz|NEXUS|Murillo Cesar Barbosa dos Santos|271|41|5
 11030301|Rafael Moraes Pontes|NEXUS|Geovana Buttignon|266|3|0
-11030302|Gabriela Benini de Oliveira Correa|NEXUS|Geovana Buttignon|257|26|5
-11030303|Grazielle Fernanda Fascina|NEXUS|Geovana Buttignon|227|52|3
-11030304|Leticia Jessica Amoedo de Souza|NEXUS|Geovana Buttignon|241|109|58
-11030305|Gabriela Italia Sartori|NEXUS|Geovana Buttignon|265|50|11
-11030306|Bianca Freitas Borja Chaves|NEXUS|Geovana Buttignon|241|22|2
-11030307|Evandro Gomes Da Silva|NEXUS|Geovana Buttignon|230|19|11
-11030308|Anaisa Marchiori Moretto|NEXUS|Geovana Buttignon|247|49|36
-11030401|Amanda Nogueira|NEXUS|Vanessa Araujo Ferreira Lima|226|24|4
-11030402|Karla Marques de Oliveira|NEXUS|Vanessa Araujo Ferreira Lima|240|35|15
-11030403|Thiago Henrique Soares Alonso|NEXUS|Vanessa Araujo Ferreira Lima|243|22|8
-11030404|Maria Fernanda Silva E Silva|NEXUS|Vanessa Araujo Ferreira Lima|254|19|1
-11030405|Paulo Henrique Silva|NEXUS|Vanessa Araujo Ferreira Lima|225|45|14
-11030407|Filipe Pereira Vicente|NEXUS|Vanessa Araujo Ferreira Lima|254|36|14
-11030408|Luan de Melo Souza|NEXUS|Vanessa Araujo Ferreira Lima|233|26|18
-11630101|Lucas Caserta|VITAL|Fabiano Atanazio Machado|252|28|9
-11630102|Lucia Maria da Silva Rosa Ernandes|VITAL|Fabiano Atanazio Machado|253|37|7
-11630103|Elouise Batisti de Souza Palma|VITAL|Fabiano Atanazio Machado|254|43|11
-11630105|Wesley Alves Trindade|VITAL|Fabiano Atanazio Machado|271|25|13
-11630106|Andre Vessoni Ferri|VITAL|Fabiano Atanazio Machado|255|72|25
-11630107|Isabella Fernanda de Oliveira Moreira|VITAL|Fabiano Atanazio Machado|252|48|6
-11630108|Renato Lopes de Souza|VITAL|Fabiano Atanazio Machado|253|48|2
-11630109|Adriely Rebecchi Ferreira|VITAL|Fabiano Atanazio Machado|272|81|26
-11630201|Janaina Aparecida Sertori|VITAL|Daniel Antonio Costa|246|42|16
-11630202|Denise Miyuri Thomaz Wakabayashi|VITAL|Daniel Antonio Costa|241|44|31
-11630203|Luis Fernando Alves Verissimo|VITAL|Daniel Antonio Costa|249|35|10
-11630204|Mirella Leao Alves Lima|VITAL|Daniel Antonio Costa|246|27|10
-11630206|Aline de Jesus Munhoz|VITAL|Daniel Antonio Costa|264|52|12
-11630207|Natalia Lopes Ferreira|VITAL|Daniel Antonio Costa|258|44|16
-11630208|Flavia Luciana Braga Rocha|VITAL|Daniel Antonio Costa|253|43|10
-11630209|Walter de Oliveira Nery|VITAL|Daniel Antonio Costa|252|36|8
-11630210|Julio Cesar Daibert Filho|VITAL|Daniel Antonio Costa|252|25|2
-11630301|Lazara Alexandra Duarte Mariano|VITAL|Matheus Landulpho Allonso|268|31|0
-11630302|Brian Cavalcanti Silva|VITAL|Matheus Landulpho Allonso|252|19|5
-11630303|VAGO|VITAL|Matheus Landulpho Allonso|259|31|4
-11630304|Natalia Fernandes|VITAL|Matheus Landulpho Allonso|257|92|58
-11630305|Renan Registro Reis|VITAL|Matheus Landulpho Allonso|253|58|11
-11630306|Soraia Vieira Scheufen|VITAL|Matheus Landulpho Allonso|245|4|2
-11630307|Talita Carvalho de Sousa Santos|VITAL|Matheus Landulpho Allonso|266|43|11
-11630308|Francine Caroline Souza dos Santos|VITAL|Matheus Landulpho Allonso|257|67|36
-11630401|VAGO|VITAL|Michael Aparecido da Silva Mota|245|11|5
-11630402|Bruna Peixoto Vargas|VITAL|Michael Aparecido da Silva Mota|239|39|15
-11630403|Milena Palmira Matielo Marques|VITAL|Michael Aparecido da Silva Mota|232|37|7
+11030302|Gabriela Benini de Oliveira Correa|NEXUS|Geovana Buttignon|257|42|19
+11030303|Grazielle Fernanda Fascina|NEXUS|Geovana Buttignon|227|71|9
+11030304|Leticia Jessica Amoedo de Souza|NEXUS|Geovana Buttignon|241|108|61
+11030305|Gabriela Italia Sartori|NEXUS|Geovana Buttignon|265|57|13
+11030306|Bianca Freitas Borja Chaves|NEXUS|Geovana Buttignon|241|23|4
+11030307|Evandro Gomes Da Silva|NEXUS|Geovana Buttignon|230|31|16
+11030308|Anaisa Marchiori Moretto|NEXUS|Geovana Buttignon|247|72|55
+11030401|Amanda Nogueira|NEXUS|Vanessa Araujo Ferreira Lima|226|38|11
+11030402|Karla Marques de Oliveira|NEXUS|Vanessa Araujo Ferreira Lima|240|52|22
+11030403|Thiago Henrique Soares Alonso|NEXUS|Vanessa Araujo Ferreira Lima|243|30|9
+11030404|Maria Fernanda Silva E Silva|NEXUS|Vanessa Araujo Ferreira Lima|254|31|1
+11030405|Paulo Henrique Silva|NEXUS|Vanessa Araujo Ferreira Lima|225|59|14
+11030407|Filipe Pereira Vicente|NEXUS|Vanessa Araujo Ferreira Lima|254|57|14
+11030408|Luan de Melo Souza|NEXUS|Vanessa Araujo Ferreira Lima|233|27|18
+11630101|Lucas Caserta|VITAL|Fabiano Atanazio Machado|252|30|6
+11630102|Lucia Maria da Silva Rosa Ernandes|VITAL|Fabiano Atanazio Machado|253|51|9
+11630103|Elouise Batisti de Souza Palma|VITAL|Fabiano Atanazio Machado|254|42|9
+11630105|Wesley Alves Trindade|VITAL|Fabiano Atanazio Machado|271|33|21
+11630106|Andre Vessoni Ferri|VITAL|Fabiano Atanazio Machado|255|69|26
+11630107|Isabella Fernanda de Oliveira Moreira|VITAL|Fabiano Atanazio Machado|252|57|8
+11630108|Renato Lopes de Souza|VITAL|Fabiano Atanazio Machado|253|59|12
+11630109|Adriely Rebecchi Ferreira|VITAL|Fabiano Atanazio Machado|272|77|24
+11630201|Janaina Aparecida Sertori|VITAL|Daniel Antonio Costa|246|45|18
+11630202|Denise Miyuri Thomaz Wakabayashi|VITAL|Daniel Antonio Costa|241|40|21
+11630203|Luis Fernando Alves Verissimo|VITAL|Daniel Antonio Costa|249|42|13
+11630204|Mirella Leao Alves Lima|VITAL|Daniel Antonio Costa|246|39|12
+11630206|Aline de Jesus Munhoz|VITAL|Daniel Antonio Costa|264|64|23
+11630207|Natalia Lopes Ferreira|VITAL|Daniel Antonio Costa|258|49|14
+11630208|Flavia Luciana Braga Rocha|VITAL|Daniel Antonio Costa|253|45|11
+11630209|Walter de Oliveira Nery|VITAL|Daniel Antonio Costa|252|38|8
+11630210|Julio Cesar Daibert Filho|VITAL|Daniel Antonio Costa|252|29|4
+11630301|Lazara Alexandra Duarte Mariano|VITAL|Matheus Landulpho Allonso|268|35|0
+11630302|Brian Cavalcanti Silva|VITAL|Matheus Landulpho Allonso|252|36|19
+11630303|VAGO|VITAL|Matheus Landulpho Allonso|259|58|10
+11630304|Natalia Fernandes|VITAL|Matheus Landulpho Allonso|257|105|61
+11630305|Renan Registro Reis|VITAL|Matheus Landulpho Allonso|253|66|13
+11630306|Soraia Vieira Scheufen|VITAL|Matheus Landulpho Allonso|245|12|4
+11630307|Talita Carvalho de Sousa Santos|VITAL|Matheus Landulpho Allonso|266|61|16
+11630308|Francine Caroline Souza dos Santos|VITAL|Matheus Landulpho Allonso|257|88|55
+11630401|VAGO|VITAL|Michael Aparecido da Silva Mota|245|19|9
+11630402|Bruna Peixoto Vargas|VITAL|Michael Aparecido da Silva Mota|239|55|23
+11630403|Milena Palmira Matielo Marques|VITAL|Michael Aparecido da Silva Mota|232|44|10
 11630404|Mariane Fleming Araujo|VITAL|Michael Aparecido da Silva Mota|276|0|0
-11630405|Milton Pereira da Silva Junior|VITAL|Michael Aparecido da Silva Mota|263|35|14
+11630405|Milton Pereira da Silva Junior|VITAL|Michael Aparecido da Silva Mota|263|36|14
 11630407|Maria Leticia Reis Casemiro|VITAL|Michael Aparecido da Silva Mota|257|27|14
-11630408|Eduardo de Souza Lima|VITAL|Michael Aparecido da Silva Mota|233|35|18`
+11630408|Eduardo de Souza Lima|VITAL|Michael Aparecido da Silva Mota|233|41|18`
 };
 
 function sobrepCls(v) { return v > 20 ? 'crit' : (v >= 10 ? 'warn' : 'ok'); }
