@@ -48,6 +48,14 @@
     padding:4px 10px; border-radius:6px;
   }
   .regional-label{font-size:12px; font-weight:700; color:#C9D6EE; text-transform:uppercase; letter-spacing:.6px;}
+  header .wrap{display:flex; justify-content:space-between; align-items:flex-start; gap:16px;}
+  header .wrap > div{flex:1 1 auto; min-width:0;}
+  .header-atualizado{
+    flex:0 0 auto; margin:0; font-size:12px; color:#C9D6EE; text-align:right; line-height:1.5; white-space:nowrap;
+    background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18); border-radius:8px; padding:6px 12px;
+  }
+  .header-atualizado strong{color:#fff; font-weight:700;}
+  @media (max-width:600px){ header .wrap{flex-wrap:wrap;} }
   .wrap{max-width:1320px; margin:0 auto; padding:0 24px;}
   .kpis{
     display:grid; grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); gap:12px;
@@ -205,12 +213,15 @@
 
 <header>
   <div class="wrap">
-    <div class="ems-brand">
-      <span class="ems-badge">EMS</span>
-      <span class="regional-label">Regional SPI</span>
+    <div>
+      <div class="ems-brand">
+        <span class="ems-badge">EMS</span>
+        <span class="regional-label">Regional SPI</span>
+      </div>
+      <h1 id="header-titulo">Análise de Sobreposição — Regional SPI</h1>
+      <p id="header-sub">Aderência à diretriz de roteirização: sobreposição entre pares de linha e % do painel por distrito/representante</p>
     </div>
-    <h1 id="header-titulo">Análise de Sobreposição — Regional SPI</h1>
-    <p id="header-sub">Aderência à diretriz de roteirização: sobreposição entre pares de linha e % do painel por distrito/representante</p>
+    <p class="header-atualizado">Atualizado em <strong id="header-atualizado-data">22/10/2026</strong></p>
   </div>
 </header>
 
