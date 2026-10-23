@@ -506,7 +506,10 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
 .mk-eixo{font-size:9.5px;fill:#6b7280}.mk-eixo.atual{font-weight:800;fill:#111827}
 .mk-val{font-size:10.5px;font-weight:800;paint-order:stroke;stroke:#fff;stroke-width:3px}.mk-val.ref{font-weight:600;font-size:9.5px}
 .mk-leg{display:flex;gap:16px;flex-wrap:wrap;font-size:11px;color:#6b7280;margin-top:8px}
-.mk-leg span{display:flex;align-items:center;gap:5px}.mk-leg i{width:16px;height:3px;border-radius:2px;display:inline-block}
+.mk-leg span{display:flex;align-items:center;gap:5px;cursor:pointer;user-select:none;transition:opacity .15s}.mk-leg i{width:16px;height:3px;border-radius:2px;display:inline-block}
+.mk-leg span.off{opacity:.3}.mk-leg span.sel{color:#111827;font-weight:700}
+.mk-s{transition:opacity .15s;cursor:pointer}.mk-svg.foco .mk-s{opacity:.1}.mk-svg.foco .mk-s.on{opacity:1}
+.mk-hid{display:none}.mk-svg.foco .mk-s.on .mk-hid{display:inline}.mk-svg.foco .mk-s:not(.on) .mk-val{display:none}
 .mk-chip{font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:10px;white-space:nowrap}
 .mk-chip.up{background:#E8F5EE;color:#15693A}.mk-chip.down{background:#fce8ec;color:#C8102E}.mk-chip.flat{background:#F3F4F6;color:#6B7280}
 .mk-reg{display:block;font-size:10px;color:var(--gray);font-weight:500;margin-top:1px}
@@ -8892,7 +8895,9 @@ function mkTarjaMercado(ciclo) {
   return '<span class="mk-ref' + (atras ? ' atraso' : '') + '">' + (atras ? '⚠ ' : '') + 'MERCADO DE ' + ciclo + '/2026' + (atras ? ' · MAIS RECENTE DISPONÍVEL' : '') + '</span>';
 }
 
-// Gráfico de linhas pequeno (SVG, sem biblioteca): série de referência sai tracejada e só rotula o último ponto
+// Gráfico de linhas pequeno (SVG, sem biblioteca): série de referência sai tracejada e só rotula o último ponto.
+// Interativo (igual à RPS): passar o mouse numa linha ou na legenda destaca a série — com o % de todos os meses —
+// e apaga as outras; clicar fixa o destaque (dá para fixar várias), clicar de novo solta.
 function mkGrafico(labels, series){
   var W = 360, H = 190, mL = 34, mR = 34, mT = 16, mB = 24, vals = [];
   series.forEach(function(s){ s.pts.forEach(function(v){ if (v !== null && !isNaN(v)) vals.push(v); }); });
@@ -8903,19 +8908,22 @@ function mkGrafico(labels, series){
   var o = '<svg viewBox="0 0 ' + W + ' ' + H + '" class="mk-svg" role="img">';
   for (var g = 0; g <= topo + 1e-9; g += passo) o += '<line x1="' + mL + '" x2="' + (W - mR) + '" y1="' + Y(g) + '" y2="' + Y(g) + '" stroke="#e5e7eb"/><text x="' + (mL - 5) + '" y="' + (Y(g) + 3.5) + '" class="mk-eixo" text-anchor="end">' + g + '%</text>';
   labels.forEach(function(l, i){ o += '<text x="' + X(i) + '" y="' + (H - 7) + '" class="mk-eixo' + (i === n - 1 ? ' atual' : '') + '" text-anchor="middle">' + l + '</text>'; });
-  // rótulos: um por ponto (a referência tracejada só no último); os que caem no mesmo mês são afastados para não se sobreporem
-  var rot = [];
-  series.forEach(function(s){
-    var d = '', novo = true;
+  // rótulos fixos: um por ponto da série principal (a referência tracejada só no último); os que caem no mesmo mês são afastados
+  // para não se sobreporem. Os demais pontos (concorrentes, meses anteriores da referência) ganham rótulo oculto,
+  // que só aparece quando a série está em destaque.
+  var rot = [], partes = [];
+  series.forEach(function(s, si){
+    var d = '', novo = true, pts = '';
     s.pts.forEach(function(v, i){ if (v === null || isNaN(v)){ novo = true; return; } d += (novo ? 'M' : 'L') + X(i).toFixed(1) + ' ' + Y(v).toFixed(1) + ' '; novo = false; });
-    o += '<path d="' + d + '" fill="none" stroke="' + s.cor + '" stroke-width="' + (s.ref ? 1.6 : 2.6) + '" stroke-opacity="' + (s.ref ? 0.65 : 1) + '"' + (s.ref ? ' stroke-dasharray="5 4"' : '') + ' stroke-linecap="round" stroke-linejoin="round"/>';
+    var path = '<path d="' + d + '" fill="none" stroke="' + s.cor + '" stroke-width="' + (s.ref ? 1.6 : 2.6) + '" stroke-opacity="' + (s.ref ? 0.65 : 1) + '"' + (s.ref ? ' stroke-dasharray="' + (s.dash || '5 4') + '"' : '') + ' stroke-linecap="round" stroke-linejoin="round"/>';
     s.pts.forEach(function(v, i){
       if (v === null || isNaN(v)) return;
-      o += '<circle cx="' + X(i).toFixed(1) + '" cy="' + Y(v).toFixed(1) + '" r="' + (s.ref ? 2.4 : 3.6) + '" fill="' + (s.ref ? '#fff' : s.cor) + '" stroke="' + s.cor + '" stroke-width="1.8"><title>' + s.nome + ' · ' + labels[i] + ': ' + mkPct(v) + '</title></circle>';
-      if (s.semRotulo) return;
-      if (s.ref && i !== n - 1) return;
-      rot.push({ i: i, x: s.ref ? X(i) + 6 : X(i), y: s.ref ? Y(v) + 3.5 : Y(v) - 7, txt: mkPct(v), cor: s.cor, ref: !!s.ref });
+      pts += '<circle cx="' + X(i).toFixed(1) + '" cy="' + Y(v).toFixed(1) + '" r="' + (s.ref ? 2.4 : 3.6) + '" fill="' + (s.ref ? '#fff' : s.cor) + '" stroke="' + s.cor + '" stroke-width="1.8"><title>' + s.nome + ' · ' + labels[i] + ': ' + mkPct(v) + '</title></circle>';
+      var fixo = !s.semRotulo && (!s.ref || i === n - 1);
+      if (fixo) rot.push({ si: si, i: i, x: s.ref ? X(i) + 6 : X(i), y: s.ref ? Y(v) + 3.5 : Y(v) - 7, txt: mkPct(v), cor: s.cor, ref: !!s.ref });
+      else pts += '<text x="' + X(i).toFixed(1) + '" y="' + (Y(v) - 7).toFixed(1) + '" class="mk-val mk-hid" fill="' + s.cor + '" text-anchor="middle">' + mkPct(v) + '</text>';
     });
+    partes.push({ d: d, path: path, pts: pts, fixos: '' });
   });
   var porX = {};
   rot.forEach(function(r){ (porX[r.i] = porX[r.i] || []).push(r); });
@@ -8929,10 +8937,43 @@ function mkGrafico(labels, series){
   rot.forEach(function(r){
     var anc = r.ref ? 'start' : (r.i === 0 && n > 1 ? 'start' : (r.i === n - 1 && n > 1 ? 'end' : 'middle'));
     var dx = (!r.ref && r.i === 0 && n > 1) ? -4 : ((!r.ref && r.i === n - 1 && n > 1) ? 4 : 0);
-    o += '<text x="' + (r.x + dx).toFixed(1) + '" y="' + r.y.toFixed(1) + '" class="mk-val' + (r.ref ? ' ref' : '') + '" fill="' + r.cor + '" text-anchor="' + anc + '">' + r.txt + '</text>';
+    partes[r.si].fixos += '<text x="' + (r.x + dx).toFixed(1) + '" y="' + r.y.toFixed(1) + '" class="mk-val' + (r.ref ? ' ref' : '') + '" fill="' + r.cor + '" text-anchor="' + anc + '">' + r.txt + '</text>';
+  });
+  // cada série vira um grupo (para o destaque); a faixa invisível larga deixa o mouse pegar a linha mesmo com as séries próximas
+  partes.forEach(function(p, si){
+    o += '<g class="mk-s" data-s="' + si + '">' + p.path + p.pts + p.fixos + '<path d="' + p.d + '" fill="none" stroke="transparent" stroke-width="14" pointer-events="stroke"/></g>';
   });
   return o + '</svg>';
 }
+// Destaque dos gráficos (mesmo mecanismo da RPS): o escopo é o bloco que contém o gráfico e a sua legenda;
+// clicar num item da legenda (ou na linha) fixa a série, passar o mouse destaca enquanto o mouse estiver em cima.
+function mkEscopo(el, alvo){ var n = el; while (n && n !== document.body){ if (n.querySelector(alvo)) return n; n = n.parentElement; } return el.parentElement; }
+function mkFoco(escopo, idx){
+  var sel = (escopo.dataset.mkSel || '').split(',').filter(Boolean), k = sel.indexOf(String(idx));
+  if (k >= 0) sel.splice(k, 1); else sel.push(String(idx));
+  escopo.dataset.mkSel = sel.join(',');
+  mkAplica(escopo, sel);
+}
+function mkHover(escopo, idx){ mkAplica(escopo, idx === null ? (escopo.dataset.mkSel || '').split(',').filter(Boolean) : [String(idx)]); }
+function mkAplica(escopo, sel){
+  escopo.querySelectorAll('svg.mk-svg').forEach(function(sv){
+    sv.classList.toggle('foco', sel.length > 0);
+    sv.querySelectorAll('.mk-s').forEach(function(g){ g.classList.toggle('on', sel.indexOf(g.getAttribute('data-s')) >= 0); });
+  });
+  escopo.querySelectorAll('.mk-leg').forEach(function(lg){
+    Array.prototype.forEach.call(lg.children, function(sp, i){ sp.classList.toggle('off', sel.length > 0 && sel.indexOf(String(i)) < 0); sp.classList.toggle('sel', sel.indexOf(String(i)) >= 0); });
+  });
+}
+function mkAlvo(el){
+  var sp = el.closest && el.closest('.mk-leg > span');
+  if (sp) return { esc: mkEscopo(sp.parentElement, 'svg.mk-svg'), idx: Array.prototype.indexOf.call(sp.parentElement.children, sp), el: sp };
+  var g = el.closest && el.closest('svg.mk-svg .mk-s');
+  if (g) return { esc: mkEscopo(g.closest('svg'), '.mk-leg'), idx: g.getAttribute('data-s'), el: g };
+  return null;
+}
+document.addEventListener('click', function(ev){ var a = mkAlvo(ev.target); if (a) mkFoco(a.esc, a.idx); });
+document.addEventListener('mouseover', function(ev){ var a = mkAlvo(ev.target); if (a) mkHover(a.esc, a.idx); });
+document.addEventListener('mouseout', function(ev){ var a = mkAlvo(ev.target); if (!a) return; var b = ev.relatedTarget ? mkAlvo(ev.relatedTarget) : null; if (!b || b.el !== a.el) mkHover(a.esc, null); });
 
 // ── Análise de concorrentes por marca-chave ──
 // Ranking das marcas de cada mercado (o genérico entra no tamanho, mas fica fora da disputa),
