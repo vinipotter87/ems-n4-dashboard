@@ -200,7 +200,7 @@ html.embed .main{padding-top:14px}
 var CONFIG = {};
 var TODOS_MESES = ["JAN","FEV","MAR","ABR","MAI","JUN","JUL","AGO","SET","OUT","NOV","DEZ"];
 var REG_LABEL = { SPI: 'SPI OESTE', LESTE: 'LESTE' };
-var STATE = { rx: [], dem: [], cid: [], vista: 'gd', cidTop: 30, cidBusca: '', cidSel: '', mes: null, regional: null, marcaKey: null, distrito: '', setor: '', sort: { rx: { col: 'rxMercado', dir: -1 }, dem: { col: 'demTotal', dir: -1 }, cid: { col: 'rx', dir: -1 } } };
+var STATE = { rx: [], dem: [], cid: [], cids: [], vista: 'gd', cidTop: 30, cidBusca: '', cidSel: '', mes: null, regional: null, marcaKey: null, distrito: '', setor: '', sort: { rx: { col: 'rxMercado', dir: -1 }, dem: { col: 'demTotal', dir: -1 }, cid: { col: 'rx', dir: -1 } } };
 // Modo embutido (dentro do dashboard): sem cabeçalho próprio, estado inicial pela URL e altura avisada ao pai
 var PARAMS = new URLSearchParams(location.search);
 var EMBED = PARAMS.get('embed') === '1';
@@ -829,58 +829,98 @@ function render() {
 // "Analisar por" = Médico | Cidade). Não existe setor/GD aqui: a cidade é a do médico, não a do território.
 function renderCidade() {
   var marca = STATE.marcaKey.split('|')[1], linha = STATE.marcaKey.split('|')[0];
-  var base = STATE.cid.filter(function(r) { return r.regional === STATE.regional && r.linha === linha && r.marca === marca; });
   var meses = mesesDisponiveis();
-  var mesSel = STATE.mes;
+  var mesSel = STATE.mes, mesAnt = meses[meses.indexOf(mesSel) - 1] || null;
   var nomeReg = 'Regional ' + (REG_LABEL[STATE.regional] || STATE.regional);
+  // escopo: regional (leitura direta do Raio X por cidade) · distrito ou setor (export por médico × painel)
+  var noSetor = !!STATE.setor, noDistrito = !!STATE.distrito && !noSetor, comEscopo = noSetor || noDistrito;
+  var baseReg = STATE.cid.filter(function(r) { return r.regional === STATE.regional && r.linha === linha && r.marca === marca; });
+  var baseSet = STATE.cids.filter(function(r) { return r.regional === STATE.regional && r.linha === linha && r.marca === marca && (noSetor ? r.setor === STATE.setor : r.distrito === STATE.distrito); });
+  var distRow = rxDe('DISTRITO', STATE.distrito)[0];
+  var nomeDist = STATE.distrito ? 'Distrito ' + primeiroNome((distRow || {}).nome || STATE.distrito) : '';
+  var setRow = noSetor ? baseSet[0] : null;
+  var nomeEsc = noSetor ? (primeiroNome((setRow || {}).nome || '') + ' · setor ' + STATE.setor) : (noDistrito ? nomeDist : nomeReg);
+  var rotEsc = noSetor ? 'setor' : (noDistrito ? 'distrito' : 'regional');
+  var limiar = noSetor ? 5 : (noDistrito ? 2 : 1); // % do Rx do escopo para a cidade contar como relevante
+
   document.getElementById('pill-mes').textContent = mesSel + '/2026';
   document.getElementById('btn-voltar').href = STATE.regional === 'LESTE' ? 'leste.html' : 'index.html';
-  document.getElementById('pill-escopo').textContent = marca + ' · ' + nomeReg + ' · por cidade';
+  document.getElementById('pill-escopo').textContent = marca + ' · ' + nomeEsc + ' · por cidade';
 
-  var doMes = base.filter(function(r) { return r.mes === mesSel; });
-  var tot = doMes.filter(function(r) { return r.nivel === 'TOTAL'; })[0];
-  var regShare = tot ? n(tot.share) : null, regRx = tot ? n(tot.rx_mercado) : null;
-  var rxReg = rxDe('REGIONAL')[0]; // visão por distrito, para conferência do painel
-  // histórico por cidade: share em cada ciclo lido
-  var hist = {};
-  base.forEach(function(r) { if (r.nivel !== 'CIDADE') return; var h = hist[r.cidade] = hist[r.cidade] || {}; h[r.mes] = { share: n(r.share), rx: n(r.rx_mercado) }; });
-  var cidades = doMes.filter(function(r) { return r.nivel === 'CIDADE'; }).map(function(r) {
-    var rx = n(r.rx_mercado), share = n(r.share), peso = (rx !== null && regRx) ? rx / regRx * 100 : null;
-    var dif = (share !== null && regShare !== null) ? Math.round((share - regShare) * 10) / 10 : null;
-    var grande = peso !== null && peso >= 1;
-    var cls = !grande ? 'peq' : (dif !== null && dif >= 2 ? 'fort' : (dif !== null && dif <= -2 ? 'opor' : 'linha'));
-    return { cidade: r.cidade, painel: n(r.painel), rx: rx, peso: peso, share: share, var_pp: n(r.var_pp), dif: dif, cls: cls, hist: hist[r.cidade] || {} };
+  // regional por cidade (referência em qualquer escopo)
+  var regCid = {}, regTot = {};
+  baseReg.forEach(function(r) { if (r.nivel === 'TOTAL') regTot[r.mes] = { share: n(r.share), rx: n(r.rx_mercado), painel: n(r.painel), var_pp: n(r.var_pp) }; else (regCid[r.cidade] = regCid[r.cidade] || {})[r.mes] = { share: n(r.share), rx: n(r.rx_mercado), painel: n(r.painel), var_pp: n(r.var_pp) }; });
+
+  // escopo por cidade e por mês
+  var escCid = {}, escTot = {};
+  if (comEscopo) {
+    baseSet.forEach(function(r) {
+      var h = escCid[r.cidade] = escCid[r.cidade] || {}, m = h[r.mes] = h[r.mes] || { rx: 0, rxm: 0, painel: 0, presc: 0 };
+      m.rx += n(r.rx_mercado) || 0; m.rxm += n(r.rx_marca) || 0; m.painel += n(r.painel) || 0; m.presc += n(r.prescritores) || 0;
+      var t = escTot[r.mes] = escTot[r.mes] || { rx: 0, rxm: 0, painel: 0 };
+      t.rx += n(r.rx_mercado) || 0; t.rxm += n(r.rx_marca) || 0; t.painel += n(r.painel) || 0;
+    });
+    Object.keys(escCid).forEach(function(c) { Object.keys(escCid[c]).forEach(function(m) { var x = escCid[c][m]; x.share = x.rx ? x.rxm / x.rx * 100 : null; }); });
+    Object.keys(escTot).forEach(function(m) { var t = escTot[m]; t.share = t.rx ? t.rxm / t.rx * 100 : null; });
+  } else {
+    Object.keys(regCid).forEach(function(c) { escCid[c] = regCid[c]; });
+    escTot = regTot;
+  }
+  var tot = escTot[mesSel], totAnt = mesAnt ? escTot[mesAnt] : null;
+  var regShareCid = function(c) { var h = regCid[c] && regCid[c][mesSel]; return h ? h.share : null; };
+  var refShare = comEscopo ? null : (tot ? tot.share : null); // regional: compara com a própria regional; escopo: compara com a regional NA CIDADE
+
+  var cidades = Object.keys(escCid).filter(function(c) { return escCid[c][mesSel]; }).map(function(c) {
+    var x = escCid[c][mesSel], a = mesAnt && escCid[c][mesAnt];
+    var peso = (x.rx !== null && tot && tot.rx) ? x.rx / tot.rx * 100 : null;
+    var ref = comEscopo ? regShareCid(c) : refShare;
+    var dif = (x.share !== null && ref !== null && ref !== undefined) ? Math.round((x.share - ref) * 10) / 10 : null;
+    var varpp = comEscopo ? ((a && a.share !== null && x.share !== null) ? Math.round((x.share - a.share) * 10) / 10 : null) : x.var_pp;
+    var grande = peso !== null && peso >= limiar;
+    var cls = !grande ? 'peq' : (dif === null ? 'linha' : (dif >= 2 ? 'fort' : (dif <= -2 ? 'opor' : 'linha')));
+    return { cidade: c, painel: x.painel, presc: x.presc, rx: x.rx, peso: peso, share: x.share, var_pp: varpp, ref: ref, dif: dif, cls: cls, hist: escCid[c] };
   });
   var ROT = { fort: 'Fortaleza', opor: 'Oportunidade', linha: 'Em linha', peq: 'Mercado pequeno' };
-  var EXPL = { fort: 'mercado relevante (≥ 1% das receitas da regional) com share ao menos 2 pp acima da regional', opor: 'mercado relevante com share ao menos 2 pp abaixo da regional', linha: 'mercado relevante com share até 2 pp da regional', peq: 'menos de 1% das receitas da regional' };
+  var refTxt = comEscopo ? 'a regional na mesma cidade' : 'a regional';
+  var EXPL = { fort: 'mercado relevante (≥ ' + limiar + '% das receitas do ' + rotEsc + ') com share ao menos 2 pp acima d' + refTxt, opor: 'mercado relevante com share ao menos 2 pp abaixo d' + refTxt, linha: 'mercado relevante com share até 2 pp d' + refTxt, peq: 'menos de ' + limiar + '% das receitas do ' + rotEsc };
 
   function soma(lista, k) { return lista.reduce(function(a, c) { return a + (c[k] || 0); }, 0); }
   var porCls = {};
-  ['fort', 'opor', 'linha', 'peq'].forEach(function(c) { var l = cidades.filter(function(x) { return x.cls === c; }); porCls[c] = { n: l.length, rx: soma(l, 'rx'), pct: regRx ? soma(l, 'rx') / regRx * 100 : null }; });
+  ['fort', 'opor', 'linha', 'peq'].forEach(function(c) { var l = cidades.filter(function(x) { return x.cls === c; }); porCls[c] = { n: l.length, rx: soma(l, 'rx'), pct: tot && tot.rx ? soma(l, 'rx') / tot.rx * 100 : null }; });
   var ordRx = cidades.slice().sort(function(a, b) { return (b.rx || 0) - (a.rx || 0); });
-  var top10 = ordRx.slice(0, 10), top10Pct = regRx ? soma(top10, 'rx') / regRx * 100 : null;
+  var nTop = comEscopo ? 5 : 10;
+  var top = ordRx.slice(0, nTop), topPct = tot && tot.rx ? soma(top, 'rx') / tot.rx * 100 : null;
   function pp(v) { return (v > 0 ? '+' : '') + v.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' pp'; }
   function pct1(v) { return v === null || v === undefined ? '—' : v.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%'; }
+  var fonte = comEscopo ? 'export por médico do Raio X (Médico | Nome - CRM) × painel (Qualificação do Painel Médico: setor e cidade de cada médico)' : 'Raio X › Prescrição | Análise de Performance › Médico | Cidade';
 
-  var html = '<div class="sec-hdr" style="margin-top:0">' + esc(marca) + ' por cidade <small>' + esc(linha) + ' · ' + esc(nomeReg) + ' · ' + mesSel + '/2026 · cidade do consultório do médico (não é o setor) · fonte: Raio X › Prescrição | Análise de Performance › Médico | Cidade</small></div>';
+  var html = '<div class="sec-hdr" style="margin-top:0">' + esc(marca) + ' por cidade <small>' + esc(linha) + ' · ' + esc(nomeEsc) + ' · ' + mesSel + '/2026 · cidade do consultório do médico · fonte: ' + fonte + '</small></div>';
   html += secao('rx');
   html += '<div class="mk-secao-box rx">';
+  if (comEscopo && !cidades.length) {
+    html += '<div class="nota" style="font-size:12px;padding:14px 0">Sem leitura por ' + rotEsc + ' em ' + mesSel + '/2026: faltam os exports por médico desse ciclo (<code>inputs_powerbi/crm_chave_rx/{MARCA}_' + mesSel + '.xlsx</code>). Rode <code>python scripts/ingest_mercado_cidade_setor.py --mes ' + mesSel + '</code> depois de exportar.</div></div>';
+    document.getElementById('main').innerHTML = html;
+    return;
+  }
+  var regTotMes = regTot[mesSel];
+  var totVar = comEscopo ? ((tot && totAnt && tot.share !== null && totAnt.share !== null) ? Math.round((tot.share - totAnt.share) * 10) / 10 : null) : (tot ? tot.var_pp : null);
   html += '<div class="card-grid">';
-  html += '<div class="card rx"><div class="card-t">Presc. share da regional</div><div class="card-v">' + fmtPct(regShare) + trend(tot ? n(tot.var_pp) : null, ' pp') + '</div><div class="card-f">' + fmtInt(regRx) + ' receitas do mercado em ' + cidades.length + ' cidades · painel com cidade: ' + fmtInt(tot ? n(tot.painel) : null) + (rxReg && n(rxReg.painel) ? ' de ' + fmtInt(n(rxReg.painel)) + ' médicos' : '') + '</div></div>';
-  html += '<div class="card fort"><div class="card-t">Fortalezas</div><div class="card-v">' + porCls.fort.n + ' <span class="sub" style="font-size:13px">cidades</span></div><div class="card-f"><b>' + pct1(porCls.fort.pct) + '</b> das receitas da regional · ' + EXPL.fort + '</div></div>';
-  html += '<div class="card opor"><div class="card-t">Oportunidades</div><div class="card-v">' + porCls.opor.n + ' <span class="sub" style="font-size:13px">cidades</span></div><div class="card-f"><b>' + pct1(porCls.opor.pct) + '</b> das receitas da regional · ' + EXPL.opor + '</div></div>';
-  html += '<div class="card"><div class="card-t">Concentração</div><div class="card-v">' + pct1(top10Pct) + '</div><div class="card-f">das receitas do mercado estão nas 10 maiores cidades: ' + esc(top10.map(function(c) { return c.cidade; }).slice(0, 5).join(', ').toLowerCase()) + '…</div></div>';
+  html += '<div class="card rx"><div class="card-t">Presc. share · ' + esc(nomeEsc) + '</div><div class="card-v">' + fmtPct(tot ? tot.share : null) + trend(totVar, ' pp') + '</div><div class="card-f">' + fmtInt(tot ? tot.rx : null) + ' receitas do mercado em ' + cidades.length + ' cidades · painel com cidade: ' + fmtInt(tot ? tot.painel : null) + ' médicos' + (comEscopo && regTotMes ? ' · regional: <b>' + fmtPct(regTotMes.share) + '</b>' : '') + '</div></div>';
+  html += '<div class="card fort"><div class="card-t">Fortalezas</div><div class="card-v">' + porCls.fort.n + ' <span class="sub" style="font-size:13px">cidades</span></div><div class="card-f"><b>' + pct1(porCls.fort.pct) + '</b> das receitas do ' + rotEsc + ' · ' + EXPL.fort + '</div></div>';
+  html += '<div class="card opor"><div class="card-t">Oportunidades</div><div class="card-v">' + porCls.opor.n + ' <span class="sub" style="font-size:13px">cidades</span></div><div class="card-f"><b>' + pct1(porCls.opor.pct) + '</b> das receitas do ' + rotEsc + ' · ' + EXPL.opor + '</div></div>';
+  html += '<div class="card"><div class="card-t">Concentração</div><div class="card-v">' + pct1(topPct) + '</div><div class="card-f">das receitas do mercado do ' + rotEsc + ' estão nas ' + nTop + ' maiores cidades: ' + esc(top.map(function(c) { return c.cidade; }).slice(0, 5).join(', ').toLowerCase()) + (ordRx.length > 5 ? '…' : '') + '</div></div>';
   html += '</div>';
 
-  // cidade selecionada: evolução dos ciclos lidos
+  // cidade selecionada: evolução dos ciclos lidos (escopo em linha cheia, regional na cidade tracejada)
   if (STATE.cidSel) {
     var c0 = cidades.filter(function(x) { return x.cidade === STATE.cidSel; })[0];
     if (c0) {
       var labels = meses.slice();
-      var serieC = { nome: STATE.cidSel, pontos: labels.map(function(m) { return c0.hist[m] ? c0.hist[m].share : null; }) };
-      var serieR = { nome: nomeReg, pontos: labels.map(function(m) { var t = base.filter(function(r) { return r.mes === m && r.nivel === 'TOTAL'; })[0]; return t ? n(t.share) : null; }), dash: '6 4' };
-      html += '<div class="rep-banner" style="margin-top:14px">📍 <b>' + esc(STATE.cidSel) + '</b> <span class="cid-tag ' + c0.cls + '">' + ROT[c0.cls] + '</span> <span class="sub">— ' + fmtInt(c0.rx) + ' receitas (' + pct1(c0.peso) + ' da regional) · painel ' + fmtInt(c0.painel) + ' médicos · share ' + fmtPct(c0.share) + (c0.dif === null ? '' : ' (' + pp(c0.dif) + ' vs regional)') + '</span> <button class="link-btn" data-cidade="' + esc(STATE.cidSel) + '">✕ fechar</button></div>';
-      html += '<div class="graf-grid"><div class="graf-box"><div class="graf-t">Presc. share · ' + esc(STATE.cidSel) + ' <span class="sub">linha cheia = cidade · tracejada = regional</span></div>' + graficoLinhas(labels, [serieC, serieR], labels.map(function() { return false; })) + '</div></div>';
+      var series = [{ nome: esc(nomeEsc) + ' · ' + STATE.cidSel, pontos: labels.map(function(m) { return c0.hist[m] ? c0.hist[m].share : null; }) }];
+      if (comEscopo) series.push({ nome: nomeReg + ' · ' + STATE.cidSel, pontos: labels.map(function(m) { var h = regCid[STATE.cidSel] && regCid[STATE.cidSel][m]; return h ? h.share : null; }), dash: '6 4' });
+      else series.push({ nome: nomeReg, pontos: labels.map(function(m) { return regTot[m] ? regTot[m].share : null; }), dash: '6 4' });
+      html += '<div class="rep-banner" style="margin-top:14px">📍 <b>' + esc(STATE.cidSel) + '</b> <span class="cid-tag ' + c0.cls + '">' + ROT[c0.cls] + '</span> <span class="sub">— ' + fmtInt(c0.rx) + ' receitas (' + pct1(c0.peso) + ' do ' + rotEsc + ') · painel ' + fmtInt(c0.painel) + ' médicos' + (comEscopo ? ' · ' + fmtInt(c0.presc) + ' prescritores do mercado' : '') + ' · share ' + fmtPct(c0.share) + (c0.dif === null ? '' : ' (' + pp(c0.dif) + ' vs ' + refTxt + ')') + '</span> <button class="link-btn" data-cidade="' + esc(STATE.cidSel) + '">✕ fechar</button></div>';
+      html += '<div class="graf-grid"><div class="graf-box"><div class="graf-t">Presc. share · ' + esc(STATE.cidSel) + ' <span class="sub">linha cheia = ' + rotEsc + ' na cidade · tracejada = ' + (comEscopo ? 'regional na cidade' : 'regional') + '</span></div>' + graficoLinhas(labels, series, labels.map(function() { return false; })) + '</div></div>';
     }
   }
 
@@ -899,26 +939,29 @@ function renderCidade() {
   if (STATE.cidTop && !busca) lista = lista.slice(0, STATE.cidTop);
   function th(col, txt, left) { return '<th class="sortable' + (left ? ' l' : '') + '" data-sort="cid:' + col + '">' + txt + (sc.col === col ? (sc.dir < 0 ? ' ▼' : ' ▲') : '') + '</th>'; }
   var ultimos = meses.slice(-3);
-  var ROTCOL = { rx: 'receitas do mercado', share: 'presc. share', dif: 'distância da regional', painel: 'painel', var_pp: 'penetração', cidade: 'nome', peso: 'peso na regional' };
-  html += '<div class="sec-hdr">Cidades <small>' + (STATE.cidTop && !busca ? 'as ' + lista.length + ' maiores de ' + totalLista : lista.length + ' cidades') + ' · ordenadas por ' + (ROTCOL[sc.col] || sc.col) + ' · clique na cidade para ver a evolução</small></div>';
-  html += '<div class="box"><div class="box-scroll"><table><thead><tr>' + th('cidade', 'Cidade', true) + th('rx', 'Rx mercado') + th('peso', 'Peso na regional') + th('painel', 'Painel') + th('share', 'Presc. share') + th('var_pp', 'Penetração') + th('dif', 'vs regional') + '<th>Leitura</th><th class="l">Ciclos lidos</th></tr></thead><tbody>';
+  var ROTCOL = { rx: 'receitas do mercado', share: 'presc. share', dif: 'distância da referência', painel: 'painel', presc: 'prescritores', var_pp: 'penetração', cidade: 'nome', peso: 'peso no ' + rotEsc, ref: 'regional na cidade' };
+  html += '<div class="sec-hdr">Cidades · ' + esc(nomeEsc) + ' <small>' + (STATE.cidTop && !busca && totalLista > lista.length ? 'as ' + lista.length + ' maiores de ' + totalLista : lista.length + ' cidades') + ' · ordenadas por ' + (ROTCOL[sc.col] || sc.col) + ' · clique na cidade para ver a evolução</small></div>';
+  html += '<div class="box"><div class="box-scroll"><table><thead><tr>' + th('cidade', 'Cidade', true) + th('rx', 'Rx mercado') + th('peso', 'Peso no ' + rotEsc) + th('painel', 'Painel') + (comEscopo ? th('presc', 'Prescritores') : '') + th('share', 'Presc. share') + th('var_pp', 'Penetração') + (comEscopo ? th('ref', 'Regional na cidade') : '') + th('dif', comEscopo ? 'vs regional na cidade' : 'vs regional') + '<th>Leitura</th><th class="l">Ciclos lidos</th></tr></thead><tbody>';
   var pesoMax = ordRx[0] && ordRx[0].peso ? ordRx[0].peso : 1;
   lista.forEach(function(c) {
-    var histTxt = ultimos.map(function(m) { var h = c.hist[m]; return (m === mesSel ? '<span class="sel">' : '') + m + ' <b>' + (h ? fmtPct(h.share) : '—') + '</b>' + (m === mesSel ? '</span>' : ''); }).join(' → ');
+    var histTxt = ultimos.map(function(m) { var h = c.hist[m]; return (m === mesSel ? '<span class="sel">' : '') + m + ' <b>' + (h && h.share !== null && h.share !== undefined ? fmtPct(h.share) : '—') + '</b>' + (m === mesSel ? '</span>' : ''); }).join(' → ');
     html += '<tr class="clicavel' + (c.cidade === STATE.cidSel ? ' marca' : '') + '" data-cidade="' + esc(c.cidade) + '"><td class="l"><b>' + esc(c.cidade) + '</b></td>' +
       '<td>' + fmtInt(c.rx) + '</td><td><span class="peso-bar"><i style="width:' + Math.min(100, (c.peso || 0) / pesoMax * 100) + '%"></i></span>' + pct1(c.peso) + '</td>' +
-      '<td>' + fmtInt(c.painel) + '</td><td><div class="share-cell"><span class="share-bar rx"><i style="width:' + Math.min(100, c.share || 0) + '%"></i></span><b class="share-n">' + fmtPct(c.share) + '</b></div></td>' +
-      '<td>' + trend(c.var_pp, ' pp') + '</td><td>' + (c.dif === null ? '—' : '<span class="tr ' + (c.dif > 0 ? 'up' : (c.dif < 0 ? 'down' : 'flat')) + '">' + pp(c.dif) + '</span>') + '</td>' +
+      '<td>' + fmtInt(c.painel) + '</td>' + (comEscopo ? '<td>' + fmtInt(c.presc) + '</td>' : '') +
+      '<td><div class="share-cell"><span class="share-bar rx"><i style="width:' + Math.min(100, c.share || 0) + '%"></i></span><b class="share-n">' + fmtPct(c.share) + '</b></div></td>' +
+      '<td>' + trend(c.var_pp, ' pp') + '</td>' + (comEscopo ? '<td>' + fmtPct(c.ref) + '</td>' : '') +
+      '<td>' + (c.dif === null ? '—' : '<span class="tr ' + (c.dif > 0 ? 'up' : (c.dif < 0 ? 'down' : 'flat')) + '">' + pp(c.dif) + '</span>') + '</td>' +
       '<td><span class="cid-tag ' + c.cls + '" title="' + EXPL[c.cls] + '">' + ROT[c.cls] + '</span></td><td class="l cid-hist">' + histTxt + '</td></tr>';
   });
-  if (!lista.length) html += '<tr><td colspan="9" class="l sub">Nenhuma cidade encontrada.</td></tr>';
+  if (!lista.length) html += '<tr><td colspan="11" class="l sub">Nenhuma cidade encontrada.</td></tr>';
   html += '</tbody></table></div></div>';
-  html += '<div class="nota">Leitura: <b>Fortaleza</b> e <b>Oportunidade</b> só valem para cidades com ao menos 1% das receitas do mercado da regional; a distância é contra o presc. share da regional no mesmo ciclo. Penetração = mudança do share contra o mês anterior. O painel por cidade é menor que o da visão por distrito porque só entram cidades com receita no mercado da marca (médicos sem cidade cadastrada ou em cidades sem receita ficam fora).</div>';
+  html += '<div class="nota">Leitura: <b>Fortaleza</b> e <b>Oportunidade</b> só valem para cidades com ao menos ' + limiar + '% das receitas do mercado do ' + rotEsc + '; a distância é contra o presc. share d' + refTxt + ' no mesmo ciclo. Penetração = mudança do share contra o ciclo anterior.' +
+    (comEscopo ? ' Nível ' + rotEsc + ': o Rx de cada médico do export por médico do Raio X é atribuído ao setor e à cidade do consultório dele conforme o painel mais recente da Qualificação do Painel Médico (cada médico está em um só setor da linha); somado por cidade, bate com a leitura direta do Raio X. "Painel" = médicos do ' + rotEsc + ' com consultório na cidade; "Prescritores" = os que tiveram receita no mercado da marca.' : ' O painel por cidade é menor que o da visão por distrito porque só entram cidades com receita no mercado da marca (médicos sem cidade cadastrada ou em cidades sem receita ficam fora).') + '</div>';
   html += '</div>';
   document.getElementById('main').innerHTML = html;
 }
 
-function baseVista() { return STATE.vista === 'cidade' ? STATE.cid : STATE.rx.concat(STATE.dem); }
+function baseVista() { return STATE.vista === 'cidade' ? STATE.cid.concat(STATE.cids) : STATE.rx.concat(STATE.dem); }
 function mesesDisponiveis() {
   var s = {};
   baseVista().forEach(function(r) { if (r.regional === STATE.regional && (r.linha + '|' + r.marca) === STATE.marcaKey) s[r.mes] = 1; });
@@ -960,7 +1003,29 @@ function montarFiltros() {
     return '<button class="btn' + (m === STATE.mes ? ' active' : '') + '" data-mes="' + m + '">' + m + '</button>';
   }).join('');
 
-  if (cidade) { document.querySelectorAll('.grp-setor').forEach(function(el) { el.style.display = 'none'; }); return; }
+  if (cidade) {
+    var lc = STATE.marcaKey.split('|')[0], mc = STATE.marcaKey.split('|')[1];
+    var distC = {}, setC = {};
+    rxDe('DISTRITO').forEach(function(r) { distC[r.codigo] = r.nome; });
+    STATE.cids.forEach(function(r) {
+      if (r.regional !== STATE.regional || r.linha !== lc || r.marca !== mc) return;
+      distC[r.distrito] = distC[r.distrito] || r.distrito;
+      if (STATE.distrito && r.distrito === STATE.distrito) setC[r.setor] = setC[r.setor] || r.nome || r.setor;
+    });
+    if (STATE.distrito && !distC[STATE.distrito]) STATE.distrito = '';
+    if (STATE.setor && !setC[STATE.setor]) STATE.setor = '';
+    document.querySelectorAll('.grp-gd').forEach(function(el) { el.style.display = ''; });
+    document.getElementById('sel-distrito').innerHTML = '<option value="">Regional inteira</option>' + Object.keys(distC).sort().map(function(c) {
+      return '<option value="' + c + '"' + (c === STATE.distrito ? ' selected' : '') + '>' + esc(distC[c]) + '</option>';
+    }).join('');
+    document.getElementById('btn-limpar').style.display = STATE.distrito ? '' : 'none';
+    var temSetC = Object.keys(setC).length > 0;
+    document.querySelectorAll('.grp-setor').forEach(function(el) { el.style.display = temSetC ? '' : 'none'; });
+    document.getElementById('sel-setor').innerHTML = '<option value="">Distrito inteiro</option>' + Object.keys(setC).sort().map(function(c) {
+      return '<option value="' + c + '"' + (c === STATE.setor ? ' selected' : '') + '>' + c.slice(-3) + ' · ' + esc(primeiroNome(setC[c])) + '</option>';
+    }).join('');
+    return;
+  }
   var dist = {};
   rxDe('DISTRITO').forEach(function(r) { dist[r.codigo] = r.nome; });
   demDe('DISTRITO').forEach(function(r) { dist[r.codigo] = dist[r.codigo] || r.nome; });
@@ -1018,8 +1083,8 @@ async function init() {
     CONFIG = await res.json();
     if (!CONFIG.spreadsheet_id || !CONFIG.api_key) throw new Error('SPREADSHEET_ID ou API_KEY não configurados em config.json.');
     txt.textContent = 'Carregando dados de mercado…';
-    var abas = await Promise.all([fetchAba('mercado_rx').catch(function() { return []; }), fetchAba('mercado_demanda').catch(function() { return []; }), fetchAba('mercado_rx_conc').catch(function() { return []; }), fetchAba('mercado_cidade').catch(function() { return []; })]);
-    STATE.rx = abas[0]; STATE.dem = abas[1]; STATE.rxc = abas[2]; STATE.cid = abas[3];
+    var abas = await Promise.all([fetchAba('mercado_rx').catch(function() { return []; }), fetchAba('mercado_demanda').catch(function() { return []; }), fetchAba('mercado_rx_conc').catch(function() { return []; }), fetchAba('mercado_cidade').catch(function() { return []; }), fetchAba('mercado_cidade_setor').catch(function() { return []; })]);
+    STATE.rx = abas[0]; STATE.dem = abas[1]; STATE.rxc = abas[2]; STATE.cid = abas[3]; STATE.cids = abas[4];
     if (STATE.vista === 'cidade' && !STATE.cid.length) STATE.vista = 'gd';
     if (!STATE.rx.length && !STATE.dem.length) {
       document.getElementById('main').innerHTML = '<div class="error-card"><div class="error-title">Ainda não há dados publicados</div>' +
