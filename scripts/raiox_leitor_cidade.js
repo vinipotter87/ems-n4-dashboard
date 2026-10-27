@@ -1,6 +1,8 @@
 // raiox_leitor_cidade.js — variante do raiox_leitor_v2.js para a visão "Médico | Cidade" da página
 // "Prescrição | Análise de Performance" (market share das marcas-chave por cidade do médico).
 // Serve também para "Demanda | Análise de Concorrentes" com "Analisar por (1)" = GDU | Cidade da UTC (tipo DEM).
+// E para "Demanda | Análise de Performance" com "Analisar por" = GDU | Cidade da UTC (tipo DEMP: uma linha por cidade,
+// mercado + EMS; plano B quando a matriz cidade × produto estoura o limite de recursos do Power BI).
 // Diferenças: aceita "Analisar por" fora do grupo GDU, e o nível no nome do arquivo passa a ser
 // SETOR / DISTRITAL / CIDADE (RX_{MARCA}_{LINHA}_{REGIONAL}_CIDADE_{MES}.json → ingest_mercado.py --apenas-cidade).
 // Uso igual ao v2: __marcar(), __job({ tipo:'RX', linha, regional, marcas, analises:['Médico | Cidade'],
@@ -38,16 +40,22 @@
   };
   // assinatura: nº de linhas + cabeçalho + as linhas visíveis (inclui a de Total, que fica fixa no rodapé)
   const sig = () => { const g = grid(); return g ? g.getAttribute('aria-rowcount') + '#' + hdr(g)[0] + '#' + [...linhas(g).values()].map((c) => c.join('|')).join(';') : ''; };
+  // a grade pode carregar mais linhas conforme rola (Demanda por cidade: aria-rowcount começa em 501 e cresce):
+  // repete passagens até o aria-rowcount parar de crescer e todas as linhas estarem lidas
   const ler = async () => {
-    const g = grid(), total = parseInt(g.getAttribute('aria-rowcount')), sc = g.querySelector('.mid-viewport'), rows = new Map();
-    for (let pass = 0; pass < 5 && rows.size < total - 1; pass++) {
+    const g = grid(), sc = g.querySelector('.mid-viewport'), rows = new Map();
+    let total = parseInt(g.getAttribute('aria-rowcount'));
+    for (let pass = 0; pass < 8; pass++) {
       const step = pass === 0 ? 240 : 110;
       for (let y = 0; y <= sc.scrollHeight; y += step) {
         sc.scrollTop = y; sc.dispatchEvent(new Event('scroll', { bubbles: true }));
         await sleep(600);
         linhas(g).forEach((v, k) => rows.set(k, v));
-        if (rows.size >= total - 1) break;
       }
+      await sleep(1500);
+      const t2 = parseInt(g.getAttribute('aria-rowcount'));
+      if (t2 === total && rows.size >= total - 1) break;
+      total = t2;
     }
     sc.scrollTop = 0; sc.dispatchEvent(new Event('scroll', { bubbles: true }));
     await sleep(400);
@@ -133,9 +141,11 @@
               }
               if (!ok) throw new Error('tabela nao atualizou: ' + (grid() ? hdr(grid())[0] : '?') + ' | ' + titulo());
               const r = await ler();
-              if (r.rows.length !== r.expected) throw new Error('linhas ' + r.rows.length + '/' + r.expected);
+              // grade com teto de 500 linhas (aria-rowcount 501 = 500 + Total): aceita 1 linha a mais (a de Total)
+              if (r.rows.length < r.expected || r.rows.length > r.expected + 1) throw new Error('linhas ' + r.rows.length + '/' + r.expected);
               if (!r.titulo.includes('de ' + tok + ' ') || r.hdr[0] !== an || marcaAtual() !== alvo || perAtual() !== sel) throw new Error('estado mudou durante a leitura');
-              if (sig() !== prev) throw new Error('tabela mudou durante a leitura');
+              // DEMP: a grade carrega mais linhas conforme rola (aria-rowcount cresce), então a assinatura muda de propósito
+              if (tipo !== 'DEMP' && sig() !== prev) throw new Error('tabela mudou durante a leitura');
               if (tipo === 'DEM' && !r.rows.some((x) => (x[1] || '').replace(/ /g, ' ').toUpperCase() === m + ' (EMS)')) throw new Error('produto da marca nao aparece (tabela de outra marca?)');
               r.name = name; r.slicers[0] = alvo;
               window.__res[name] = r; antes = null;

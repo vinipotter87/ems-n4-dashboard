@@ -49,7 +49,7 @@ def limpar(txt):
 
 def parse_nome_arquivo(path: Path):
     """RX_BUPIUM_XL_VITAL_SPI_SETOR_AGO -> (RX, BUPIUM XL, VITAL, SPI, SETOR, AGO)"""
-    m = re.match(r"^(RX|DEM)_(.+)_(%s)_(%s)_(%s)_([A-Z]{3})$" % (
+    m = re.match(r"^(RX|DEMP|DEM)_(.+)_(%s)_(%s)_(%s)_([A-Z]{3})$" % (
         "|".join(LINHAS), "|".join(REGIONAIS), "|".join(NIVEIS)), path.stem)
     if not m:
         return None
@@ -155,6 +155,35 @@ def processar_dem_cidade(path, marca, linha, regional, mes):
     return out
 
 
+def processar_demp_cidade(path, marca, linha, regional, mes):
+    """
+    Demanda | Análise de Performance com "Analisar por" = GDU | Cidade da UTC (plano B quando a matriz
+    cidade × produto da página de Concorrentes estoura o limite de recursos do Power BI). Uma linha por
+    cidade: cidade, mercado, cresc. mercado, EMS, cresc. EMS, market share, penetração. Vira duas linhas
+    na aba: a marca (valor EMS) e "DEMAIS PRODUTOS" (mercado − EMS), sem abrir os concorrentes.
+    """
+    dados = json.loads(path.read_text(encoding="utf-8"))
+    out = []
+    for r in dados["rows"]:
+        if limpar(r[0]) == "Total":
+            continue
+        cid = limpar(r[0]).upper()
+        mercado = num(r[1]) if len(r) > 1 else None
+        if len(r) >= 7:
+            ems, cresc, share, var = num(r[3]), num(r[4]), num(r[5]), num(r[6])
+        elif len(r) == 4:          # cidade sem venda da marca: só mercado e crescimento
+            ems, cresc, share, var = 0.0, None, 0.0, num(r[3])
+        else:
+            continue
+        if mercado is None:
+            continue
+        base = {"mes": mes, "regional": regional, "linha": linha, "marca": marca, "cidade": cid}
+        out.append(dict(base, produto=f"{marca} (EMS)", eh_marca="1", valor=ems, cresc_pct=cresc, share=share, var_pp=var))
+        out.append(dict(base, produto="DEMAIS PRODUTOS", eh_marca="0", valor=round(mercado - (ems or 0.0), 2),
+                        cresc_pct=num(r[2]) if len(r) > 2 else None, share=None, var_pp=None))
+    return out
+
+
 def processar_dem(path, marca, linha, regional, nivel_arq, mes):
     dados = json.loads(path.read_text(encoding="utf-8"))
     out = []
@@ -245,7 +274,7 @@ def main():
                 cid.extend(linhas)
                 print(f"  ✓ {path.name}: {len(linhas)} cidades")
             else:
-                linhas = processar_dem_cidade(path, marca, linha, regional, mes)
+                linhas = (processar_demp_cidade if tipo == "DEMP" else processar_dem_cidade)(path, marca, linha, regional, mes)
                 dcid.extend(linhas)
                 print(f"  ✓ {path.name}: {len(linhas)} cidade×produto")
             continue

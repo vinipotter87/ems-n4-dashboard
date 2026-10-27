@@ -999,11 +999,11 @@ function demandaCidade(marca, linha, mesSel, mesAnt, meses, comEscopo, rotEsc, n
     var share = x.marca / x.tot * 100, shareAnt = a && a.tot ? a.marca / a.tot * 100 : null;
     var peso = tot.tot ? x.tot / tot.tot * 100 : null;
     var dif = regShare !== null ? Math.round((share - regShare) * 10) / 10 : null;
-    var conc = x.prods.filter(function(p) { return !p.eh; }).sort(function(p, q) { return q.valor - p.valor; });
+    var conc = x.prods.filter(function(p) { return !p.eh && !/^DEMAIS PRODUTOS/i.test(p.produto); }).sort(function(p, q) { return q.valor - p.valor; });
     var lider = conc[0] ? { produto: conc[0].produto, share: conc[0].valor / x.tot * 100, gen: conc[0].gen } : null;
     var grande = peso !== null && peso >= 1;
     var cls = !grande ? 'peq' : (dif === null ? 'linha' : (dif >= 2 ? 'fort' : (dif <= -2 ? 'opor' : 'linha')));
-    return { cidade: c, tot: x.tot, marca: x.marca, peso: peso, share: share, var_pp: shareAnt !== null ? Math.round((share - shareAnt) * 10) / 10 : x.var_pp, dif: dif, cls: cls, lider: lider, posicao: 1 + conc.filter(function(p) { return p.valor > x.marca; }).length, hist: porCid[c], prods: x.prods };
+    return { cidade: c, tot: x.tot, marca: x.marca, peso: peso, share: share, var_pp: shareAnt !== null ? Math.round((share - shareAnt) * 10) / 10 : x.var_pp, dif: dif, cls: cls, lider: lider, posicao: conc.length ? 1 + conc.filter(function(p) { return p.valor > x.marca; }).length : null, hist: porCid[c], prods: x.prods, semConc: !conc.length };
   });
   var ROT = { fort: 'Fortaleza', opor: 'Oportunidade', linha: 'Em linha', peq: 'Mercado pequeno' };
   function soma(lista, k) { return lista.reduce(function(a, c) { return a + (c[k] || 0); }, 0); }
@@ -1015,7 +1015,7 @@ function demandaCidade(marca, linha, mesSel, mesAnt, meses, comEscopo, rotEsc, n
   html += '<div class="card"><div class="card-t">Market share · ' + esc(nomeReg) + '</div><div class="card-v">' + fmtPct(regShare) + trend(regShareAnt !== null && regShare !== null ? Math.round((regShare - regShareAnt) * 10) / 10 : null, ' pp') + '</div><div class="card-f">' + fmtRS(tot.tot) + ' de mercado em ' + cidades.length + ' cidades (preço fábrica) · soma das cidades lidas</div></div>';
   html += '<div class="card fort"><div class="card-t">Fortalezas</div><div class="card-v">' + fort.length + ' <span class="sub" style="font-size:13px">cidades</span></div><div class="card-f"><b>' + pct1(tot.tot ? soma(fort, 'tot') / tot.tot * 100 : null) + '</b> do mercado da regional · cidade relevante (≥ 1% do mercado) com share ao menos 2 pp acima da regional</div></div>';
   html += '<div class="card opor"><div class="card-t">Oportunidades</div><div class="card-v">' + opor.length + ' <span class="sub" style="font-size:13px">cidades</span></div><div class="card-f"><b>' + pct1(tot.tot ? soma(opor, 'tot') / tot.tot * 100 : null) + '</b> do mercado da regional · cidade relevante com share ao menos 2 pp abaixo da regional</div></div>';
-  html += '<div class="card conc"><div class="card-t">Liderança</div><div class="card-v">' + lideres.length + ' <span class="sub" style="font-size:13px">de ' + cidades.filter(function(x) { return x.peso >= 1; }).length + '</span></div><div class="card-f">cidades relevantes em que ' + esc(marca) + ' é a 1ª marca do mercado · as 10 maiores cidades concentram <b>' + pct1(tot.tot ? soma(top10, 'tot') / tot.tot * 100 : null) + '</b> do mercado</div></div>';
+  if (cidades.some(function(x) { return !x.semConc; })) html += '<div class="card conc"><div class="card-t">Liderança</div><div class="card-v">' + lideres.length + ' <span class="sub" style="font-size:13px">de ' + cidades.filter(function(x) { return x.peso >= 1; }).length + '</span></div><div class="card-f">cidades relevantes em que ' + esc(marca) + ' é a 1ª marca do mercado · as 10 maiores cidades concentram <b>' + pct1(tot.tot ? soma(top10, 'tot') / tot.tot * 100 : null) + '</b> do mercado</div></div>';
   html += '</div>';
 
   // cidade selecionada: concorrentes na cidade
@@ -1036,7 +1036,7 @@ function demandaCidade(marca, linha, mesSel, mesAnt, meses, comEscopo, rotEsc, n
           return q ? q.valor / h.tot * 100 : null;
         }) };
       });
-      html += '<div class="rep-banner" style="margin-top:14px;border-color:#2563eb">🏪 <b>' + esc(STATE.cidSel) + '</b> <span class="cid-tag ' + c0.cls + '">' + ROT[c0.cls] + '</span> <span class="sub">— ' + fmtRS(c0.tot) + ' de mercado (' + pct1(c0.peso) + ' da regional) · ' + esc(marca) + ' em ' + c0.posicao + 'º lugar com ' + fmtPct(c0.share) + (c0.dif === null ? '' : ' (' + pp(c0.dif) + ' vs regional)') + '</span></div>';
+      html += '<div class="rep-banner" style="margin-top:14px;border-color:#2563eb">🏪 <b>' + esc(STATE.cidSel) + '</b> <span class="cid-tag ' + c0.cls + '">' + ROT[c0.cls] + '</span> <span class="sub">— ' + fmtRS(c0.tot) + ' de mercado (' + pct1(c0.peso) + ' da regional) · ' + esc(marca) + (c0.posicao ? ' em ' + c0.posicao + 'º lugar' : '') + ' com ' + fmtPct(c0.share) + (c0.dif === null ? '' : ' (' + pp(c0.dif) + ' vs regional)') + '</span></div>';
       html += '<div class="graf-grid"><div class="graf-box"><div class="graf-t">Concorrentes em ' + esc(STATE.cidSel) + ' <span class="sub">' + mesSel + '/2026 · share em valor</span></div><div class="box"><div class="box-scroll"><table><thead><tr><th class="l">Produto</th><th>Valor</th><th>Share na cidade</th></tr></thead><tbody>';
       ps.forEach(function(p) {
         var sh = p.valor / c0.tot * 100;
@@ -1063,7 +1063,7 @@ function demandaCidade(marca, linha, mesSel, mesAnt, meses, comEscopo, rotEsc, n
   if (STATE.cidTop && !busca) lista = lista.slice(0, STATE.cidTop);
   function th(col, txt, left) { return '<th class="sortable' + (left ? ' l' : '') + '" data-sort="cidd:' + col + '">' + txt + (sc.col === col ? (sc.dir < 0 ? ' ▼' : ' ▲') : '') + '</th>'; }
   var ultimos = meses.slice(-3);
-  html += '<div class="sec-hdr">Market share por cidade <small>' + (STATE.cidTop && !busca && totalLista > lista.length ? 'as ' + lista.length + ' maiores de ' + totalLista : lista.length + ' cidades') + ' · venda a preço fábrica · cidade do ponto de venda · clique na cidade para ver os concorrentes</small></div>';
+  html += '<div class="sec-hdr">Market share por cidade <small>' + (STATE.cidTop && !busca && totalLista > lista.length ? 'as ' + lista.length + ' maiores de ' + totalLista : lista.length + ' cidades') + ' · venda a preço fábrica · cidade do ponto de venda · ' + (cidades.some(function(x) { return !x.semConc; }) ? 'clique na cidade para ver os concorrentes' : 'leitura pela página Demanda | Análise de Performance (marca × mercado, sem abertura por concorrente)') + '</small></div>';
   html += '<div class="box"><div class="box-scroll"><table><thead><tr>' + th('cidade', 'Cidade', true) + th('tot', 'Mercado (R$)') + th('peso', 'Peso na regional') + th('marca', esc(marca) + ' (R$)') + th('share', 'Market share') + th('var_pp', 'Variação') + th('dif', 'vs regional') + th('posicao', 'Posição') + '<th class="l">Líder / principal concorrente</th><th>Leitura</th><th class="l">Ciclos lidos</th></tr></thead><tbody>';
   var pesoMax = ordTot[0] && ordTot[0].peso ? ordTot[0].peso : 1;
   lista.forEach(function(c) {
@@ -1072,7 +1072,7 @@ function demandaCidade(marca, linha, mesSel, mesAnt, meses, comEscopo, rotEsc, n
       '<td>' + fmtRS(c.tot) + '</td><td><span class="peso-bar"><i style="width:' + Math.min(100, (c.peso || 0) / pesoMax * 100) + '%;background:#2563eb"></i></span>' + pct1(c.peso) + '</td>' +
       '<td>' + fmtRS(c.marca) + '</td><td><div class="share-cell"><span class="share-bar"><i style="width:' + Math.min(100, c.share || 0) + '%;background:#2563eb"></i></span><b class="share-n">' + fmtPct(c.share) + '</b></div></td>' +
       '<td>' + trend(c.var_pp, ' pp') + '</td><td>' + (c.dif === null ? '—' : '<span class="tr ' + (c.dif > 0 ? 'up' : (c.dif < 0 ? 'down' : 'flat')) + '">' + pp(c.dif) + '</span>') + '</td>' +
-      '<td>' + c.posicao + 'º</td><td class="l">' + (c.lider ? esc(c.lider.produto) + ' <span class="sub">' + fmtPct(c.lider.share) + '</span>' + (c.lider.gen ? ' <span class="tag-conc">genérico</span>' : '') : '—') + '</td>' +
+      '<td>' + (c.posicao ? c.posicao + 'º' : '—') + '</td><td class="l">' + (c.lider ? esc(c.lider.produto) + ' <span class="sub">' + fmtPct(c.lider.share) + '</span>' + (c.lider.gen ? ' <span class="tag-conc">genérico</span>' : '') : '—') + '</td>' +
       '<td><span class="cid-tag ' + c.cls + '">' + ROT[c.cls] + '</span></td><td class="l cid-hist">' + histTxt + '</td></tr>';
   });
   if (!lista.length) html += '<tr><td colspan="11" class="l sub">Nenhuma cidade encontrada.</td></tr>';
