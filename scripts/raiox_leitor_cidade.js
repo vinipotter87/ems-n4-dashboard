@@ -1,5 +1,6 @@
 // raiox_leitor_cidade.js — variante do raiox_leitor_v2.js para a visão "Médico | Cidade" da página
 // "Prescrição | Análise de Performance" (market share das marcas-chave por cidade do médico).
+// Serve também para "Demanda | Análise de Concorrentes" com "Analisar por (1)" = GDU | Cidade da UTC (tipo DEM).
 // Diferenças: aceita "Analisar por" fora do grupo GDU, e o nível no nome do arquivo passa a ser
 // SETOR / DISTRITAL / CIDADE (RX_{MARCA}_{LINHA}_{REGIONAL}_CIDADE_{MES}.json → ingest_mercado.py --apenas-cidade).
 // Uso igual ao v2: __marcar(), __job({ tipo:'RX', linha, regional, marcas, analises:['Médico | Cidade'],
@@ -93,7 +94,7 @@
     const L = (s) => window.__js.log.push(s);
     let antes = window.__antes || null, ordem = periodos.slice();
     window.__antes = null;
-    const nomeDe = (m, an, suf) => tipo + '_' + m.replace(/ /g, '_') + '_' + linha + '_' + regional + '_' + (an.endsWith('Setor') ? 'SETOR' : an.endsWith('Cidade') ? 'CIDADE' : 'DISTRITAL') + '_' + suf;
+    const nomeDe = (m, an, suf) => tipo + '_' + m.replace(/ /g, '_') + '_' + linha + '_' + regional + '_' + (an.endsWith('Setor') ? 'SETOR' : /Cidade/.test(an) ? 'CIDADE' : 'DISTRITAL') + '_' + suf;
     try {
       for (const m of marcas) {
         const alvo = 'MARCAS CHAVES ' + linha + ' (grupo) + ' + m + ' (mercado)';

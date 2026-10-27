@@ -13,6 +13,8 @@ Lê os JSON em inputs_powerbi/mercado/ (um por tabela lida do Raio X):
     DEM_{MARCA}_{LINHA}_{REGIONAL}_REGIONAL_{MES}.json  mesma página, "Analisar por (1)" vazio
     RX_{MARCA}_{LINHA}_{REGIONAL}_CIDADE_{MES}.json     Prescrição | Análise de Performance, Médico | Cidade
                                                         (lido com scripts/raiox_leitor_cidade.js)
+    DEM_{MARCA}_{LINHA}_{REGIONAL}_CIDADE_{MES}.json    Demanda | Análise de Concorrentes, GDU | Cidade da UTC
+                                                        × Mercado | Produto Gen. Agrup → aba mercado_demanda_cidade
 
 Escreve nas abas mercado_rx, mercado_demanda e mercado_cidade (série histórica, um ciclo ao lado do outro).
     python scripts/ingest_mercado.py --mes SET --apenas-cidade   (só os arquivos _CIDADE_ → aba mercado_cidade)
@@ -131,6 +133,28 @@ def processar_rx_cidade(path, marca, linha, regional, mes):
     return out
 
 
+def processar_dem_cidade(path, marca, linha, regional, mes):
+    """
+    Demanda | Análise de Concorrentes com "Analisar por (1)" = GDU | Cidade da UTC: uma linha por
+    cidade (do ponto de venda, não do médico) × produto. Colunas: cidade, produto, valor, cresc, share, var.
+    """
+    dados = json.loads(path.read_text(encoding="utf-8"))
+    out = []
+    for r in dados["rows"]:
+        if len(r) == 4 and limpar(r[0]) != "Total":
+            r = [r[0], r[1], "0", r[2], "0", r[3]]
+        if len(r) < 6:
+            continue
+        cid, produto = limpar(r[0]).upper(), limpar(r[1])
+        out.append({
+            "mes": mes, "regional": regional, "linha": linha, "marca": marca,
+            "cidade": cid, "produto": produto,
+            "eh_marca": "1" if produto.upper() == f"{marca} (EMS)".upper() else "0",
+            "valor": num(r[2]), "cresc_pct": num(r[3]), "share": num(r[4]), "var_pp": num(r[5]),
+        })
+    return out
+
+
 def processar_dem(path, marca, linha, regional, nivel_arq, mes):
     dados = json.loads(path.read_text(encoding="utf-8"))
     out = []
@@ -208,7 +232,7 @@ def main():
     if mes not in ingest.MESES_VALIDOS:
         sys.exit(f"Mês inválido: {mes}")
 
-    rx, dem, cid = [], [], []
+    rx, dem, cid, dcid = [], [], [], []
     for path in sorted(PASTA.glob(f"*_{mes}.json")):
         info = parse_nome_arquivo(path)
         if not info:
@@ -216,12 +240,14 @@ def main():
             continue
         tipo, marca, linha, regional, nivel_arq, _ = info
         if nivel_arq == "CIDADE":
-            if tipo != "RX":
-                print(f"  ⚠  Só prescrição tem leitura por cidade, ignorado: {path.name}")
-                continue
-            linhas = processar_rx_cidade(path, marca, linha, regional, mes)
-            cid.extend(linhas)
-            print(f"  ✓ {path.name}: {len(linhas)} cidades")
+            if tipo == "RX":
+                linhas = processar_rx_cidade(path, marca, linha, regional, mes)
+                cid.extend(linhas)
+                print(f"  ✓ {path.name}: {len(linhas)} cidades")
+            else:
+                linhas = processar_dem_cidade(path, marca, linha, regional, mes)
+                dcid.extend(linhas)
+                print(f"  ✓ {path.name}: {len(linhas)} cidade×produto")
             continue
         if args.apenas_cidade:
             continue
@@ -229,7 +255,7 @@ def main():
         (rx if tipo == "RX" else dem).extend(linhas)
         print(f"  ✓ {path.name}: {len(linhas)} registros")
 
-    if not rx and not dem and not cid:
+    if not rx and not dem and not cid and not dcid:
         sys.exit(f"Nenhum arquivo de {mes} em {PASTA}")
 
     # O Raio X arredonda o share (5%); recalcula com 2 casas a partir dos valores
@@ -247,9 +273,19 @@ def main():
         dem.extend(derivadas)
         print(f"  ✓ {len(derivadas)} linhas REGIONAL de demanda calculadas a partir dos distritos")
 
-    print(f"\nTotal {mes}: {len(rx)} registros de prescrição, {len(dem)} de demanda, {len(cid)} por cidade")
+    # share da demanda por cidade recalculado com 2 casas a partir dos valores
+    tot_c = {}
+    for r in dcid:
+        k = (r["regional"], r["linha"], r["marca"], r["cidade"])
+        tot_c[k] = tot_c.get(k, 0.0) + (r["valor"] or 0.0)
+    for r in dcid:
+        t = tot_c[(r["regional"], r["linha"], r["marca"], r["cidade"])]
+        if t > 0 and r["valor"] is not None:
+            r["share"] = round(r["valor"] / t * 100, 2)
+
+    print(f"\nTotal {mes}: {len(rx)} registros de prescrição, {len(dem)} de demanda, {len(cid)} por cidade, {len(dcid)} demanda por cidade")
     if args.dry:
-        for amostra in (rx[:2], dem[:2], cid[:2]):
+        for amostra in (rx[:2], dem[:2], cid[:2], dcid[:2]):
             for a in amostra:
                 print("   ", a)
         return
@@ -261,6 +297,8 @@ def main():
         ingest.anexar_aba_por_mes(gc, sh, "mercado_demanda", dem, mes)
     if cid:
         ingest.anexar_aba_por_mes(gc, sh, "mercado_cidade", cid, mes)
+    if dcid:
+        ingest.anexar_aba_por_mes(gc, sh, "mercado_demanda_cidade", dcid, mes)
     print(f"Dados de Mercado {mes} publicados.")
 
 
