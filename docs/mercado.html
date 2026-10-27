@@ -922,7 +922,7 @@ function renderCidade() {
       else series.push({ nome: nomeReg, cor: '#0d9488', tracejado: true, dash: '6 4', referencia: true, pontos: labels.map(function(m) { return regTot[m] ? regTot[m].share : null; }) });
       html += '<div class="rep-banner" style="margin-top:14px">📍 <b>' + esc(STATE.cidSel) + '</b> <span class="cid-tag ' + c0.cls + '">' + ROT[c0.cls] + '</span> <span class="sub">— ' + fmtInt(c0.rx) + ' receitas (' + pct1(c0.peso) + ' do ' + rotEsc + ') · painel ' + fmtInt(c0.painel) + ' médicos' + (comEscopo ? ' · ' + fmtInt(c0.presc) + ' prescritores do mercado' : '') + ' · share ' + fmtPct(c0.share) + (c0.dif === null ? '' : ' (' + pp(c0.dif) + ' vs ' + refTxt + ')') + '</span> <button class="link-btn" data-cidade="' + esc(STATE.cidSel) + '">✕ fechar</button></div>';
       var infoC = rxConcCidade(linha, marca, STATE.cidSel, mesSel);
-      html += '<div class="graf-grid"><div class="graf-box"><div class="graf-t">Presc. share · ' + esc(STATE.cidSel) + ' <span class="sub">linha cheia = ' + rotEsc + ' na cidade · tracejada = ' + (comEscopo ? 'regional na cidade' : 'regional') + '</span></div>' + graficoLinhas(labels, series, labels.map(function() { return false; })) + '</div>' + concCidadeHtml(infoC, STATE.cidSel, marca) + '</div>';
+      html += '<div class="graf-grid"><div class="graf-box"><div class="graf-t">Presc. share · ' + esc(STATE.cidSel) + ' <span class="sub">linha cheia = ' + rotEsc + ' na cidade · tracejada = ' + (comEscopo ? 'regional na cidade' : 'regional') + '</span></div>' + graficoLinhas(labels, series, labels.map(function() { return false; })) + '</div>' + concCidadeHtml(infoC, STATE.cidSel, marca) + (function() { var sC = concSeriesCidade(linha, marca, STATE.cidSel, labels); return sC.length ? '<div class="graf-box"><div class="graf-t">Disputa nas receitas · ' + esc(STATE.cidSel) + ' <span class="sub">share de receitas de ' + esc(marca) + ' e dos ' + (sC.length - 1) + ' maiores concorrentes na cidade · ciclo sem leitura usa o share anterior do ciclo seguinte</span></div>' + graficoLinhas(labels, sC, labels.map(function() { return false; })) + '</div>' : ''; })() + '</div>';
       if (!infoC) html += '<div class="nota">Concorrentes de prescrição ainda não lidos para ' + esc(STATE.cidSel) + ' (a leitura por cidade cobre as 20 maiores cidades da regional).</div>';
     }
   }
@@ -1095,6 +1095,26 @@ function rxConcCidade(linha, marca, cidade, mesSel) {
   var conc = lista.filter(function(x) { return !x.eh; });
   return { mes: mes, lista: lista, nossa: nossa, lider: conc[0] || null, posicao: nossa ? 1 + conc.filter(function(x) { return (x.share || 0) > (nossa.share || 0); }).length : null };
 }
+function concSeriesCidade(linha, marca, cidade, meses) {
+  var MS = TODOS_MESES;
+  var base = (STATE.rxc || []).filter(function(r) { return r.regional === STATE.regional && r.linha === linha && r.marca === marca && r.nivel === 'CIDADE' && r.codigo === cidade; });
+  if (!base.length) return [];
+  var ult = base.map(function(r) { return r.mes; }).sort(function(a, b) { return MS.indexOf(a) - MS.indexOf(b); }).pop();
+  var top = base.filter(function(r) { return r.mes === ult && r.eh_marca !== '1'; }).sort(function(a, b) { return (n(b.share) || 0) - (n(a.share) || 0); }).slice(0, 4);
+  var nossa = base.filter(function(r) { return r.mes === ult && r.eh_marca === '1'; })[0];
+  var prods = (nossa ? [nossa] : []).concat(top);
+  function shareDe(produto, m) {
+    var r = base.filter(function(x) { return x.mes === m && x.produto === produto; })[0];
+    if (r) return n(r.share);
+    var seg = MS[MS.indexOf(m) + 1], r2 = seg && base.filter(function(x) { return x.mes === seg && x.produto === produto; })[0];
+    return r2 ? n(r2.share_ant) : null;
+  }
+  return prods.map(function(t, k) {
+    var eh = t.eh_marca === '1';
+    return { nome: t.produto, destaque: eh, cor: eh ? '#0d9488' : ['#7c3aed', '#d97706', '#be123c', '#64748b'][(k - (nossa ? 1 : 0)) % 4], pontos: meses.map(function(m) { return shareDe(t.produto, m); }) };
+  });
+}
+
 function concCidadeHtml(info, cidade, marca) {
   if (!info) return '';
   var o = '<div class="graf-box"><div class="graf-t">Prescrição · concorrentes em ' + esc(cidade) + ' <span class="sub">' + info.mes + '/2026 · share de receitas · Raio X › Prescrição | Análise de Concorrentes</span></div>';
