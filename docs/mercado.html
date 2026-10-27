@@ -78,6 +78,7 @@ tr.gen-row td{color:var(--gray);background:#fafafa}
 .graf-t{font-size:12.5px;font-weight:800;margin-bottom:6px}
 .graf-t .sub{margin-left:6px}
 svg.graf{width:100%;height:auto;display:block}
+.g-wrap{max-width:760px}
 .g-grid{stroke:#e5e7eb;stroke-width:1}
 .g-eixo{font-size:10px;fill:#6B7280}
 .g-atual{font-weight:800;fill:#111827}
@@ -916,11 +917,11 @@ function renderCidade() {
     var c0 = cidades.filter(function(x) { return x.cidade === STATE.cidSel; })[0];
     if (c0) {
       var labels = meses.slice();
-      var series = [{ nome: esc(nomeEsc) + ' · ' + STATE.cidSel, pontos: labels.map(function(m) { return c0.hist[m] ? c0.hist[m].share : null; }) }];
-      if (comEscopo) series.push({ nome: nomeReg + ' · ' + STATE.cidSel, pontos: labels.map(function(m) { var h = regCid[STATE.cidSel] && regCid[STATE.cidSel][m]; return h ? h.share : null; }), dash: '6 4' });
-      else series.push({ nome: nomeReg, pontos: labels.map(function(m) { return regTot[m] ? regTot[m].share : null; }), dash: '6 4' });
+      var series = [{ nome: esc(nomeEsc) + ' · ' + STATE.cidSel, cor: '#0d9488', destaque: true, pontos: labels.map(function(m) { return c0.hist[m] ? c0.hist[m].share : null; }) }];
+      if (comEscopo) series.push({ nome: nomeReg + ' · ' + STATE.cidSel, cor: '#0d9488', tracejado: true, dash: '6 4', referencia: true, pontos: labels.map(function(m) { var h = regCid[STATE.cidSel] && regCid[STATE.cidSel][m]; return h ? h.share : null; }) });
+      else series.push({ nome: nomeReg, cor: '#0d9488', tracejado: true, dash: '6 4', referencia: true, pontos: labels.map(function(m) { return regTot[m] ? regTot[m].share : null; }) });
       html += '<div class="rep-banner" style="margin-top:14px">📍 <b>' + esc(STATE.cidSel) + '</b> <span class="cid-tag ' + c0.cls + '">' + ROT[c0.cls] + '</span> <span class="sub">— ' + fmtInt(c0.rx) + ' receitas (' + pct1(c0.peso) + ' do ' + rotEsc + ') · painel ' + fmtInt(c0.painel) + ' médicos' + (comEscopo ? ' · ' + fmtInt(c0.presc) + ' prescritores do mercado' : '') + ' · share ' + fmtPct(c0.share) + (c0.dif === null ? '' : ' (' + pp(c0.dif) + ' vs ' + refTxt + ')') + '</span> <button class="link-btn" data-cidade="' + esc(STATE.cidSel) + '">✕ fechar</button></div>';
-      html += '<div class="graf-grid"><div class="graf-box"><div class="graf-t">Presc. share · ' + esc(STATE.cidSel) + ' <span class="sub">linha cheia = ' + rotEsc + ' na cidade · tracejada = ' + (comEscopo ? 'regional na cidade' : 'regional') + '</span></div>' + graficoLinhas(labels, series, labels.map(function() { return false; })) + '</div></div>';
+      html += '<div class="graf-grid"><div class="graf-box"><div class="graf-t">Presc. share · ' + esc(STATE.cidSel) + ' <span class="sub">linha cheia = ' + rotEsc + ' na cidade · tracejada = ' + (comEscopo ? 'regional na cidade' : 'regional') + ' · a leitura por cidade do Raio X traz só a marca; os concorrentes por cidade estão no bloco Demanda</span></div>' + graficoLinhas(labels, series, labels.map(function() { return false; })) + '</div></div>';
     }
   }
 
@@ -1021,8 +1022,18 @@ function demandaCidade(marca, linha, mesSel, mesAnt, meses, comEscopo, rotEsc, n
     if (c0) {
       var ps = c0.prods.slice().sort(function(a, b) { return b.valor - a.valor; }).slice(0, 8);
       var labels = meses.slice();
-      var sCid = { nome: STATE.cidSel, pontos: labels.map(function(m) { var h = c0.hist[m]; return h && h.tot ? h.marca / h.tot * 100 : null; }) };
-      var sReg = { nome: nomeReg, pontos: labels.map(function(m) { var t = regTot[m]; return t && t.tot ? t.marca / t.tot * 100 : null; }), dash: '6 4' };
+      // gráfico: marca na cidade (destaque) + os 4 maiores concorrentes de marca da cidade no mês
+      // (genérico fica fora do ranking, como no resto da página) + marca na regional tracejada
+      var sCid = { nome: esc(marca) + ' · ' + STATE.cidSel, cor: '#2563eb', destaque: true, pontos: labels.map(function(m) { var h = c0.hist[m]; return h && h.tot ? h.marca / h.tot * 100 : null; }) };
+      var sReg = { nome: esc(marca) + ' · ' + nomeReg, cor: '#2563eb', tracejado: true, dash: '6 4', referencia: true, pontos: labels.map(function(m) { var t = regTot[m]; return t && t.tot ? t.marca / t.tot * 100 : null; }) };
+      var concTop = c0.prods.filter(function(p) { return !p.eh && !p.gen; }).sort(function(a, b) { return b.valor - a.valor; }).slice(0, 4);
+      var sConcCid = concTop.map(function(p, k) {
+        return { nome: p.produto, cor: ['#7c3aed', '#d97706', '#be123c', '#64748b'][k], pontos: labels.map(function(m) {
+          var h = c0.hist[m]; if (!h || !h.tot) return null;
+          var q = h.prods.filter(function(x) { return x.produto === p.produto; })[0];
+          return q ? q.valor / h.tot * 100 : null;
+        }) };
+      });
       html += '<div class="rep-banner" style="margin-top:14px;border-color:#2563eb">🏪 <b>' + esc(STATE.cidSel) + '</b> <span class="cid-tag ' + c0.cls + '">' + ROT[c0.cls] + '</span> <span class="sub">— ' + fmtRS(c0.tot) + ' de mercado (' + pct1(c0.peso) + ' da regional) · ' + esc(marca) + ' em ' + c0.posicao + 'º lugar com ' + fmtPct(c0.share) + (c0.dif === null ? '' : ' (' + pp(c0.dif) + ' vs regional)') + '</span></div>';
       html += '<div class="graf-grid"><div class="graf-box"><div class="graf-t">Concorrentes em ' + esc(STATE.cidSel) + ' <span class="sub">' + mesSel + '/2026 · share em valor</span></div><div class="box"><div class="box-scroll"><table><thead><tr><th class="l">Produto</th><th>Valor</th><th>Share na cidade</th></tr></thead><tbody>';
       ps.forEach(function(p) {
@@ -1030,7 +1041,7 @@ function demandaCidade(marca, linha, mesSel, mesAnt, meses, comEscopo, rotEsc, n
         html += '<tr' + (p.eh ? ' class="marca"' : '') + '><td class="l">' + esc(p.produto) + (p.gen ? ' <span class="tag-conc">genérico</span>' : '') + '</td><td>' + fmtRS(p.valor) + '</td><td><div class="share-cell"><span class="share-bar"><i style="width:' + Math.min(100, sh) + '%' + (p.eh ? ';background:#2563eb' : '') + '"></i></span><b class="share-n">' + fmtPct(sh) + '</b></div></td></tr>';
       });
       html += '</tbody></table></div></div></div>';
-      html += '<div class="graf-box"><div class="graf-t">Market share · ' + esc(STATE.cidSel) + ' <span class="sub">linha cheia = cidade · tracejada = regional</span></div>' + graficoLinhas(labels, [sCid, sReg], labels.map(function() { return false; })) + '</div></div>';
+      html += '<div class="graf-box"><div class="graf-t">Market share · ' + esc(STATE.cidSel) + ' <span class="sub">' + esc(marca) + ' e os ' + sConcCid.length + ' maiores concorrentes na cidade · tracejada = ' + esc(marca) + ' na regional</span></div>' + graficoLinhas(labels, [sCid].concat(sConcCid, [sReg]), labels.map(function() { return false; })) + '</div></div>';
     }
   }
 
