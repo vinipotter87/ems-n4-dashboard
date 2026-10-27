@@ -11,8 +11,11 @@ Lê os JSON em inputs_powerbi/mercado/ (um por tabela lida do Raio X):
     RX_{MARCA}_{LINHA}_{REGIONAL}_DISTRITAL_{MES}.json  mesma página, GDU | Distrital
     DEM_{MARCA}_{LINHA}_{REGIONAL}_SETOR_{MES}.json     Demanda | Análise de Concorrentes, GDU | Setor
     DEM_{MARCA}_{LINHA}_{REGIONAL}_REGIONAL_{MES}.json  mesma página, "Analisar por (1)" vazio
+    RX_{MARCA}_{LINHA}_{REGIONAL}_CIDADE_{MES}.json     Prescrição | Análise de Performance, Médico | Cidade
+                                                        (lido com scripts/raiox_leitor_cidade.js)
 
-Escreve nas abas mercado_rx e mercado_demanda (série histórica, um ciclo ao lado do outro).
+Escreve nas abas mercado_rx, mercado_demanda e mercado_cidade (série histórica, um ciclo ao lado do outro).
+    python scripts/ingest_mercado.py --mes SET --apenas-cidade   (só os arquivos _CIDADE_ → aba mercado_cidade)
 """
 
 import sys, json, argparse, re
@@ -24,7 +27,7 @@ import ingest
 PASTA = ingest.ROOT / "inputs_powerbi" / "mercado"
 LINHAS = ("NEXUS", "VITAL")
 REGIONAIS = ("SPI", "LESTE")
-NIVEIS = ("SETOR", "DISTRITAL", "REGIONAL")
+NIVEIS = ("SETOR", "DISTRITAL", "REGIONAL", "CIDADE")
 
 
 def num(txt):
@@ -102,6 +105,32 @@ def processar_rx(path, marca, linha, regional, nivel_arq, mes):
     return out
 
 
+def processar_rx_cidade(path, marca, linha, regional, mes):
+    """
+    Visão "Médico | Cidade": uma linha por cidade do consultório do médico (não é a cidade do setor).
+    A linha Total da tabela vira nivel TOTAL (soma das cidades; médicos sem cidade ficam fora dela,
+    por isso o painel aqui é um pouco menor que o da visão por distrito).
+    """
+    dados = json.loads(path.read_text(encoding="utf-8"))
+    out = []
+    for r in dados["rows"]:
+        if len(r) == 3:
+            r = [r[0], r[1], r[2], "0", ""]
+        elif len(r) == 4:
+            r = [r[0], r[1], r[2], "0", r[3]]
+        elif len(r) < 5:
+            continue
+        rotulo = limpar(r[0])
+        out.append({
+            "mes": mes, "regional": regional, "linha": linha, "marca": marca,
+            "nivel": "TOTAL" if rotulo == "Total" else "CIDADE",
+            "cidade": "TOTAL" if rotulo == "Total" else rotulo.upper(),
+            "painel": num(r[1]), "rx_mercado": num(r[2]),
+            "share": num(r[3]), "var_pp": num(r[4]),
+        })
+    return out
+
+
 def processar_dem(path, marca, linha, regional, nivel_arq, mes):
     dados = json.loads(path.read_text(encoding="utf-8"))
     out = []
@@ -172,23 +201,35 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--mes", required=True)
     ap.add_argument("--dry-run", action="store_true", dest="dry")
+    ap.add_argument("--apenas-cidade", action="store_true", dest="apenas_cidade",
+                    help="processa só os arquivos _CIDADE_ e escreve só a aba mercado_cidade")
     args = ap.parse_args()
     mes = args.mes.upper()
     if mes not in ingest.MESES_VALIDOS:
         sys.exit(f"Mês inválido: {mes}")
 
-    rx, dem = [], []
+    rx, dem, cid = [], [], []
     for path in sorted(PASTA.glob(f"*_{mes}.json")):
         info = parse_nome_arquivo(path)
         if not info:
             print(f"  ⚠  Nome fora do padrão, ignorado: {path.name}")
             continue
         tipo, marca, linha, regional, nivel_arq, _ = info
+        if nivel_arq == "CIDADE":
+            if tipo != "RX":
+                print(f"  ⚠  Só prescrição tem leitura por cidade, ignorado: {path.name}")
+                continue
+            linhas = processar_rx_cidade(path, marca, linha, regional, mes)
+            cid.extend(linhas)
+            print(f"  ✓ {path.name}: {len(linhas)} cidades")
+            continue
+        if args.apenas_cidade:
+            continue
         linhas = (processar_rx if tipo == "RX" else processar_dem)(path, marca, linha, regional, nivel_arq, mes)
         (rx if tipo == "RX" else dem).extend(linhas)
         print(f"  ✓ {path.name}: {len(linhas)} registros")
 
-    if not rx and not dem:
+    if not rx and not dem and not cid:
         sys.exit(f"Nenhum arquivo de {mes} em {PASTA}")
 
     # O Raio X arredonda o share (5%); recalcula com 2 casas a partir dos valores
@@ -206,9 +247,9 @@ def main():
         dem.extend(derivadas)
         print(f"  ✓ {len(derivadas)} linhas REGIONAL de demanda calculadas a partir dos distritos")
 
-    print(f"\nTotal {mes}: {len(rx)} registros de prescrição, {len(dem)} de demanda")
+    print(f"\nTotal {mes}: {len(rx)} registros de prescrição, {len(dem)} de demanda, {len(cid)} por cidade")
     if args.dry:
-        for amostra in (rx[:2], dem[:2]):
+        for amostra in (rx[:2], dem[:2], cid[:2]):
             for a in amostra:
                 print("   ", a)
         return
@@ -218,6 +259,8 @@ def main():
         ingest.anexar_aba_por_mes(gc, sh, "mercado_rx", rx, mes)
     if dem:
         ingest.anexar_aba_por_mes(gc, sh, "mercado_demanda", dem, mes)
+    if cid:
+        ingest.anexar_aba_por_mes(gc, sh, "mercado_cidade", cid, mes)
     print(f"Dados de Mercado {mes} publicados.")
 
 
