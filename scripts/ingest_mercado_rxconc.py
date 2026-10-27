@@ -4,7 +4,8 @@ cada marca do mercado das marcas-chave (página "Prescrição | Análise de Conc
 
 Lê os JSONs `inputs_powerbi/mercado/RXC_{MARCA}_{LINHA}_{REGIONAL}_{ESCOPO}_{MES}.json`
 (gravados por raiox_leitor_rxconc.js + salvar_leitura_mercado.ps1), onde ESCOPO é `REGIONAL`
-ou o código do distrito (ex.: 11030100). Cada linha da tabela do Raio X traz o share do mês
+ou o código do distrito (ex.: 11030100), o código do setor, ou `CID-NOME-DA-CIDADE` (FILTRO 1 =
+Médico | Cidade, nivel CIDADE, codigo = nome da cidade). Cada linha da tabela do Raio X traz o share do mês
 anterior, o share do mês e a penetração (diferença em pontos percentuais).
 
 Uso (cwd = ems-n4-dashboard, PYTHONIOENCODING=utf-8):
@@ -36,7 +37,17 @@ def nivel_do_escopo(escopo):
     A leitura por setor usa o filtro Setor do bloco FILTRO do Raio X, um setor por vez."""
     if escopo == "REGIONAL":
         return "REGIONAL"
+    if escopo.startswith("CID-"):
+        return "CIDADE"      # FILTRO 1 = Médico | Cidade (cidade do consultório), uma cidade por vez
     return "DISTRITO" if escopo.endswith("00") else "SETOR"
+
+
+def codigo_do_escopo(escopo):
+    if escopo == "REGIONAL":
+        return ""
+    if escopo.startswith("CID-"):
+        return escopo[4:].replace("-", " ")
+    return escopo
 
 
 def linha_para_registro(cels):
@@ -76,7 +87,7 @@ def main():
     if not arquivos:
         sys.exit(f"Nenhum arquivo RXC_*_{mes}.json em {PASTA}")
     for arq in arquivos:
-        m = re.match(rf"RXC_(.+)_(NEXUS|VITAL)_(SPI|LESTE)_(REGIONAL|\d{{8}})_{mes}$", arq.stem)
+        m = re.match(rf"RXC_(.+)_(NEXUS|VITAL)_(SPI|LESTE)_(REGIONAL|\d{{8}}|CID-[A-Z0-9-]+)_{mes}$", arq.stem)
         if not m:
             print(f"  ⚠  nome fora do padrão: {arq.name}")
             continue
@@ -90,7 +101,7 @@ def main():
             registros.append({
                 "mes": mes, "regional": regional, "linha": linha, "marca": marca,
                 "nivel": nivel_do_escopo(escopo),
-                "codigo": "" if escopo == "REGIONAL" else escopo,
+                "codigo": codigo_do_escopo(escopo),
                 "produto": produto, "eh_marca": "1" if produto.upper() == f"{marca} (EMS)" else "0",
                 "share": "" if atual is None else atual,
                 "share_ant": "" if ant is None else ant,
@@ -122,7 +133,7 @@ def derivar(mes, dry):
         sys.exit(f"Nenhum arquivo RXC_*_{seg}.json em {PASTA} para derivar {mes}")
     registros = []
     for arq in arquivos:
-        m = re.match(rf"RXC_(.+)_(NEXUS|VITAL)_(SPI|LESTE)_(REGIONAL|\d{{8}})_{seg}$", arq.stem)
+        m = re.match(rf"RXC_(.+)_(NEXUS|VITAL)_(SPI|LESTE)_(REGIONAL|\d{{8}}|CID-[A-Z0-9-]+)_{seg}$", arq.stem)
         if not m:
             continue
         marca, linha, regional, escopo = m.group(1).replace("_", " "), m.group(2), m.group(3), m.group(4)
@@ -143,7 +154,7 @@ def derivar(mes, dry):
             registros.append({
                 "mes": mes, "regional": regional, "linha": linha, "marca": marca,
                 "nivel": nivel_do_escopo(escopo),
-                "codigo": "" if escopo == "REGIONAL" else escopo,
+                "codigo": codigo_do_escopo(escopo),
                 "produto": produto, "eh_marca": "1" if produto.upper() == f"{marca} (EMS)" else "0",
                 "share": share,
                 "share_ant": "" if s_ant is None else s_ant,

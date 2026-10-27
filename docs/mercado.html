@@ -921,7 +921,9 @@ function renderCidade() {
       if (comEscopo) series.push({ nome: nomeReg + ' · ' + STATE.cidSel, cor: '#0d9488', tracejado: true, dash: '6 4', referencia: true, pontos: labels.map(function(m) { var h = regCid[STATE.cidSel] && regCid[STATE.cidSel][m]; return h ? h.share : null; }) });
       else series.push({ nome: nomeReg, cor: '#0d9488', tracejado: true, dash: '6 4', referencia: true, pontos: labels.map(function(m) { return regTot[m] ? regTot[m].share : null; }) });
       html += '<div class="rep-banner" style="margin-top:14px">📍 <b>' + esc(STATE.cidSel) + '</b> <span class="cid-tag ' + c0.cls + '">' + ROT[c0.cls] + '</span> <span class="sub">— ' + fmtInt(c0.rx) + ' receitas (' + pct1(c0.peso) + ' do ' + rotEsc + ') · painel ' + fmtInt(c0.painel) + ' médicos' + (comEscopo ? ' · ' + fmtInt(c0.presc) + ' prescritores do mercado' : '') + ' · share ' + fmtPct(c0.share) + (c0.dif === null ? '' : ' (' + pp(c0.dif) + ' vs ' + refTxt + ')') + '</span> <button class="link-btn" data-cidade="' + esc(STATE.cidSel) + '">✕ fechar</button></div>';
-      html += '<div class="graf-grid"><div class="graf-box"><div class="graf-t">Presc. share · ' + esc(STATE.cidSel) + ' <span class="sub">linha cheia = ' + rotEsc + ' na cidade · tracejada = ' + (comEscopo ? 'regional na cidade' : 'regional') + ' · a leitura por cidade do Raio X traz só a marca; os concorrentes por cidade estão no bloco Demanda</span></div>' + graficoLinhas(labels, series, labels.map(function() { return false; })) + '</div></div>';
+      var infoC = rxConcCidade(linha, marca, STATE.cidSel, mesSel);
+      html += '<div class="graf-grid"><div class="graf-box"><div class="graf-t">Presc. share · ' + esc(STATE.cidSel) + ' <span class="sub">linha cheia = ' + rotEsc + ' na cidade · tracejada = ' + (comEscopo ? 'regional na cidade' : 'regional') + '</span></div>' + graficoLinhas(labels, series, labels.map(function() { return false; })) + '</div>' + concCidadeHtml(infoC, STATE.cidSel, marca) + '</div>';
+      if (!infoC) html += '<div class="nota">Concorrentes de prescrição ainda não lidos para ' + esc(STATE.cidSel) + ' (a leitura por cidade cobre as 20 maiores cidades da regional).</div>';
     }
   }
 
@@ -942,7 +944,7 @@ function renderCidade() {
   var ultimos = meses.slice(-3);
   var ROTCOL = { rx: 'receitas do mercado', share: 'presc. share', dif: 'distância da referência', painel: 'painel', presc: 'prescritores', var_pp: 'penetração', cidade: 'nome', peso: 'peso no ' + rotEsc, ref: 'regional na cidade' };
   html += '<div class="sec-hdr">Cidades · ' + esc(nomeEsc) + ' <small>' + (STATE.cidTop && !busca && totalLista > lista.length ? 'as ' + lista.length + ' maiores de ' + totalLista : lista.length + ' cidades') + ' · ordenadas por ' + (ROTCOL[sc.col] || sc.col) + ' · clique na cidade para ver a evolução</small></div>';
-  html += '<div class="box"><div class="box-scroll"><table><thead><tr>' + th('cidade', 'Cidade', true) + th('rx', 'Rx mercado') + th('peso', 'Peso no ' + rotEsc) + th('painel', 'Painel') + (comEscopo ? th('presc', 'Prescritores') : '') + th('share', 'Presc. share') + th('var_pp', 'Penetração') + (comEscopo ? th('ref', 'Regional na cidade') : '') + th('dif', comEscopo ? 'vs regional na cidade' : 'vs regional') + '<th>Leitura</th><th class="l">Ciclos lidos</th></tr></thead><tbody>';
+  html += '<div class="box"><div class="box-scroll"><table><thead><tr>' + th('cidade', 'Cidade', true) + th('rx', 'Rx mercado') + th('peso', 'Peso no ' + rotEsc) + th('painel', 'Painel') + (comEscopo ? th('presc', 'Prescritores') : '') + th('share', 'Presc. share') + th('var_pp', 'Penetração') + (comEscopo ? th('ref', 'Regional na cidade') : '') + th('dif', comEscopo ? 'vs regional na cidade' : 'vs regional') + '<th>Leitura</th><th class="l">Posição · líder na cidade</th><th class="l">Ciclos lidos</th></tr></thead><tbody>';
   var pesoMax = ordRx[0] && ordRx[0].peso ? ordRx[0].peso : 1;
   lista.forEach(function(c) {
     var histTxt = ultimos.map(function(m) { var h = c.hist[m]; return (m === mesSel ? '<span class="sel">' : '') + m + ' <b>' + (h && h.share !== null && h.share !== undefined ? fmtPct(h.share) : '—') + '</b>' + (m === mesSel ? '</span>' : ''); }).join(' → ');
@@ -952,9 +954,9 @@ function renderCidade() {
       '<td><div class="share-cell"><span class="share-bar rx"><i style="width:' + Math.min(100, c.share || 0) + '%"></i></span><b class="share-n">' + fmtPct(c.share) + '</b></div></td>' +
       '<td>' + trend(c.var_pp, ' pp') + '</td>' + (comEscopo ? '<td>' + fmtPct(c.ref) + '</td>' : '') +
       '<td>' + (c.dif === null ? '—' : '<span class="tr ' + (c.dif > 0 ? 'up' : (c.dif < 0 ? 'down' : 'flat')) + '">' + pp(c.dif) + '</span>') + '</td>' +
-      '<td><span class="cid-tag ' + c.cls + '" title="' + EXPL[c.cls] + '">' + ROT[c.cls] + '</span></td><td class="l cid-hist">' + histTxt + '</td></tr>';
+      '<td><span class="cid-tag ' + c.cls + '" title="' + EXPL[c.cls] + '">' + ROT[c.cls] + '</span></td><td class="l">' + (function() { var ic = rxConcCidade(linha, marca, c.cidade, mesSel); if (!ic) return '<span class="sub">—</span>'; return (ic.nossa ? '<b>' + ic.posicao + 'º</b>' : '<span class="sub">sem receita</span>') + (ic.lider ? ' · ' + esc(ic.lider.produto) + ' <span class="sub">' + fmtPct(ic.lider.share) + '</span>' : ''); })() + '</td><td class="l cid-hist">' + histTxt + '</td></tr>';
   });
-  if (!lista.length) html += '<tr><td colspan="11" class="l sub">Nenhuma cidade encontrada.</td></tr>';
+  if (!lista.length) html += '<tr><td colspan="12" class="l sub">Nenhuma cidade encontrada.</td></tr>';
   html += '</tbody></table></div></div>';
   html += '<div class="nota">Leitura: <b>Fortaleza</b> e <b>Oportunidade</b> só valem para cidades com ao menos ' + limiar + '% das receitas do mercado do ' + rotEsc + '; a distância é contra o presc. share d' + refTxt + ' no mesmo ciclo. Penetração = mudança do share contra o ciclo anterior.' +
     (comEscopo ? ' Nível ' + rotEsc + ': o Rx de cada médico do export por médico do Raio X é atribuído ao setor e à cidade do consultório dele conforme o painel mais recente da Qualificação do Painel Médico (cada médico está em um só setor da linha); somado por cidade, bate com a leitura direta do Raio X. "Painel" = médicos do ' + rotEsc + ' com consultório na cidade; "Prescritores" = os que tiveram receita no mercado da marca.' : ' O painel por cidade é menor que o da visão por distrito porque só entram cidades com receita no mercado da marca (médicos sem cidade cadastrada ou em cidades sem receita ficam fora).') + '</div>';
@@ -1078,6 +1080,32 @@ function demandaCidade(marca, linha, mesSel, mesAnt, meses, comEscopo, rotEsc, n
   html += '<div class="nota">Demanda = venda em R$ a preço fábrica no mercado da marca (Raio X › Demanda | Análise de Concorrentes, "Analisar por" = GDU | Cidade da UTC × Produto). A cidade aqui é a do ponto de venda, por isso não bate 1:1 com a prescrição (cidade do consultório). Market share recalculado a partir dos valores; Variação = contra o ciclo anterior lido.</div>';
   html += '</div>';
   return html;
+}
+
+// Prescrição por concorrente na cidade (Raio X › Prescrição | Análise de Concorrentes, FILTRO 1 = Médico | Cidade).
+// Só existe para as maiores cidades da regional (leitura cidade a cidade); devolve null quando a cidade não foi lida.
+function rxConcCidade(linha, marca, cidade, mesSel) {
+  var MS = TODOS_MESES;
+  var base = (STATE.rxc || []).filter(function(r) { return r.regional === STATE.regional && r.linha === linha && r.marca === marca && r.nivel === 'CIDADE' && r.codigo === cidade && MS.indexOf(r.mes) <= MS.indexOf(mesSel); });
+  if (!base.length) return null;
+  var mes = base.map(function(r) { return r.mes; }).sort(function(a, b) { return MS.indexOf(a) - MS.indexOf(b); }).pop();
+  var lista = base.filter(function(r) { return r.mes === mes; }).map(function(r) { return { produto: r.produto, eh: r.eh_marca === '1', gen: ehGenerico(r), share: n(r.share), share_ant: n(r.share_ant), var_pp: n(r.var_pp) }; })
+    .sort(function(a, b) { return (b.share || 0) - (a.share || 0); });
+  var nossa = lista.filter(function(x) { return x.eh; })[0];
+  var conc = lista.filter(function(x) { return !x.eh; });
+  return { mes: mes, lista: lista, nossa: nossa, lider: conc[0] || null, posicao: nossa ? 1 + conc.filter(function(x) { return (x.share || 0) > (nossa.share || 0); }).length : null };
+}
+function concCidadeHtml(info, cidade, marca) {
+  if (!info) return '';
+  var o = '<div class="graf-box"><div class="graf-t">Prescrição · concorrentes em ' + esc(cidade) + ' <span class="sub">' + info.mes + '/2026 · share de receitas · Raio X › Prescrição | Análise de Concorrentes</span></div>';
+  o += '<div class="box"><div class="box-scroll"><table><thead><tr><th class="l">Produto</th><th>Share anterior</th><th>Share atual</th><th>Penetração</th></tr></thead><tbody>';
+  info.lista.forEach(function(x) {
+    o += '<tr' + (x.eh ? ' class="marca"' : '') + '><td class="l">' + esc(x.produto) + (x.gen ? ' <span class="tag-conc">genérico</span>' : '') + '</td><td>' + fmtPct(x.share_ant) + '</td>' +
+      '<td><div class="share-cell"><span class="share-bar rx"><i style="width:' + Math.min(100, x.share || 0) + '%"></i></span><b class="share-n">' + fmtPct(x.share) + '</b></div></td><td>' + trend(x.var_pp, ' pp') + '</td></tr>';
+  });
+  o += '</tbody></table></div></div>';
+  o += '<div class="nota">' + (info.nossa ? esc(marca) + ' em <b>' + info.posicao + 'º</b> lugar nas receitas da cidade' + (info.lider ? ' · principal concorrente: <b>' + esc(info.lider.produto) + '</b> (' + fmtPct(info.lider.share) + ')' : '') : esc(marca) + ' sem receita no mercado da cidade no ciclo') + '.</div></div>';
+  return o;
 }
 
 function baseVista() { return STATE.vista === 'cidade' ? STATE.cid.concat(STATE.cids, STATE.cidd) : STATE.rx.concat(STATE.dem); }
