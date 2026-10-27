@@ -51,7 +51,11 @@
 // script.google.com, abre por este ID (a service account e o dono têm acesso).
 var PLANILHA_ID = '1ze0t-BoO9CDUjMQw6ucs5wthTVCoXbBR-9XrML2I8Mk';
 var ABA_BUDGET = 'budget_lancamentos';
-var HEADERS = ['id', 'gd', 'linha', 'produto', 'crm', 'medico', 'valor', 'acao', 'data', 'criadoEm', 'editado'];
+// Coluna 'tipo' (27/10/2026): 'MEDICO' (crm + medico) ou 'PDV' (ponto de venda:
+// crm guarda o CNPJ e medico o nome do PDV; única ação permitida: Coffee break).
+// Linhas antigas sem a coluna são médico — a página trata vazio como MEDICO.
+var HEADERS = ['id', 'gd', 'linha', 'produto', 'crm', 'medico', 'valor', 'acao', 'data', 'criadoEm', 'editado', 'tipo'];
+var COL_TIPO = 12;
 var ABAS_PERMITIDAS = /^(budget_lancamentos|tendencias_[A-Z]{3})$/; // o que o navegador pode ler
 // SEM senha (decisão do Vinicius, 16/10/2026): o Copiloto de RPS é usado pelos GDs
 // com o time, então os registros de RPS — combinados das atas, texto completo e
@@ -252,7 +256,8 @@ function executar(body, sessao) {
     if (encontrarLinha(sheet, body.id) >= 0) return resposta({ ok: true, jaExistia: true });
     sheet.appendRow([
       body.id, body.gd, body.linha, body.produto, body.crm,
-      body.medico, body.valor, body.acao_lancamento, body.data, body.criadoEm, 'FALSE'
+      body.medico, body.valor, body.acao_lancamento, body.data, body.criadoEm, 'FALSE',
+      tipoLancamento(body)
     ]);
     return resposta({ ok: true });
   }
@@ -265,6 +270,7 @@ function executar(body, sessao) {
       body.valor, body.acao_lancamento, body.data, body.criadoEm
     ]]);
     sheet.getRange(linha, 11).setValue('TRUE');
+    sheet.getRange(linha, COL_TIPO).setValue(tipoLancamento(body));
     return resposta({ ok: true });
   }
 
@@ -288,8 +294,14 @@ function pegarAba() {
   if (!sheet) {
     sheet = ss.insertSheet(ABA_BUDGET);
     sheet.appendRow(HEADERS);
+  } else if (String(sheet.getRange(1, COL_TIPO).getValue()) !== 'tipo') {
+    sheet.getRange(1, COL_TIPO).setValue('tipo'); // aba criada antes da coluna 'tipo'
   }
   return sheet;
+}
+
+function tipoLancamento(body) {
+  return String(body.tipo || '').toUpperCase() === 'PDV' ? 'PDV' : 'MEDICO';
 }
 
 function encontrarLinha(sheet, id) {

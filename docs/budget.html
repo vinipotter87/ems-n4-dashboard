@@ -101,6 +101,13 @@ table.led-tbl tbody tr.editada{background:var(--gold-l)}
 .icon-btn.danger{color:var(--danger);border-color:#f3c6c2}
 .icon-btn.danger:hover{background:var(--danger-l)}
 .edit-tag{font-size:9px;font-weight:800;color:var(--gold);margin-left:5px}
+.pdv-tag{font-size:9px;font-weight:800;padding:1px 6px;border-radius:8px;background:var(--brand-l);color:var(--brand-d);margin-left:6px;vertical-align:middle}
+.tipo-toggle{display:flex;border:1.5px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:12px}
+.tipo-toggle button{flex:1;padding:8px 6px;border:none;background:#fff;font-size:12px;font-weight:700;color:var(--gray);cursor:pointer;font-family:inherit}
+.tipo-toggle button+button{border-left:1.5px solid var(--border)}
+.tipo-toggle button.on{background:var(--brand);color:#fff}
+.tipo-toggle button:hover:not(.on){background:var(--light)}
+.field select.fixo{background:var(--light);color:var(--dark);font-weight:700}
 .tbl-empty{padding:30px;text-align:center;color:var(--gray);font-size:12px}
 
 .modal-bg{position:fixed;inset:0;background:rgba(17,24,39,.5);z-index:800;display:flex;align-items:center;justify-content:center;padding:20px}
@@ -189,7 +196,40 @@ var TAB_NAME = 'budget_lancamentos';
 // A aba budget_lancamentos também guarda os lançamentos e classificações da
 // página Budget Glempa Consultor (budget-glempa.html) — não são verba tática.
 function ehGlempa(l){ return l.produto === 'GLEMPA' || l.produto === 'GLEMPA_CLASSIF'; }
-var ACOES = ['Almoço/jantar','Cesta de presente','Bloco de receituário','Outros'];
+// Tipo do lançamento: médico (CRM + nome) ou ponto de venda (CNPJ + nome do PDV).
+// O PDV usa as mesmas colunas da aba (crm ← CNPJ, medico ← nome do PDV) e grava
+// tipo = 'PDV' na coluna "tipo"; registros antigos sem essa coluna são médico,
+// e um "Coffee break" sem tipo é PDV (é a única ação permitida pra PDV).
+var ACOES = ['Almoço/jantar','Cesta de presente','Bloco de receituário','Outros']; // médico
+var ACOES_PDV = ['Coffee break'];                                                // ponto de venda
+function tipoDoRegistro(r){
+  if (r.tipo === 'PDV') return 'PDV';
+  if (!r.tipo && r.acao === ACOES_PDV[0]) return 'PDV';
+  return 'MEDICO';
+}
+function soDigitos(v){ return String(v || '').replace(/\D/g, ''); }
+function fmtCNPJ(v){
+  var d = soDigitos(v).slice(0, 14);
+  var out = d.slice(0,2);
+  if (d.length > 2) out += '.' + d.slice(2,5);
+  if (d.length > 5) out += '.' + d.slice(5,8);
+  if (d.length > 8) out += '/' + d.slice(8,12);
+  if (d.length > 12) out += '-' + d.slice(12,14);
+  return out;
+}
+function cnpjValido(v){
+  var d = soDigitos(v);
+  if (d.length !== 14 || /^(\d)\1{13}$/.test(d)) return false;
+  function dv(base, pesos){
+    var soma = 0;
+    for (var i = 0; i < pesos.length; i++) soma += parseInt(base[i], 10) * pesos[i];
+    var r = soma % 11;
+    return r < 2 ? 0 : 11 - r;
+  }
+  var d1 = dv(d, [5,4,3,2,9,8,7,6,5,4,3,2]);
+  var d2 = dv(d, [6,5,4,3,2,9,8,7,6,5,4,3,2]);
+  return d1 === parseInt(d[12], 10) && d2 === parseInt(d[13], 10);
+}
 var CONFIG = {};
 var BACKEND_PRONTO = false;
 
@@ -281,7 +321,8 @@ async function carregarLancamentos(){
     return {
       id: r.id, gd: r.gd, linha: r.linha, produto: r.produto, crm: r.crm,
       medico: r.medico, valor: parseFloat(r.valor) || 0, acao: r.acao,
-      data: r.data, criadoEm: r.criadoEm, editado: r.editado === 'TRUE'
+      data: r.data, criadoEm: r.criadoEm, editado: r.editado === 'TRUE',
+      tipo: tipoDoRegistro(r)
     };
   });
 }
@@ -303,7 +344,8 @@ function enviarAoSheet(operacao, dados, tentativa){
     acao: operacao, // 'add' | 'edit' | 'delete'
     id: dados.id, gd: dados.gd, linha: dados.linha, produto: dados.produto,
     crm: dados.crm, medico: dados.medico, valor: dados.valor,
-    acao_lancamento: dados.acao, data: dados.data, criadoEm: dados.criadoEm
+    acao_lancamento: dados.acao, data: dados.data, criadoEm: dados.criadoEm,
+    tipo: dados.tipo || 'MEDICO'
   };
   function falhou(){
     return jaGravadoNoSheet(operacao, dados.id).then(function(gravado){
@@ -439,7 +481,7 @@ function renderLedger(gd){
     '</div>';
 
   if (!lancs.length){
-    html += '<div class="tbl-empty">Nenhum lançamento ' + (gd ? 'para este GD ainda.' + (BACKEND_PRONTO ? ' Use "Novo lançamento" para registrar o primeiro CRM.' : '') : 'encontrado para este filtro.') + '</div></div>';
+    html += '<div class="tbl-empty">Nenhum lançamento ' + (gd ? 'para este GD ainda.' + (BACKEND_PRONTO ? ' Use "Novo lançamento" para registrar o primeiro (médico ou ponto de venda).' : '') : 'encontrado para este filtro.') + '</div></div>';
     return html;
   }
 
@@ -447,7 +489,7 @@ function renderLedger(gd){
     '<th>Data</th>' +
     (gd ? '' : '<th class="txt-left">GD</th><th>Distrito</th>') +
     '<th>Linha</th><th class="txt-left">Produto</th>' +
-    '<th>CRM</th><th class="txt-left">Médico</th><th class="txt-left">Ação</th><th>Valor</th><th>Saldo após</th><th>—</th>' +
+    '<th>CRM / CNPJ</th><th class="txt-left">Médico / PDV</th><th class="txt-left">Ação</th><th>Valor</th><th>Saldo após</th><th>—</th>' +
   '</tr></thead><tbody>';
 
   lancs.forEach(function(l){
@@ -464,7 +506,7 @@ function renderLedger(gd){
       '<td><span class="linha-badge ' + linhaCls + '">' + l.linha + '</span></td>' +
       '<td class="txt-left">' + nomeProduto(l.produto) + '</td>' +
       '<td>' + l.crm + '</td>' +
-      '<td class="txt-left">' + l.medico + (l.editado ? '<span class="edit-tag">editado</span>' : '') + '</td>' +
+      '<td class="txt-left">' + l.medico + (l.tipo === 'PDV' ? '<span class="pdv-tag" title="Ponto de venda">PDV</span>' : '') + (l.editado ? '<span class="edit-tag">editado</span>' : '') + '</td>' +
       '<td class="txt-left"><span class="acao-tag">' + l.acao + '</span></td>' +
       '<td class="val-cell">-' + fmtBRL(l.valor) + '</td>' +
       '<td class="saldo-cell ' + (saldoApos<0?'neg':'') + '">' + fmtBRL(saldoApos) + '</td>' +
@@ -509,7 +551,7 @@ function render(){
     '<li><b>Escopo: só ' + (REGIONAL_LESTE ? 'LESTE' : 'SPI OESTE') + '.</b> Verba por GD/produto cruzada com o mapeamento oficial do projeto (config/mapping.json: prefixos de distrito ' + (REGIONAL_LESTE ? '1105 = LESTE Nexus, 1165 = LESTE Vital' : '11030 = SPI Nexus, 11630 = SPI Vital') + '). Produtos: BUPIUM XL, LINADIB, LINADIB DUO e OZIVY (Vital); LYBERDIA, CONCARDIO e OZIVY (Nexus). Verba conforme Painel Executivo — Verba Tática Q3 (prazo de utilização 20/11/2026); OZIVY tem verba própria em cada linha.</li>' +
     '<li>A conta corrente é calculada por Produto: cada lançamento desconta do saldo daquele produto específico dentro do GD selecionado (não existe um "saldo único" por GD somando produtos diferentes — o card consolidado é só informativo).</li>' +
     '<li>Lançamentos são gravados na aba <code>budget_lancamentos</code> do Google Sheets do dashboard, através de um Apps Script Web App — não há atualização automática entre abas abertas: use "🔄 Atualizar" para ver o que outras pessoas lançaram.</li>' +
-    '<li>Lista de "Ação": Almoço/jantar, Cesta de presente, Bloco de receituário, Outros.</li>' +
+    '<li>Lançamento por <b>médico</b> (CRM + nome completo) ou por <b>ponto de venda</b> (nome do PDV + CNPJ válido). Ações para médico: Almoço/jantar, Cesta de presente, Bloco de receituário, Outros. Para ponto de venda a única ação permitida é <b>Coffee break</b>.</li>' +
     '<li>Edição recalcula o saldo automaticamente (o saldo nunca é digitado à mão, sempre = verba − soma dos lançamentos).</li>' +
     '<li><b>Trava de saldo:</b> o campo de valor nunca aceita mais do que o saldo disponível daquele produto, e o lançamento fica bloqueado quando o produto zera. Produto esgotado aparece marcado "🔒 ESGOTADO".</li>' +
   '</ul></div>';
@@ -551,6 +593,8 @@ function abrirModal(lancamentoId){
     return { p: p, saldoDisponivel: p.verba - utilizadoOutros };
   }
 
+  var tipo = editando ? editando.tipo : 'MEDICO';
+
   var html = '<div class="modal-bg" id="modal-bg"><div class="modal">' +
     '<h3>' + (editando ? '✏️ Editar lançamento' : '➕ Novo lançamento') + '</h3>' +
     '<div class="modal-err" id="modal-err"></div>' +
@@ -563,16 +607,18 @@ function abrirModal(lancamentoId){
           p.linha + ' — ' + nomeProduto(p.produto) + (esgotado ? ' (ESGOTADO)' : '') + '</option>';
       }).join('') +
     '</select></div>' +
+    '<div class="tipo-toggle" id="f-tipo">' +
+      '<button type="button" data-tipo="MEDICO" class="' + (tipo === 'MEDICO' ? 'on' : '') + '">\uD83D\uDC68\u200D\u2695\uFE0F Médico</button>' +
+      '<button type="button" data-tipo="PDV" class="' + (tipo === 'PDV' ? 'on' : '') + '">\uD83C\uDFEA Ponto de venda</button>' +
+    '</div>' +
     '<div class="field-row">' +
-      '<div class="field"><label>CRM do médico</label><input id="f-crm" type="text" placeholder="Ex: 123456" value="' + (editando ? editando.crm : '') + '"></div>' +
+      '<div class="field"><label id="lbl-crm">CRM do médico</label><input id="f-crm" type="text" placeholder="Ex: 123456" value="' + (editando ? String(editando.crm).replace(/"/g,'&quot;') : '') + '"></div>' +
       '<div class="field"><label>Data</label><input id="f-data" type="date" value="' + (editando ? editando.data : hoje) + '"></div>' +
     '</div>' +
-    '<div class="field"><label>Nome completo do médico</label><input id="f-medico" type="text" placeholder="Nome completo" value="' + (editando ? editando.medico.replace(/"/g,'&quot;') : '') + '"></div>' +
+    '<div class="field"><label id="lbl-medico">Nome completo do médico</label><input id="f-medico" type="text" placeholder="Nome completo" value="' + (editando ? editando.medico.replace(/"/g,'&quot;') : '') + '"></div>' +
     '<div class="field-row">' +
       '<div class="field"><label>Valor utilizado (R$)</label><input id="f-valor" type="number" step="0.01" min="0.01" placeholder="0,00" value="' + (editando ? editando.valor : '') + '"></div>' +
-      '<div class="field"><label>Ação</label><select id="f-acao">' +
-        ACOES.map(function(a){ return '<option ' + (editando && editando.acao === a ? 'selected' : '') + '>' + a + '</option>'; }).join('') +
-      '</select></div>' +
+      '<div class="field"><label>Ação</label><select id="f-acao"></select></div>' +
     '</div>' +
     '<div class="saldo-hint" id="saldo-hint"></div>' +
     '<div class="modal-actions">' +
@@ -613,6 +659,39 @@ function abrirModal(lancamentoId){
     return check;
   }
 
+  // Médico × Ponto de venda: troca rótulos, máscara do CNPJ e a lista de ações
+  // (PDV só permite Coffee break; o select fica travado nessa opção).
+  function aplicarTipo(){
+    var pdv = tipo === 'PDV';
+    var crmInput = document.getElementById('f-crm');
+    var medInput = document.getElementById('f-medico');
+    var acaoSel = document.getElementById('f-acao');
+    document.getElementById('lbl-crm').textContent = pdv ? 'CNPJ do ponto de venda' : 'CRM do médico';
+    document.getElementById('lbl-medico').textContent = pdv ? 'Nome do ponto de venda' : 'Nome completo do médico';
+    crmInput.placeholder = pdv ? '00.000.000/0000-00' : 'Ex: 123456';
+    crmInput.inputMode = pdv ? 'numeric' : 'text';
+    crmInput.maxLength = pdv ? 18 : 40;
+    medInput.placeholder = pdv ? 'Ex: Drogaria São Paulo — Centro' : 'Nome completo';
+    if (pdv) crmInput.value = fmtCNPJ(crmInput.value);
+    var lista = pdv ? ACOES_PDV : ACOES;
+    var atual = editando && editando.tipo === tipo ? editando.acao : '';
+    acaoSel.innerHTML = lista.map(function(a){ return '<option ' + (atual === a ? 'selected' : '') + '>' + a + '</option>'; }).join('');
+    acaoSel.disabled = lista.length === 1;
+    acaoSel.className = lista.length === 1 ? 'fixo' : '';
+    Array.prototype.forEach.call(document.querySelectorAll('#f-tipo button'), function(b){
+      b.className = b.getAttribute('data-tipo') === tipo ? 'on' : '';
+    });
+  }
+  document.getElementById('f-tipo').onclick = function(e){
+    var b = e.target.closest('button[data-tipo]');
+    if (!b || b.getAttribute('data-tipo') === tipo) return;
+    tipo = b.getAttribute('data-tipo');
+    aplicarTipo();
+    document.getElementById('modal-err').style.display = 'none';
+  };
+  document.getElementById('f-crm').oninput = function(){ if (tipo === 'PDV') this.value = fmtCNPJ(this.value); };
+  aplicarTipo();
+
   document.getElementById('f-produto').onchange = atualizarHint;
   document.getElementById('f-valor').oninput = atualizarHint;
   atualizarHint();
@@ -632,10 +711,24 @@ function abrirModal(lancamentoId){
     var err = document.getElementById('modal-err');
     var btnSalvar = document.getElementById('btn-salvar');
 
+    var pdv = tipo === 'PDV';
     if (!crm || !medico || !data || !valor || valor <= 0){
-      err.textContent = 'Preencha CRM, nome completo, data e um valor maior que zero.';
+      err.textContent = pdv
+        ? 'Preencha CNPJ, nome do ponto de venda, data e um valor maior que zero.'
+        : 'Preencha CRM, nome completo, data e um valor maior que zero.';
       err.style.display = 'block';
       return;
+    }
+    if (pdv){
+      if (!cnpjValido(crm)){
+        err.textContent = 'CNPJ inválido — confira os 14 dígitos (' + soDigitos(crm).length + ' informados).';
+        err.style.display = 'block';
+        return;
+      }
+      crm = fmtCNPJ(crm);
+      acao = ACOES_PDV[0]; // ponto de venda: só Coffee break
+    } else if (ACOES.indexOf(acao) < 0){
+      acao = ACOES[0];
     }
 
     var check = atualizarHint();
@@ -653,7 +746,7 @@ function abrirModal(lancamentoId){
     var registro = {
       id: editando ? editando.id : novoId, gd: gd, linha: linha, produto: produto,
       crm: crm, medico: medico, valor: valor, acao: acao, data: data,
-      criadoEm: editando ? editando.criadoEm : novoCriadoEm
+      criadoEm: editando ? editando.criadoEm : novoCriadoEm, tipo: tipo
     };
 
     btnSalvar.disabled = true;
@@ -679,7 +772,7 @@ function excluirLancamento(id){
   var html = '<div class="modal-bg" id="modal-bg"><div class="modal" style="max-width:380px">' +
     '<h3>🗑️ Excluir lançamento?</h3>' +
     '<div class="modal-err" id="modal-err-del"></div>' +
-    '<p style="font-size:12.5px;color:var(--gray);line-height:1.5;margin-bottom:6px">Isso remove permanentemente o lançamento de <b style="color:var(--dark)">' + l.medico + '</b> (CRM ' + l.crm + '), valor <b style="color:var(--dark)">' + fmtBRL(l.valor) + '</b> em ' + fmtData(l.data) + '.</p>' +
+    '<p style="font-size:12.5px;color:var(--gray);line-height:1.5;margin-bottom:6px">Isso remove permanentemente o lançamento de <b style="color:var(--dark)">' + l.medico + '</b> (' + (l.tipo === 'PDV' ? 'PDV · CNPJ ' : 'CRM ') + l.crm + '), valor <b style="color:var(--dark)">' + fmtBRL(l.valor) + '</b> em ' + fmtData(l.data) + '.</p>' +
     '<p style="font-size:11.5px;color:var(--danger);font-weight:700;margin-bottom:16px">Essa ação não pode ser desfeita.</p>' +
     '<div class="modal-actions">' +
       '<button class="btn-secondary" id="btn-cancelar-excluir">Cancelar</button>' +
