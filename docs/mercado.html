@@ -1087,13 +1087,22 @@ function demandaCidade(marca, linha, mesSel, mesAnt, meses, comEscopo, rotEsc, n
 function rxConcCidade(linha, marca, cidade, mesSel) {
   var MS = TODOS_MESES;
   var base = (STATE.rxc || []).filter(function(r) { return r.regional === STATE.regional && r.linha === linha && r.marca === marca && r.nivel === 'CIDADE' && r.codigo === cidade && MS.indexOf(r.mes) <= MS.indexOf(mesSel); });
-  if (!base.length) return null;
-  var mes = base.map(function(r) { return r.mes; }).sort(function(a, b) { return MS.indexOf(a) - MS.indexOf(b); }).pop();
-  var lista = base.filter(function(r) { return r.mes === mes; }).map(function(r) { return { produto: r.produto, eh: r.eh_marca === '1', gen: ehGenerico(r), share: n(r.share), share_ant: n(r.share_ant), var_pp: n(r.var_pp) }; })
+  var derivado = false, mes;
+  if (!base.length) {
+    // ciclo ainda sem leitura própria: usa o "share anterior" da leitura do ciclo seguinte (mesma lógica do gráfico)
+    var seg = MS[MS.indexOf(mesSel) + 1];
+    base = (STATE.rxc || []).filter(function(r) { return r.regional === STATE.regional && r.linha === linha && r.marca === marca && r.nivel === 'CIDADE' && r.codigo === cidade && r.mes === seg && n(r.share_ant) !== null; });
+    if (!base.length) return null;
+    derivado = true; mes = mesSel;
+  } else {
+    mes = base.map(function(r) { return r.mes; }).sort(function(a, b) { return MS.indexOf(a) - MS.indexOf(b); }).pop();
+  }
+  var lista = base.filter(function(r) { return derivado || r.mes === mes; }).map(function(r) { return derivado ? { produto: r.produto, eh: r.eh_marca === '1', gen: ehGenerico(r), share: n(r.share_ant), share_ant: null, var_pp: null } : { produto: r.produto, eh: r.eh_marca === '1', gen: ehGenerico(r), share: n(r.share), share_ant: n(r.share_ant), var_pp: n(r.var_pp) }; })
+    .filter(function(x) { return !derivado || (x.share || 0) > 0; })
     .sort(function(a, b) { return (b.share || 0) - (a.share || 0); });
   var nossa = lista.filter(function(x) { return x.eh; })[0];
   var conc = lista.filter(function(x) { return !x.eh; });
-  return { mes: mes, lista: lista, nossa: nossa, lider: conc[0] || null, posicao: nossa ? 1 + conc.filter(function(x) { return (x.share || 0) > (nossa.share || 0); }).length : null };
+  return { mes: mes, derivado: derivado, lista: lista, nossa: nossa, lider: conc[0] || null, posicao: nossa ? 1 + conc.filter(function(x) { return (x.share || 0) > (nossa.share || 0); }).length : null };
 }
 function concSeriesCidade(linha, marca, cidade, meses) {
   var MS = TODOS_MESES;
@@ -1117,7 +1126,7 @@ function concSeriesCidade(linha, marca, cidade, meses) {
 
 function concCidadeHtml(info, cidade, marca) {
   if (!info) return '';
-  var o = '<div class="graf-box"><div class="graf-t">Prescrição · concorrentes em ' + esc(cidade) + ' <span class="sub">' + info.mes + '/2026 · share de receitas · Raio X › Prescrição | Análise de Concorrentes</span></div>';
+  var o = '<div class="graf-box"><div class="graf-t">Prescrição · concorrentes em ' + esc(cidade) + ' <span class="sub">' + info.mes + '/2026 · share de receitas · Raio X › Prescrição | Análise de Concorrentes' + (info.derivado ? ' · derivado do "share anterior" da leitura do ciclo seguinte' : '') + '</span></div>';
   o += '<div class="box"><div class="box-scroll"><table><thead><tr><th class="l">Produto</th><th>Share anterior</th><th>Share atual</th><th>Penetração</th></tr></thead><tbody>';
   info.lista.forEach(function(x) {
     o += '<tr' + (x.eh ? ' class="marca"' : '') + '><td class="l">' + esc(x.produto) + (x.gen ? ' <span class="tag-conc">genérico</span>' : '') + '</td><td>' + fmtPct(x.share_ant) + '</td>' +
