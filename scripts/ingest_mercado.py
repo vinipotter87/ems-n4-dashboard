@@ -178,9 +178,9 @@ def processar_demp_cidade(path, marca, linha, regional, mes):
         if mercado is None:
             continue
         base = {"mes": mes, "regional": regional, "linha": linha, "marca": marca, "cidade": cid}
-        out.append(dict(base, produto=f"{marca} (EMS)", eh_marca="1", valor=ems, cresc_pct=cresc, share=share, var_pp=var))
+        out.append(dict(base, produto=f"{marca} (EMS)", eh_marca="1", valor=ems, cresc_pct=cresc, share=share, var_pp=var, _demp=True))
         out.append(dict(base, produto="DEMAIS PRODUTOS", eh_marca="0", valor=round(mercado - (ems or 0.0), 2),
-                        cresc_pct=num(r[2]) if len(r) > 2 else None, share=None, var_pp=None))
+                        cresc_pct=num(r[2]) if len(r) > 2 else None, share=None, var_pp=None, _demp=True))
     return out
 
 
@@ -302,6 +302,14 @@ def main():
         dem.extend(derivadas)
         print(f"  ✓ {len(derivadas)} linhas REGIONAL de demanda calculadas a partir dos distritos")
 
+    # Cidades lidas com concorrentes (DEM, página de Concorrentes com FILTRO 1 nas maiores cidades) substituem
+    # a leitura só da marca (DEMP: marca + DEMAIS PRODUTOS) da mesma cidade/marca/linha
+    com_conc = {(r["regional"], r["linha"], r["marca"], r["cidade"]) for r in dcid if r["produto"] != "DEMAIS PRODUTOS" and r["eh_marca"] != "1"}
+    antes = len(dcid)
+    dcid = [r for r in dcid if not (r.get("_demp") and (r["regional"], r["linha"], r["marca"], r["cidade"]) in com_conc)]
+    if len(dcid) != antes:
+        print(f"  ✓ {antes - len(dcid)} linhas DEMP substituídas pela leitura com concorrentes em {len(com_conc)} cidade×marca")
+
     # share da demanda por cidade recalculado com 2 casas a partir dos valores
     tot_c = {}
     for r in dcid:
@@ -327,6 +335,8 @@ def main():
     if cid:
         ingest.anexar_aba_por_mes(gc, sh, "mercado_cidade", cid, mes)
     if dcid:
+        for r in dcid:
+            r.pop("_demp", None)
         ingest.anexar_aba_por_mes(gc, sh, "mercado_demanda_cidade", dcid, mes)
     print(f"Dados de Mercado {mes} publicados.")
 
