@@ -102,6 +102,19 @@ table.led-tbl tbody tr.editada{background:var(--gold-l)}
 .icon-btn.danger:hover{background:var(--danger-l)}
 .edit-tag{font-size:9px;font-weight:800;color:var(--gold);margin-left:5px}
 .pdv-tag{font-size:9px;font-weight:800;padding:1px 6px;border-radius:8px;background:var(--brand-l);color:var(--brand-d);margin-left:6px;vertical-align:middle}
+.extra-tag{font-size:9px;font-weight:800;padding:1px 6px;border-radius:8px;background:#ede9fe;color:#5b21b6;margin-left:6px;vertical-align:middle;white-space:nowrap}
+.consol-card.extra{background:linear-gradient(135deg,#4c1d95,#7c3aed);box-shadow:0 4px 16px rgba(76,29,149,.25)}
+.extra-toggle{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1.5px dashed #c4b5fd;border-radius:8px;background:#f5f3ff;margin-bottom:12px;cursor:pointer;font-size:12px;font-weight:700;color:#5b21b6}
+.extra-toggle input{width:16px;height:16px;margin:0;accent-color:#7c3aed;flex:none}
+.extra-toggle small{display:block;font-weight:500;color:#6d28d9;font-size:11px;margin-top:2px}
+.extra-wrap{border:1px solid #ddd6fe;border-radius:12px;padding:14px 16px;margin:18px 0 0;background:#faf5ff}
+.extra-wrap h3{font-size:13px;font-weight:800;color:#4c1d95;margin:0 0 4px}
+.extra-wrap p{font-size:11.5px;color:var(--gray);margin:0 0 10px;line-height:1.5}
+.extra-tbl{width:100%;border-collapse:collapse;font-size:12px}
+.extra-tbl th{font-size:10.5px;text-transform:uppercase;letter-spacing:.3px;color:var(--gray);text-align:left;padding:6px 8px;border-bottom:1px solid #ddd6fe}
+.extra-tbl td{padding:7px 8px;border-bottom:1px solid #ede9fe}
+.extra-tbl td.num,.extra-tbl th.num{text-align:right;font-variant-numeric:tabular-nums}
+.extra-tbl tr.tot td{font-weight:800;color:#4c1d95;border-bottom:none}
 .tipo-toggle{display:flex;border:1.5px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:12px}
 .tipo-toggle button{flex:1;padding:8px 6px;border:none;background:#fff;font-size:12px;font-weight:700;color:var(--gray);cursor:pointer;font-family:inherit}
 .tipo-toggle button+button{border-left:1.5px solid var(--border)}
@@ -195,7 +208,22 @@ BASE_ALLOC.forEach(function(a){ GDS_DA_REGIONAL[a.gd] = true; });
 var TAB_NAME = 'budget_lancamentos';
 // A aba budget_lancamentos também guarda os lançamentos e classificações da
 // página Budget Glempa Consultor (budget-glempa.html) — não são verba tática.
-function ehGlempa(l){ return l.produto === 'GLEMPA' || l.produto === 'GLEMPA_CLASSIF'; }
+function ehGlempa(l){ return /^GLEMPA/.test(String(l.produto || '')); } // GLEMPA, GLEMPA_CLASSIF, GLEMPA_TATICO (Tático Extra Glempa)
+// Lançamento EXTRA (fora da verba distribuída): fica na mesma aba, gravado com
+// produto "EXTRA:<nome do produto>" — o nome é livre (pode ser um produto da verba
+// ou qualquer outro). Não desconta do saldo de nenhum produto: entra numa
+// contabilidade própria (card "Extra" e bloco por produto).
+var EXTRA_PREFIXO = 'EXTRA:';
+function ehExtra(l){ return String(l.produto || '').indexOf(EXTRA_PREFIXO) === 0; }
+function nomeExtra(produto){ return String(produto || '').slice(EXTRA_PREFIXO.length); }
+function somaValor(ls){ return ls.reduce(function(a,l){ return a + l.valor; }, 0); }
+function extrasDe(gd, linha){ return STATE.lancamentos.filter(function(l){ return l.extra && (!gd || l.gd === gd) && (!linha || l.linha === linha); }); }
+// Extras agrupados pelo nome do produto digitado
+function extrasPorProduto(ls){
+  var m = {};
+  ls.forEach(function(l){ var k = nomeExtra(l.produto); if (!m[k]) m[k] = { produto: k, n: 0, valor: 0 }; m[k].n++; m[k].valor += l.valor; });
+  return Object.keys(m).sort().map(function(k){ return m[k]; });
+}
 // Tipo do lançamento: médico (CRM + nome) ou ponto de venda (CNPJ + nome do PDV).
 // O PDV usa as mesmas colunas da aba (crm ← CNPJ, medico ← nome do PDV) e grava
 // tipo = 'PDV' na coluna "tipo"; registros antigos sem essa coluna são médico,
@@ -250,6 +278,7 @@ function fmtData(iso){
 }
 
 function nomeProduto(produto){
+  if (ehExtra({ produto: produto })) return nomeExtra(produto);
   return produto === 'CONCARDIO - CRM-CHAVE E DEMAIS AÇÕES' ? 'CONCARDIO' : produto;
 }
 
@@ -281,7 +310,7 @@ function produtosDoGd(gd){
 
 function utilizadoDoProduto(gd, produto){
   return STATE.lancamentos
-    .filter(function(l){ return l.gd === gd && l.produto === produto; })
+    .filter(function(l){ return !l.extra && l.gd === gd && l.produto === produto; })
     .reduce(function(a,l){ return a + l.valor; }, 0);
 }
 
@@ -322,7 +351,8 @@ async function carregarLancamentos(){
       id: r.id, gd: r.gd, linha: r.linha, produto: r.produto, crm: r.crm,
       medico: r.medico, valor: parseFloat(r.valor) || 0, acao: r.acao,
       data: r.data, criadoEm: r.criadoEm, editado: r.editado === 'TRUE',
-      tipo: tipoDoRegistro(r)
+      tipo: tipoDoRegistro(r),
+      extra: ehExtra(r)
     };
   });
 }
@@ -405,6 +435,7 @@ function renderCards(gd){
     '<div class="consol-card"><div class="lbl">Verba total (todas as linhas)</div><div class="val">' + fmtBRL(verbaTotal) + '</div><div class="sub">' + produtos.length + ' produto(s) sob gestão</div></div>' +
     '<div class="consol-card" style="background:linear-gradient(135deg,#7c2d12,#c2410c)"><div class="lbl">Utilizado</div><div class="val">' + fmtBRL(utilizadoTotal) + '</div><div class="sub">' + pctTotal.toFixed(0) + '% da verba consolidada</div></div>' +
     '<div class="consol-card" style="background:linear-gradient(135deg,' + (saldoTotal < 0 ? '#7f1d1d,#b91c1c' : '#1e3a5f,#1d4ed8') + ')"><div class="lbl">Saldo disponível</div><div class="val">' + fmtBRL(saldoTotal) + '</div><div class="sub">Conta corrente consolidada do GD</div></div>' +
+    cardExtra(extrasDe(gd), 'fora da verba distribuída · não entra no saldo') +
   '</div>';
 
   html += '<div class="card-grid">';
@@ -426,12 +457,47 @@ function renderCards(gd){
     '</div>';
   });
   html += '</div>';
+  html += renderExtraBloco(extrasDe(gd), gd);
   return html;
+}
+
+// Card "Extra" (soma dos lançamentos fora da verba) — usado no GD e na visão da regional
+function cardExtra(extras, sub){
+  return '<div class="consol-card extra"><div class="lbl">Extra · fora da verba</div><div class="val">' + fmtBRL(somaValor(extras)) + '</div>' +
+    '<div class="sub">' + extras.length + ' lançamento(s) · ' + sub + '</div></div>';
+}
+
+// Bloco "Extra" com a soma por produto digitado (contabilidade separada da verba)
+function renderExtraBloco(extras, gd){
+  var html = '<div class="extra-wrap"><h3>🧾 Extra — fora da verba distribuída' + (gd ? '' : (STATE.filtroLinha ? ' · ' + STATE.filtroLinha : ' · regional') ) + '</h3>' +
+    '<p>Lançamentos marcados como <b>Extra</b> no formulário: gasto que não sai da verba tática distribuída (outro produto ou valor além da verba). ' +
+    'Somam aqui, por produto informado, e não alteram o saldo de nenhum produto.</p>';
+  if (!extras.length) return html + '<p style="margin:0"><i>Nenhum lançamento Extra' + (gd ? ' para este GD' : '') + ' até agora.</i></p></div>';
+  var grupos = extrasPorProduto(extras);
+  html += '<table class="extra-tbl"><thead><tr><th>Produto (como informado)</th>' + (gd ? '' : '<th>GDs</th>') + '<th class="num">Lançamentos</th><th class="num">Valor</th></tr></thead><tbody>';
+  grupos.forEach(function(g){
+    var gds = gd ? '' : Object.keys(extras.filter(function(l){ return nomeExtra(l.produto) === g.produto; }).reduce(function(m,l){ m[l.gd] = 1; return m; }, {})).length;
+    html += '<tr><td><b>' + g.produto + '</b></td>' + (gd ? '' : '<td>' + gds + '</td>') + '<td class="num">' + g.n + '</td><td class="num">' + fmtBRL(g.valor) + '</td></tr>';
+  });
+  html += '<tr class="tot"><td>Total Extra</td>' + (gd ? '' : '<td></td>') + '<td class="num">' + extras.length + '</td><td class="num">' + fmtBRL(somaValor(extras)) + '</td></tr>';
+  return html + '</tbody></table></div>';
 }
 
 function renderOverview(){
   var linhas = STATE.filtroLinha ? [STATE.filtroLinha] : ['NEXUS','VITAL'];
   var html = '<div class="gd-empty" style="margin-bottom:18px">Selecione um <b>Gerente Distrital</b> acima para abrir a conta corrente dele e lançar/editar movimentações. Abaixo, a visão consolidada por linha e produto.</div>';
+  // Cards consolidados da regional (ou da linha filtrada): verba, utilizado, saldo e Extra
+  var regVerba = 0, regUsado = 0;
+  BASE_ALLOC.forEach(function(a){ if (linhas.indexOf(a.linha) >= 0) regVerba += a.verba; });
+  STATE.lancamentos.forEach(function(l){ if (!l.extra && linhas.indexOf(l.linha) >= 0) regUsado += l.valor; });
+  var regExtras = STATE.lancamentos.filter(function(l){ return l.extra && linhas.indexOf(l.linha) >= 0; });
+  var regSaldo = regVerba - regUsado, regPct = regVerba ? regUsado / regVerba * 100 : 0;
+  html += '<div class="consol-row">' +
+    '<div class="consol-card"><div class="lbl">Verba distribuída' + (STATE.filtroLinha ? ' · ' + STATE.filtroLinha : '') + '</div><div class="val">' + fmtBRL(regVerba) + '</div><div class="sub">verba tática por GD e produto</div></div>' +
+    '<div class="consol-card" style="background:linear-gradient(135deg,#7c2d12,#c2410c)"><div class="lbl">Utilizado</div><div class="val">' + fmtBRL(regUsado) + '</div><div class="sub">' + regPct.toFixed(0) + '% da verba distribuída</div></div>' +
+    '<div class="consol-card" style="background:linear-gradient(135deg,' + (regSaldo < 0 ? '#7f1d1d,#b91c1c' : '#1e3a5f,#1d4ed8') + ')"><div class="lbl">Saldo</div><div class="val">' + fmtBRL(regSaldo) + '</div><div class="sub">verba − lançamentos (sem o Extra)</div></div>' +
+    cardExtra(regExtras, 'soma de todos os GDs') +
+  '</div>';
   linhas.forEach(function(linha){
     var produtosSet = {};
     BASE_ALLOC.filter(function(a){ return a.linha === linha; }).forEach(function(a){
@@ -444,7 +510,7 @@ function renderOverview(){
     if (!produtos.length) return;
     html += '<div class="linha-hdr">' + (linha === 'NEXUS' ? '🔵' : '🔴') + ' ' + linha + '</div><div class="card-grid">';
     produtos.forEach(function(p){
-      var utilizado = STATE.lancamentos.filter(function(l){ return l.linha === linha && l.produto === p.produto; }).reduce(function(a,l){ return a+l.valor; }, 0);
+      var utilizado = STATE.lancamentos.filter(function(l){ return !l.extra && l.linha === linha && l.produto === p.produto; }).reduce(function(a,l){ return a+l.valor; }, 0);
       var saldo = p.verba - utilizado;
       var pct = p.verba ? Math.min(100, utilizado/p.verba*100) : 0;
       var barCls = pct >= 100 ? 'over' : (pct >= 80 ? 'warn' : '');
@@ -460,6 +526,7 @@ function renderOverview(){
     });
     html += '</div>';
   });
+  html += renderExtraBloco(STATE.lancamentos.filter(function(l){ return l.extra && linhas.indexOf(l.linha) >= 0; }), null);
   return html;
 }
 
@@ -496,20 +563,23 @@ function renderLedger(gd){
     var verbaProduto = produtosDoGd(l.gd).filter(function(p){ return p.produto === l.produto; })[0];
     var verba = verbaProduto ? verbaProduto.verba : 0;
     var utilizadoAteAqui = STATE.lancamentos
-      .filter(function(x){ return x.gd === l.gd && x.produto === l.produto && (x.data+x.criadoEm) <= (l.data+l.criadoEm); })
+      .filter(function(x){ return !x.extra && x.gd === l.gd && x.produto === l.produto && (x.data+x.criadoEm) <= (l.data+l.criadoEm); })
       .reduce(function(a,x){ return a+x.valor; }, 0);
     var saldoApos = verba - utilizadoAteAqui;
+    var saldoCell = l.extra
+      ? '<td class="saldo-cell" style="color:#6d28d9;font-size:10.5px;white-space:nowrap">fora da verba</td>'
+      : '<td class="saldo-cell ' + (saldoApos<0?'neg':'') + '">' + fmtBRL(saldoApos) + '</td>';
     var linhaCls = l.linha === 'NEXUS' ? 'nexus' : 'vital';
     html += '<tr class="' + (l.editado ? 'editada' : '') + '">' +
       '<td>' + fmtData(l.data) + '</td>' +
       (gd ? '' : '<td class="txt-left">' + l.gd + '</td><td>' + (distritoDoGd(l.gd) || '—') + '</td>') +
       '<td><span class="linha-badge ' + linhaCls + '">' + l.linha + '</span></td>' +
-      '<td class="txt-left">' + nomeProduto(l.produto) + '</td>' +
+      '<td class="txt-left">' + nomeProduto(l.produto) + (l.extra ? '<span class="extra-tag" title="Lançamento Extra — fora da verba distribuída">EXTRA</span>' : '') + '</td>' +
       '<td>' + l.crm + '</td>' +
       '<td class="txt-left">' + l.medico + (l.tipo === 'PDV' ? '<span class="pdv-tag" title="Ponto de venda">PDV</span>' : '') + (l.editado ? '<span class="edit-tag">editado</span>' : '') + '</td>' +
       '<td class="txt-left"><span class="acao-tag">' + l.acao + '</span></td>' +
       '<td class="val-cell">-' + fmtBRL(l.valor) + '</td>' +
-      '<td class="saldo-cell ' + (saldoApos<0?'neg':'') + '">' + fmtBRL(saldoApos) + '</td>' +
+      saldoCell +
       '<td><div class="row-actions">' +
         '<button type="button" class="icon-btn" data-action="editar" data-id="' + l.id + '" ' + (BACKEND_PRONTO ? '' : 'disabled') + '>✏️ Editar</button>' +
         '<button type="button" class="icon-btn danger" data-action="excluir" data-id="' + l.id + '" ' + (BACKEND_PRONTO ? '' : 'disabled') + '>🗑️</button>' +
@@ -554,6 +624,7 @@ function render(){
     '<li>Lançamento por <b>médico</b> (CRM + nome completo) ou por <b>ponto de venda</b> (nome do PDV + CNPJ válido). Ações para médico: Almoço/jantar, Cesta de presente, Bloco de receituário, Outros. Para ponto de venda a única ação permitida é <b>Coffee break</b>.</li>' +
     '<li>Edição recalcula o saldo automaticamente (o saldo nunca é digitado à mão, sempre = verba − soma dos lançamentos).</li>' +
     '<li><b>Trava de saldo:</b> o campo de valor nunca aceita mais do que o saldo disponível daquele produto, e o lançamento fica bloqueado quando o produto zera. Produto esgotado aparece marcado "🔒 ESGOTADO".</li>' +
+    '<li><b>Extra (fora da verba):</b> gasto que não sai da verba distribuída — de outro produto ou além do saldo — é lançado com a opção <b>Extra</b> marcada e o nome do produto digitado. Não desconta de nenhum saldo e soma numa contabilidade própria (card "Extra" e bloco por produto). Na aba do Sheets fica gravado com produto <code>EXTRA:&lt;nome&gt;</code>.</li>' +
   '</ul></div>';
 
   document.getElementById('main').innerHTML = html;
@@ -594,11 +665,25 @@ function abrirModal(lancamentoId){
   }
 
   var tipo = editando ? editando.tipo : 'MEDICO';
+  var extra = editando ? !!editando.extra : false;
+  // linhas em que o GD tem verba (normalmente uma só); o Extra usa a mesma linha
+  var linhasGd = produtos.map(function(p){ return p.linha; }).filter(function(v, i, a){ return a.indexOf(v) === i; });
+  // nomes já usados em lançamentos Extra (de qualquer GD) + produtos da verba, pra sugerir
+  var sugestoesExtra = produtos.map(function(p){ return nomeProduto(p.produto); })
+    .concat(STATE.lancamentos.filter(function(l){ return l.extra; }).map(function(l){ return nomeExtra(l.produto); }))
+    .filter(function(v, i, a){ return v && a.indexOf(v) === i; }).sort();
 
   var html = '<div class="modal-bg" id="modal-bg"><div class="modal">' +
     '<h3>' + (editando ? '✏️ Editar lançamento' : '➕ Novo lançamento') + '</h3>' +
     '<div class="modal-err" id="modal-err"></div>' +
-    '<div class="field"><label>Produto</label><select id="f-produto">' +
+    '<label class="extra-toggle"><input type="checkbox" id="f-extra" ' + (extra ? 'checked' : '') + '>' +
+      '<span>🧾 Extra — fora da verba distribuída<small>Gasto de outro produto ou além da verba. Não desconta de nenhum saldo; soma na conta Extra.</small></span></label>' +
+    '<div class="field" id="campo-extra" style="display:none"><label>Produto do Extra (nome livre)</label>' +
+      '<input id="f-produto-extra" type="text" list="lista-extra" maxlength="40" placeholder="Ex: GLEMPA, OZIVY, CONCARDIO…" value="' + (extra ? nomeExtra(editando.produto).replace(/"/g,'&quot;') : '') + '">' +
+      '<datalist id="lista-extra">' + sugestoesExtra.map(function(n){ return '<option value="' + n.replace(/"/g,'&quot;') + '">'; }).join('') + '</datalist>' +
+      (linhasGd.length > 1 ? '<select id="f-linha-extra" style="margin-top:6px">' + linhasGd.map(function(ln){ return '<option ' + (extra && editando.linha === ln ? 'selected' : '') + '>' + ln + '</option>'; }).join('') + '</select>' : '') +
+    '</div>' +
+    '<div class="field" id="campo-produto"><label>Produto</label><select id="f-produto">' +
       produtos.map(function(p){
         var isSel = editando ? editando.produto === p.produto : false;
         var saldo = saldoRestanteProduto(p.produto).saldoDisponivel;
@@ -632,6 +717,15 @@ function abrirModal(lancamentoId){
   function atualizarHint(){
     var produtoSel = document.getElementById('f-produto');
     var produto = produtoSel.value;
+    if (extra){ // Extra: sem trava de saldo, o valor é livre
+      var vi = document.getElementById('f-valor'), hx = document.getElementById('saldo-hint');
+      vi.disabled = false; vi.removeAttribute('max');
+      hx.className = 'saldo-hint'; hx.style.color = '#6d28d9';
+      hx.textContent = '🧾 Lançamento Extra: não desconta da verba distribuída — entra só na conta Extra do GD.';
+      document.getElementById('btn-salvar').disabled = false;
+      return { p: null, saldoDisponivel: Infinity };
+    }
+    document.getElementById('saldo-hint').style.color = '';
     var check = saldoRestanteProduto(produto);
     var saldoDisponivel = check.saldoDisponivel;
     var valorInput = document.getElementById('f-valor');
@@ -692,9 +786,16 @@ function abrirModal(lancamentoId){
   document.getElementById('f-crm').oninput = function(){ if (tipo === 'PDV') this.value = fmtCNPJ(this.value); };
   aplicarTipo();
 
+  function aplicarExtra(){
+    document.getElementById('campo-extra').style.display = extra ? '' : 'none';
+    document.getElementById('campo-produto').style.display = extra ? 'none' : '';
+    document.getElementById('modal-err').style.display = 'none';
+    atualizarHint();
+  }
+  document.getElementById('f-extra').onchange = function(){ extra = this.checked; aplicarExtra(); };
   document.getElementById('f-produto').onchange = atualizarHint;
   document.getElementById('f-valor').oninput = atualizarHint;
-  atualizarHint();
+  aplicarExtra();
 
   document.getElementById('btn-cancelar').onclick = function(){ document.getElementById('modal-root').innerHTML = ''; };
   document.getElementById('modal-bg').onclick = function(e){ if (e.target.id === 'modal-bg') document.getElementById('modal-root').innerHTML = ''; };
@@ -702,7 +803,13 @@ function abrirModal(lancamentoId){
   document.getElementById('btn-salvar').onclick = function(){
     var produtoSel = document.getElementById('f-produto');
     var produto = produtoSel.value;
-    var linha = produtoSel.selectedOptions[0].getAttribute('data-linha');
+    var linha = produtoSel.selectedOptions.length ? produtoSel.selectedOptions[0].getAttribute('data-linha') : linhasGd[0];
+    if (extra){
+      var nomeEx = document.getElementById('f-produto-extra').value.trim().toUpperCase().replace(/\s+/g, ' ');
+      produto = EXTRA_PREFIXO + nomeEx;
+      var selLinha = document.getElementById('f-linha-extra');
+      linha = selLinha ? selLinha.value : linhasGd[0];
+    }
     var crm = document.getElementById('f-crm').value.trim();
     var medico = document.getElementById('f-medico').value.trim();
     var valor = parseFloat(document.getElementById('f-valor').value);
@@ -712,6 +819,11 @@ function abrirModal(lancamentoId){
     var btnSalvar = document.getElementById('btn-salvar');
 
     var pdv = tipo === 'PDV';
+    if (extra && produto.length < EXTRA_PREFIXO.length + 2){
+      err.textContent = 'Informe o nome do produto do lançamento Extra (ex: GLEMPA, OZIVY).';
+      err.style.display = 'block';
+      return;
+    }
     if (!crm || !medico || !data || !valor || valor <= 0){
       err.textContent = pdv
         ? 'Preencha CNPJ, nome do ponto de venda, data e um valor maior que zero.'
@@ -732,12 +844,12 @@ function abrirModal(lancamentoId){
     }
 
     var check = atualizarHint();
-    if (check.saldoDisponivel <= 0){
+    if (!extra && check.saldoDisponivel <= 0){
       err.textContent = 'Este produto está com o saldo ESGOTADO para este GD — não é possível lançar mais nada nele.';
       err.style.display = 'block';
       return;
     }
-    if (valor > check.saldoDisponivel){
+    if (!extra && valor > check.saldoDisponivel){
       err.textContent = 'Valor maior que o saldo disponível neste produto (' + fmtBRL(check.saldoDisponivel) + '). Ajuste o valor ou escolha outro produto.';
       err.style.display = 'block';
       return;

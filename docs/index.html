@@ -1503,6 +1503,14 @@ var BUDGET_VERBA_GD = {
   '116304': {gd:'Michael Aparecido da Silva Mota',      verba:6532.08}
 };
 var BUDGET_LANC = null; // null = ainda não carregou / falhou
+// Classificação dos registros de budget_lancamentos no dashboard:
+//  - tático: desconta da verba distribuída (BUDGET_VERBA_GD);
+//  - "EXTRA:<produto>": fora da verba (outro produto ou além do saldo), contabilidade
+//    própria — coluna/bloco "Extra", nunca entra no utilizado nem no % da verba;
+//  - GLEMPA* (Glempa Consultor e Tático Extra Glempa): outra página, outra verba — ignorado.
+function budgetEhExtra(l) { return String(l.produto || '').indexOf('EXTRA:') === 0; }
+function budgetEhTatico(l) { return !/^GLEMPA/.test(String(l.produto || '')) && !budgetEhExtra(l); }
+function budgetSoma(ls) { return ls.reduce(function(t, l){ return t + (parseFloat(l.valor) || 0); }, 0); }
 
 async function carregarBudget() {
   try {
@@ -1545,13 +1553,14 @@ function renderBudgetResumo() {
     html += bloco('Total', brl(verba)) + bloco('Utilizado', '—') + '<div class="kpi-sub">lançamentos indisponíveis no momento</div>';
   } else {
     html += bloco('Total', brl(verba));
-    var usado = BUDGET_LANC.filter(function(l){ return l.produto !== 'GLEMPA' && gds.indexOf(l.gd) >= 0; })
-      .reduce(function(t, l){ return t + (parseFloat(l.valor) || 0); }, 0);
+    var usado = budgetSoma(BUDGET_LANC.filter(function(l){ return budgetEhTatico(l) && gds.indexOf(l.gd) >= 0; }));
+    var extra = budgetSoma(BUDGET_LANC.filter(function(l){ return budgetEhExtra(l) && gds.indexOf(l.gd) >= 0; }));
     var pctU = verba ? usado / verba * 100 : 0;
     var saldo = verba - usado;
     var corBar = pctU >= 100 ? '#ef4444' : (pctU >= 80 ? '#f59e0b' : '#22c55e');
     html += bloco('Utilizado', brl(usado));
     html += bloco('Saldo', brl(saldo), saldo < 0 ? 'var(--red)' : null);
+    html += bloco('Extra · fora da verba', brl(extra), extra ? '#6d28d9' : 'var(--gray)');
     html += '<div style="flex:1;min-width:180px"><div style="height:9px;background:#e5e7eb;border-radius:5px;overflow:hidden">' +
       '<div style="height:100%;width:' + Math.min(100, pctU) + '%;background:' + corBar + ';border-radius:5px"></div></div>' +
       '<div class="kpi-sub" style="margin-top:5px"><b>' + pctU.toFixed(1).replace('.', ',') + '%</b> utilizado</div></div>';
@@ -1575,46 +1584,46 @@ function renderBudgetPorGd() {
   }
   var semLanc = BUDGET_LANC === null;
   function brl(v) { return v.toLocaleString('pt-BR', {style:'currency', currency:'BRL'}); }
-  function usadoDe(gd) {
-    return (BUDGET_LANC || []).filter(function(l){ return l.produto !== 'GLEMPA' && l.gd === gd; })
-      .reduce(function(t, l){ return t + (parseFloat(l.valor) || 0); }, 0);
-  }
+  function usadoDe(gd) { return budgetSoma((BUDGET_LANC || []).filter(function(l){ return budgetEhTatico(l) && l.gd === gd; })); }
+  function extraDe(gd) { return budgetSoma((BUDGET_LANC || []).filter(function(l){ return budgetEhExtra(l) && l.gd === gd; })); }
   function pctHtml(usado, verba) {
     var v = verba ? usado / verba * 100 : 0;
     var cls = v >= 100 ? 'crit' : (v >= 80 ? 'warn' : 'ok');
     return '<span class="crm-pct ' + cls + '">' + v.toFixed(1).replace('.', ',') + '%</span> ' +
       '<span class="crm-bar-wrap"><span class="crm-bar-fill ' + cls + '" style="width:' + Math.min(100, v) + '%"></span></span>';
   }
-  function cols(verba, usado) {
-    if (semLanc) return '<td>' + brl(verba) + '</td><td>—</td><td>—</td><td>—</td>';
+  function cols(verba, usado, extra) {
+    if (semLanc) return '<td>' + brl(verba) + '</td><td>—</td><td>—</td><td>—</td><td>—</td>';
     var saldo = verba - usado;
     return '<td>' + brl(verba) + '</td><td>' + brl(usado) + '</td>' +
-      '<td' + (saldo < 0 ? ' style="color:var(--red);font-weight:700"' : '') + '>' + brl(saldo) + '</td><td>' + pctHtml(usado, verba) + '</td>';
+      '<td' + (saldo < 0 ? ' style="color:var(--red);font-weight:700"' : '') + '>' + brl(saldo) + '</td><td>' + pctHtml(usado, verba) + '</td>' +
+      '<td style="' + (extra ? 'color:#6d28d9;font-weight:700' : 'color:var(--gray)') + '">' + (extra ? brl(extra) : '—') + '</td>';
   }
   var TOT = 'background:#f3f4f6;font-weight:700';
 
   var html = '<div style="margin:0 0 28px" id="budget-por-gd">' + cab;
   html += '<div class="visitas-chart-wrap" style="margin-top:8px">';
   html += '<div class="visitas-table-wrap"><table class="visitas-table"><thead><tr>';
-  html += '<th class="th-gd">GD</th><th>Total</th><th>Utilizado</th><th>Saldo</th><th>% utilizado</th></tr></thead><tbody>';
-  var regV = 0, regU = 0;
+  html += '<th class="th-gd">GD</th><th>Total</th><th>Utilizado</th><th>Saldo</th><th>% utilizado</th><th title="Lançamentos marcados como Extra na página Budget: fora da verba distribuída, não entram no utilizado">Extra · fora da verba</th></tr></thead><tbody>';
+  var regV = 0, regU = 0, regE = 0;
   [['NEXUS', '1103'], ['VITAL', '1163']].forEach(function(par) {
     var ks = chaves.filter(function(k){ return k.substring(0, 4) === par[1]; });
     if (!ks.length) return;
-    html += '<tr class="row-sep"><td colspan="5">' + (par[0] === 'NEXUS' ? '🟢 NEXUS' : '🔴 VITAL') + '</td></tr>';
-    var linV = 0, linU = 0;
+    html += '<tr class="row-sep"><td colspan="6">' + (par[0] === 'NEXUS' ? '🟢 NEXUS' : '🔴 VITAL') + '</td></tr>';
+    var linV = 0, linU = 0, linE = 0;
     ks.forEach(function(k) {
-      var g = BUDGET_VERBA_GD[k], u = usadoDe(g.gd);
-      linV += g.verba; linU += u;
-      html += '<tr class="' + (par[0] === 'NEXUS' ? 'row-nexus' : 'row-vital') + '"><td class="td-gd">' + g.gd + '</td>' + cols(g.verba, u) + '</tr>';
+      var g = BUDGET_VERBA_GD[k], u = usadoDe(g.gd), ex = extraDe(g.gd);
+      linV += g.verba; linU += u; linE += ex;
+      html += '<tr class="' + (par[0] === 'NEXUS' ? 'row-nexus' : 'row-vital') + '"><td class="td-gd">' + g.gd + '</td>' + cols(g.verba, u, ex) + '</tr>';
     });
-    if (!prefixo) html += '<tr class="row-total"><td class="td-gd">Total ' + par[0] + '</td>' + cols(linV, linU) + '</tr>';
-    regV += linV; regU += linU;
+    if (!prefixo) html += '<tr class="row-total"><td class="td-gd">Total ' + par[0] + '</td>' + cols(linV, linU, linE) + '</tr>';
+    regV += linV; regU += linU; regE += linE;
   });
-  if (!prefixo) html += '<tr style="' + TOT + '"><td class="td-gd">Regional SPI</td>' + cols(regV, regU) + '</tr>';
+  if (!prefixo) html += '<tr style="' + TOT + '"><td class="td-gd">Regional SPI</td>' + cols(regV, regU, regE) + '</tr>';
   html += '</tbody></table></div>';
   html += '<p style="font-size:11px;color:var(--gray);margin:12px 0 0;line-height:1.5">Verba tática por GD e lançamentos da página ' +
-    '<a href="budget.html" style="color:var(--orange);font-weight:700">💰 Budget</a> — valor acumulado (a verba não é mensal, não muda com o mês selecionado).' +
+    '<a href="budget.html" style="color:var(--orange);font-weight:700">💰 Budget</a> — valor acumulado (a verba não é mensal, não muda com o mês selecionado). ' +
+    'A coluna <b>Extra</b> soma os lançamentos marcados como fora da verba (outro produto ou além do saldo); eles não entram no utilizado nem no %.' +
     (semLanc ? ' Lançamentos indisponíveis no momento.' : '') + '</p>';
   html += '</div></div>';
   return html;
@@ -3057,9 +3066,10 @@ function apresMensagem(chave) {
       var gdB = ((D.distritos || [])[0] || {}).nm, vb = 0, ub = 0;
       Object.keys(BUDGET_VERBA_GD).forEach(function(k) { if (BUDGET_VERBA_GD[k].gd === gdB) vb = BUDGET_VERBA_GD[k].verba; });
       if (!vb || BUDGET_LANC === null) return '';
-      BUDGET_LANC.forEach(function(l) { if (l.gd === gdB && l.produto !== 'GLEMPA' && l.produto !== 'GLEMPA_CLASSIF') ub += parseFloat(l.valor) || 0; });
+      var eb = 0;
+      BUDGET_LANC.forEach(function(l) { if (l.gd !== gdB) return; if (budgetEhTatico(l)) ub += parseFloat(l.valor) || 0; else if (budgetEhExtra(l)) eb += parseFloat(l.valor) || 0; });
       function r0(v) { return 'R$ ' + Math.round(v).toLocaleString('pt-BR'); }
-      return r0(ub) + ' utilizados de ' + r0(vb) + ' (' + p1(ub / vb * 100) + '%) — saldo de ' + r0(vb - ub);
+      return r0(ub) + ' utilizados de ' + r0(vb) + ' (' + p1(ub / vb * 100) + '%) — saldo de ' + r0(vb - ub) + (eb ? ' · Extra fora da verba: ' + r0(eb) : '');
     }
     if (chave === 'crm') {
       var cr = (D.crm || [])[0]; if (!cr) return '';
@@ -3206,10 +3216,11 @@ async function apresCarregarAlloc() {
 // Detalhe do Budget no slide: verba, gasto e saldo por produto + ações lançadas
 function apresBudgetDetalhe(gd) {
   var aloc = (APRES_ALLOC || []).filter(function(a) { return a.gd === gd; });
-  var lanc = (BUDGET_LANC || []).filter(function(l) { return l.gd === gd && l.produto !== 'GLEMPA' && l.produto !== 'GLEMPA_CLASSIF'; });
-  if (!aloc.length && !lanc.length) return null;
+  var lanc = (BUDGET_LANC || []).filter(function(l) { return l.gd === gd && budgetEhTatico(l); });
+  var extras = (BUDGET_LANC || []).filter(function(l) { return l.gd === gd && budgetEhExtra(l); });
+  if (!aloc.length && !lanc.length && !extras.length) return null;
   function brl(v) { return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
-  function nomeProd(p) { return String(p).split(' - ')[0]; }
+  function nomeProd(p) { p = String(p); return p.indexOf('EXTRA:') === 0 ? p.slice(6) + ' <span style="font-size:9px;font-weight:800;padding:1px 5px;border-radius:6px;background:#ede9fe;color:#5b21b6">EXTRA</span>' : p.split(' - ')[0]; }
   function dataBr(d) { var x = String(d || '').split('-'); return x.length === 3 ? x[2] + '/' + x[1] + '/' + x[0] : (d || '—'); }
   var prods = [];
   aloc.forEach(function(a) {
@@ -3230,13 +3241,15 @@ function apresBudgetDetalhe(gd) {
       '<td>' + ls.length + '</td></tr>';
   });
   if (prods.length) html += '<tr style="background:#f3f4f6;font-weight:700"><td class="td-gd">Total</td><td>' + brl(tV) + '</td><td>' + brl(tU) + '</td><td>' + brl(tV - tU) + '</td><td>' + (tV ? (tU / tV * 100).toFixed(1).replace('.', ',') : '0,0') + '%</td><td>' + tN + '</td></tr>';
+  if (extras.length) html += '<tr style="color:#5b21b6;font-weight:700"><td class="td-gd">Extra — fora da verba</td><td>—</td><td>' + brl(budgetSoma(extras)) + '</td><td>—</td><td>—</td><td>' + extras.length + '</td></tr>';
   html += '</tbody></table></div></div>';
 
-  html += '<div class="visitas-chart-wrap" style="margin-top:14px"><h3>📒 Ações lançadas (' + lanc.length + ')</h3>';
-  if (!lanc.length) html += '<p style="font-size:12px;color:var(--gray);margin:0">Nenhum lançamento registrado para este GD.</p>';
+  var todos = lanc.concat(extras);
+  html += '<div class="visitas-chart-wrap" style="margin-top:14px"><h3>📒 Ações lançadas (' + todos.length + ')</h3>';
+  if (!todos.length) html += '<p style="font-size:12px;color:var(--gray);margin:0">Nenhum lançamento registrado para este GD.</p>';
   else {
     html += '<div class="visitas-table-wrap"><table class="visitas-table"><thead><tr><th class="th-gd">Data</th><th style="text-align:left">Produto</th><th style="text-align:left">Ação</th><th style="text-align:left">Médico</th><th>CRM</th><th>Valor</th></tr></thead><tbody>';
-    lanc.slice().sort(function(a, b) { return String(a.data).localeCompare(String(b.data)); }).forEach(function(l) {
+    todos.slice().sort(function(a, b) { return String(a.data).localeCompare(String(b.data)); }).forEach(function(l) {
       html += '<tr><td class="td-gd">' + dataBr(l.data) + '</td><td style="text-align:left">' + nomeProd(l.produto) + '</td><td style="text-align:left">' + (l.acao || '—') + '</td>' +
         '<td style="text-align:left">' + (l.medico || '—') + '</td><td>' + (l.crm || '—') + '</td><td>' + brl(parseFloat(l.valor) || 0) + '</td></tr>';
     });
