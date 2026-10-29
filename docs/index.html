@@ -1511,10 +1511,39 @@ var BUDGET_LANC = null; // null = ainda não carregou / falhou
 function budgetEhExtra(l) { return String(l.produto || '').indexOf('EXTRA:') === 0; }
 function budgetEhTatico(l) { return !/^GLEMPA/.test(String(l.produto || '')) && !budgetEhExtra(l); }
 function budgetSoma(ls) { return ls.reduce(function(t, l){ return t + (parseFloat(l.valor) || 0); }, 0); }
+// Tático Extra Glempa (página budget-glempa.html, aba Tático): verba própria de
+// R$ 1.000 por CRM da lista mapeada pelos GDs (Fake não conta), lançamentos com
+// produto GLEMPA_TATICO. NÃO soma na verba tática — aparece no Panorama como
+// bloco separado "Glempa", só pra acompanhar. A lista de médicos é lida da
+// própria página do Glempa, pra não existir uma segunda cópia.
+var BUDGET_GLEMPA_MED = null; // [{d: distrito, c: CRM, v: verba, ...}] ou null se não carregou
+async function carregarGlempaMedicos() {
+  if (BUDGET_GLEMPA_MED) return;
+  try {
+    var txt = await (await fetch('budget-glempa.html?t=' + Date.now(), { cache: 'no-store' })).text();
+    var marca = 'var GLEMPA_TATICO_MEDICOS = ';
+    var ini = txt.indexOf(marca), fim = ini < 0 ? -1 : txt.indexOf('];', ini);
+    BUDGET_GLEMPA_MED = fim > 0 ? JSON.parse(txt.substring(ini + marca.length, fim + 1)) : null;
+  } catch (e) { BUDGET_GLEMPA_MED = null; console.warn('Lista do Tático Extra Glempa indisponível.', e.message); }
+}
+// Verba, utilizado e CRMs do Tático Extra Glempa de um distrito (prefixo de 6 dígitos)
+function budgetGlempaDe(prefixo6) {
+  if (!BUDGET_GLEMPA_MED || BUDGET_LANC === null) return null;
+  var meds = BUDGET_GLEMPA_MED.filter(function(m){ return String(m.d).substring(0, 6) === prefixo6; });
+  if (!meds.length) return null;
+  var classif = {}; // última classificação (FATO/FAKE) de cada CRM, produto GLEMPA_CLASSIF — igual à página do Glempa
+  BUDGET_LANC.forEach(function(l){ if (l.produto === 'GLEMPA_CLASSIF' && l.crm) classif[String(l.crm)] = l.acao; });
+  var crms = {}, verba = 0;
+  meds.forEach(function(m){ crms[String(m.c)] = true; if (classif[String(m.c)] !== 'FAKE') verba += parseFloat(m.v) || 0; });
+  var ls = BUDGET_LANC.filter(function(l){ return l.produto === 'GLEMPA_TATICO' && crms[String(l.crm)]; });
+  var comLanc = {}; ls.forEach(function(l){ comLanc[String(l.crm)] = true; });
+  return { verba: verba, usado: budgetSoma(ls), crms: meds.length, comLanc: Object.keys(comLanc).length };
+}
 
 async function carregarBudget() {
   try {
     BUDGET_LANC = GATE.liberado() ? await GATE.ler('budget_lancamentos') : null; // área restrita: só com a senha
+    if (BUDGET_LANC) await carregarGlempaMedicos(); // bloco "Glempa" do Panorama
   } catch(e) {
     BUDGET_LANC = null;
     console.warn('Aba budget_lancamentos indisponível — resumo de budget fica sem o utilizado.', e.message);
@@ -1620,10 +1649,24 @@ function renderBudgetPorGd() {
     regV += linV; regU += linU; regE += linE;
   });
   if (!prefixo) html += '<tr style="' + TOT + '"><td class="td-gd">Regional SPI</td>' + cols(regV, regU, regE) + '</tr>';
+  // Bloco "Glempa" — Tático Extra Glempa, verba própria: aparece na mesma tabela
+  // mas NÃO entra nos totais acima (decisão do Vinicius, 28/10/2026).
+  var glRows = '', glV = 0, glU = 0;
+  chaves.filter(function(k){ return k.substring(0, 4) === '1163'; }).forEach(function(k) {
+    var gl = budgetGlempaDe(k); if (!gl) return;
+    glV += gl.verba; glU += gl.usado;
+    glRows += '<tr class="row-vital"><td class="td-gd">' + BUDGET_VERBA_GD[k].gd +
+      ' <span style="font-size:10px;color:var(--gray);font-weight:500;white-space:nowrap">' + gl.comLanc + ' de ' + gl.crms + ' CRMs</span></td>' + cols(gl.verba, gl.usado, 0) + '</tr>';
+  });
+  if (glRows) {
+    html += '<tr class="row-sep"><td colspan="6">🧩 GLEMPA · Tático Extra <span style="font-weight:500;color:var(--gray)">— verba própria de R$ 1.000 por CRM (Fake não conta); não soma na verba tática acima</span></td></tr>' + glRows;
+    if (!prefixo) html += '<tr class="row-total"><td class="td-gd">Total Glempa</td>' + cols(glV, glU, 0) + '</tr>';
+  }
   html += '</tbody></table></div>';
   html += '<p style="font-size:11px;color:var(--gray);margin:12px 0 0;line-height:1.5">Verba tática por GD e lançamentos da página ' +
     '<a href="budget.html" style="color:var(--orange);font-weight:700">💰 Budget</a> — valor acumulado (a verba não é mensal, não muda com o mês selecionado). ' +
-    'A coluna <b>Extra</b> soma os lançamentos marcados como fora da verba (outro produto ou além do saldo); eles não entram no utilizado nem no %.' +
+    'A coluna <b>Extra</b> soma os lançamentos marcados como fora da verba (outro produto ou além do saldo); eles não entram no utilizado nem no %. ' +
+    'O bloco <b>Glempa</b> é o Tático Extra Glempa da página <a href="budget-glempa.html#tatico" style="color:var(--orange);font-weight:700">🎯 Budget Glempa</a>: verba própria, fora dos totais da verba tática.' +
     (semLanc ? ' Lançamentos indisponíveis no momento.' : '') + '</p>';
   html += '</div></div>';
   return html;
