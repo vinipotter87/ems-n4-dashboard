@@ -57,7 +57,7 @@ var RpsRegras = (function () {
     // conta como desvio nem exige plano de Fundamentos — Q4 não é prioridade e não pontua no PEX.
     var q4 = num(r.q4); out.push({ nome: 'Cobertura Q4', valor: q4 === null ? '—' : p1(q4), meta: 'informativo', desvio: false, info: true, sem: q4 === null, n: q4, fonte: 'reps' });
     add('Frequência Q1–Q3 (PEX)', f ? f.cob : null, '≥ 90%', f && f.cob < 90, 'freq');
-    add('Sobreposição Nexus × Vital', s ? s.pNv : null, '≤ 10%', s && s.pNv > 10, 'sob');
+    add('Sobreposição Clínica × Saúde', s ? s.pNv : null, '≤ 10%', s && s.pNv > 10, 'sob');
     // PEX aparece sempre, com a pontuação e o quadrante (medalha); só conta como desvio em atenção ou crítico
     if (px) out.push({ nome: 'PEX' + (sim ? ' (simulado)' : ''), valor: num(px.pts).toFixed(1).replace('.', ',') + ' pts', meta: 'bronze ou acima', desvio: /ATEN|CR[IÍ]T/i.test(px.medalha), sem: false, quad: px.medalha, n: num(px.pts), fonte: 'pex' });
     else out.push({ nome: 'PEX', valor: '—', meta: 'bronze ou acima', desvio: false, sem: true, n: null, fonte: 'pex' });
