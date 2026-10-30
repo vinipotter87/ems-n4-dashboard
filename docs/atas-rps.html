@@ -25,6 +25,13 @@ button,select,input{font-family:inherit}
 .cols{flex:1;min-height:0;display:grid;grid-template-columns:360px minmax(0,1fr);gap:16px;padding:16px 28px 20px}
 .lista{background:#fff;border-radius:12px;box-shadow:0 1px 6px rgba(0,0,0,.06);overflow:auto}
 .lista h2{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--gray);padding:12px 16px 8px;position:sticky;top:0;background:#fff;border-bottom:1px solid var(--border)}
+.mes{border-bottom:1px solid var(--border)}
+.mes summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;padding:11px 14px;background:#f8fafc;font-size:13.5px;font-weight:800;color:var(--brand-d)}
+.mes summary::-webkit-details-marker{display:none}
+.mes summary::before{content:"▸";font-size:12px;color:var(--gray);width:10px}
+.mes[open] summary::before{content:"▾"}
+.mes summary small{margin-left:auto;font-size:11px;font-weight:700;color:var(--gray)}
+.mes .item{padding-left:26px}
 .item{display:block;width:100%;text-align:left;background:#fff;border:none;border-bottom:1px solid var(--border);border-left:4px solid transparent;padding:10px 14px;cursor:pointer}
 .item:hover{background:#f8fafc}
 .item.on{background:#eff6ff;border-left-color:var(--brand)}
@@ -85,6 +92,7 @@ td{padding:8px 9px;border-bottom:1px solid var(--border);vertical-align:top;line
 </div>
 
 <div class="bar">
+  <label for="f-mes">Mês da RPS</label><select id="f-mes"><option value="">Todos</option></select>
   <label for="f-gd">GD</label><select id="f-gd"><option value="">Todos</option></select>
   <label for="f-tipo">Tipo</label><select id="f-tipo"><option value="">Todas</option><option value="col">Coletiva</option><option value="ind">Individual</option></select>
   <input id="f-busca" type="search" placeholder="Buscar no texto das atas">
@@ -116,7 +124,9 @@ td{padding:8px 9px;border-bottom:1px solid var(--border);vertical-align:top;line
 // RPS_ATA_DOC guarda o texto integral extraído do PDF. Atas anexadas antes de
 // o texto integral existir têm só os combinados. Página somente de leitura.
 var TAB = 'budget_lancamentos', MESES = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
-var CONFIG = {}, ATAS = [], GDS = {}, SEL = null;
+var CONFIG = {}, ATAS = [], GDS = {}, SEL = null, ABERTOS = null; // ABERTOS[mes] = grupo aberto na lista
+var NOME_MES = {JAN:'Janeiro',FEV:'Fevereiro',MAR:'Março',ABR:'Abril',MAI:'Maio',JUN:'Junho',JUL:'Julho',AGO:'Agosto',SET:'Setembro',OUT:'Outubro',NOV:'Novembro',DEZ:'Dezembro'};
+function mesDe(iso){ var m = +String(iso || '').slice(5, 7); return m >= 1 && m <= 12 ? MESES[m - 1] : ''; } // mês da data da RPS (yyyy-mm-dd)
 var TOPO = /^(Metadados da reuni[ãa]o|Objetivo da reuni[ãa]o|Resumo executivo|Blocos da diretriz RPS|Plano de a[çc][ãa]o consolidado|Combinado para alavancar|Pend[êe]ncias|Texto curto para registro)/i;
 
 function $(id){ return document.getElementById(id); }
@@ -175,22 +185,26 @@ async function carregar(){
     var a; try { a = JSON.parse(l.acao); } catch(e){ return; }
     var x = String(l.crm).split('|'), ind = x[0] === 'rpsi', distrito = String(l.gd).slice(3), g = GDS[distrito] || {};
     ATAS.push({ id: l.id, distrito: distrito, gd: g.nm || (ind ? distrito : l.medico), linha: g.linha || l.linha, ind: ind, rep: ind ? (l.medico || x[1]) : '', setor: ind ? x[1] : '',
-      data: x[x.length - 1], anexada: l.data, ata: a, doc: docs[l.gd + '§' + l.crm] || null, criado: Number(l.criadoEm) || 0 });
+      data: x[x.length - 1], mes: mesDe(x[x.length - 1]), anexada: l.data, ata: a, doc: docs[l.gd + '§' + l.crm] || null, criado: Number(l.criadoEm) || 0 });
   });
   ATAS.sort(function(p, q){ return q.data.localeCompare(p.data) || p.gd.localeCompare(q.gd) || q.criado - p.criado; });
   var sel = $('f-gd'), atual = sel.value, vistos = {};
   sel.innerHTML = '<option value="">Todos</option>' + ATAS.filter(function(t){ if (vistos[t.distrito]) return false; vistos[t.distrito] = 1; return true; })
     .sort(function(p, q){ return p.gd.localeCompare(q.gd); }).map(function(t){ return '<option value="' + t.distrito + '">' + esc(t.gd) + '</option>'; }).join('');
   sel.value = atual;
+  var selM = $('f-mes'), atualM = selM.value, vm = {}; ATAS.forEach(function(t){ if (t.mes) vm[t.mes] = 1; });
+  selM.innerHTML = '<option value="">Todos</option>' + MESES.filter(function(m){ return vm[m]; }).reverse().map(function(m){ return '<option value="' + m + '">' + NOME_MES[m] + '/2026</option>'; }).join('');
+  selM.value = vm[atualM] ? atualM : '';
   var pedido = (location.search.match(/[?&]id=([^&]+)/) || [])[1];
   if (!SEL && pedido && ATAS.some(function(t){ return t.id === pedido; })) SEL = pedido;
   desenharLista(); desenharDoc();
 }
 
 function filtradas(){
-  var gd = $('f-gd').value, tipo = $('f-tipo').value, b = norm($('f-busca').value.trim());
+  var gd = $('f-gd').value, mes = $('f-mes').value, tipo = $('f-tipo').value, b = norm($('f-busca').value.trim());
   return ATAS.filter(function(t){
     if (gd && t.distrito !== gd) return false;
+    if (mes && t.mes !== mes) return false;
     if (tipo && (tipo === 'ind') !== t.ind) return false;
     if (b){ var txt = norm([t.gd, t.rep, t.ata.titulo, t.ata.arquivo, t.doc ? t.doc.texto : ''].concat(t.ata.itens.map(function(i){ return i.texto + ' ' + i.resp; })).join(' ')); if (txt.indexOf(b) < 0) return false; }
     return true;
@@ -199,11 +213,20 @@ function filtradas(){
 function desenharLista(){
   var ls = filtradas();
   if (!ATAS.length){ $('lista').innerHTML = '<div class="vazio"><b>Nenhuma ata anexada</b>As atas aparecem aqui quando os GDs anexam o PDF no último slide da RPS.</div>'; return; }
-  $('lista').innerHTML = '<h2>' + ls.length + ' de ' + ATAS.length + ' atas · mais recentes primeiro</h2>' + (ls.length ? ls.map(function(t){
-    var res = t.ata.itens.filter(function(i){ return i.status === 'Resolvido'; }).length;
-    return '<button class="item' + (t.id === SEL ? ' on' : '') + '" onclick="abrir(\'' + t.id + '\')"><b>RPS de ' + dataBr(t.data) + ' · ' + esc(t.gd) + '</b>' +
-      '<span><i class="tag ' + (t.ind ? 'ind' : 'col') + '" style="font-style:normal">' + (t.ind ? 'Individual' : 'Coletiva') + '</i><i class="tag ' + (t.doc ? 'ok' : 'sem') + '" style="font-style:normal">' + (t.doc ? 'ata completa' : 'só combinados') + '</i></span>' +
-      '<span>' + (t.ind ? esc(t.rep) + ' · ' : '') + t.ata.itens.length + ' combinados · ' + res + ' resolvidos</span></button>'; }).join('') : '<div class="vazio">Nenhuma ata com esses filtros.</div>');
+  // primeiro o mês da RPS (mais recente no alto), depois as atas do mês, mais recentes primeiro — como na página de atas de N4
+  var grupos = [], por = {};
+  ls.forEach(function(t){ var m = t.mes || '—'; if (!por[m]){ por[m] = { mes: m, atas: [] }; grupos.push(por[m]); } por[m].atas.push(t); });
+  var filtrando = !!($('f-gd').value || $('f-mes').value || $('f-tipo').value || $('f-busca').value.trim());
+  if (ABERTOS === null){ ABERTOS = {}; if (grupos.length) ABERTOS[grupos[0].mes] = 1; } // começa com o mês mais recente aberto
+  var selMes = (ATAS.filter(function(t){ return t.id === SEL; })[0] || {}).mes;
+  $('lista').innerHTML = '<h2>' + ls.length + ' de ' + ATAS.length + ' atas · por mês da RPS</h2>' + (ls.length ? grupos.map(function(g){
+    var aberto = filtrando || ABERTOS[g.mes] || g.mes === selMes;
+    return '<details class="mes" data-mes="' + g.mes + '"' + (aberto ? ' open' : '') + '><summary>' + (NOME_MES[g.mes] ? NOME_MES[g.mes] + '/2026' : 'Sem data') + '<small>' + g.atas.length + (g.atas.length === 1 ? ' ata' : ' atas') + '</small></summary>' + g.atas.map(function(t){
+      var res = t.ata.itens.filter(function(i){ return i.status === 'Resolvido'; }).length;
+      return '<button class="item' + (t.id === SEL ? ' on' : '') + '" onclick="abrir(\'' + t.id + '\')"><b>RPS de ' + dataBr(t.data) + ' · ' + esc(t.gd) + '</b>' +
+        '<span><i class="tag ' + (t.ind ? 'ind' : 'col') + '" style="font-style:normal">' + (t.ind ? 'Individual' : 'Coletiva') + '</i><i class="tag ' + (t.doc ? 'ok' : 'sem') + '" style="font-style:normal">' + (t.doc ? 'ata completa' : 'só combinados') + '</i></span>' +
+        '<span>' + (t.ind ? esc(t.rep) + ' · ' : '') + t.ata.itens.length + ' combinados · ' + res + ' resolvidos</span></button>'; }).join('') + '</details>'; }).join('') : '<div class="vazio">Nenhuma ata com esses filtros.</div>');
+  [].forEach.call($('lista').querySelectorAll('details.mes'), function(d){ d.addEventListener('toggle', function(){ if (d.open) ABERTOS[d.getAttribute('data-mes')] = 1; else delete ABERTOS[d.getAttribute('data-mes')]; }); });
 }
 function abrir(id){ SEL = id; desenharLista(); desenharDoc(); $('doc').scrollTop = 0; }
 
@@ -238,7 +261,7 @@ function desenharDoc(){
   $('doc').innerHTML = h;
 }
 
-['f-gd', 'f-tipo'].forEach(function(id){ $(id).addEventListener('change', desenharLista); });
+['f-gd', 'f-mes', 'f-tipo'].forEach(function(id){ $(id).addEventListener('change', desenharLista); });
 $('f-busca').addEventListener('input', desenharLista);
 $('btn-atualizar').addEventListener('click', function(){ carregar().catch(erro); });
 function erro(e){ $('lista').innerHTML = '<div class="vazio"><b>Erro ao carregar</b>' + esc(e.message) + '</div>'; }
