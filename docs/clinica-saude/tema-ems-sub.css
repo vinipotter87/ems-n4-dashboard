@@ -1,0 +1,72 @@
+/* Tema Grupo EMS — subpáginas (atas, budget, CRM Chave, mercado, planos, RPS, tendências, governança).
+   Mesma paleta do tema-ems.css do dashboard principal; carregado depois do <style> de cada página.
+   Cores de status (verde/amarelo/vermelho) não são alteradas aqui. */
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@200;300;400;500;600;700;800&display=swap');
+
+:root{
+  --navy:#1F2D44; --navy-2:#1C2D46; --azul:#B6E4FA; --azul-txt:#BFE3F8; --gelo:#DFF1FB; --aco:#5787A2;
+  --bg:#F3F9FD; --text:#1F2D44; --dark:#1F2D44; --gray:#4E7A94; --light:#EEF6FB; --border:#D6E6F0;
+  --brand:#1F2D44; --brand-d:#1C2D46; --brand-hi:#5787A2; --brand-l:#DFF1FB;
+  --pri:#1F2D44; --pri-2:#5787A2; --pri-l:#DFF1FB;
+  --nexus:#12735A; --nexus-l:#E3F4EE;
+  /* governanca-spi.html usa nomes próprios */
+  --azul-ems:#1F2D44; --azul-escuro:#1F2D44; --azul-claro:#DFF1FB; --azul-medio:#5787A2;
+  --cinza-texto:#1F2D44; --cinza-suave:#4E7A94; --borda:#D6E6F0; --fundo:#F3F9FD;
+}
+
+body{font-family:'Sora',system-ui,-apple-system,'Segoe UI',Arial,sans-serif}
+body.tema-claro{background:var(--bg)}
+button,select,input,textarea{font-family:inherit}
+
+/* ── Cabeçalho de página (só o que tem logo; .hdr de slide fica como está) ── */
+.hdr:has(.logo){background:var(--navy);box-shadow:0 2px 14px rgba(31,45,68,.28);position:relative;overflow:hidden}
+.hdr:has(.hdr-inner){position:sticky}
+.hdr:has(.logo)::before,.hdr:has(.logo)::after{content:"";position:absolute;border-radius:50%;background:var(--navy-2);filter:brightness(1.35);opacity:.55;pointer-events:none}
+.hdr:has(.logo)::before{width:260px;height:260px;right:-60px;top:-150px}
+.hdr:has(.logo)::after{width:150px;height:150px;right:150px;top:-30px}
+.hdr:has(.logo) > *,.hdr-inner{position:relative;z-index:1}
+.top{background:var(--navy)}
+.hdr .logo,.top .logo{background:none;padding:0;border-radius:0;display:flex;align-items:center;flex:none}
+.logo img{height:18px;display:block}
+.hdr-sep{background:var(--aco)}
+.hdr:has(.logo) h1{font-weight:700;letter-spacing:-.2px}
+.hdr:has(.logo) p{color:var(--gelo);font-weight:300}
+.hpill,.hdr:has(.logo) a{background:transparent;border:1px solid var(--aco);color:var(--azul-txt);border-radius:999px}
+.hpill.hi{background:var(--azul);border-color:var(--azul);color:var(--navy);font-weight:700}
+.hdr:has(.logo) a:hover{background:rgba(182,228,250,.14)}
+
+/* ── Controles: abas/botões ativos e loading na paleta ── */
+.mes-btn.active{background:var(--navy);border-color:var(--navy);color:#fff}
+.loading-spinner{border-color:var(--gelo);border-top-color:var(--navy)}
+.st.Em,.st.and{color:var(--aco)}
+.banner2{color:var(--navy)}
+.tag.nexus{color:var(--nexus)}
+
+/* ── RPS (Copiloto): palco e tela de entrada em navy + azul claro, sem o azul vivo ── */
+body:has(> .top){background:#17233A}
+.capa{background:var(--navy)}
+.capa.ent{background:
+  radial-gradient(560px 560px at 90% -6%,rgba(87,135,162,.42) 0%,rgba(87,135,162,0) 62%),
+  radial-gradient(420px 420px at 2% 104%,rgba(182,228,250,.13) 0%,rgba(182,228,250,0) 60%),
+  var(--navy)}
+.capa.ent .k:after{background:linear-gradient(90deg,var(--azul),rgba(182,228,250,.12))}
+.capa.ent h2{font-weight:800;text-shadow:none}
+.capa.ent h2 span{background:none;-webkit-background-clip:border-box;background-clip:border-box;color:var(--azul);font-weight:200}
+.capa.ent .modelo{background:rgba(182,228,250,.07);border:1px solid rgba(182,228,250,.26)}
+.capa.ent .modelo:hover{background:rgba(182,228,250,.16)}
+.capa.ent .modelo.on{background:rgba(182,228,250,.2);border-color:var(--azul);box-shadow:0 0 0 1px var(--azul)}
+.capa.ent .modelo i{background:var(--azul);box-shadow:none}
+.capa.ent .modelo i svg{stroke:var(--navy)}
+.capa.ent .form select,.capa.ent .form input{color:var(--navy);box-shadow:none}
+.capa.ent .form .ir{color:var(--navy);background:var(--azul);border:1px solid var(--azul);box-shadow:none}
+.capa.ent .form .ir:hover{background:var(--azul-txt)}
+
+/* ── Budget: cartões consolidados no padrão suave dos KPIs (fundo branco + faixa no topo) ── */
+.consol-card{background:#fff!important;color:var(--navy);border:1px solid var(--border);border-top:4px solid var(--navy);box-shadow:0 1px 3px rgba(31,45,68,.05)}
+.consol-card .lbl{color:var(--aco);opacity:1;letter-spacing:1px}
+.consol-card .sub{color:var(--gray);opacity:1}
+.consol-card[style*="c2410c"]{border-top-color:#E9A23B}
+.consol-card[style*="1d4ed8"]{border-top-color:var(--aco)}
+.consol-card[style*="111827"]{border-top-color:var(--azul)}
+.consol-card[style*="b91c1c"]{border-top-color:#D9596B}
+.consol-card[style*="b91c1c"] .val{color:#B42318}

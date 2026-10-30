@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Grupo EMS | Acesso restrito</title>
+<style>
+body{margin:0;background:#ECEDF0;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}
+.gate-trava{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:16px}
+.gate-trava form{background:#fff;border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,.18);padding:28px 30px;width:340px;max-width:100%;box-sizing:border-box}
+.gate-trava h2{font-size:17px;font-weight:800;color:#0b2a5b;margin:0 0 6px}
+.gate-trava p{font-size:12.5px;color:#6b7280;margin:0 0 16px;line-height:1.5}
+.gate-trava input{width:100%;box-sizing:border-box;border:1.5px solid #e5e7eb;border-radius:8px;padding:10px 12px;font-size:14px}
+.gate-trava input:focus{outline:none;border-color:#1d4ed8}
+.gate-trava button{width:100%;margin-top:12px;background:#1d4ed8;color:#fff;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:800;cursor:pointer}
+.gate-trava button[disabled]{opacity:.6;cursor:default}
+.gate-trava .err{color:#c8102e;font-size:12px;font-weight:700;margin-top:10px;min-height:16px}
+</style>
+</head>
+<body>
+<div class="gate-trava"><form id="f" autocomplete="off" hidden>
+<h2>🔒 Dashboard N4</h2>
+<p>Digite a senha para abrir.</p>
+<input id="s" type="password" autocomplete="current-password" placeholder="senha" autofocus>
+<button id="b" type="submit">Entrar</button>
+<div class="err" id="e"></div>
+</form></div>
+<script>
+(function () {
+  var SAL = 'd5IYgasIvqxFzuKqz9qEEA==', ITER = 600000, ARQUIVO = 'mercado.enc', CHAVE = 'cs_acesso_v1';
+  function bytes(b64) { return Uint8Array.from(atob(b64), function (c) { return c.charCodeAt(0); }); }
+  function b64(u8) { return btoa(String.fromCharCode.apply(null, u8)); }
+  async function derivar(senha) {
+    var base = await crypto.subtle.importKey('raw', new TextEncoder().encode(senha), 'PBKDF2', false, ['deriveBits']);
+    return new Uint8Array(await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: bytes(SAL), iterations: ITER }, base, 256));
+  }
+  // Abre com a chave; falha com OperationError se a chave estiver errada
+  async function abrir(chave) {
+    var r = await fetch(ARQUIVO + '?t=' + Date.now(), { cache: 'no-store' });
+    if (!r.ok) throw new Error('rede');
+    var enc = new Uint8Array(await r.arrayBuffer());
+    var k = await crypto.subtle.importKey('raw', chave, 'AES-GCM', false, ['decrypt']);
+    var plano = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: enc.slice(0, 12) }, k, enc.slice(12));
+    var html = await new Response(new Blob([plano]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+    try { sessionStorage.setItem(CHAVE, b64(chave)); } catch (e) {}
+    document.open(); document.write(html); document.close();
+  }
+  var f = document.getElementById('f'), s = document.getElementById('s'), b = document.getElementById('b'), e = document.getElementById('e');
+  function mostrar() { f.hidden = false; s.focus(); }
+  f.addEventListener('submit', async function (ev) {
+    ev.preventDefault();
+    if (!s.value) { s.focus(); return; }
+    b.disabled = true; e.textContent = 'Conferindo…';
+    try { await abrir(await derivar(s.value)); }
+    catch (x) {
+      e.textContent = x && x.name === 'OperationError' ? 'Senha incorreta.' : 'Não foi possível abrir. Confira a conexão e tente de novo.';
+      s.value = ''; s.focus(); b.disabled = false;
+    }
+  });
+  var guardada = null;
+  try { guardada = sessionStorage.getItem(CHAVE); } catch (x) {}
+  if (!guardada) { mostrar(); return; }
+  abrir(bytes(guardada)).catch(function () {
+    try { sessionStorage.removeItem(CHAVE); } catch (x) {}
+    mostrar();
+  });
+})();
+</script>
+</body>
+</html>
