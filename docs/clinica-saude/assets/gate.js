@@ -47,6 +47,7 @@ var GATE = (function () {
   // lê config.json uma vez (mesma pasta das páginas) só pra pegar gate_url
   function config() {
     if (CFG) return CFG;
+    if (window.CS_GATE_URL !== undefined) { URL = window.CS_GATE_URL || null; CFG = Promise.resolve({ gate_url: URL }); return CFG; }
     CFG = fetch((window.GATE_BASE || '') + 'config.json?t=' + Date.now(), { cache: 'no-store' })
       .then(function (r) { if (!r.ok) throw new Error('config.json não encontrado.'); return r.json(); })
       .then(function (c) { URL = c.gate_url || null; return c; })
