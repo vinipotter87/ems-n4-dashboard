@@ -84,6 +84,7 @@ select.st{cursor:pointer}
 .vazio b{display:block;font-size:16px;color:var(--text)}
 .vazio.mini{padding:18px 10px}
 .nota{font-size:11px;color:var(--gray);line-height:1.5;margin-top:4px}
+.selo{display:inline-block;white-space:nowrap;border-radius:999px;padding:2px 9px;font-size:10.5px;font-weight:800;margin-left:6px}.selo.ok{background:#dcfce7;color:#166534}.selo.warn{background:#fef3c7;color:#92400e}.selo.crit{background:#fee2e2;color:#991b1b}.selo.cinza{background:#f3f4f6;color:#374151}
 .aviso{background:#fff7ed;color:#9a3412;border-radius:8px;padding:8px 12px;font-size:12px;margin-bottom:14px;line-height:1.5}
 .aviso button{background:#fff;border:1.5px solid #fdba74;border-radius:7px;padding:4px 10px;font-size:11.5px;font-weight:800;color:#9a3412;cursor:pointer;margin-left:6px}
 .lk{color:var(--brand);font-weight:700;text-decoration:none;white-space:nowrap}
@@ -187,6 +188,19 @@ function revisaoTag(p){
   if (p.revisao === HOJE) return '<span class="p warn">revisão hoje — ' + dataBr(p.revisao) + '</span>';
   return '<span class="p ok">próxima revisão ' + dataBr(p.revisao) + '</span>';
 }
+function altQuando(s){ // carimbo do servidor 'yyyy-MM-dd HH:mm' (ou 'dd/MM/yyyy HH:mm:ss' se o Sheets converteu) → {iso, br}
+  var m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/.exec(String(s || '').replace(/^'/, '')); if (m) return { iso: m[1] + '-' + m[2] + '-' + m[3], br: m[3] + '/' + m[2] + '/' + m[1] + ' ' + m[4] + ':' + m[5] };
+  m = /^(\d{2})\/(\d{2})\/(\d{4})[ ,T]+(\d{2}):(\d{2})/.exec(String(s || '').replace(/^'/, '')); if (m) return { iso: m[3] + '-' + m[2] + '-' + m[1], br: m[1] + '/' + m[2] + '/' + m[3] + ' ' + m[4] + ':' + m[5] };
+  return null; }
+// Nota de alteração (30/10/2026): editar o plano no Copiloto é livre; o servidor carimba data, hora e nome.
+// Referência = última RPS em que o plano foi revisado (antes de hoje), senão a criação.
+function notaAlt(p){
+  var q = altQuando(p.atualizadoEm), n = Number(p.nAlteracoes) || 0, quem = String(p.alteradoPor || '').trim();
+  if (!q) return '<span class="selo cinza" title="Plano anterior ao registro de alterações (30/10/2026)">sem registro de alteração</span>';
+  var revs = p.revisoes.filter(function(d){ return d < HOJE; }).sort(), refRps = revs.length ? revs[revs.length - 1] : null, ref = refRps || p.criado, refTxt = refRps ? 'a RPS de ' + dataBr(refRps) : 'a criação';
+  var selo = q.iso === HOJE ? '<span class="selo warn">⚠ alterado hoje</span>' : q.iso > ref ? '<span class="selo ok">✓ atualizado após ' + refTxt + '</span>' : '<span class="selo crit">✗ sem alteração desde ' + refTxt + '</span>';
+  return selo + '<span class="nota" title="hora do servidor">última alteração ' + q.br + (quem ? ' por ' + esc(quem) : '') + ' · ' + (n ? n + (n === 1 ? ' alteração' : ' alterações') : 'sem alterações') + ' desde a criação</span>';
+}
 function revisaoAtrasada(p){ return !p.encerrado && !!p.revisao && p.revisao < HOJE; }
 // métrica, base e objetivo × realizado de cada mês do plano (gravados pelo Copiloto)
 function metaHtml(p){
@@ -276,6 +290,7 @@ function lerPlanos(linhas){
       setor: setor, rep: l.medico || setor, chave: chave, mes: p.mesBase || mes, tipo: fund ? 'fund' : 'marca', titulo: planoTitulo(chave),
       problema: p.problema || '', kpis: p.kpis || [], porques: p.porques || [], raiz: p.raiz || (p.porques || [])[(p.porques || []).length - 1] || '', raizPropria: !!p.raiz,
       acoes: p.acoes || [], criado: criadoDe(l), data: l.data, revisao: p.revisao || '', revisoes: p.revisoes || [], encerrado: p.encerrado || null,
+      atualizadoEm: l.atualizadoEm || '', alteradoPor: l.alteradoPor || '', nAlteracoes: l.nAlteracoes || '', // carimbos do servidor (30/10/2026)
       metrica: p.metrica || '', mesBase: p.mesBase || mes, base: p.base || null, medicoes: p.medicoes || [], objetivos: p.objetivos || [], resultados: p.resultados || {},
       reg: l, bruto: p // linha original e JSON completo, para regravar o status
     };
@@ -397,6 +412,10 @@ function seletor(p, k){
   return '<select class="st ' + COR[a.status] + '" onchange="mudarStatus(\'' + p.reg.id + '\',' + k + ',this)">' +
     STATUS.map(function(s){ return '<option' + (s === a.status ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>';
 }
+var QUEM_CHAVE = 'ems_rps_quem'; // mesmo nome guardado pelo Copiloto
+function quemAltera(){ var n = ''; try { n = localStorage.getItem(QUEM_CHAVE) || ''; } catch(e){}
+  if (!n){ n = String(window.prompt('Quem está fazendo esta alteração? (fica registrado com a data e a hora)') || '').replace(/\s+/g, ' ').trim().slice(0, 60); if (n) try { localStorage.setItem(QUEM_CHAVE, n); } catch(e){} }
+  return n; }
 async function mudarStatus(id, k, sel){
   var p = PLANOS.filter(function(x){ return x.reg.id === id; })[0];
   if (!p) return;
@@ -406,7 +425,7 @@ async function mudarStatus(id, k, sel){
   try {
     var resp = await GATE.enviar({
       acao: 'edit', id: p.reg.id, gd: p.reg.gd, linha: p.reg.linha, produto: p.reg.produto, crm: p.reg.crm,
-      medico: p.reg.medico, valor: 0, acao_lancamento: JSON.stringify(p.bruto), data: p.reg.data, criadoEm: p.reg.criadoEm });
+      medico: p.reg.medico, valor: 0, acao_lancamento: JSON.stringify(p.bruto), data: p.reg.data, criadoEm: p.reg.criadoEm, alteradoPor: quemAltera() });
     if (!resp.ok) throw new Error(resp.erro || 'falha desconhecida');
     p.reg.acao = JSON.stringify(p.bruto);
   } catch(e){
@@ -537,7 +556,7 @@ function render(){
   h += '<div class="card"><h2>Planos completos <small>clique para abrir o problema, os 5 porquês, o objetivo e o 5W2H</small></h2>';
   ps.forEach(function(p){
     h += '<details class="plano' + (p.encerrado ? ' enc' : '') + '"><summary><b>' + esc(p.rep) + '</b><span class="tag gd">' + esc(p.gdAb) + '</span><span class="tag ' + p.linha + '">' + p.linha + '</span><span class="tag ' + p.tipo + '">' + esc(p.titulo) + '</span>' +
-      '<span class="raiz"><i>Causa raiz:</i> ' + esc(p.raiz || '—') + '</span>' + revisaoTag(p) + '<span class="nota">base ' + esc(p.mes) + '/2026 · criado em ' + dataBr(p.criado) + ' · ' + p.acoes.length + ' ação(ões)</span></summary>' +
+      '<span class="raiz"><i>Causa raiz:</i> ' + esc(p.raiz || '—') + '</span>' + revisaoTag(p) + '<span class="nota">base ' + esc(p.mes) + '/2026 · criado em ' + dataBr(p.criado) + ' · ' + p.acoes.length + ' ação(ões)</span>' + notaAlt(p) + '</summary>' +
       '<div class="corpo"><div class="prob"><span class="sub">Problema</span>' + esc(p.problema) + (p.kpis.length ? '<div class="kp">' + p.kpis.map(function(k){ return '<span>' + esc(k) + '</span>'; }).join('') + '</div>' : '') + metaHtml(p) + '</div>' +
       '<div><span class="sub">5 porquês</span>' + p.porques.map(function(t, k){ var r = !p.raizPropria && k === p.porques.length - 1; return '<div class="pq' + (r ? ' raiz' : '') + '"><i>' + (r ? 'Causa raiz' : (k + 1) + 'º por quê') + '</i>' + esc(t) + '</div>'; }).join('') + (p.raizPropria ? '<div class="pq raiz"><i>Causa raiz</i>' + esc(p.raiz) + '</div>' : '') +
       (p.revisoes.length ? '<div class="nota" style="margin-top:8px">Revisões feitas: ' + p.revisoes.map(dataBr).join(' · ') + '</div>' : '') + '</div>' +

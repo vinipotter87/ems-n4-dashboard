@@ -11,7 +11,8 @@
  * Uso nas páginas:
  *   await GATE.garantir('Atas de N4');  // mostra a tela de senha se preciso
  *   var linhas = await GATE.ler('budget_lancamentos'); // [{id, gd, ...}]
- *   await GATE.gravar({acao:'add'|'edit'|'delete', id, gd, ...});
+ *   await GATE.gravar({acao:'add'|'edit'|'delete', id, gd, ..., alteradoPor});  // alteradoPor: nome de quem grava (planos de RPS)
+ *   await GATE.ler('rps_plano_log');   // histórico das gravações de plano de RPS (só a senha do GRD)
  *   GATE.liberado()  → true quando há sessão com o papel que a página exige (window.GATE_PAPEL)
  *   GATE.pronto()    → true quando o gate_url está configurado
  */

@@ -149,3 +149,16 @@ Scripts Python que escrevem nessas abas usam `ingest.conectar_sheets_restrito()`
 (`subir_atas_n4_notion.py` aqui e `publicar_tendencias.py` no SQUAD N4), que lê
 `SPREADSHEET_ID_RESTRITO` do `.env`. A service account precisa ser Editor também
 na planilha privada.
+
+**Rastro das alterações de plano de RPS (30/10/2026).** Editar um plano salvo no
+Copiloto (`rps.html`) é livre, sem senha, para representante e GD. Em troca, cada
+gravação de `RPS_PLANO` é carimbada **pelo servidor** (hora do Apps Script, fuso
+`America/Sao_Paulo`, gravada como texto `yyyy-MM-dd HH:mm`) nas colunas
+`atualizadoEm`, `alteradoPor` e `nAlteracoes` de `budget_lancamentos`, que saem no
+`ler_aberto` e viram a nota de rodapé do plano (selo verde/vermelho/âmbar em relação à
+última RPS em que o plano foi revisado). Mudar só status de ação, data de revisão ou
+encerramento não conta como alteração (o servidor compara o conteúdo, `conteudoPlano`).
+Cada gravação vai também para a aba `rps_plano_log` (antes/depois), lida só com
+`SENHA_GRD` (botão 📜 Histórico no plano; a senha do GRD passou a abrir qualquer página).
+Apagar um plano continua exigindo senha e é exclusão lógica: a linha vira produto
+`RPS_PLANO_APAGADO` e nada some da planilha.

@@ -2717,6 +2717,7 @@ function apresRepsPlanosGrupo() {
   function dataBr(iso) { var x = String(iso || '').split('-'); return x.length === 3 ? x[2] + '/' + x[1] + '/' + x[0] : ''; }
   function isoDe(d) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
   function criadoDe(l) { var t = Number(l.criadoEm); return t ? isoDe(new Date(t)) : (l.data || ''); }
+  function altDe(l) { var m = /^(\d{4})-(\d{2})-(\d{2})[ T]/.exec(String(l.atualizadoEm || '').replace(/^'/, '')) || (function(x) { var k = /^(\d{2})\/(\d{2})\/(\d{4})/.exec(x); return k ? [k[0], k[3], k[2], k[1]] : null; })(String(l.atualizadoEm || '').replace(/^'/, '')); return m ? m[3] + '/' + m[2] : ''; } // última alteração do plano (carimbo do servidor, 30/10/2026) em dd/mm
   var hoje = isoDe(new Date());
 
   // planos RPS do distrito (um por setor × chave × mês-base; só os em andamento interessam aqui)
@@ -2724,7 +2725,7 @@ function apresRepsPlanosGrupo() {
     if (l.produto !== 'RPS_PLANO' || l.gd !== 'N4:' + DISTRITO_FILTRO) return null;
     var x = String(l.crm).split('|'); if (x[0] !== 'rpsi') return null;
     var p; try { p = JSON.parse(l.acao); } catch (e) { return null; } if (!p) return null;
-    return { setor: x[1], chave: x[2], tipo: /^fund/.test(x[2]) ? 'fund' : 'marca', titulo: x[2] === 'fund' ? 'Fundamentos' : x[2] === 'fund2' ? 'Fundamentos (2º)' : x[2].replace(/^marca-/, '').replace(/_/g, ' '), p: p, criado: criadoDe(l) };
+    return { setor: x[1], chave: x[2], tipo: /^fund/.test(x[2]) ? 'fund' : 'marca', titulo: x[2] === 'fund' ? 'Fundamentos' : x[2] === 'fund2' ? 'Fundamentos (2º)' : x[2].replace(/^marca-/, '').replace(/_/g, ' '), p: p, criado: criadoDe(l), alt: altDe(l) };
   }).filter(Boolean);
   function abertos(setor) { return planos.filter(function(o) { return o.setor === setor && !o.p.encerrado; }).sort(function(a, b) { return a.criado.localeCompare(b.criado); }); }
 
@@ -2763,7 +2764,7 @@ function apresRepsPlanosGrupo() {
     if (ab.length) nComPlano++;
     nPlanos += ab.length; nFund += ab.filter(function(o) { return o.tipo === 'fund'; }).length;
     var chips = ab.map(function(o) { acTot += (o.p.acoes || []).length; acConc += (o.p.acoes || []).filter(function(a) { return a.status === 'Concluída'; }).length;
-      return '<span class="ap-rp-tag ' + o.tipo + '">' + esc(o.titulo) + ' · desde ' + dataBr(o.criado).slice(0, 5) + '</span>'; }).join('');
+      return '<span class="ap-rp-tag ' + o.tipo + '" title="' + (o.alt ? 'última alteração do plano em ' + o.alt : 'sem registro de alteração') + '">' + esc(o.titulo) + ' · desde ' + dataBr(o.criado).slice(0, 5) + (o.alt ? ' · alt. ' + o.alt : '') + '</span>'; }).join('');
     var ac = ab.reduce(function(t, o) { return t + (o.p.acoes || []).length; }, 0), acOk = ab.reduce(function(t, o) { return t + (o.p.acoes || []).filter(function(a) { return a.status === 'Concluída'; }).length; }, 0);
     var revs = ab.map(function(o) { return o.p.revisao || ''; });
     var revHtml = '—';

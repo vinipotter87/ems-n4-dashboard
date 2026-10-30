@@ -17,8 +17,21 @@
  *   {acao:'ler_aberto'}  (sem senha)     → {ok, values}  só registros de RPS (PRODUTOS_ABERTOS)
  *   add/edit/delete sem token: aceitos só para registros de RPS
  *   {acao:'add'|'edit'|'delete', token, ...campos}  (aba budget_lancamentos,
- *                                          mesmo contrato do web app antigo)
+ *                                          mesmo contrato do web app antigo;
+ *                                          + alteradoPor = nome de quem gravou)
  *   {acao:'sair', token}                 → {ok}
+ *
+ * Rastro das alterações de plano de RPS (30/10/2026): editar um plano é livre
+ * (sem senha), então o servidor é quem registra quando e por quem. Na linha do
+ * plano ficam as colunas atualizadoEm (hora DESTE servidor, nunca a do
+ * navegador), alteradoPor e nAlteracoes, que saem no ler_aberto pra nota de
+ * rodapé que todo mundo vê. Cada gravação de RPS_PLANO vai também pra aba
+ * rps_plano_log (antes/depois), que só a senha do GRD lê. Mudar só o status de
+ * uma ação, a data de revisão ou encerrar o plano NÃO conta como alteração do
+ * plano (conteudoPlano ignora esses campos); o servidor compara o conteúdo, não
+ * confia no que a página diz. Apagar RPS_PLANO exige senha e é exclusão lógica:
+ * a linha vira produto RPS_PLANO_APAGADO (segue aberta à leitura, pra nota
+ * "substitui o plano de…") e nada some da planilha.
  * Resposta {ok:false, erro:'sessao'} = token inválido/expirado → a página
  * pede a senha de novo; {erro:'negado'} = sessão válida mas sem permissão
  * (papel Leste em registro da SPI, papel Glempa fora dos lançamentos GLEMPA) → a página só avisa.
@@ -54,15 +67,19 @@ var ABA_BUDGET = 'budget_lancamentos';
 // Coluna 'tipo' (27/10/2026): 'MEDICO' (crm + medico) ou 'PDV' (ponto de venda:
 // crm guarda o CNPJ e medico o nome do PDV; única ação permitida: Coffee break).
 // Linhas antigas sem a coluna são médico — a página trata vazio como MEDICO.
-var HEADERS = ['id', 'gd', 'linha', 'produto', 'crm', 'medico', 'valor', 'acao', 'data', 'criadoEm', 'editado', 'tipo'];
-var COL_TIPO = 12;
-var ABAS_PERMITIDAS = /^(budget_lancamentos|tendencias_[A-Z]{3})$/; // o que o navegador pode ler
+var HEADERS = ['id', 'gd', 'linha', 'produto', 'crm', 'medico', 'valor', 'acao', 'data', 'criadoEm', 'editado', 'tipo', 'atualizadoEm', 'alteradoPor', 'nAlteracoes'];
+var COL_TIPO = 12, COL_ATUALIZADO = 13, COL_QUEM = 14, COL_N = 15;
+var ABA_LOG = 'rps_plano_log', ABAS_SO_GRD = { 'rps_plano_log': true };
+var HEADERS_LOG = ['id', 'gd', 'crm', 'medico', 'quando', 'quem', 'acao', 'conteudo', 'antes', 'depois'];
+var FUSO = 'America/Sao_Paulo';
+var ABAS_PERMITIDAS = /^(budget_lancamentos|tendencias_[A-Z]{3}|rps_plano_log)$/; // o que o navegador pode ler
 // SEM senha (decisão do Vinicius, 16/10/2026): o Copiloto de RPS é usado pelos GDs
 // com o time, então os registros de RPS — combinados das atas, texto completo e
 // planos — podem ser lidos ('ler_aberto') e gravados (add/edit/delete sem token)
 // por qualquer um. Só esses produtos: atas de N4, planos de N4, budget e
 // tendências continuam atrás da senha, tanto pra ler quanto pra gravar.
-var PRODUTOS_ABERTOS = { 'RPS_ATA': true, 'RPS_ATA_DOC': true, 'RPS_PLANO': true };
+var PRODUTOS_ABERTOS = { 'RPS_ATA': true, 'RPS_ATA_DOC': true, 'RPS_PLANO': true, 'RPS_PLANO_APAGADO': true };
+var PLANO = 'RPS_PLANO', PLANO_APAGADO = 'RPS_PLANO_APAGADO';
 var SESSAO_SEG = 6 * 60 * 60;        // 6 h (máximo do CacheService)
 // Senha de 4 dígitos por decisão do Vinicius (16/10/2026): fácil pro time, mas são só
 // 10 mil combinações. Pra compensar, o bloqueio é duro: 5 erros travam o login por
@@ -144,6 +161,7 @@ function login(body) {
   var tentativa = String(body.senha || ''), concedido = null;
   if (papel === 'grd') { if (iguais(tentativa, senhaGrd)) concedido = 'grd'; } // página do GRD: só a senha do GRD (a SPI não abre)
   else if (iguais(tentativa, senhaSpi)) concedido = 'spi';                  // a senha SPI abre tudo
+  else if (senhaGrd.length >= SENHA_MIN && iguais(tentativa, senhaGrd)) concedido = 'grd'; // a senha do GRD abre qualquer página (30/10/2026: é o que lê o histórico dos planos)
   else if (papel === 'leste' && iguais(tentativa, senhaLeste)) concedido = 'leste';
   else if (papel === 'glempa' && iguais(tentativa, senhaGlempa)) concedido = 'glempa';
   if (!concedido) {
@@ -179,6 +197,7 @@ function iguais(a, b) {
 function ler(body, papel) {
   var aba = String(body.aba || '');
   if (!ABAS_PERMITIDAS.test(aba)) return resposta({ ok: false, erro: 'aba não permitida: ' + aba });
+  if (ABAS_SO_GRD[aba] && papel !== 'grd') return resposta({ ok: false, erro: 'negado' }); // histórico dos planos: só a senha do GRD
   if (papel !== 'spi' && papel !== 'grd' && aba !== ABA_BUDGET) return resposta({ ok: false, erro: 'negado' }); // tendências é só SPI/GRD
   var sheet = planilha().getSheetByName(aba);
   if (!sheet) return resposta({ ok: true, values: [] }); // mesma semântica do 400 da API: aba inexistente = vazia
@@ -232,9 +251,13 @@ function executar(body, sessao) {
   // precisam ter produto em PRODUTOS_ABERTOS.
   if (!sessao) {
     if ((acao === 'add' || acao === 'edit') && !PRODUTOS_ABERTOS[body.produto]) return resposta({ ok: false, erro: 'sessao' });
+    if (body.produto === PLANO_APAGADO) return resposta({ ok: false, erro: 'sessao' }); // só o servidor marca como apagado
     if (acao === 'edit' || acao === 'delete') {
       var li = encontrarLinha(sheet, body.id);
-      if (li >= 0 && !PRODUTOS_ABERTOS[String(sheet.getRange(li, 4).getValue())]) return resposta({ ok: false, erro: 'sessao' });
+      var prodLi = li >= 0 ? String(sheet.getRange(li, 4).getValue()) : '';
+      if (li >= 0 && !PRODUTOS_ABERTOS[prodLi]) return resposta({ ok: false, erro: 'sessao' });
+      if (li >= 0 && prodLi === PLANO_APAGADO) return resposta({ ok: false, erro: 'sessao' });
+      if (acao === 'delete' && (prodLi === PLANO || body.produto === PLANO)) return resposta({ ok: false, erro: 'sessao' }); // apagar plano de RPS: só com senha
     }
   } else if (sessao === 'leste') { // sessão da Leste só mexe em registros da Leste
     var mapaL = gdsLeste();
@@ -251,32 +274,56 @@ function executar(body, sessao) {
     }
   }
 
+  var ehPlano = body.produto === PLANO, quando = agora(), quem = quemAlterou(body);
+
   if (acao === 'add') {
     // idempotente: reenvio do mesmo lançamento (retry após timeout) não duplica
     if (encontrarLinha(sheet, body.id) >= 0) return resposta({ ok: true, jaExistia: true });
     sheet.appendRow([
       body.id, body.gd, body.linha, body.produto, body.crm,
       body.medico, body.valor, body.acao_lancamento, body.data, body.criadoEm, 'FALSE',
-      tipoLancamento(body)
+      tipoLancamento(body), ehPlano ? txt(quando) : '', ehPlano ? quem : '', ehPlano ? 0 : ''
     ]);
-    return resposta({ ok: true });
+    if (ehPlano) registrarLog(body, quando, quem, 'add', true, '', body.acao_lancamento);
+    return resposta({ ok: true, atualizadoEm: ehPlano ? quando : '', alteradoPor: ehPlano ? quem : '', nAlteracoes: 0 });
   }
 
   if (acao === 'edit') {
     var linha = encontrarLinha(sheet, body.id);
     if (linha < 0) return resposta({ ok: false, erro: 'lançamento não encontrado' });
+    var antes = ehPlano ? String(sheet.getRange(linha, 8).getValue()) : '';
     sheet.getRange(linha, 2, 1, 9).setValues([[
       body.gd, body.linha, body.produto, body.crm, body.medico,
       body.valor, body.acao_lancamento, body.data, body.criadoEm
     ]]);
     sheet.getRange(linha, 11).setValue('TRUE');
     sheet.getRange(linha, COL_TIPO).setValue(tipoLancamento(body));
-    return resposta({ ok: true });
+    var meta = { atualizadoEm: '', nAlteracoes: '' };
+    if (ehPlano) {
+      // só conta como alteração do plano o que muda o conteúdo (não status, revisão ou encerramento)
+      var mudou = conteudoPlano(antes) !== conteudoPlano(body.acao_lancamento);
+      var atual = sheet.getRange(linha, COL_ATUALIZADO, 1, 3).getValues()[0];
+      var n = Number(atual[2]) || 0;
+      if (mudou) { // plano anterior a esta versão (sem carimbo) só ganha carimbo quando o conteúdo muda de fato
+        n = n + 1;
+        sheet.getRange(linha, COL_ATUALIZADO, 1, 3).setValues([[txt(quando), quem, n]]);
+        meta = { atualizadoEm: quando, alteradoPor: quem, nAlteracoes: n };
+      } else meta = { atualizadoEm: carimbo(atual[0]), alteradoPor: String(atual[1] || ''), nAlteracoes: n };
+      registrarLog(body, quando, quem, 'edit', mudou, antes, body.acao_lancamento);
+    }
+    return resposta({ ok: true, atualizadoEm: meta.atualizadoEm, alteradoPor: meta.alteradoPor, nAlteracoes: meta.nAlteracoes });
   }
 
   if (acao === 'delete') {
     var linhaDel = encontrarLinha(sheet, body.id);
     if (linhaDel < 0) return resposta({ ok: false, erro: 'lançamento não encontrado' });
+    if (String(sheet.getRange(linhaDel, 4).getValue()) === PLANO) { // exclusão lógica: a linha fica, só muda o produto
+      var antesDel = String(sheet.getRange(linhaDel, 8).getValue());
+      sheet.getRange(linhaDel, 4).setValue(PLANO_APAGADO);
+      sheet.getRange(linhaDel, COL_ATUALIZADO, 1, 2).setValues([[txt(quando), quem]]);
+      registrarLog(body, quando, quem, 'delete', true, antesDel, '');
+      return resposta({ ok: true, apagadoEm: quando });
+    }
     sheet.deleteRow(linhaDel);
     return resposta({ ok: true });
   }
@@ -297,7 +344,52 @@ function pegarAba() {
   } else if (String(sheet.getRange(1, COL_TIPO).getValue()) !== 'tipo') {
     sheet.getRange(1, COL_TIPO).setValue('tipo'); // aba criada antes da coluna 'tipo'
   }
+  if (String(sheet.getRange(1, COL_N).getValue()) !== 'nAlteracoes') { // aba criada antes do rastro das alterações (30/10/2026)
+    if (sheet.getMaxColumns() < COL_N) sheet.insertColumnsAfter(sheet.getMaxColumns(), COL_N - sheet.getMaxColumns());
+    sheet.getRange(1, COL_ATUALIZADO, 1, 3).setValues([['atualizadoEm', 'alteradoPor', 'nAlteracoes']]);
+    sheet.getRange('M:N').setNumberFormat('@'); // texto: a hora não vira data do Sheets (a página lê 'yyyy-MM-dd HH:mm')
+  }
   return sheet;
+}
+
+// ── Rastro das alterações de plano (30/10/2026) ──────────────────────────────
+
+function agora() { return Utilities.formatDate(new Date(), FUSO, 'yyyy-MM-dd HH:mm'); }
+// O Sheets converte '2026-10-30 09:40' em data ao gravar (appendRow ignora o formato da coluna).
+// txt() grava com apóstrofo inicial (texto forçado, como digitado) e carimbo() normaliza o que
+// vier da célula (texto, texto com apóstrofo ou Date) de volta pra 'yyyy-MM-dd HH:mm'.
+function txt(s) { return s ? "'" + s : ''; }
+function carimbo(v) {
+  if (v instanceof Date) return Utilities.formatDate(v, FUSO, 'yyyy-MM-dd HH:mm');
+  return String(v || '').replace(/^'/, '');
+}
+
+function quemAlterou(body) { return String(body.alteradoPor || '').replace(/\s+/g, ' ').trim().slice(0, 60); }
+
+// Retrato do CONTEÚDO do plano: tudo menos o que a RPS mexe no acompanhamento
+// (status das ações, data e histórico de revisão, encerramento, medições,
+// resultados e a base calculada). Dois planos com o mesmo retrato = sem alteração.
+function conteudoPlano(json) {
+  var p;
+  try { p = JSON.parse(json || ''); } catch (e) { return String(json || ''); }
+  if (!p || typeof p !== 'object') return String(json || '');
+  var ign = { revisao: 1, revisoes: 1, encerrado: 1, medicoes: 1, resultados: 1, base: 1 };
+  var o = {};
+  Object.keys(p).sort().forEach(function (k) { if (!ign[k]) o[k] = p[k]; });
+  if (o.acoes && o.acoes.length) o.acoes = o.acoes.map(function (a) { var b = {}; Object.keys(a || {}).sort().forEach(function (k) { if (k !== 'status') b[k] = a[k]; }); return b; });
+  return JSON.stringify(o);
+}
+
+function pegarLog() {
+  var ss = planilha(), sheet = ss.getSheetByName(ABA_LOG);
+  if (!sheet) { sheet = ss.insertSheet(ABA_LOG); sheet.appendRow(HEADERS_LOG); sheet.getRange('E:E').setNumberFormat('@'); }
+  return sheet;
+}
+
+function registrarLog(body, quando, quem, acao, conteudo, antes, depois) {
+  try {
+    pegarLog().appendRow([body.id, body.gd, body.crm, body.medico, txt(quando), quem, acao, conteudo ? 'SIM' : 'NAO', String(antes || '').slice(0, 45000), String(depois || '').slice(0, 45000)]);
+  } catch (e) { Logger.log('log falhou: ' + e); } // o log nunca derruba a gravação
 }
 
 function tipoLancamento(body) {

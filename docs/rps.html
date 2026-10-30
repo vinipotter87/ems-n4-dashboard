@@ -206,6 +206,13 @@ tr.ip-ch td{background:#fffdf5}tr.ip-ch td.n{font-weight:800;color:#78350f}
 .pcr{font-size:12px;margin-top:4px;color:var(--gray)}.pcr b{color:#b91c1c}
 .wt td{vertical-align:top;text-align:left;padding:4px 5px}.wt th{text-align:left}.wt.ver td{padding:7px 9px;font-size:12.5px}
 .pf{display:flex;align-items:center;gap:10px;margin-top:8px;font-size:11.5px;color:var(--gray);flex-wrap:wrap}
+.nota-alt{display:flex;align-items:flex-start;gap:10px;margin-top:8px;padding:8px 10px;border-radius:8px;background:#f8fafc;border:1px dashed var(--border);font-size:11.5px;color:var(--gray);line-height:1.45}
+.nota-alt b{color:var(--text)}.nota-alt small{opacity:.8}
+.selo{display:inline-block;white-space:nowrap;border-radius:999px;padding:3px 10px;font-size:10.5px;font-weight:800}.selo.ok{background:#dcfce7;color:#166534}.selo.warn{background:#fef3c7;color:#92400e}.selo.crit{background:#fee2e2;color:#991b1b}.selo.cinza{background:#f3f4f6;color:#374151}
+.hist-modal{position:fixed;inset:0;z-index:4000;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;padding:16px}
+.hist-box{background:#fff;border-radius:12px;max-width:1100px;width:100%;max-height:90vh;overflow:auto;padding:16px 18px;box-shadow:0 10px 40px rgba(0,0,0,.25)}
+.hist-cab{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;font-size:14px}
+.hist-corpo td{font-size:11.5px;vertical-align:top}.hist-corpo s{color:#991b1b}
 .pp{background:#f8fafc;border-radius:8px;padding:8px 12px;font-size:13px;line-height:1.5;margin-bottom:10px}
 .pp b,.psub{display:block;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--gray);margin-bottom:3px}
 .ptags{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}.ptags span{background:#fee2e2;color:#991b1b;font-size:10.5px;font-weight:700;border-radius:20px;padding:2px 9px}
@@ -248,7 +255,7 @@ tr.ip-ch td{background:#fffdf5}tr.ip-ch td.n{font-weight:800;color:#78350f}
 </head>
 <body>
 <div class="top"><div class="logo"><img src="assets/logo-grupo-ems.png" alt="Grupo EMS"></div><span id="ctx">Copiloto de RPS — Reunião de Performance Semanal</span><span class="sp"></span>
-  <button class="btn" id="b-senha" style="display:none" onclick="rpsDesbloquear()" title="Com a senha dá para editar ou apagar planos e atas já salvos">🔒 Senha</button><button class="btn" id="b-rep" style="display:none" onclick="telaReps()">⇄ Trocar representante</button><button class="btn" id="b-trocar" style="display:none">⇄ Trocar reunião</button><a class="btn" id="b-dash" href="index.html">← Dashboard</a></div>
+  <button class="btn" id="b-senha" style="display:none" onclick="rpsDesbloquear()" title="Com a senha dá para apagar planos e editar, trocar ou remover atas já salvas. A senha do GRD abre também o histórico de alterações de cada plano.">🔒 Senha</button><button class="btn" id="b-rep" style="display:none" onclick="telaReps()">⇄ Trocar representante</button><button class="btn" id="b-trocar" style="display:none">⇄ Trocar reunião</button><a class="btn" id="b-dash" href="index.html">← Dashboard</a></div>
 <div class="stage" id="stage"></div>
 <div class="nav"><button class="btn" id="b-prev">← Anterior</button><div class="dots" id="dots"></div><span id="cnt"></span><button class="btn" id="b-next">Próximo →</button></div>
 
@@ -369,8 +376,12 @@ function telaEntrada(){
 }
 
 // Regra do Copiloto (16/10/2026): sem senha, qualquer um vê os combinados, muda o status deles,
-// anexa a ata e sobe um plano novo. Plano e ata já salvos ficam fixos: editar, trocar ou apagar
-// só com a senha (botão 🔒 no cabeçalho) — é o GD quem exclui pra um plano novo subir.
+// anexa a ata e sobe um plano novo. Ata já salva fica fixa: editar, trocar ou apagar só com a
+// senha (botão 🔒 no cabeçalho).
+// Planos (30/10/2026, decisão do Vinicius): EDITAR um plano salvo é livre — representante e GD
+// mexem sem senha. Em troca, cada gravação fica datada pelo servidor (nota de rodapé do plano,
+// ver notaAlteracao) e o histórico completo abre só com a senha do GRD. APAGAR um plano continua
+// pedindo a senha, e é exclusão lógica (o servidor guarda a linha como RPS_PLANO_APAGADO).
 // (`pode` = aberto a todos; `senha` = exige a sessão do gate.)
 async function lancRps(){
   var rows;
@@ -1332,10 +1343,17 @@ async function ataGravar(ata, apagar){
 }
 // A leitura do Sheets logo após gravar pode vir sem a alteração. Sem a linha na cópia local, o
 // próximo salvamento criaria uma linha duplicada; então a cópia local é ajustada ao que foi enviado.
-function espelhar(env){
+function espelhar(env, resp){ // resp = resposta do servidor (carimbos atualizadoEm/alteradoPor/nAlteracoes dos planos)
   var i = -1; ST.lanc.forEach(function(l, k){ if (l.id === env.id) i = k; });
-  if (env.acao === 'delete'){ if (i >= 0) ST.lanc.splice(i, 1); return; }
-  var l = { id: env.id, gd: env.gd, linha: env.linha, produto: env.produto, crm: env.crm, medico: env.medico, valor: '0', acao: env.acao_lancamento, data: env.data, criadoEm: env.criadoEm };
+  resp = resp || {};
+  if (env.acao === 'delete'){
+    if (i < 0) return;
+    if (env.produto === 'RPS_PLANO'){ ST.lanc[i].produto = 'RPS_PLANO_APAGADO'; ST.lanc[i].atualizadoEm = resp.apagadoEm || ST.lanc[i].atualizadoEm || ''; ST.lanc[i].alteradoPor = env.alteradoPor || ''; } // exclusão lógica: o servidor guarda a linha
+    else ST.lanc.splice(i, 1);
+    return; }
+  var ant = i >= 0 ? ST.lanc[i] : {};
+  var l = { id: env.id, gd: env.gd, linha: env.linha, produto: env.produto, crm: env.crm, medico: env.medico, valor: '0', acao: env.acao_lancamento, data: env.data, criadoEm: env.criadoEm,
+    atualizadoEm: resp.atualizadoEm || ant.atualizadoEm || '', alteradoPor: resp.alteradoPor !== undefined && resp.alteradoPor !== '' ? resp.alteradoPor : (ant.alteradoPor || ''), nAlteracoes: resp.nAlteracoes !== undefined && resp.nAlteracoes !== '' ? resp.nAlteracoes : (ant.nAlteracoes || '') };
   if (i >= 0) ST.lanc[i] = l; else ST.lanc.push(l);
 }
 function ataLerEdicao(){ var o = []; [].forEach.call(ataBox().querySelectorAll('[data-item]'), function(tr){ function v(c){ return tr.querySelector('[data-c="' + c + '"]').value.trim(); }
@@ -1873,8 +1891,8 @@ function desenharAndamentoEm(box, ab, qual){
   if (!ab.length) h = '<div class="vazio"><b>Nenhum plano ' + qual + ' em andamento</b>Os planos salvos para este representante voltam aqui a cada RPS, até serem encerrados.</div>';
   ab.forEach(function(o){ var p = o.p, id = o.reg.id, evs = evolDados(o.ch, p, medir(o.ch)), feitas = (p.acoes || []).filter(function(a){ return a.status === 'Concluída'; }).length;
     // plano que não tem mais o slide "Plano — X" (já está em andamento): a edição acontece aqui mesmo
-    var edita = senha && ST.planoAqui && ST.planoAqui[o.ch] && planoInfo(o.ch);
-    h += '<div class="plano" id="and-card-' + o.ch + '" style="margin-bottom:12px"><div class="ph">🧭 ' + esc(planoTitulo(o.ch)) + ' <span>criado em ' + dataBr(criadoDe(o.reg)) + ' · base ' + (p.mesBase || o.mes) + '/2026' + (p.revisoes && p.revisoes.length ? ' · revisado em ' + p.revisoes.map(function(d){ return dataBr(d).slice(0, 5); }).join(', ') : '') + '</span><span style="margin-left:auto">' + (edita ? '<button class="b2" style="margin-right:8px" onclick="andEditar(\'' + o.ch + '\')">✏️ Editar plano</button>' : '') + objetivoTag(p) + ' ' + revisaoTag(p, ST.data) + '</span></div>' +
+    var edita = pode && ST.planoAqui && ST.planoAqui[o.ch] && planoInfo(o.ch); // editar é livre (30/10/2026); status, revisão e encerramento seguem com a senha do GD
+    h += '<div class="plano" id="and-card-' + o.ch + '" style="margin-bottom:12px"><div class="ph">🧭 ' + esc(planoTitulo(o.ch)) + ' <span>criado em ' + dataBr(criadoDe(o.reg)) + ' · base ' + (p.mesBase || o.mes) + '/2026' + (p.revisoes && p.revisoes.length ? ' · revisado em ' + p.revisoes.map(function(d){ return dataBr(d).slice(0, 5); }).join(', ') : '') + '</span><span style="margin-left:auto">' + (GATE.papel() === 'grd' ? '<button class="b2" style="margin-right:8px" onclick="planoHistorico(\'' + id + '\')" title="Todas as gravações deste plano, com o que mudou (só a senha do GRD)">📜 Histórico</button>' : '') + (edita ? '<button class="b2" style="margin-right:8px" onclick="andEditar(\'' + o.ch + '\')" title="Editar é livre; a alteração fica registrada com data, hora e nome">✏️ Editar plano</button>' : '') + objetivoTag(p) + ' ' + revisaoTag(p, ST.data) + '</span></div>' +
       '<div class="pcols" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)"><div class="pp" style="margin:0"><b>Problema</b>' + esc(p.problema) + '</div><div class="pv raiz" style="margin:0"><i>Causa raiz</i>' + esc(raizDe(p) || '—') + '</div></div>' +
       (evs.length ? '<b class="psub" style="margin-top:10px">Evolução desde o plano</b><table class="wt ver"><thead><tr><th>' + (/^fund/.test(o.ch) ? 'Indicador acompanhado' : 'Métrica') + '</th><th>Linha do tempo</th><th>Resultado</th></tr></thead><tbody>' +
         evs.map(function(l){ return '<tr><td><b>' + esc(l.nome) + '</b></td><td>' + evolChips(l.pontos) + '</td><td>' + l.delta + '</td></tr>'; }).join('') + '</tbody></table>' : '') +
@@ -1884,7 +1902,7 @@ function desenharAndamentoEm(box, ab, qual){
           (senha ? '<select class="st ' + ACAO_COR[st] + '" onchange="andStatus(\'' + id + '\',' + k + ',this)">' + ACAO_ST.map(function(s){ return '<option' + (s === st ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' : st) + '</td></tr>'; }).join('') + '</tbody></table>' +
       (senha ? '<div class="pf"><span style="font-weight:700;color:var(--text)">Próxima revisão:</span><input type="date" id="and-rev-' + id + '" value="' + maisDias(ST.data, 7) + '" style="border:1.5px solid var(--border);border-radius:7px;padding:5px 8px;font-size:12.5px">' +
         '<button class="b1" onclick="andRevisar(\'' + id + '\')">✓ Registrar revisão de ' + dataBr(ST.data).slice(0, 5) + '</button><span style="flex:1"></span>' +
-        '<button class="b2" onclick="andEncerrar(\'' + id + '\',\'atingido\')">Encerrar — objetivo atingido</button><button class="b2" onclick="andEncerrar(\'' + id + '\',\'nao\')">Encerrar — não atingido</button></div>' : '') + '</div>' +
+        '<button class="b2" onclick="andEncerrar(\'' + id + '\',\'atingido\')">Encerrar — objetivo atingido</button><button class="b2" onclick="andEncerrar(\'' + id + '\',\'nao\')">Encerrar — não atingido</button></div>' : '') + notaAlteracao(o.reg, p, o.ch) + '</div>' +
       (edita ? '<div class="plano" id="plano-' + o.ch + '" data-inline="1" style="display:none;margin-bottom:12px"></div>' : ''); });
   box.innerHTML = h;
   var s = box.closest('.slide'), msg = s && s.querySelector('.hdr span'), venc = ab.filter(function(o){ return o.p.revisao && o.p.revisao <= ST.data; }).length;
@@ -1914,11 +1932,73 @@ function planoPorques(ch){ var ins = document.querySelectorAll('#plano-' + ch + 
 function planoAcao(ch, delta, idx){ var p = planoLer(ch), box = $('plano-' + ch);
   var ls = [].map.call(box.querySelectorAll('[data-acao]'), function(tr){ var a = { status: tr.getAttribute('data-st') || 'Pendente' }; W.forEach(function(w){ a[w[0]] = tr.querySelector('[data-w="' + w[0] + '"]').value; }); return a; });
   if (delta > 0) ls.push({}); else ls.splice(idx, 1); p.acoes = ls.length ? ls : [{}]; planoDesenhar(ch, true, p); }
+// ── Rastro das alterações do plano (30/10/2026) ──────────────────
+// Editar o plano é livre (sem senha). Em troca, cada gravação fica registrada pelo
+// SERVIDOR (hora do Apps Script, não a do computador): colunas atualizadoEm,
+// alteradoPor e nAlteracoes da linha, que chegam no ler_aberto e viram a nota de
+// rodapé que todo mundo vê. Mudar status, revisão ou encerramento não conta como
+// alteração do plano (o servidor compara o conteúdo). O histórico completo
+// (aba rps_plano_log, antes/depois) só abre com a senha do GRD.
+var QUEM_CHAVE = 'ems_rps_quem';
+function quemGuardado(){ try { return localStorage.getItem(QUEM_CHAVE) || ''; } catch(e){ return ''; } }
+function quemGuardar(n){ try { localStorage.setItem(QUEM_CHAVE, n); } catch(e){} }
+function quemLimpo(n){ return String(n || '').replace(/\s+/g, ' ').trim().slice(0, 60); }
+function quemDoForm(ch){ var i = document.querySelector('#plano-' + ch + ' [data-f="quem"]'); return i ? quemLimpo(i.value) : ''; }
+function quemAltera(){ // nome de quem está gravando: o guardado neste navegador ou, na primeira vez, perguntado
+  var n = quemGuardado();
+  if (!n){ n = quemLimpo(window.prompt('Quem está fazendo esta alteração? (fica registrado com a data e a hora)')); if (n) quemGuardar(n); }
+  return n; }
+function altQuando(s){ // 'yyyy-MM-dd HH:mm' do servidor (ou 'dd/MM/yyyy HH:mm:ss' se o Sheets converteu) → {iso, hm, br}
+  var m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/.exec(String(s || '').replace(/^'/, '')); if (m) return { iso: m[1] + '-' + m[2] + '-' + m[3], hm: m[4] + ':' + m[5], br: m[3] + '/' + m[2] + '/' + m[1] + ' ' + m[4] + ':' + m[5] };
+  m = /^(\d{2})\/(\d{2})\/(\d{4})[ ,T]+(\d{2}):(\d{2})/.exec(String(s || '').replace(/^'/, '')); if (m) return { iso: m[3] + '-' + m[2] + '-' + m[1], hm: m[4] + ':' + m[5], br: m[1] + '/' + m[2] + '/' + m[3] + ' ' + m[4] + ':' + m[5] };
+  return null; }
+// RPS de referência da nota: a última RPS anterior em que o plano foi revisado (p.revisoes),
+// senão a data de criação. A nota compara a última alteração com ela e com a RPS aberta (ST.data).
+function notaAlteracao(reg, p, ch){
+  var q = altQuando(reg.atualizadoEm), n = Number(reg.nAlteracoes) || 0, quem = String(reg.alteradoPor || '').trim();
+  var revs = (p.revisoes || []).filter(function(d){ return d < ST.data; }).sort(), refRps = revs.length ? revs[revs.length - 1] : null, ref = refRps || criadoDe(reg);
+  var refTxt = refRps ? 'a RPS de ' + dataBr(refRps) : 'a criação em ' + dataBr(ref);
+  var selo, txt;
+  if (!q){ selo = '<span class="selo cinza">sem registro de alteração</span>'; txt = 'Plano anterior ao registro de alterações (30/10/2026): a próxima gravação passa a ser datada pelo servidor.'; }
+  else {
+    if (q.iso === ST.data) selo = '<span class="selo warn">⚠ alterado hoje, no dia da RPS</span>';
+    else if (q.iso > ref) selo = '<span class="selo ok">✓ atualizado após ' + refTxt + '</span>';
+    else selo = '<span class="selo crit">✗ sem alteração desde ' + refTxt + '</span>';
+    txt = 'Última alteração: <b>' + q.br + '</b>' + (quem ? ' · por <b>' + esc(quem) + '</b>' : ' · sem nome informado') + ' · ' + (n ? n + (n === 1 ? ' alteração' : ' alterações') + ' desde a criação' : 'nenhuma alteração desde a criação') + ' em ' + dataBr(criadoDe(reg)) + ' <small>(hora do servidor)</small>'; }
+  // plano apagado antes deste, no mesmo setor e chave: o novo não apaga o rastro do anterior
+  var pref = 'rpsi|' + ST.setor + '|' + ch + '|', ap = ST.lanc.filter(function(l){ return l.produto === 'RPS_PLANO_APAGADO' && l.gd === reg.gd && String(l.crm).indexOf(pref) === 0 && l.id !== reg.id; })
+    .sort(function(a, b){ return String(a.atualizadoEm).localeCompare(String(b.atualizadoEm)); }), ult = ap[ap.length - 1];
+  var sub = ult ? '<br>Substitui um plano criado em ' + dataBr(criadoDe(ult)) + (altQuando(ult.atualizadoEm) ? ', apagado em ' + altQuando(ult.atualizadoEm).br + (ult.alteradoPor ? ' por ' + esc(ult.alteradoPor) : '') : '') + '.' : '';
+  return '<div class="nota-alt">' + selo + '<span>' + txt + sub + '</span></div>';
+}
+// histórico completo (senha do GRD): uma linha por gravação, com o que mudou
+async function planoHistorico(id){
+  var reg = ST.lanc.filter(function(l){ return l.id === id; })[0]; if (!reg) return;
+  var box = document.createElement('div'); box.className = 'hist-modal'; box.innerHTML = '<div class="hist-box"><div class="hist-cab"><b>📜 Histórico de alterações — ' + esc(reg.medico) + ' · ' + esc(planoTitulo(String(reg.crm).split('|')[2] || '')) + '</b><button class="b2" onclick="this.closest(\'.hist-modal\').remove()">Fechar</button></div><div class="hist-corpo">Carregando…</div></div>';
+  box.addEventListener('click', function(ev){ if (ev.target === box) box.remove(); }); document.body.appendChild(box);
+  var corpo = box.querySelector('.hist-corpo'), rows;
+  try { rows = (await GATE.ler('rps_plano_log')).filter(function(l){ return l.id === id; }); } catch(e){ corpo.innerHTML = '<p class="nota">Não foi possível ler o histórico: ' + esc(e.message) + '</p>'; return; }
+  if (!rows.length){ corpo.innerHTML = '<p class="nota">Nenhuma gravação registrada (o registro começou em 30/10/2026).</p>'; return; }
+  corpo.innerHTML = '<table class="wt ver"><thead><tr><th>Quando</th><th>Quem</th><th>O quê</th><th>Mudanças</th></tr></thead><tbody>' + rows.map(function(l){ var q = altQuando(l.quando), a, d; try { a = l.antes ? JSON.parse(l.antes) : null; } catch(e){ a = null; } try { d = l.depois ? JSON.parse(l.depois) : null; } catch(e){ d = null; }
+    var tipo = l.acao === 'add' ? 'Plano criado' : l.acao === 'delete' ? 'Plano apagado' : (l.conteudo === 'SIM' ? 'Plano alterado' : 'Acompanhamento (status, revisão ou encerramento)');
+    return '<tr><td style="white-space:nowrap">' + (q ? q.br : esc(l.quando)) + '</td><td>' + (esc(l.quem) || '<i>sem nome</i>') + '</td><td>' + tipo + '</td><td>' + (l.acao === 'edit' ? (difPlano(a, d).map(function(x){ return '<div>' + x + '</div>'; }).join('') || '—') : '—') + '</td></tr>'; }).join('') + '</tbody></table>';
+}
+function difPlano(a, b){ // o que mudou entre duas versões do plano, em linguagem simples
+  a = a || {}; b = b || {}; var out = [];
+  function t(v){ return v === undefined || v === null ? '' : String(v); }
+  function c(rot, x, y){ if (t(x) !== t(y)) out.push('<b>' + rot + ':</b> ' + (t(x) ? '<s>' + esc(t(x)) + '</s> → ' : '') + esc(t(y) || '(vazio)')); }
+  c('Problema', a.problema, b.problema); c('Causa raiz', a.raiz, b.raiz); c('Métrica', a.metrica, b.metrica); c('Mês-base', a.mesBase, b.mesBase); c('Próxima revisão', a.revisao && dataBr(a.revisao), b.revisao && dataBr(b.revisao));
+  var pa = a.porques || [], pb = b.porques || []; for (var i = 0; i < Math.max(pa.length, pb.length); i++) c((i + 1) + 'º por quê', pa[i], pb[i]);
+  var oa = (a.objetivos || []).map(function(o){ return o.mes + ' ' + o.alvo; }).join(' · '), ob = (b.objetivos || []).map(function(o){ return o.mes + ' ' + o.alvo; }).join(' · '); c('Objetivos', oa, ob);
+  var aa = a.acoes || [], ab = b.acoes || []; for (var k = 0; k < Math.max(aa.length, ab.length); k++){ var x = aa[k] || {}, y = ab[k] || {}; W.forEach(function(w){ c('Ação ' + (k + 1) + ' · ' + w[1], x[w[0]], y[w[0]]); }); c('Ação ' + (k + 1) + ' · status', x.status, y.status); }
+  if (!a.encerrado !== !b.encerrado) c('Encerramento', a.encerrado ? a.encerrado.resultado : '', b.encerrado ? b.encerrado.resultado : '');
+  return out;
+}
 function planoDesenhar(ch, editar, rasc){
   var box = $('plano-' + ch), info = planoInfo(ch); if (!box || !info) return;
   if (box.getAttribute('data-inline') && editar !== true){ // edição embutida no slide de planos em andamento: fecha e volta o cartão
     box.style.display = 'none'; box.innerHTML = ''; var cd = $('and-card-' + ch); if (cd) cd.style.display = ''; if (ST.slides.length) ajustar(); return; }
-  var pode = !ST.lancPendente, senha = pode && GATE.liberado(), reg = planoReg(ch), salvo = planoDados(ch), ed = pode && (editar === true ? (senha || !salvo) : (!salvo && !info.opcional)), q = "'" + ch + "'", h = lancAviso();
+  var pode = !ST.lancPendente, senha = pode && GATE.liberado(), reg = planoReg(ch), salvo = planoDados(ch), ed = pode && (editar === true ? true : (!salvo && !info.opcional)), q = "'" + ch + "'", h = lancAviso(); // editar é livre (30/10/2026); apagar pede senha
   if (ed){
     var p = rasc || salvo || { problema: info.problema, kpis: info.kpis.slice(), porques: [], acoes: [{}] }; if (!p.acoes || !p.acoes.length) p.acoes = [{}];
     h += '<div class="ph">🧭 Plano — ' + info.titulo + ' <span>5 porquês + 5W2H</span></div><label class="pl">Problema</label><textarea data-f="problema" rows="2">' + esc(p.problema) + '</textarea>';
@@ -1930,22 +2010,23 @@ function planoDesenhar(ch, editar, rasc){
     p.acoes.forEach(function(a, k){ h += '<tr data-acao="' + k + '" data-st="' + esc(a.status || 'Pendente') + '">' + W.map(function(w){ return '<td><textarea rows="2" data-w="' + w[0] + '">' + esc(a[w[0]] || '') + '</textarea></td>'; }).join('') + '<td><button class="b2" onclick="planoAcao(' + q + ',-1,' + k + ')">✕</button></td></tr>'; });
     h += '</tbody></table><div class="pf" style="margin-top:6px"><span style="font-weight:700;color:var(--text)">Próxima revisão:</span><input type="date" data-f="revisao" value="' + esc(p.revisao || maisDias(ST.data, 7)) + '" style="border:1.5px solid var(--border);border-radius:7px;padding:5px 8px;font-size:12.5px;background:#fffef7">' +
       '<span>data em que este plano volta à pauta da RPS</span>' + (reg ? '<span style="margin-left:auto">Plano criado em <b>' + dataBr(criadoDe(reg)) + '</b></span>' : '<span style="margin-left:auto">Data de criação: <b>' + dataBr(hoje()) + '</b></span>') + '</div>' +
+      '<div class="pf"><span style="font-weight:700;color:var(--text)">Quem está alterando:</span><input type="text" data-f="quem" value="' + esc(quemGuardado()) + '" placeholder="seu nome" maxlength="60" style="border:1.5px solid var(--border);border-radius:7px;padding:5px 8px;font-size:12.5px;background:#fffef7;min-width:220px"><span>fica registrado com a data e a hora desta gravação (hora do servidor)</span></div>' +
       '<div class="pf"><button class="b2" onclick="planoAcao(' + q + ',1)">+ Adicionar ação</button><button class="b1" onclick="planoSalvar(' + q + ')">Salvar plano</button>' +
-      (salvo ? '<button class="b2" onclick="planoDesenhar(' + q + ',false)">Cancelar</button><button class="b2" onclick="planoApagar(' + q + ')">Apagar plano</button>' : (info.opcional ? '<button class="b2" onclick="planoDesenhar(' + q + ',false)">Cancelar</button>' : '')) + '<span id="plano-st-' + ch + '">' + (reg ? 'Salvo em ' + dataBr(reg.data) : 'Ainda não preenchido') + '</span></div>';
+      (salvo ? '<button class="b2" onclick="planoDesenhar(' + q + ',false)">Cancelar</button>' + (senha ? '<button class="b2" onclick="planoApagar(' + q + ')">Apagar plano</button>' : '<span class="nota" style="margin:0" title="Apagar um plano exige a senha (botão 🔒 no cabeçalho). Editar é livre.">🔒 apagar só com senha</span>') : (info.opcional ? '<button class="b2" onclick="planoDesenhar(' + q + ',false)">Cancelar</button>' : '')) + '<span id="plano-st-' + ch + '">' + (reg ? 'Salvo em ' + dataBr(reg.data) : 'Ainda não preenchido') + '</span></div>';
   } else if (salvo){
-    h += '<div class="ph">🧭 Plano — ' + info.titulo + '<span style="margin-left:auto">' + (senha ? '<button class="b2" onclick="planoDesenhar(' + q + ',true)">✏️ Editar</button>' : '<span class="nota" title="Plano salvo fica fixo. Para alterar ou excluir, o GD entra com a senha (botão 🔒 no cabeçalho) e apaga o plano; aí um novo pode subir.">🔒 plano fixo</span>') + '</span></div>' +
+    h += '<div class="ph">🧭 Plano — ' + info.titulo + '<span style="margin-left:auto;display:flex;gap:6px">' + (GATE.papel() === 'grd' ? '<button class="b2" onclick="planoHistorico(\'' + reg.id + '\')" title="Todas as gravações deste plano, com o que mudou (só a senha do GRD)">📜 Histórico</button>' : '') + '<button class="b2" onclick="planoDesenhar(' + q + ',true)" title="Editar é livre; a alteração fica registrada com data, hora e nome">✏️ Editar</button></span></div>' +
       '<div class="pp"><b>Problema</b>' + esc(salvo.problema) + (salvo.kpis && salvo.kpis.length ? '<div class="ptags">' + salvo.kpis.map(function(k){ return '<span>' + esc(k) + '</span>'; }).join('') + '</div>' : '') + '</div><div class="pcols"><div><b class="psub">5 porquês</b>' +
       salvo.porques.map(function(t, k){ var r = !salvo.raiz && k === salvo.porques.length - 1; return '<div class="pv' + (r ? ' raiz' : '') + '"><i>' + (r ? 'Causa raiz' : (k + 1) + 'º por quê') + '</i>' + esc(t) + '</div>'; }).join('') +
       (salvo.raiz ? '<div class="pv raiz"><i>Causa raiz</i>' + esc(salvo.raiz) + '</div>' : '') +
       '</div><div><b class="psub">Plano de ação — 5W2H</b><table class="wt ver"><thead><tr>' + W.map(function(w){ return '<th>' + w[1] + '</th>'; }).join('') + '</tr></thead><tbody>' +
-      salvo.acoes.map(function(a){ return '<tr>' + W.map(function(w){ return '<td>' + (esc(a[w[0]]) || '—') + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div></div>' + evolBloco(ch, salvo) + '<div class="pf"><span>Criado em <b>' + dataBr(criadoDe(reg)) + '</b></span>' + revisaoTag(salvo, ST.data) + '<span id="plano-st-' + ch + '" style="margin-left:auto">Última alteração em ' + dataBr(reg.data) + '</span></div>';
+      salvo.acoes.map(function(a){ return '<tr>' + W.map(function(w){ return '<td>' + (esc(a[w[0]]) || '—') + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div></div>' + evolBloco(ch, salvo) + '<div class="pf"><span>Criado em <b>' + dataBr(criadoDe(reg)) + '</b></span>' + revisaoTag(salvo, ST.data) + '<span id="plano-st-' + ch + '" style="margin-left:auto"></span></div>' + notaAlteracao(reg, salvo, ch);
   } else if (info.opcional && pode){
     var p1o = planoDados('fund');
     h += '<div class="ph">🧭 Plano — ' + info.titulo + ' <span>opcional</span></div><div class="pp" style="margin:0">' +
       (p1o ? 'O representante já tem 1 plano de fundamentos em andamento. Dá para abrir um segundo, para outro indicador — o limite é de <b style="display:inline;font-size:inherit;text-transform:none;letter-spacing:0;color:inherit">2 planos de fundamentos em andamento</b>. Um terceiro só depois de encerrar um deles no slide "Planos em andamento".'
            : 'Preencha primeiro o plano de Fundamentos no slide anterior. O segundo plano é opcional e serve para tratar outro indicador em paralelo (máximo de 2 em andamento).') + '</div>' +
       (p1o ? '<div class="pf"><button class="b1" onclick="planoDesenhar(' + q + ',true)">＋ Abrir 2º plano de fundamentos</button></div>' : '');
-  } else h += '<div class="ph">🧭 Plano — ' + info.titulo + '</div><div class="pf"><span>Planos ficam em área restrita.</span> <button class="b2" onclick="rpsDesbloquear()">🔒 Senha para ver e editar os planos</button></div>';
+  } else h += '<div class="ph">🧭 Plano — ' + info.titulo + '</div><div class="pf"><span>Aguardando os planos salvos…</span></div>';
   box.innerHTML = h; if (ed) planoPorques(ch); ajustar();
 }
 async function planoEnviar(ch, plano, apagar){ var reg = planoReg(ch), st = $('plano-st-' + ch), r0 = repSel();
@@ -1953,9 +2034,9 @@ async function planoEnviar(ch, plano, apagar){ var reg = planoReg(ch), st = $('p
   var env = null;
   try { var resp = await GATE.enviar(env = { acao: apagar ? 'delete' : (reg ? 'edit' : 'add'),
       id: reg ? reg.id : 'rpp' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), gd: 'N4:' + ST.gd, linha: ST.d.dist.linha, produto: 'RPS_PLANO', crm: reg ? reg.crm : 'rpsi|' + ST.setor + '|' + ch + '|' + MES_FECHADO,
-      medico: r0.nome, valor: 0, acao_lancamento: plano ? JSON.stringify(plano) : '', data: hoje(), criadoEm: reg ? reg.criadoEm : Date.now().toString() }); if (!resp.ok) throw new Error(resp.erro || 'falha desconhecida');
+      medico: r0.nome, valor: 0, acao_lancamento: plano ? JSON.stringify(plano) : '', data: hoje(), criadoEm: reg ? reg.criadoEm : Date.now().toString(), alteradoPor: quemDoForm(ch) || quemAltera() }); if (!resp.ok) throw new Error(resp.erro === 'sessao' && apagar ? 'apagar um plano exige a senha (botão 🔒)' : (resp.erro || 'falha desconhecida'));
   } catch(e){ if (st) st.textContent = 'Não foi possível salvar: ' + e.message; return false; }
-  ST.lanc = await lancRps(); espelhar(env); return true; }
+  ST.lanc = await lancRps(); espelhar(env, resp); return true; }
 async function planoSalvar(ch){ var p = planoLer(ch), st = $('plano-st-' + ch); function er(m){ st.textContent = m; st.style.color = 'var(--red)'; }
   if (!p.problema) return er('Descreva o problema.'); if (p.porques.length < 3) return er('Preencha pelo menos 3 porquês.');
   if (!p.raiz) return er('Escreva a causa raiz, sintetizando os porquês.');
@@ -1963,6 +2044,7 @@ async function planoSalvar(ch){ var p = planoLer(ch), st = $('plano-st-' + ch); 
   if (!p.metrica) return er('Escolha a métrica do plano.');
   if (!p.objetivos.length || p.objetivos.some(function(o){ return o.alvo === null || isNaN(o.alvo); })) return er('Informe o objetivo de cada mês do prazo.');
   if (!p.revisao) return er('Escolha a data da próxima revisão.');
+  var quem = quemDoForm(ch); if (!quem) return er('Informe quem está alterando o plano.'); quemGuardar(quem);
   var ant = planoDados(ch);
   // a base é o retrato do último mês fechado; plano antigo (sem mês de base) ganha a base nova ao receber métrica e objetivo
   p.base = (ant && ant.base && ant.mesBase) ? ant.base : comDados(ST.dF, function(){ return medir(ch); });
@@ -2022,8 +2104,8 @@ var HIST = { aba: 'planos', filtro: '', dist: null }; // dist[distrito_id] = dad
 async function gravarLinha(reg, obj){ // regrava o JSON de uma linha existente (status de ação ou de combinado)
   try {
     var resp = await GATE.enviar({ acao: 'edit', id: reg.id, gd: reg.gd, linha: reg.linha,
-      produto: reg.produto, crm: reg.crm, medico: reg.medico, valor: 0, acao_lancamento: JSON.stringify(obj), data: reg.data, criadoEm: reg.criadoEm }); if (!resp.ok) throw new Error(resp.erro || 'falha desconhecida');
-    reg.acao = JSON.stringify(obj); return true;
+      produto: reg.produto, crm: reg.crm, medico: reg.medico, valor: 0, acao_lancamento: JSON.stringify(obj), data: reg.data, criadoEm: reg.criadoEm, alteradoPor: quemAltera() }); if (!resp.ok) throw new Error(resp.erro || 'falha desconhecida');
+    reg.acao = JSON.stringify(obj); if (resp.atualizadoEm){ reg.atualizadoEm = resp.atualizadoEm; reg.alteradoPor = resp.alteradoPor; reg.nAlteracoes = resp.nAlteracoes; } return true;
   } catch(e){ alert('Não foi possível gravar: ' + e.message); return false; }
 }
 function histLinhas(prod){ var gd = 'N4:' + ST.gd; return ST.lanc.filter(function(l){ return l.produto === prod && l.gd === gd; }); }
