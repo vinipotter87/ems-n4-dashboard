@@ -1439,13 +1439,14 @@ function renderKPIs(dados) {
     crmPct !== null ? Math.round(crmReal) + ' de ' + Math.round(crmObj) + ' interações' : SEM);
 
   // Frequência — Q1–Q3 (meta 90%) quando o Farol tem o ciclo; senão, régua antiga do painel (meta 75%)
-  var fDist = freqTem(mes) ? freqDistritos(mes, prefixo) : [];
+  // Mês sem leitura do Farol (ciclo ainda não fechado no relatório): usa o último ciclo lido e avisa qual é.
+  var fMes = freqCicloAte(mes), fDist = fMes ? freqDistritos(fMes, prefixo) : [];
   var cFreq;
   if (fDist.length) {
-    var fQ = freqUsar(mes), fTot = freqSoma(fDist), fAntC = freqCicloAnterior(mes);
+    var fQ = freqUsar(fMes), fTot = freqSoma(fDist), fAntC = freqCicloAnterior(fMes);
     var fAnt = fAntC ? freqDistritos(fAntC, prefixo) : [];
     cFreq = kpiCard(fTot.cob >= FREQ_RG.ok ? 'g' : (fTot.cob >= FREQ_RG.warn ? 'o' : 'r'), fQ ? 'FREQUÊNCIA Q1–Q3' : 'FREQUÊNCIA', pp(fTot.cob),
-      (fQ ? 'Q1–Q3 · meta 90%' : 'cobertura do painel') + (fAnt.length ? ' · ' + freqDeltaHtml(fTot.cob, freqSoma(fAnt).cob) + ' vs ' + fAntC : ''));
+      (fQ ? 'Q1–Q3 · meta 90%' : 'cobertura do painel') + (fMes !== mes ? ' · ciclo ' + fMes : '') + (fAnt.length ? ' · ' + freqDeltaHtml(fTot.cob, freqSoma(fAnt).cob) + ' vs ' + fAntC : ''));
   } else {
     cFreq = kpiCard('n', 'FREQUÊNCIA', '—', SEM);
   }
@@ -2812,6 +2813,16 @@ var FREQ_NOMES = {};
 FREQ_CICLOS_ORDEM.forEach(function(c) { (FREQ_SETORES_RAW[c] || '').trim().split('\n').filter(Boolean).forEach(function(l) { var p = l.split('|'); FREQ_NOMES[p[0]] = p[1]; }); });
 function freqEhQ13(ciclo) { return !!FREQ_Q13[ciclo]; }
 function freqTem(ciclo) { return !!(FREQ_SETORES_RAW[ciclo] || FREQ_Q13[ciclo]); }
+// Último ciclo com leitura até o mês (até 6 meses pra trás): a página de um mês que o Farol ainda não
+// fechou (ex.: OUT enquanto o relatório segue na janela MAI–SET) mostra o ciclo anterior, com a nota do ciclo.
+function freqCicloAte(mes) {
+  for (var i = FREQ_MESES_ORD.indexOf(mes), n = 0; i >= 0 && n < 6; i--, n++) if (freqTem(FREQ_MESES_ORD[i])) return FREQ_MESES_ORD[i];
+  return null;
+}
+function freqNotaCiclo(ciclo) {
+  var q = FREQ_Q13[ciclo];
+  return q ? 'janela ' + q.janela + ', export de ' + q.data.split('-').reverse().join('/') : 'régua antiga (painel inteiro)';
+}
 var FREQ_RG = { q13: true, ok: 90, warn: 80 };            // régua em uso na tela (freqUsar)
 function freqUsar(ciclo) { FREQ_RG = freqEhQ13(ciclo) ? { q13: true, ok: 90, warn: 80 } : { q13: false, ok: 75, warn: 50 }; return FREQ_RG.q13; }
 function freqLegenda() {
@@ -3092,11 +3103,13 @@ function renderFrequencia() {
 // sem filtro, por setor com distrito filtrado. Só aparece nos meses que
 // têm snapshot em FREQ_SETORES_RAW.
 function renderFrequenciaMes(mes) {
-  if (!freqTem(mes)) return '';
-  var Q = freqUsar(mes);
-  var cicloAnt = freqCicloAnterior(mes);
+  // Mês sem leitura do Farol (ciclo ainda não fechado no relatório): mostra o último ciclo lido, com a nota.
+  var ciclo = freqCicloAte(mes);
+  if (!ciclo) return '';
+  var Q = freqUsar(ciclo);
+  var cicloAnt = freqCicloAnterior(ciclo);
   var prefixo = DISTRITO_FILTRO ? DISTRITO_FILTRO.substring(0, 6) : null;
-  var dist = freqDistritos(mes, prefixo);
+  var dist = freqDistritos(ciclo, prefixo);
   if (!dist.length) return '';
   var distAnt = cicloAnt ? freqDistritos(cicloAnt, prefixo) : [];
   var tot = freqSoma(dist);
@@ -3104,7 +3117,11 @@ function renderFrequenciaMes(mes) {
 
   var html = '<div style="margin:0 0 28px">';
   html += '<div class="sec-hdr"><div class="sec-title">PANORAMA — FREQUÊNCIA DE VISITAÇÃO</div><div class="sec-line"></div>';
-  html += '<span style="font-size:11px;color:var(--gray)">' + mes + '/2026</span></div>';
+  html += '<span style="font-size:11px;color:var(--gray)">' + ciclo + '/2026' + (ciclo !== mes ? ' · último ciclo do Farol' : '') + '</span></div>';
+  if (ciclo !== mes) {
+    html += '<div style="margin-top:8px;padding:8px 12px;border-radius:8px;background:#fffbeb;border:1px solid #fcd34d;font-size:11px;color:#92400e">' +
+      '⏳ O Farol da Frequência ainda não tem o ciclo ' + mes + ' (o relatório fecha o mês com atraso). Leitura abaixo: ciclo <b>' + ciclo + '</b>, ' + freqNotaCiclo(ciclo) + '.</div>';
+  }
   html += '<div class="visitas-chart-wrap" style="margin-top:8px">';
   html += '<h3>🩺 ' + (Q ? 'Frequência Q1–Q3 (PEX)' : 'Cobertura de frequência') + ' ' + (prefixo ? 'por setor — ' + dist[0].gd : 'por distrito') + ': ' + freqPctTxt(tot.cob) +
     (totAnt ? ' &nbsp;' + freqDeltaHtml(tot.cob, totAnt.cob) + ' <span style="font-weight:400;color:var(--gray)">vs ' + cicloAnt + '</span>' : '') + '</h3>';
@@ -3112,9 +3129,9 @@ function renderFrequenciaMes(mes) {
     (prefixo ? '' : ' &nbsp;·&nbsp; selecione um distrito no filtro do topo para ver por setor') + ' &nbsp;·&nbsp; ';
   html += freqLegenda() + '</p>';
   html += prefixo
-    ? renderFrequenciaSetorTable(freqSetores(mes, prefixo), cicloAnt ? freqSetores(cicloAnt, prefixo) : [], cicloAnt)
+    ? renderFrequenciaSetorTable(freqSetores(ciclo, prefixo), cicloAnt ? freqSetores(cicloAnt, prefixo) : [], cicloAnt)
     : renderFrequenciaDistTable(dist, distAnt, cicloAnt);
-  html += '<p style="font-size:11px;color:var(--gray);margin:12px 0 0">Histórico e evolução entre ciclos na aba <a href="#" onclick="FREQ_CICLO=\'' + mes + '\';abrirFrequencia();window.scrollTo(0,0);return false" style="color:#0369a1;font-weight:700">🩺 Frequência</a>.</p>';
+  html += '<p style="font-size:11px;color:var(--gray);margin:12px 0 0">Histórico e evolução entre ciclos na aba <a href="#" onclick="FREQ_CICLO=\'' + ciclo + '\';abrirFrequencia();window.scrollTo(0,0);return false" style="color:#0369a1;font-weight:700">🩺 Frequência</a>.</p>';
   html += '</div></div>';
   return html;
 }
