@@ -1294,6 +1294,14 @@ async function docGravar(crm, doc, apagar){ // doc = {titulo, arquivo, texto}; f
 // representante da reunião aberta e pede confirmação para substituir uma ata já anexada —
 // sem isso, duas atas individuais anexadas na coletiva se sobrescreviam sem aviso.
 function semAcento(t){ return String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); }
+// GDs da regional citados num trecho da ata: o primeiro nome e mais um nome do GD ("Vanessa Lima", "João Leardini")
+function gdsCitados(txt){
+  var t = ' ' + semAcento(txt).replace(/[^a-z0-9]+/g, ' ') + ' ';
+  return (ST.distritos || []).filter(function(x){
+    var p = semAcento(x.nm).split(/\s+/).filter(function(w){ return w.length > 2 && !/^(dos|das|de|da|do)$/.test(w); });
+    return p.length > 1 && t.indexOf(' ' + p[0] + ' ') >= 0 && p.slice(1).some(function(w){ return t.indexOf(' ' + w + ' ') >= 0; });
+  });
+}
 function ataConferir(arquivo, ata){
   var st = ataSt(), cab = semAcento(arquivo + ' ' + (ata ? ata.titulo : '') + ' ' + (ST.doc && ST.doc.texto ? ST.doc.texto.slice(0, 800) : ''));
   var ind = /\bindividual\b/.test(cab), col = /\bcoletiva\b/.test(cab), aqui = ST.modelo === 'individual';
@@ -1313,6 +1321,18 @@ function ataConferir(arquivo, ata){
       return false;
     }
     if (!window.confirm('A ata cita o distrito ' + dm[1] + ', mas a apresentação aberta é do distrito ' + cod + ' (' + ST.d.dist.nm + '). Anexar mesmo assim?')){ st.textContent = 'Nada foi gravado.'; return false; }
+  }
+  // O GD da ata (título e "GD condutor"; sem eles, os participantes) tem de ser o da apresentação
+  // aberta. Pode haver motivo para seguir (GD cobrindo outro distrito), então só pergunta.
+  var lsAta = String(ST.doc && ST.doc.texto || '').split('\n').slice(0, 80);
+  function campoAta(rx){ return lsAta.filter(function(l){ return rx.test(l.trim()); }).join(' '); }
+  var gdCond = gdsCitados(arquivo + ' ' + (ata ? ata.titulo : '') + ' ' + campoAta(/^(t[ií]tulo:?\s*)?ata rps/i) + ' ' + campoAta(/^gd\s*\/?\s*condutor/i));
+  var gdRef = gdCond.length ? gdCond : gdsCitados(campoAta(/^participantes/i));
+  if (gdRef.length && !gdRef.some(function(x){ return String(x.distrito_id) === String(ST.gd); }) &&
+    !window.confirm('A ata cita ' + gdRef.map(function(x){ return x.nm; }).join(' e ') + (gdCond.length ? ' como GD da reunião' : ' entre os participantes') +
+      ', mas a apresentação aberta é do GD ' + ST.d.dist.nm + '.\n\nSeguir mesmo assim e gravar a ata no GD ' + ST.d.dist.nm + '?')){
+    st.textContent = 'Nada foi gravado. Se a ata é de outro GD, volte ao início, escolha o GD certo e anexe de novo.';
+    return false;
   }
   if (aqui){
     var rep = repSel(), nome = rep ? semAcento(rep.nome).split(/\s+/).filter(function(p){ return p.length > 2; }) : [];
