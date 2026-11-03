@@ -1302,6 +1302,18 @@ function ataConferir(arquivo, ata){
       (ind ? 'Volte ao início, escolha o modelo Individual e o representante da ata, e anexe de novo.' : 'Volte ao início, escolha o modelo Coletiva e anexe de novo.') + ' Nada foi gravado.';
     return false;
   }
+  // O distrito citado na ata (nome do arquivo, título ou cabeçalho) tem de ser o da apresentação
+  // aberta: em out/2026 atas coletivas da Geovana e da Vanessa foram gravadas no GD do João.
+  var dm = cab.match(/distrito[\s_:\-]*(\d{8})/), cod = mkCodDistrito();
+  if (dm && dm[1] !== cod){
+    var dono = (ST.distritos || []).filter(function(x){ return String(x.distrito_id).substring(0, 6) + '00' === dm[1]; })[0];
+    if (dono){
+      st.textContent = 'Esta ata é do distrito ' + dm[1] + ' (' + dono.nm + '), mas a apresentação aberta é do distrito ' + cod + ' (' + ST.d.dist.nm + '). ' +
+        'Volte ao início, escolha o GD ' + dono.nm + ' e anexe de novo. Nada foi gravado.';
+      return false;
+    }
+    if (!window.confirm('A ata cita o distrito ' + dm[1] + ', mas a apresentação aberta é do distrito ' + cod + ' (' + ST.d.dist.nm + '). Anexar mesmo assim?')){ st.textContent = 'Nada foi gravado.'; return false; }
+  }
   if (aqui){
     var rep = repSel(), nome = rep ? semAcento(rep.nome).split(/\s+/).filter(function(p){ return p.length > 2; }) : [];
     if (nome.length && !nome.some(function(p){ return cab.indexOf(p) >= 0; }) &&
