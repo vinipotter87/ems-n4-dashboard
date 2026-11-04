@@ -1947,7 +1947,7 @@ async function abrirVisitasGD() {
 // anterior, a página compara os ciclos entre si (evolução).
 // Setores: setor|nome|linha|regional|painel|f0|f20|f40|f60|f80|f100|cob
 
-var FREQ_CICLOS_ORDEM = ['AGO', 'SET'];
+var FREQ_CICLOS_ORDEM = ['AGO', 'SET', 'OUT'];
 var FREQ_CICLO = FREQ_CICLOS_ORDEM[FREQ_CICLOS_ORDEM.length - 1];
 var FREQ_GD = {"110501": "Larissa de Melo Poubel Gomes", "110502": "Carla Patricia de Melo Ziviani", "116501": "Julio Cesar dos Santos Oliveira", "116502": "Rafael Oliveira Almeida"};
 var FREQ_SETORES_RAW = {
@@ -2014,11 +2014,44 @@ var FREQ_SETORES_RAW = {
 11650206|Natalia Cristina Rabelo de Paula Bueno|VITAL|LESTE|250|9|0|9|36|55|141|78
 11650207|Mariana Rezende de Souza Lucas Peixoto|VITAL|LESTE|247|4|0|7|38|50|148|80
 11650208|Fernanda Flavia Xavier|VITAL|LESTE|256|0|2|12|39|64|139|79
+11650209|Andre Luiz de Paiva|VITAL|LESTE|241|0|3|12|25|93|108|83`,
+  OUT: `11050101|Katia Alves da Silva Teixeira|NEXUS|LESTE|252|2|6|16|32|68|128|78
+11050102|Andre Oliveira Tardin|NEXUS|LESTE|273|7|10|31|34|67|124|70
+11050103|Leandro Cesar Caetano|NEXUS|LESTE|236|0|4|8|16|55|153|88
+11050104|Carlos Andre Oliveira Godinho|NEXUS|LESTE|244|0|0|4|20|49|171|90
+11050105|Laryssa De Moraes Rodrigues|NEXUS|LESTE|224|12|9|51|51|101|0|45
+11050106|Fernando Assis Silva|NEXUS|LESTE|226|1|0|7|20|46|152|88
+11050107|Thiago Medeiros Zacaron|NEXUS|LESTE|260|1|8|10|34|70|137|80
+11050201|Gabriela Salomao Xavier Bastos|NEXUS|LESTE|273|22|37|38|62|66|48|42
+11050202|Victoria Bessa Alvarenga Lima|NEXUS|LESTE|256|5|13|20|26|57|135|75
+11050203|Marina de Paula Braz|NEXUS|LESTE|227|8|6|31|49|74|59|59
+11050204|Renata Lydiane Soares Silva|NEXUS|LESTE|257|10|48|81|106|12|0|5
+11050205|Jessica Lara Santos de Oliveira|NEXUS|LESTE|256|7|5|10|24|48|162|82
+11050206|Fabiane de Souza Santos|NEXUS|LESTE|235|8|4|5|11|39|168|88
+11050207|Claudio Murilo dos Santos Junior|NEXUS|LESTE|242|1|0|5|11|57|168|93
+11050208|Larissa Pires de Souza Lima|NEXUS|LESTE|259|2|4|25|30|92|106|76
+11050209|Natalia Andrade Filordi|NEXUS|LESTE|239|0|4|18|31|90|96|78
+11650101|Rusllany Faria Picoli Sperandio|VITAL|LESTE|247|2|4|14|34|67|126|78
+11650102|Ederson Adao Zamprogno|VITAL|LESTE|239|1|1|7|25|42|163|86
+11650103|Marcos Gomes Dolabela Filho|VITAL|LESTE|254|0|1|18|23|92|120|83
+11650104|Nayara Sann Silva Rodrigues|VITAL|LESTE|250|1|6|15|30|59|139|79
+11650105|Daniela Monferarri Costa|VITAL|LESTE|246|2|4|10|26|42|162|83
+11650106|Deividy Kellvy Barreto|VITAL|LESTE|252|0|4|20|63|76|89|65
+11650107|Lucas Pereira Alves|VITAL|LESTE|254|16|61|84|71|22|0|9
+11650201|VAGO|VITAL|LESTE|282|63|2|3|38|58|118|62
+11650202|Sabrina Franca Silva|VITAL|LESTE|255|6|11|20|42|94|82|69
+11650203|Camilla Guerra de Rezende|VITAL|LESTE|234|1|1|3|16|84|129|91
+11650204|Disney Dias de Almeida|VITAL|LESTE|255|9|17|8|19|71|131|79
+11650205|Nathalia Aparecida Alves de Carvalho Aleme|VITAL|LESTE|240|3|3|13|28|59|134|80
+11650206|Natalia Cristina Rabelo de Paula Bueno|VITAL|LESTE|250|9|0|9|36|55|141|78
+11650207|Mariana Rezende de Souza Lucas Peixoto|VITAL|LESTE|247|4|0|7|38|50|148|80
+11650208|Fernanda Flavia Xavier|VITAL|LESTE|256|0|2|12|39|64|139|79
 11650209|Andre Luiz de Paiva|VITAL|LESTE|241|0|3|12|25|93|108|83`
 };
 var FREQ_NOTAS = {
   AGO: "Exportação nativa do relatório estava desabilitada pela organização; dados de agosto extraídos via leitura direta da tabela e conferidos contra os totais do próprio relatório (Painel e Cobertura).",
-  SET: "Dados do export \"Resumo da Frequência\" do relatório (por Setor), com o ciclo de setembro fechado — o relatório calcula a frequência com base nos últimos 5 ciclos fechados (2026-05 a 2026-09). Totais conferidos contra o próprio relatório (Painel 7.961, Cobertura 72,3%). Setores 11050204 (Renata Lydiane Soares Silva), 11650107 (Lucas Pereira Alves) e 11050105 (Laryssa De Moraes Rodrigues) aparecem sem nenhum médico em Freq 100 (coberturas de 5%, 9% e 45%) — os três mudaram de titular em relação ao snapshot de agosto. Setor 11650201 está VAGO."
+  SET: "Dados do export \"Resumo da Frequência\" do relatório (por Setor), com o ciclo de setembro fechado — o relatório calcula a frequência com base nos últimos 5 ciclos fechados (2026-05 a 2026-09). Totais conferidos contra o próprio relatório (Painel 7.961, Cobertura 72,3%). Setores 11050204 (Renata Lydiane Soares Silva), 11650107 (Lucas Pereira Alves) e 11050105 (Laryssa De Moraes Rodrigues) aparecem sem nenhum médico em Freq 100 (coberturas de 5%, 9% e 45%) — os três mudaram de titular em relação ao snapshot de agosto. Setor 11650201 está VAGO.",
+  OUT: "Dados do export \"Detalhamento da Frequência\" do relatório (UGN = LESTE, sem filtro de linha; export de 04/11/2026), agregados por setor, com o ciclo de outubro fechado — o relatório calcula a frequência com base nos últimos 5 ciclos fechados (2026-06 a 2026-10). Totais de Nexus + Vital conferidos: Painel 7.961, Cobertura 72,3%."
 };
 
 function freqCls(v) {
