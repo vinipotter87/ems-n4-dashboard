@@ -477,13 +477,19 @@ def processar_produto(xlsx_bytes: bytes, mes: str, linha: str, regional: str = "
             # Setor terminado em "00" é o SUBTOTAL do GD (soma dos reps do distrito),
             # não uma venda adicional — confirmado: GD_row == sum(reps do distrito).
             # Incluir essa linha junto com os reps individuais contaria tudo em dobro.
-            if parsed and filtro_fn(parsed["setor_id"]) and not parsed["vago"] and not parsed["setor_id"].endswith("00"):
+            # O "Não Visitado" (xxxx9999) também fica fora: é um balde à parte (distrito xx99),
+            # não entra no subtotal de nenhum GD. Já o setor VAGO ENTRA (decisão do Vinicius,
+            # 04/11/2026): no Raio X o subtotal do distrito = reps + VAGO, e o dash tem de bater
+            # com ele. Esse setor vai com nome "Vago" (a tela de outliers já o trata à parte).
+            sid_ = parsed["setor_id"] if parsed else ""
+            nao_visitado = bool(parsed) and (sid_.endswith("9999") or "VISITADO" in parsed["nome"].upper())
+            if parsed and filtro_fn(sid_) and not nao_visitado and not sid_.endswith("00"):
                 registros_rep.append({
                     "mes":          mes,
                     "linha":        linha,
                     "produto":      produto,
                     "setor_id":     parsed["setor_id"],
-                    "nome":         parsed["nome"],
+                    "nome":         "Vago" if parsed["vago"] else parsed["nome"],
                     "distrito_id":  get_distrito_id(parsed["setor_id"]),
                     "cota":         cota,
                     "realizado":    realizado,
