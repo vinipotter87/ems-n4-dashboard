@@ -238,6 +238,16 @@ tr.ip-ch td{background:#fffdf5}tr.ip-ch td.n{font-weight:800;color:#78350f}
 .pmeta{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,2fr);gap:12px;margin-top:4px;background:#f8fafc;border:1px solid var(--border);border-radius:9px;padding:4px 12px 10px}
 .pmeta select,.pobj input{width:100%;border:1.5px solid var(--border);border-radius:7px;padding:6px 8px;font-size:12.5px;background:#fffef7;font-family:inherit}
 .pmfix{font-size:13px;padding:6px 0}
+/* conta em unidades (plano de marca-chave): gap em unidades, cidades e cota projetada */
+.conta{margin-top:10px;background:#f8fafc;border:1px solid var(--border);border-radius:9px;padding:8px 12px 10px}
+.conta .ch{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px;font-weight:800;color:var(--brand-d);margin-bottom:6px}.conta .ch small{font-weight:600;color:var(--gray)}
+.conta .ukp{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:8px}.conta .ukp div{background:#fff;border:1px solid var(--border);border-radius:8px;padding:6px 10px;min-width:0}.conta .ukp i{display:block;font-style:normal;font-size:10px;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.3px}.conta .ukp b{font-size:18px;color:var(--brand-d);white-space:nowrap}.conta .ukp b.neg{color:#b91c1c}.conta .ukp s{display:block;text-decoration:none;font-size:11px;color:var(--gray)}
+.conta .cols{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:12px}.conta .cols>div{min-width:0}
+.conta table.wt{width:100%;background:#fff;border-radius:8px;overflow:hidden}.conta table.wt td,.conta table.wt th{padding:4px 7px;font-size:12px;white-space:nowrap}.conta table.wt td.n{white-space:normal}.conta table.wt tr.tot td{font-weight:800;background:#eff6ff}
+.conta .lt{display:inline-block;border-radius:20px;padding:1px 8px;font-size:10.5px;font-weight:800;white-space:nowrap}.lt.rec{background:#fef3c7;color:#92400e}.lt.inv{background:#fee2e2;color:#991b1b}.lt.man{background:#dcfce7;color:#166534}.lt.pou{background:#e5e7eb;color:#4b5563}
+.conta .proj{margin-top:10px}.conta .proj .pf{margin-top:0;margin-bottom:6px}.conta .proj select,.conta .proj input{border:1.5px solid var(--border);border-radius:7px;padding:5px 8px;font-size:12.5px;background:#fffef7;font-family:inherit}.conta .proj input{width:72px}
+.conta .aviso-un{font-size:11px;color:#9a3412;background:#fff7ed;border-radius:7px;padding:5px 9px;margin-top:6px;line-height:1.45}.conta .leg{font-size:11px;color:var(--gray);line-height:1.5;margin-top:6px}
+.conta.vazio-un{font-size:12.5px;color:var(--gray);line-height:1.5}
 .pobj{display:flex;gap:8px}.pobj span{flex:1;min-width:0}.pobj i{display:block;font-style:normal;font-size:10px;font-weight:800;color:var(--brand-d);letter-spacing:.5px}
 /* ata */
 .vazio{background:#fff;border:2px dashed var(--border);border-radius:14px;padding:38px 30px;text-align:center;color:var(--gray);line-height:1.6}
@@ -478,6 +488,9 @@ async function carregarDistrito(d, m){ // dados de um distrito no mês, cada fon
   o.mk.meses = hm; o.mk.hrx = doHist(mrx); o.mk.hdem = doHist(mdm);
   o.mk.rxc = (mrc || []).filter(function(r){ return r.regional === REG && r.linha === L; });
   o.pReg = await fetchAba('produtos_' + L + '_' + ref.prod); // cota da regional por produto (referência)
+  // Conta em unidades: Raio X em unidades por cidade (setor, ou distrito no piloto), PDVs por cidade e incremento da cota (abas novas; podem não existir)
+  o.un = unidadesDe(await fetchAba('cota_un_cidade'), await fetchAba('cota_un_pdv'), d, m);
+  o.inc = (await fetchAba('cota_incremento')).filter(function(r){ return r.regional === REG && r.linha === L; });
   // evolução do distrito: os três meses até o escolhido, cada um com o dado do próprio mês
   var ms = [mesAnt(mesAnt(m) || ''), mesAnt(m), m].filter(Boolean);
   for (var i = 0; i < ms.length; i++) o.histD.push({ mes: ms[i], dist: doD(await fetchAba('distritos_' + ms[i]))[0] || null, pd: doD(await fetchAba('produtos_dist_' + L + '_' + ms[i])) });
@@ -1727,6 +1740,118 @@ function iMarcasDesvio(){
   return out;
 }
 
+// ── conta em unidades: gap em unidades, cidades com elasticidade e cota projetada ──
+// Ideia do GD Fabiano (05/11/2026): o plano de marca-chave mostra quantas UNIDADES faltam, em quais cidades
+// do setor há espaço (cota × cobertura × crescimento, com os PDVs que mais perderam) e qual cota o rep vai
+// encontrar nos meses do plano, já que a cota sobe e a % de cobertura é sobre a cota nova. Fontes: abas
+// cota_un_cidade e cota_un_pdv (Raio X em unidades; nível SETOR, ou DISTRITO no piloto, quando a parte do
+// setor é estimada pela participação em R$) e cota_incremento (cota R$ da regional por produto e mês).
+// A métrica do plano continua sendo a % de cobertura; a conta é derivada dela e gravada como snapshot (p.conta).
+var UN_REGRAS = { grande: 1.5, investigar: 40, recuperar: 95, lancamento: 50, janela: 6, semanas: 4.3 }; // % da cota da marca no escopo, % de cobertura, salto de cota que marca lançamento, meses da mediana
+function unidadesDe(rows, pdv, d, m){ // leitura mais recente até o mês: setores do distrito (prefixo) ou o distrito inteiro
+  var L = d.linha, id = String(d.distrito_id).substring(0, 6), meu = (rows || []).filter(function(r){ return r.regional === REG && r.linha === L && String(r.codigo).substring(0, 6) === id && (r.nivel === 'SETOR' || r.nivel === 'DISTRITO'); }); // distrito_id vem com 9 dígitos (116301000); a aba usa 6
+  if (!meu.length) return null;
+  var cic = null; for (var mm = m, n = 0; mm && n < 8 && !cic; mm = mesAnt(mm), n++){ if (meu.some(function(r){ return r.mes === mm; })) cic = mm; }
+  if (!cic) return null;
+  var doC = meu.filter(function(r){ return r.mes === cic; }), nivel = doC.some(function(r){ return r.nivel === 'SETOR'; }) ? 'SETOR' : 'DISTRITO';
+  doC = doC.filter(function(r){ return r.nivel === nivel; });
+  var cod = {}; doC.forEach(function(r){ cod[r.codigo] = 1; });
+  return { ciclo: cic, nivel: nivel, rows: doC, pdv: (pdv || []).filter(function(r){ return r.regional === REG && r.linha === L && r.mes === cic && r.nivel === nivel && cod[r.codigo]; }) };
+}
+function unLeitura(cob, peso){ // classificação da cidade para o rep
+  if (cob !== null && cob >= UN_REGRAS.recuperar) return 'Manter';
+  if (peso < UN_REGRAS.grande) return 'Pouco retorno';
+  return cob !== null && cob < UN_REGRAS.investigar ? 'Investigar' : 'Recuperar';
+}
+var UN_CL = { 'Recuperar': 'rec', 'Investigar': 'inv', 'Manter': 'man', 'Pouco retorno': 'pou' };
+function unChip(cl){ return '<span class="lt ' + UN_CL[cl] + '">' + cl + '</span>'; }
+function unN(v, nd){ return v === null || v === undefined || isNaN(v) ? '—' : (+v).toLocaleString('pt-BR', { maximumFractionDigits: nd || 0, minimumFractionDigits: nd || 0 }); }
+function unS(v){ return v === null || v === undefined || isNaN(v) ? '—' : (v > 0 ? '+' : '') + unN(v); }
+function unRep(mk){ // unidades da marca para o setor em ST.setor (base = último mês fechado), com as cidades classificadas
+  var D = ST.dF || ST.d, U = D && D.un; if (!U) return null;
+  var cod = U.nivel === 'SETOR' ? ST.setor : String(D.dist.distrito_id).substring(0, 6), rows = U.rows.filter(function(r){ return norm(r.produto) === mk && String(r.codigo) === cod; });
+  if (!rows.length) return null;
+  var fC = 1, fR = 1;
+  if (U.nivel === 'DISTRITO'){ // piloto: a parte do setor é a participação do rep na cota e no realizado (R$) do distrito
+    var M = comDados(D, function(){ return marcasRep(); }), x = M.eu.m[mk], dC = 0, dR = 0; M.todos.forEach(function(r){ if (r.m[mk]){ dC += r.m[mk].cota || 0; dR += r.m[mk].real || 0; } });
+    if (!x || !dC || !dR) return null; fC = x.cota / dC; fR = x.real / dR;
+  }
+  var cota = 0, real = 0; rows.forEach(function(r){ cota += num(r.cota_un) || 0; real += num(r.real_un) || 0; });
+  var cid = rows.map(function(r){ var c = num(r.cota_un) || 0, re = num(r.real_un) || 0, cob = c ? re / c * 100 : null, peso = cota ? c / cota * 100 : 0;
+      return { cidade: r.cidade, cota: c, real: re, gap: c - re, cob: cob, peso: peso, cresc: num(r.cresc), classe: unLeitura(cob, peso) }; })
+    .sort(function(a, b){ return b.gap - a.gap; });
+  var pdv = U.pdv.filter(function(r){ var g = num(r.cresc); return norm(r.produto) === mk && String(r.codigo) === cod && num(r.unidades) !== null && g !== null && g < 0 && g > -100; })
+    .map(function(r){ var u = num(r.unidades), g = num(r.cresc) / 100; return { pdv: r.pdv, cidade: r.cidade, un: u, cresc: g * 100, perda: u / (1 + g) - u }; })
+    .sort(function(a, b){ return b.perda - a.perda; }).slice(0, 8);
+  return { ciclo: U.ciclo, nivel: U.nivel, fC: fC, fR: fR, cotaEsc: cota, realEsc: real, cota: cota * fC, real: real * fR, gap: cota * fC - real * fR, cidades: cid, pdv: pdv };
+}
+function incRegra(mk){ // incremento mensal da cota da marca na regional: mediana das últimas variações; lançamento (salto > 50%) usa só a última
+  var D = ST.dF || ST.d, s = ((D && D.inc) || []).filter(function(r){ return norm(r.produto) === mk && num(r.var_mm) !== null; }).sort(function(a, b){ return MESES.indexOf(a.mes) - MESES.indexOf(b.mes); });
+  if (!s.length) return null;
+  var j = s.slice(-UN_REGRAS.janela), v = j.map(function(r){ return num(r.var_mm); }), ult = v[v.length - 1], lanc = v.some(function(x){ return x > UN_REGRAS.lancamento; });
+  var o = v.slice().sort(function(a, b){ return a - b; }), med = o.length % 2 ? o[(o.length - 1) / 2] : (o[o.length / 2 - 1] + o[o.length / 2]) / 2;
+  var u3 = v.slice(-3), m3 = u3.reduce(function(a, b){ return a + b; }, 0) / u3.length;
+  return { serie: j, base: lanc ? ult : med, agressivo: lanc ? ult : Math.max(m3, med), lancamento: lanc, ultimo: ult, mediana: med, media3: m3 };
+}
+function cenarioPct(inc, cen){ if (!inc) return 0; return cen === 'estavel' ? 0 : cen === 'agressivo' ? inc.agressivo : inc.base; }
+function contaForm(ch, info, p){ // bloco do formulário do plano de marca-chave
+  var mk = info.titulo, u = unRep(mk), q = "'" + ch + "'", D = ST.dF || ST.d;
+  if (!u) return '<div class="conta vazio-un"><b>📦 Conta em unidades</b> — ainda sem a leitura do Raio X em unidades para este distrito (Cota | Análise de Cobertura, Mensurar por = Unidades, Analisar por = Cidade da UTC → scripts/ingest_cota_unidades.py). Quando ela entrar, este bloco mostra o gap em unidades, as cidades onde buscar e a cota projetada dos meses do plano.</div>';
+  var inc = incRegra(mk), c = p.conta || {}, cen = c.cenario || 'base', pct = cen === 'outro' && c.inc !== undefined && c.inc !== null ? c.inc : cenarioPct(inc, cen);
+  var h = '<div class="conta" id="conta-' + ch + '"><div class="ch">📦 Conta em unidades · ' + esc(mk) + ' <small>Raio X em unidades · ' + u.ciclo + '/2026' + (u.nivel === 'DISTRITO' ? ' · leitura do distrito (piloto)' : ' · setor ' + ST.setor) + '</small></div>';
+  h += '<div class="ukp"><div><i>Cota do setor</i><b>' + unN(u.cota) + ' un</b><s>' + (u.nivel === 'DISTRITO' ? (u.fC * 100).toFixed(1).replace('.', ',') + '% da cota do distrito (' + unN(u.cotaEsc) + ' un)' : u.ciclo + '/2026') + '</s></div>' +
+    '<div><i>Realizado</i><b>' + unN(u.real) + ' un</b><s>' + (u.nivel === 'DISTRITO' ? (u.fR * 100).toFixed(1).replace('.', ',') + '% do realizado do distrito (' + unN(u.realEsc) + ' un)' : 'cobertura ' + p1(u.cota ? u.real / u.cota * 100 : null)) + '</s></div>' +
+    '<div><i>' + (u.gap > 0 ? 'Faltam' : 'Acima da cota') + '</i><b class="' + (u.gap > 0 ? 'neg' : '') + '">' + unN(Math.abs(u.gap)) + ' un</b><s>' + (u.gap > 0 ? '≈ ' + unN(u.gap / UN_REGRAS.semanas) + ' un por semana no mês' : 'cota batida em ' + u.ciclo) + '</s></div>' +
+    '<div><i>Cota da regional</i><b>' + (inc ? unS(inc.base) + '% / mês' : '—') + '</b><s>' + (inc ? (inc.lancamento ? 'lançamento: vale o último mês (' + unS(inc.ultimo) + '%)' : 'mediana dos últimos ' + inc.serie.length + ' meses · últ. ' + unS(inc.ultimo) + '%') : 'sem série de cota') + '</s></div></div>';
+  // cidades: onde buscar
+  var top = u.cidades.slice(0, 10), resto = u.cidades.length - top.length, cnt = {}; u.cidades.forEach(function(x){ cnt[x.classe] = (cnt[x.classe] || 0) + 1; });
+  h += '<div class="cols"><div><table class="wt ver"><thead><tr><th>Cidade</th><th>Cota</th><th>Realiz.</th><th>Falta</th><th>Cobert.</th><th>Cresc.</th><th>Leitura</th></tr></thead><tbody>' +
+    top.map(function(x){ return '<tr><td class="n"><b>' + esc(x.cidade) + '</b></td><td>' + unN(x.cota) + '</td><td>' + unN(x.real) + '</td><td>' + (x.gap > 0 ? '<b style="color:#b91c1c">' + unN(x.gap) + '</b>' : unS(-x.gap)) + '</td><td><span class="p ' + cls(x.cob, 100, UN_REGRAS.investigar) + '">' + p1(x.cob === null ? null : Math.round(x.cob * 10) / 10) + '</span></td><td>' + (x.cresc === null ? '—' : unS(x.cresc) + '%') + '</td><td>' + unChip(x.classe) + '</td></tr>'; }).join('') +
+    '<tr class="tot"><td class="n">' + (u.nivel === 'DISTRITO' ? 'Distrito' : 'Setor') + ' · ' + u.cidades.length + ' cidades</td><td>' + unN(u.cotaEsc) + '</td><td>' + unN(u.realEsc) + '</td><td>' + (u.cotaEsc - u.realEsc > 0 ? unN(u.cotaEsc - u.realEsc) : '—') + '</td><td>' + p1(u.cotaEsc ? Math.round(u.realEsc / u.cotaEsc * 1000) / 10 : null) + '</td><td></td><td></td></tr></tbody></table>' +
+    '<div class="leg">' + (resto > 0 ? 'Mais ' + resto + ' cidade(s) com falta menor. ' : '') + Object.keys(cnt).map(function(k){ return unChip(k) + ' ' + cnt[k]; }).join(' · ') + '<br><b>Recuperar</b> = cidade com pelo menos ' + UN_REGRAS.grande + '% da cota e cobertura entre ' + UN_REGRAS.investigar + '% e ' + UN_REGRAS.recuperar + '%: é onde o plano rende. <b>Investigar</b> = abaixo de ' + UN_REGRAS.investigar + '%: a venda sumiu (PDV, distribuidor ou médico), não é elasticidade. <b>Manter</b> = ' + UN_REGRAS.recuperar + '% ou mais. Cidade = ponto de venda (UTC).</div></div>';
+  h += '<div>' + (u.pdv.length ? '<table class="wt ver"><thead><tr><th>PDVs que mais perderam unidades</th><th>Cidade</th><th>Un.</th><th>Cresc.</th><th>Perdeu</th></tr></thead><tbody>' +
+    u.pdv.map(function(x){ return '<tr><td class="n">' + esc(x.pdv) + '</td><td>' + esc(x.cidade) + '</td><td>' + unN(x.un) + '</td><td><b style="color:#b91c1c">' + unS(x.cresc) + '%</b></td><td>' + unN(x.perda) + '</td></tr>'; }).join('') + '</tbody></table><div class="leg">Unidades perdidas = o que o PDV vendia antes menos o que vende agora, pelo crescimento informado no Raio X. Comece o "onde" do 5W2H por aqui.</div>' : '<div class="leg">Sem leitura de PDVs para esta marca.</div>') + '</div></div>';
+  // projeção: cota dos meses do plano e unidades a entregar
+  h += '<div class="proj"><div class="pf"><span style="font-weight:700;color:var(--text)">Cota dos próximos meses:</span><select data-f="cenario" onchange="contaCenario(' + q + ', this)">' +
+    [['estavel', 'estável (0%)'], ['base', 'base (' + (inc ? unS(inc.base) : '0') + '% ao mês)'], ['agressivo', 'agressiva (' + (inc ? unS(inc.agressivo) : '0') + '% ao mês)'], ['outro', 'outro valor']].map(function(o){ return '<option value="' + o[0] + '"' + (o[0] === cen ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') +
+    '</select><input type="number" step="0.1" data-f="inc" value="' + (Math.round(pct * 10) / 10) + '" oninput="contaOutro(' + q + ')"><span>% de incremento da cota por mês · estimativa pelo histórico da regional; a cota real vem da empresa</span></div><div id="conta-tab-' + ch + '">' + contaTabela(ch, u, pct) + '</div>' +
+    '<div class="aviso-un">⚠ A cota de cada mês é uma <b>estimativa</b> pelo comportamento da cota da regional' + (inc && inc.lancamento ? ' — ' + esc(mk) + ' é lançamento e a cota ainda está em escada, por isso só o último mês serve de referência' : '') + '. Quando a cota real do mês entrar no dashboard, o plano mostra prevista × real.</div></div></div>';
+  return h;
+}
+function contaLinhas(ch, u, pct){ // linhas da projeção a partir do prazo e dos objetivos digitados no formulário
+  var box = $('plano-' + ch), out = []; if (!box || !u) return out;
+  var n = +((box.querySelector('[data-f="prazo"]') || {}).value || 1), i = pct / 100, ic = MESES.indexOf(u.ciclo);
+  [].forEach.call(box.querySelectorAll('[data-obj]'), function(inp){ var k = +inp.getAttribute('data-obj'); if (k >= n) return;
+    var mes = inp.getAttribute('data-mes'), passo = Math.max(0, MESES.indexOf(mes) - ic); // meses à frente da leitura em unidades (0 = a cota do mês já é conhecida)
+    var alvo = inp.value === '' ? null : parseFloat(inp.value), cota = u.cota * Math.pow(1 + i, passo), un = alvo === null || isNaN(alvo) ? null : cota * alvo / 100;
+    out.push({ mes: mes, passo: passo, cota: Math.round(cota), alvo: alvo, un: un === null ? null : Math.round(un), delta: un === null ? null : Math.round(un - u.real), semana: un === null ? null : Math.round((un - u.real) / UN_REGRAS.semanas) }); });
+  return out;
+}
+function contaTabelaHtml(ls, u, base){
+  return '<table class="wt ver"><thead><tr><th>Mês</th><th>Cota prevista</th><th>Objetivo</th><th>Unidades a vender</th><th>A mais que ' + base + '</th><th>Por semana</th></tr></thead><tbody>' +
+    '<tr class="tot"><td>Base ' + base + '/2026</td><td>' + unN(u.cota) + ' un</td><td>' + p1(u.cota ? Math.round(u.real / u.cota * 1000) / 10 : null) + '</td><td>' + unN(u.real) + ' un</td><td>—</td><td>—</td></tr>' +
+    ls.map(function(l){ return '<tr><td><b>' + l.mes + '</b></td><td>' + unN(l.cota) + ' un' + (l.passo === 0 ? ' <small style="color:var(--gray)">(cota real)</small>' : '') + '</td><td>' + (l.alvo === null ? '<span style="color:var(--gray)">informe o objetivo</span>' : p1(l.alvo)) + '</td><td><b>' + (l.un === null ? '—' : unN(l.un) + ' un') + '</b></td><td>' + (l.delta === null ? '—' : '<b style="color:' + (l.delta > 0 ? '#b91c1c' : '#15803d') + '">' + unS(l.delta) + ' un</b>') + '</td><td>' + (l.semana === null ? '—' : unS(l.semana) + ' un') + '</td></tr>'; }).join('') + '</tbody></table>';
+}
+function contaTabela(ch, u, pct){ var ls = contaLinhas(ch, u, pct); return ls.length ? contaTabelaHtml(ls, u, u.ciclo) : ''; }
+function contaAtualizar(ch){ var t = $('conta-tab-' + ch), box = $('plano-' + ch), info = planoInfo(ch); if (!t || !box || !info) return;
+  var u = unRep(info.titulo), pct = parseFloat((box.querySelector('[data-f="inc"]') || {}).value) || 0; if (u) t.innerHTML = contaTabela(ch, u, pct); }
+function contaCenario(ch, sel){ var box = $('plano-' + ch), info = planoInfo(ch), inp = box.querySelector('[data-f="inc"]'); if (sel.value !== 'outro'){ inp.value = Math.round(cenarioPct(incRegra(info.titulo), sel.value) * 10) / 10; } contaAtualizar(ch); }
+function contaOutro(ch){ var box = $('plano-' + ch), sel = box.querySelector('[data-f="cenario"]'); if (sel) sel.value = 'outro'; contaAtualizar(ch); }
+function contaSnapshot(ch){ // o que fica gravado no plano (p.conta)
+  var box = $('plano-' + ch), info = planoInfo(ch); if (!box || !info || !box.querySelector('[data-f="inc"]')) return null;
+  var u = unRep(info.titulo); if (!u) return null;
+  var pct = parseFloat(box.querySelector('[data-f="inc"]').value) || 0, cen = (box.querySelector('[data-f="cenario"]') || {}).value || 'base';
+  function nomes(cl){ return u.cidades.filter(function(x){ return x.classe === cl; }).slice(0, 6).map(function(x){ return x.cidade; }); }
+  return { ciclo: u.ciclo, nivel: u.nivel, cota: Math.round(u.cota), real: Math.round(u.real), fC: Math.round(u.fC * 10000) / 10000, fR: Math.round(u.fR * 10000) / 10000, cenario: cen, inc: pct, linhas: contaLinhas(ch, u, pct),
+    recuperar: nomes('Recuperar'), investigar: nomes('Investigar'), pdv: u.pdv.slice(0, 3).map(function(x){ return x.pdv + ' (' + x.cidade + ')'; }), gerado: hoje() };
+}
+function contaVer(ch, p){ // dentro do plano salvo
+  var c = p.conta; if (!c || !c.linhas || !c.linhas.length) return '';
+  var u = { cota: c.cota, real: c.real, ciclo: c.ciclo };
+  return '<div class="conta"><div class="ch">📦 Conta em unidades · <small>base ' + c.ciclo + '/2026' + (c.nivel === 'DISTRITO' ? ' · parte do setor estimada pela leitura do distrito' : '') + ' · cota ' + unS(c.inc) + '% ao mês (' + esc(c.cenario) + ')</small></div>' + contaTabelaHtml(c.linhas, u, c.ciclo) +
+    '<div class="leg">' + (c.recuperar && c.recuperar.length ? unChip('Recuperar') + ' ' + c.recuperar.map(esc).join(', ') + ' ' : '') + (c.investigar && c.investigar.length ? unChip('Investigar') + ' ' + c.investigar.map(esc).join(', ') + ' ' : '') + (c.pdv && c.pdv.length ? '· PDVs que mais perderam: ' + c.pdv.map(esc).join('; ') : '') + '</div></div>';
+}
+
 // ── planos: 5 porquês + 5W2H ──
 // ── evolução dos planos ──────────────────────────────────────────
 // Ao salvar, o plano guarda um retrato fixo do que ele ataca (campo "base"):
@@ -1789,10 +1914,11 @@ function planoMetaForm(ch, info, p){ // bloco do formulário: métrica, prazo e 
   } else h += '<div><label class="pl">Métrica do plano</label><div class="pmfix">% de cobertura da cota de ' + esc(info.titulo) + ' · base ' + base + '/2026: <b>' + (info.base !== undefined && info.base !== null ? p1(info.base) : '—') + '</b></div></div>';
   h += '<div><label class="pl">Prazo <small>máximo de 3 meses</small></label><select data-f="prazo" onchange="planoPrazo(' + q + ')">' + ms.map(function(m, k){ return '<option value="' + (k + 1) + '"' + (k + 1 === n ? ' selected' : '') + '>' + (k + 1) + (k ? ' meses' : ' mês') + ' — até ' + m + '/2026</option>'; }).join('') + '</select></div>';
   h += '<div><label class="pl">Objetivo de cada mês <small>' + (fund ? 'na unidade do indicador' : '% de cobertura da cota') + '</small></label><div class="pobj">' + ms.map(function(m, k){ var o = (p.objetivos || [])[k];
-    return '<span data-objbox="' + k + '"' + (k < n ? '' : ' style="display:none"') + '><i>' + m + '</i><input type="number" step="0.1" data-obj="' + k + '" data-mes="' + m + '" value="' + (o && o.alvo !== undefined && o.alvo !== null ? o.alvo : '') + '" placeholder="objetivo"></span>'; }).join('') + '</div></div>';
-  return h + '<input type="hidden" data-f="mesBase" value="' + base + '"></div>';
+    return '<span data-objbox="' + k + '"' + (k < n ? '' : ' style="display:none"') + '><i>' + m + '</i><input type="number" step="0.1" data-obj="' + k + '" data-mes="' + m + '" value="' + (o && o.alvo !== undefined && o.alvo !== null ? o.alvo : '') + '" placeholder="objetivo" oninput="contaAtualizar(' + q + ')"></span>'; }).join('') + '</div></div>';
+  h += '<input type="hidden" data-f="mesBase" value="' + base + '"></div>';
+  return fund ? h : h + contaForm(ch, info, p);
 }
-function planoPrazo(ch){ var box = $('plano-' + ch), n = +box.querySelector('[data-f="prazo"]').value; [].forEach.call(box.querySelectorAll('[data-objbox]'), function(s){ s.style.display = +s.getAttribute('data-objbox') < n ? '' : 'none'; }); }
+function planoPrazo(ch){ var box = $('plano-' + ch), n = +box.querySelector('[data-f="prazo"]').value; [].forEach.call(box.querySelectorAll('[data-objbox]'), function(s){ s.style.display = +s.getAttribute('data-objbox') < n ? '' : 'none'; }); contaAtualizar(ch); }
 function objetivoTag(p){ // etiqueta curta do objetivo, para cabeçalhos
   if (!p.objetivos || !p.objetivos.length || !p.metrica) return '<span class="p warn">sem métrica e objetivo — editar o plano</span>';
   return prazoVencido(p) ? '<span class="p crit">prazo encerrado em ' + p.objetivos[p.objetivos.length - 1].mes + '</span>' : '';
@@ -1955,7 +2081,7 @@ function planoLer(ch){ var box = $('plano-' + ch), p = { problema: (box.querySel
   p.mesBase = (box.querySelector('[data-f="mesBase"]') || {}).value || MES_FECHADO;
   var nObj = +((box.querySelector('[data-f="prazo"]') || {}).value || 1); p.objetivos = [];
   [].forEach.call(box.querySelectorAll('[data-obj]'), function(i){ if (+i.getAttribute('data-obj') < nObj) p.objetivos.push({ mes: i.getAttribute('data-mes'), alvo: i.value === '' ? null : parseFloat(i.value) }); });
-  if (/^fund/.test(ch)) p.kpis = p.metrica ? [p.metrica] : [];
+  if (/^fund/.test(ch)) p.kpis = p.metrica ? [p.metrica] : []; else p.conta = contaSnapshot(ch);
   [].forEach.call(box.querySelectorAll('[data-acao]'), function(tr){ var a = { status: tr.getAttribute('data-st') || 'Pendente' }, tem = false; W.forEach(function(w){ a[w[0]] = tr.querySelector('[data-w="' + w[0] + '"]').value.trim(); if (a[w[0]]) tem = true; }); if (tem) p.acoes.push(a); });
   return p; }
 function planoPorques(ch){ var ins = document.querySelectorAll('#plano-' + ch + ' [data-pq]'), lib = true, ult = '';
@@ -2051,7 +2177,7 @@ function planoDesenhar(ch, editar, rasc){
       salvo.porques.map(function(t, k){ var r = !salvo.raiz && k === salvo.porques.length - 1; return '<div class="pv' + (r ? ' raiz' : '') + '"><i>' + (r ? 'Causa raiz' : (k + 1) + 'º por quê') + '</i>' + esc(t) + '</div>'; }).join('') +
       (salvo.raiz ? '<div class="pv raiz"><i>Causa raiz</i>' + esc(salvo.raiz) + '</div>' : '') +
       '</div><div><b class="psub">Plano de ação — 5W2H</b><table class="wt ver"><thead><tr>' + W.map(function(w){ return '<th>' + w[1] + '</th>'; }).join('') + '</tr></thead><tbody>' +
-      salvo.acoes.map(function(a){ return '<tr>' + W.map(function(w){ return '<td>' + (esc(a[w[0]]) || '—') + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div></div>' + evolBloco(ch, salvo) + '<div class="pf"><span>Criado em <b>' + dataBr(criadoDe(reg)) + '</b></span>' + revisaoTag(salvo, ST.data) + '<span id="plano-st-' + ch + '" style="margin-left:auto"></span></div>' + notaAlteracao(reg, salvo, ch);
+      salvo.acoes.map(function(a){ return '<tr>' + W.map(function(w){ return '<td>' + (esc(a[w[0]]) || '—') + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div></div>' + evolBloco(ch, salvo) + contaVer(ch, salvo) + '<div class="pf"><span>Criado em <b>' + dataBr(criadoDe(reg)) + '</b></span>' + revisaoTag(salvo, ST.data) + '<span id="plano-st-' + ch + '" style="margin-left:auto"></span></div>' + notaAlteracao(reg, salvo, ch);
   } else if (info.opcional && pode){
     var p1o = planoDados('fund');
     h += '<div class="ph">🧭 Plano — ' + info.titulo + ' <span>opcional</span></div><div class="pp" style="margin:0">' +
@@ -2059,7 +2185,7 @@ function planoDesenhar(ch, editar, rasc){
            : 'Preencha primeiro o plano de Fundamentos no slide anterior. O segundo plano é opcional e serve para tratar outro indicador em paralelo (máximo de 2 em andamento).') + '</div>' +
       (p1o ? '<div class="pf"><button class="b1" onclick="planoDesenhar(' + q + ',true)">＋ Abrir 2º plano de fundamentos</button></div>' : '');
   } else h += '<div class="ph">🧭 Plano — ' + info.titulo + '</div><div class="pf"><span>Aguardando os planos salvos…</span></div>';
-  box.innerHTML = h; if (ed) planoPorques(ch); ajustar();
+  box.innerHTML = h; if (ed){ planoPorques(ch); contaAtualizar(ch); } ajustar(); // a conta em unidades só calcula com os campos no DOM
 }
 async function planoEnviar(ch, plano, apagar){ var reg = planoReg(ch), st = $('plano-st-' + ch), r0 = repSel();
   if (st) st.textContent = 'Salvando…';
@@ -2080,6 +2206,7 @@ async function planoSalvar(ch){ var p = planoLer(ch), st = $('plano-st-' + ch); 
   var ant = planoDados(ch);
   // a base é o retrato do último mês fechado; plano antigo (sem mês de base) ganha a base nova ao receber métrica e objetivo
   p.base = (ant && ant.base && ant.mesBase) ? ant.base : comDados(ST.dF, function(){ return medir(ch); });
+  if (!p.conta && ant && ant.conta) p.conta = ant.conta;
   p.medicoes = (ant && ant.medicoes) || []; if (ant && ant.revisoes) p.revisoes = ant.revisoes; if (ant && ant.resultados && ant.mesBase) p.resultados = ant.resultados;
   atualizarResultados(ch, p);
   st.style.color = ''; if (await planoEnviar(ch, p, false)){ planoDesenhar(ch, false); planoFinal(); desenharAndamento(); } }
