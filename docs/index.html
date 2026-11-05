@@ -821,6 +821,9 @@ table.crmp-tbl tbody tr:hover{background:#EEF6F5}
 /* Rodapé de total nas tabelas de produto */
 .prod-total-row td{background:var(--light);font-weight:800;border-top:2px solid var(--border)}
 .prod-total-row .prod-nome{text-transform:uppercase;font-size:11px;letter-spacing:.4px;color:var(--dark)}
+/* linha "Indicador PEX · Q1–Q3" no fim da tabela do Panorama de Frequência */
+.freq-pex-row td{background:#eef4ff !important;font-weight:800;border-top:2px solid #1d4ed8}
+.freq-pex-row td.td-gd{color:#1e3a8a}.freq-pex-row td.td-gd small{display:block;font-size:10.5px;font-weight:600;color:var(--gray)}
 /* ── Modo apresentação ── */
 /* linha de referência da regional nos KPIs (com distrito filtrado) */
 .kpi-ref-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--gray);margin:2px 0 6px}
@@ -3154,6 +3157,40 @@ function renderFrequencia() {
 // Bloco de Frequência dentro da página do mês (renderTudo): por distrito
 // sem filtro, por setor com distrito filtrado. Só aparece nos meses que
 // têm snapshot em FREQ_SETORES_RAW.
+// ── Indicador PEX · Q1–Q3 (última linha da tabela do Panorama de Frequência) ──
+// A tabela é o painel inteiro (Q1 a Q4); o PEX só pontua a frequência dos médicos Q1–Q3, com meta
+// de 90% (pedido do Vinicius, 05/11/2026). Por setor: [médicos Q1–Q3, com frequência, Freq 0, 20, 40,
+// 60, 80, 100, ...], do Detalhamento da Frequência (quartil por médico).
+function freqQ13Fonte() { return window.FAROL_Q13 || {}; } // Farol da Frequência (farol-frequencia/dados/freq_q13.js)
+var FREQ_Q13_PREF = /^1(103|163)/;
+function freqQ13Soma(ciclo, prefixo) {
+  var c = freqQ13Fonte()[ciclo]; if (!c) return null;
+  var ss = c.setores || c, t = [0, 0, 0, 0, 0, 0, 0, 0], n = 0;
+  Object.keys(ss).forEach(function(k) {
+    if (!FREQ_Q13_PREF.test(k) || (prefixo && k.substring(0, 6) !== prefixo)) return;
+    for (var i = 0; i < 8; i++) t[i] += +ss[k][i] || 0;
+    n++;
+  });
+  return n && t[0] ? { n: t[0], cf: t[1], f: t.slice(2), cob: t[1] / t[0] * 100, setores: n } : null;
+}
+function freqQ13Linha(ciclo, cicloAnt, prefixo, porSetor) {
+  var q = freqQ13Soma(ciclo, prefixo); if (!q) return '';
+  var qa = cicloAnt ? freqQ13Soma(cicloAnt, prefixo) : null;
+  var cls = q.cob >= 90 ? 'ok' : (q.cob >= 80 ? 'warn' : 'crit'), cor = { ok: '#15803d', warn: '#b45309', crit: '#b91c1c' }[cls];
+  var h = '<tr class="freq-pex-row"><td class="td-gd">🎯 Indicador PEX · Q1–Q3<small>' + freqFmt(q.cf) + ' de ' + freqFmt(q.n) + ' médicos Q1–Q3 com frequência · meta 90%</small></td>' +
+    '<td>' + (porSetor ? 'Q1–Q3' : q.setores) + '</td><td>' + freqFmt(q.n) + '</td>' +
+    q.f.map(function(v) { return '<td>' + freqFmt(v) + '</td>'; }).join('') +
+    '<td><span style="color:' + cor + ';font-weight:800">' + q.cob.toFixed(1).replace('.', ',') + '%</span> ' +
+    '<span class="crm-bar-wrap"><span class="crm-bar-fill ' + cls + '" style="width:' + Math.min(100, q.cob) + '%"></span></span></td>';
+  if (cicloAnt) h += '<td>' + freqDeltaHtml(q.cob, qa ? qa.cob : null) + '</td>';
+  return h + '</tr>';
+}
+// encaixa a linha no fim da tabela (antes do último </tbody>)
+function freqComLinhaPex(tabela, ciclo, cicloAnt, prefixo) {
+  var lp = freqQ13Linha(ciclo, cicloAnt, prefixo, !!prefixo), k = tabela.lastIndexOf('</tbody>');
+  return lp && k >= 0 ? tabela.slice(0, k) + lp + tabela.slice(k) : tabela;
+}
+
 function renderFrequenciaMes(mes) {
   // Mês sem leitura do Farol (ciclo ainda não fechado no relatório): mostra o último ciclo lido, com a nota.
   var ciclo = freqCicloAte(mes);
@@ -3180,9 +3217,9 @@ function renderFrequenciaMes(mes) {
   html += '<p style="font-size:11px;color:var(--gray);margin:0 0 12px">' + (Q ? 'Frequência Q1–Q3 = médicos Q1–Q3 em Freq 80 + 100 ÷ médicos Q1–Q3 · meta 90%' : 'Cobertura = (Freq 80 + Freq 100) ÷ Painel · últimos 5 ciclos fechados') +
     (prefixo ? '' : ' &nbsp;·&nbsp; selecione um distrito no filtro do topo para ver por setor') + ' &nbsp;·&nbsp; ';
   html += freqLegenda() + '</p>';
-  html += prefixo
+  html += freqComLinhaPex(prefixo
     ? renderFrequenciaSetorTable(freqSetores(ciclo, prefixo), cicloAnt ? freqSetores(cicloAnt, prefixo) : [], cicloAnt)
-    : renderFrequenciaDistTable(dist, distAnt, cicloAnt);
+    : renderFrequenciaDistTable(dist, distAnt, cicloAnt), ciclo, cicloAnt, prefixo);
   html += '<p style="font-size:11px;color:var(--gray);margin:12px 0 0">Histórico e evolução entre ciclos na aba <a href="#" onclick="FREQ_CICLO=\'' + ciclo + '\';abrirFrequencia();window.scrollTo(0,0);return false" style="color:#0369a1;font-weight:700">🩺 Frequência</a>.</p>';
   html += '</div></div>';
   return html;

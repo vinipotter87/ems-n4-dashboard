@@ -762,6 +762,9 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#ECEDF0;color:var(--dark
 /* Rodapé de total nas tabelas de produto */
 .prod-total-row td{background:var(--light);font-weight:800;border-top:2px solid var(--border)}
 .prod-total-row .prod-nome{text-transform:uppercase;font-size:11px;letter-spacing:.4px;color:var(--dark)}
+/* linha "Indicador PEX · Q1–Q3" no fim da tabela do Panorama de Frequência */
+.freq-pex-row td{background:#eef4ff !important;font-weight:800;border-top:2px solid #1d4ed8}
+.freq-pex-row td.td-gd{color:#1e3a8a}.freq-pex-row td.td-gd small{display:block;font-size:10.5px;font-weight:600;color:var(--gray)}
 /* ── Modo apresentação ── */
 /* linha de referência da regional nos KPIs (com distrito filtrado) */
 .kpi-ref-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--gray);margin:2px 0 6px}
@@ -2344,6 +2347,43 @@ function renderFrequencia() {
 // Bloco de Frequência dentro da página do mês (renderTudo): por distrito
 // sem filtro, por setor com distrito filtrado. Só aparece nos meses que
 // têm snapshot em FREQ_SETORES_RAW.
+// FREQ_Q13_PEX:INICIO (gerado por scripts/atualizar_freq_q13.py — não editar à mão)
+window.FREQ_Q13_PEX = {"OUT":{"data":"2026-11-04","setores":{"11050101":[79,69,1,1,2,6,16,53,14,14,15,14,50,41],"11050102":[66,61,0,0,3,2,8,53,9,9,16,16,41,36],"11050103":[62,60,0,1,1,0,17,43,12,12,12,12,38,36],"11050104":[80,79,0,0,0,1,7,72,12,12,21,21,47,46],"11050105":[66,23,1,2,19,21,23,0,7,1,18,3,41,19],"11050106":[79,70,0,0,3,6,14,56,8,7,26,25,45,38],"11050107":[69,61,1,2,1,4,18,43,15,14,15,13,39,34],"11050201":[69,35,5,5,10,14,17,18,9,3,19,10,41,22],"11050202":[84,75,1,2,3,3,15,60,10,8,22,22,52,45],"11050203":[61,38,0,3,5,15,23,15,16,9,16,11,29,18],"11050204":[86,4,4,15,33,30,4,0,16,2,26,1,44,1],"11050205":[90,80,2,1,1,6,11,69,14,13,27,26,49,41],"11050206":[75,71,2,0,0,2,12,59,16,15,16,15,43,41],"11050207":[48,45,1,0,0,2,6,39,7,7,10,10,31,28],"11050208":[84,69,0,0,3,12,34,35,11,9,28,24,45,36],"11050209":[91,77,0,0,4,10,39,38,17,15,29,26,45,36],"11650101":[110,105,0,0,0,5,22,83,26,26,34,33,50,46],"11650102":[97,95,0,0,0,2,13,82,20,20,30,30,47,45],"11650103":[105,91,0,0,8,6,36,55,21,20,31,27,53,44],"11650104":[124,112,0,0,4,8,21,91,29,25,40,40,55,47],"11650105":[110,105,0,1,1,3,10,95,25,25,35,35,50,45],"11650106":[122,104,0,1,3,14,44,60,25,23,39,36,58,45],"11650107":[119,16,5,12,43,43,16,0,25,6,40,4,54,6],"11650201":[105,66,34,0,0,5,21,45,23,20,35,17,47,29],"11650202":[110,93,0,1,3,13,50,43,24,24,35,32,51,37],"11650203":[115,109,1,0,1,4,33,76,24,24,38,35,53,50],"11650204":[112,107,0,0,0,5,26,81,25,25,36,35,51,47],"11650205":[102,93,0,1,1,7,18,75,23,23,32,30,47,40],"11650206":[122,97,4,0,3,18,31,66,25,22,40,29,57,46],"11650207":[89,80,1,0,1,7,14,66,18,17,29,27,42,36],"11650208":[115,109,0,0,2,4,23,86,24,23,37,36,54,50],"11650209":[112,102,0,0,1,9,46,56,22,21,37,33,53,48]}}};
+// FREQ_Q13_PEX:FIM
+// ── Indicador PEX · Q1–Q3 (última linha da tabela do Panorama de Frequência) ──
+// A tabela é o painel inteiro (Q1 a Q4); o PEX só pontua a frequência dos médicos Q1–Q3, com meta
+// de 90% (pedido do Vinicius, 05/11/2026). Por setor: [médicos Q1–Q3, com frequência, Freq 0, 20, 40,
+// 60, 80, 100, ...], do Detalhamento da Frequência (quartil por médico).
+function freqQ13Fonte() { return window.FREQ_Q13_PEX || (window.SOBREP_CS || {}).Q13 || {}; }
+var FREQ_Q13_PREF = /^1(105|165)/;
+function freqQ13Soma(ciclo, prefixo) {
+  var c = freqQ13Fonte()[ciclo]; if (!c) return null;
+  var ss = c.setores || c, t = [0, 0, 0, 0, 0, 0, 0, 0], n = 0;
+  Object.keys(ss).forEach(function(k) {
+    if (!FREQ_Q13_PREF.test(k) || (prefixo && k.substring(0, 6) !== prefixo)) return;
+    for (var i = 0; i < 8; i++) t[i] += +ss[k][i] || 0;
+    n++;
+  });
+  return n && t[0] ? { n: t[0], cf: t[1], f: t.slice(2), cob: t[1] / t[0] * 100, setores: n } : null;
+}
+function freqQ13Linha(ciclo, cicloAnt, prefixo, porSetor) {
+  var q = freqQ13Soma(ciclo, prefixo); if (!q) return '';
+  var qa = cicloAnt ? freqQ13Soma(cicloAnt, prefixo) : null;
+  var cls = q.cob >= 90 ? 'ok' : (q.cob >= 80 ? 'warn' : 'crit'), cor = { ok: '#15803d', warn: '#b45309', crit: '#b91c1c' }[cls];
+  var h = '<tr class="freq-pex-row"><td class="td-gd">🎯 Indicador PEX · Q1–Q3<small>' + freqFmt(q.cf) + ' de ' + freqFmt(q.n) + ' médicos Q1–Q3 com frequência · meta 90%</small></td>' +
+    '<td>' + (porSetor ? 'Q1–Q3' : q.setores) + '</td><td>' + freqFmt(q.n) + '</td>' +
+    q.f.map(function(v) { return '<td>' + freqFmt(v) + '</td>'; }).join('') +
+    '<td><span style="color:' + cor + ';font-weight:800">' + q.cob.toFixed(1).replace('.', ',') + '%</span> ' +
+    '<span class="crm-bar-wrap"><span class="crm-bar-fill ' + cls + '" style="width:' + Math.min(100, q.cob) + '%"></span></span></td>';
+  if (cicloAnt) h += '<td>' + freqDeltaHtml(q.cob, qa ? qa.cob : null) + '</td>';
+  return h + '</tr>';
+}
+// encaixa a linha no fim da tabela (antes do último </tbody>)
+function freqComLinhaPex(tabela, ciclo, cicloAnt, prefixo) {
+  var lp = freqQ13Linha(ciclo, cicloAnt, prefixo, !!prefixo), k = tabela.lastIndexOf('</tbody>');
+  return lp && k >= 0 ? tabela.slice(0, k) + lp + tabela.slice(k) : tabela;
+}
+
 function renderFrequenciaMes(mes) {
   if (!FREQ_SETORES_RAW[mes]) return '';
   var cicloAnt = freqCicloAnterior(mes);
@@ -2365,9 +2405,9 @@ function renderFrequenciaMes(mes) {
   html += '<span style="display:inline-block;width:10px;height:10px;background:#22c55e;border-radius:2px;margin-right:4px"></span>≥75%&nbsp;&nbsp;';
   html += '<span style="display:inline-block;width:10px;height:10px;background:#f59e0b;border-radius:2px;margin-right:4px"></span>50–74%&nbsp;&nbsp;';
   html += '<span style="display:inline-block;width:10px;height:10px;background:#ef4444;border-radius:2px;margin-right:4px"></span>&lt;50%</p>';
-  html += prefixo
+  html += freqComLinhaPex(prefixo
     ? renderFrequenciaSetorTable(freqSetores(mes, prefixo), cicloAnt ? freqSetores(cicloAnt, prefixo) : [], cicloAnt)
-    : renderFrequenciaDistTable(dist, distAnt, cicloAnt);
+    : renderFrequenciaDistTable(dist, distAnt, cicloAnt), mes, cicloAnt, prefixo);
   html += '<p style="font-size:11px;color:var(--gray);margin:12px 0 0">Histórico e evolução entre ciclos na aba <a href="#" onclick="FREQ_CICLO=\'' + mes + '\';abrirFrequencia();window.scrollTo(0,0);return false" style="color:#0369a1;font-weight:700">🩺 Frequência</a>.</p>';
   html += '</div></div>';
   return html;
