@@ -822,6 +822,9 @@ table.crmp-tbl tbody tr:hover{background:#EEF6F5}
 .prod-total-row td{background:var(--light);font-weight:800;border-top:2px solid var(--border)}
 .prod-total-row .prod-nome{text-transform:uppercase;font-size:11px;letter-spacing:.4px;color:var(--dark)}
 /* ── Modo apresentação ── */
+/* linha de referência da regional nos KPIs (com distrito filtrado) */
+.kpi-ref-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--gray);margin:2px 0 6px}
+.kpi-row.kpi-ref .kpi{background:#f8fafc;opacity:.88}
 /* plano: métrica, prazo e objetivo de cada mês */
 .ap-pmeta{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,2fr);gap:12px;margin-top:6px;background:#f8fafc;border:1px solid var(--border);border-radius:9px;padding:2px 12px 10px}
 .ap-pmeta select,.ap-pobj input{width:100%;border:1.5px solid var(--border);border-radius:7px;padding:6px 8px;font-size:12.5px;background:#fffef7;font-family:inherit}
@@ -1397,16 +1400,6 @@ function renderKPIs(dados) {
   var warn = distritos.filter(function(d) { return d.diagnostico === 'warn'; }).length;
   var crit = distritos.filter(function(d) { return d.diagnostico === 'crit'; }).length;
 
-  function mediaMDVLinha(linha) {
-    var ds   = distritos.filter(function(d){ return d.linha === linha; });
-    var vals = ds.map(function(d){ return safeFloat(d.prod); }).filter(function(v){ return v !== null; });
-    return vals.length ? vals.reduce(function(a,b){return a+b;},0) / vals.length * 100 : null;
-  }
-  var prodNexM = mediaMDVLinha('NEXUS');
-  var prodVitM = mediaMDVLinha('VITAL');
-  var allVals  = distritos.map(function(d){ return safeFloat(d.prod); }).filter(function(v){ return v !== null; });
-  var prodRegM = allVals.length ? allVals.reduce(function(a,b){return a+b;},0) / allVals.length * 100 : null;
-
   // Reps que não entregam MDV (prod < 100% = abaixo do objetivo de 12 visitas)
   var repsSemMDV = ativos.filter(function(r){
     var p = safeFloat(r.prod);
@@ -1420,25 +1413,34 @@ function renderKPIs(dados) {
       .filter(function(v){ return v !== null && v > 0; });
     return vals.length ? vals.reduce(function(a,b){return a+b;},0) / vals.length : null;
   }
-  var atProdNex = mediaAtProd(dados.prodNex);
-  var atProdVit = mediaAtProd(dados.prodVit);
-
   function fmt(v) { return v !== null ? v.toFixed(1) + '%' : '—'; }
-
-  var nDistTotal = distritos.length;
-  var nDistNex   = distritos.filter(function(d){ return d.linha === 'NEXUS'; }).length;
-  var nDistVit   = distritos.filter(function(d){ return d.linha === 'VITAL'; }).length;
   function distLbl(n) { return n + ' distrito' + (n !== 1 ? 's' : ''); }
-  var prodLbl = DISTRITO_FILTRO ? 'Média produtos do distrito' : 'Média produtos linha';
-
-  // Linha 1: produtividade MDV + produto
-  var row1 = '<div class="kpi-row" style="grid-template-columns:repeat(5,1fr);margin-bottom:10px">' +
-    kpiCard('r', 'ATING. PROD. REGIONAL', fmt(prodRegM), 'MDV · ' + distLbl(nDistTotal)) +
-    kpiCard('n', 'ATING. PROD. NEXUS',    fmt(prodNexM), 'MDV · ' + distLbl(nDistNex)) +
-    kpiCard('r', 'ATING. PROD. VITAL',    fmt(prodVitM), 'MDV · ' + distLbl(nDistVit)) +
-    kpiCard('n', 'ATING. PRODUTO NEXUS',  fmt(atProdNex), prodLbl) +
-    kpiCard('r', 'ATING. PRODUTO VITAL',  fmt(atProdVit), prodLbl) +
-  '</div>';
+  // Linha 1: produtividade MDV + produto de um conjunto de dados — o da tela e, com distrito
+  // filtrado, a regional inteira logo abaixo como referência (comparativo na Apresentação N4;
+  // pedido do GD em 05/11/2026). Os rótulos são os mesmos nas duas linhas.
+  function cardsProd(dd, lblProd, ref) {
+    var ds = dd.distritos || [];
+    function mediaLinha(linha) {
+      var vals = ds.filter(function(d){ return d.linha === linha; }).map(function(d){ return safeFloat(d.prod); }).filter(function(v){ return v !== null; });
+      return vals.length ? vals.reduce(function(a,b){return a+b;},0) / vals.length * 100 : null;
+    }
+    var all = ds.map(function(d){ return safeFloat(d.prod); }).filter(function(v){ return v !== null; });
+    var reg = all.length ? all.reduce(function(a,b){return a+b;},0) / all.length * 100 : null;
+    var nN = ds.filter(function(d){ return d.linha === 'NEXUS'; }).length, nV = ds.filter(function(d){ return d.linha === 'VITAL'; }).length;
+    return '<div class="kpi-row' + (ref ? ' kpi-ref' : '') + '" style="grid-template-columns:repeat(5,1fr);margin-bottom:10px">' +
+      kpiCard('r', (!ref && DISTRITO_FILTRO) ? 'ATING. PROD. DISTRITO' : 'ATING. PROD. REGIONAL', fmt(reg), 'MDV · ' + distLbl(ds.length)) +
+      kpiCard('n', 'ATING. PROD. NEXUS',    fmt(mediaLinha('NEXUS')), 'MDV · ' + distLbl(nN)) +
+      kpiCard('r', 'ATING. PROD. VITAL',    fmt(mediaLinha('VITAL')), 'MDV · ' + distLbl(nV)) +
+      kpiCard('n', 'ATING. PRODUTO NEXUS',  fmt(mediaAtProd(dd.prodNex)), lblProd) +
+      kpiCard('r', 'ATING. PRODUTO VITAL',  fmt(mediaAtProd(dd.prodVit)), lblProd) +
+    '</div>';
+  }
+  var row1 = cardsProd(dados, DISTRITO_FILTRO ? 'Média produtos do distrito' : 'Média produtos linha', false);
+  var mesK = dados.distritos && dados.distritos[0] && dados.distritos[0].mes ? dados.distritos[0].mes : MES_ATUAL;
+  if (DISTRITO_FILTRO && DADOS_CACHE[mesK]) {
+    row1 += '<div class="kpi-ref-lbl">Regional inteira · referência para comparar com o distrito</div>' +
+      cardsProd(DADOS_CACHE[mesK], 'Média produtos linha', true);
+  }
 
   // Linha 2: status + alerta MDV
   var semMDVCls = repsSemMDV === 0 ? 'g' : repsSemMDV <= 10 ? 'o' : 'r';
