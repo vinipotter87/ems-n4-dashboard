@@ -1070,7 +1070,8 @@ var MARCAS_CHAVE_HISTORICO_VITAL = [
 var NOTAS_PRODUTOS_POR_MES = {
 };
 var NOTAS_PEX_POR_MES = {
-  'SET': '⚠️ SIMULADO — pontuação estimada a partir de Demanda (realizado parcial, setembro ainda projetado no Raio X), Marcas-chave, Painel Referência e Cobertura/Frequência Q1-Q3 de setembro. Não é o resultado oficial do PEX. Mesma fórmula calibrada contra agosto na SPI (erro médio ~1 pt). Setores vagos ou com titular novo não entram.'
+  'SET': '⚠️ SIMULADO — pontuação estimada a partir de Demanda (realizado parcial, setembro ainda projetado no Raio X), Marcas-chave, Painel Referência e Cobertura/Frequência Q1-Q3 de setembro. Não é o resultado oficial do PEX. Mesma fórmula calibrada contra agosto na SPI (erro médio ~1 pt). Setores vagos ou com titular novo não entram.',
+  'OUT': '⚠️ SIMULADO — pontuação estimada a partir de Demanda e Marcas-chave (cota e realizado de outubro fechado no Raio X, 31 dias, export de 05/11), Painel Referência e Cobertura de painel da produtividade fechada de outubro (export de 03/11) e Frequência Q1-Q3 do Detalhamento da Frequência (leitura de 04/11). Não é o resultado oficial do PEX. Mesma fórmula calibrada contra agosto na SPI (erro médio ~1 pt). Entram só reps com 3 meses completos na regional antes de outubro.'
 };
 function normProd(n) { return (n || '').toUpperCase().trim().replace(/\s+/g, ' '); }
 function marcasChaveDoMes(linha, mes) {
