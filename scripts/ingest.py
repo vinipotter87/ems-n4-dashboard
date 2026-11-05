@@ -451,6 +451,7 @@ def processar_produto(xlsx_bytes: bytes, mes: str, linha: str, regional: str = "
 
     registros_rep = []
     registros_regional = []
+    registros_nv = []   # Não Visitado (xxxx9999): entra na regional e vira distrito próprio, nunca rep
 
     for _, row in df.iterrows():
         produto = str(row.get(col_produto, "")).strip()
@@ -477,12 +478,16 @@ def processar_produto(xlsx_bytes: bytes, mes: str, linha: str, regional: str = "
             # Setor terminado em "00" é o SUBTOTAL do GD (soma dos reps do distrito),
             # não uma venda adicional — confirmado: GD_row == sum(reps do distrito).
             # Incluir essa linha junto com os reps individuais contaria tudo em dobro.
-            # O "Não Visitado" (xxxx9999) também fica fora: é um balde à parte (distrito xx99),
-            # não entra no subtotal de nenhum GD. Já o setor VAGO ENTRA (decisão do Vinicius,
-            # 04/11/2026): no Raio X o subtotal do distrito = reps + VAGO, e o dash tem de bater
-            # com ele. Esse setor vai com nome "Vago" (a tela de outliers já o trata à parte).
+            # O "Não Visitado" (xxxx9999) não é rep nem entra no subtotal de nenhum GD, mas ENTRA na
+            # apuração (decisão do Vinicius, 05/11/2026): soma na regional e vira um distrito próprio
+            # (xxxx99000), como no Raio X — assim o total regional do dash bate com o do Raio X.
+            # O setor VAGO também ENTRA (04/11/2026): no Raio X o subtotal do distrito = reps + VAGO.
+            # Esse setor vai com nome "Vago" (a tela de outliers já o trata à parte).
             sid_ = parsed["setor_id"] if parsed else ""
             nao_visitado = bool(parsed) and (sid_.endswith("9999") or "VISITADO" in parsed["nome"].upper())
+            if nao_visitado and filtro_fn(sid_[:4] + "0000"):  # 11039999 não passa em is_spi (prefixo 11030)
+                registros_nv.append({"produto": produto, "distrito_id": get_distrito_id(sid_),
+                                     "cota": cota, "realizado": realizado})
             if parsed and filtro_fn(sid_) and not nao_visitado and not sid_.endswith("00"):
                 registros_rep.append({
                     "mes":          mes,
@@ -531,6 +536,10 @@ def processar_produto(xlsx_bytes: bytes, mes: str, linha: str, regional: str = "
             if r["realizado"]  is not None: reg_agg[p]["realizados"].append(r["realizado"])
             if r["crescimento"] is not None: reg_agg[p]["crescimentos"].append(r["crescimento"])
             if r["cobertura"]  is not None: reg_agg[p]["coberturas"].append(r["cobertura"])
+        registros_nv = [r for r in registros_nv if r["produto"] in reg_agg]
+        for r in registros_nv:  # Não Visitado soma na regional (crescimento/cobertura seguem a média dos reps)
+            if r["cota"]      is not None: reg_agg[r["produto"]]["cotas"].append(r["cota"])
+            if r["realizado"] is not None: reg_agg[r["produto"]]["realizados"].append(r["realizado"])
 
         for produto, agg in reg_agg.items():
             cota_r = sum(agg["cotas"])       if agg["cotas"]      else None
@@ -546,7 +555,7 @@ def processar_produto(xlsx_bytes: bytes, mes: str, linha: str, regional: str = "
 
         # Distrito: soma por (produto × distrito_id)
         dist_agg: dict = {}
-        for r in registros_rep:
+        for r in registros_rep + registros_nv:  # o Não Visitado é o distrito xxxx99000
             key = (r["produto"], r["distrito_id"])
             if key not in dist_agg:
                 dist_agg[key] = {"cotas": [], "realizados": [], "distrito_id": r["distrito_id"], "produto": r["produto"]}
@@ -568,7 +577,7 @@ def processar_produto(xlsx_bytes: bytes, mes: str, linha: str, regional: str = "
     n_rep  = len(registros_rep)
     n_dist = len(registros_distrito)
     n_reg  = len(registros_regional)
-    print(f"  ✓ Produto {linha}: {n_reg} regional · {n_dist} por distrito · {n_rep} por rep")
+    print(f"  ✓ Produto {linha}: {n_reg} regional · {n_dist} por distrito (inclui Não Visitado: {len(registros_nv)} produtos) · {n_rep} por rep")
     return registros_regional, registros_distrito, registros_rep
 
 

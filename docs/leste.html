@@ -1324,7 +1324,14 @@ async function carregarMes(mes) {
     fetchAbaOuVazio('diagnostico_detalhe_LESTE_' + mes)
   ]);
 
-  DADOS_CACHE[mes] = { distritos, reps, prodNex, prodVit,
+  // Não Visitado (distrito xxxx99000): entra na regional (produtos_{L}) e aparece como distrito
+  // próprio só na tabela Por Distrito do Atingimento por Produto. Sai de prodDist* para não entrar
+  // nas médias, cartões e diagnósticos por distrito, que são só dos GDs.
+  function _ehNV(r) { return /^\d{4}99000$/.test(String(r.distrito_id || '')); }
+  var prodNvNex = (prodDistNex || []).filter(_ehNV), prodNvVit = (prodDistVit || []).filter(_ehNV);
+  prodDistNex = (prodDistNex || []).filter(function(r) { return !_ehNV(r); });
+  prodDistVit = (prodDistVit || []).filter(function(r) { return !_ehNV(r); });
+  DADOS_CACHE[mes] = { distritos, reps, prodNex, prodVit, prodNvNex, prodNvVit,
                        prodDistNex, prodDistVit, prodRepNex, prodRepVit, pex,
                        visitasNex, visitasVit, crm, diagnostico, diagDetalhe };
   return DADOS_CACHE[mes];
@@ -4027,6 +4034,8 @@ function filtrarDadosPorDistrito(dados, distritoId) {
     prodVit:     linhaSel === 'VITAL' ? porDist(dados.prodDistVit) : [],
     prodDistNex: porDist(dados.prodDistNex),
     prodDistVit: porDist(dados.prodDistVit),
+    prodNvNex:   [],
+    prodNvVit:   [],
     prodRepNex:  porDist(dados.prodRepNex),
     prodRepVit:  porDist(dados.prodRepVit),
     pex:         porDist(dados.pex),
@@ -7202,9 +7211,10 @@ function atualizarProdContent() {
     html = renderProdTableSimples(prodReg, PROD_LINHA);
 
   } else if (PROD_NIVEL === 'distrito') {
-    html += renderDistPills(distrLinha);
+    var prodNv = (PROD_LINHA === 'NEXUS' ? p.prodNvNex : p.prodNvVit) || [];
+    html += renderDistPills(prodNv.length ? distrLinha.concat([{ distrito_id: prodNv[0].distrito_id, ab: 'Não Visitado' }]) : distrLinha);
     if (PROD_DIST_SEL) {
-      var filtrado = prodDist.filter(function(p) { return p.distrito_id === PROD_DIST_SEL; });
+      var filtrado = prodDist.concat(prodNv).filter(function(p) { return p.distrito_id === PROD_DIST_SEL; });
       html += filtrado.length
         ? renderProdTableSimples(filtrado, PROD_LINHA)
         : '<div class="prod-empty">Sem dados de produto por distrito. Execute <code>ingest.py --mes ' + MES_ATUAL + '</code></div>';
