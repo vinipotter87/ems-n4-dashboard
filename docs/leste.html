@@ -3759,14 +3759,28 @@ function ahLinhasProduto(rep, meses, linha, so) {
   });
   if (so) ordem = ordem.filter(function(k) { return k === normProd(so); });
   ordem.sort(function(a, b) { var ak = isMarcaChave(a, linha) ? 0 : 1, bk = isMarcaChave(b, linha) ? 0 : 1; return ak !== bk ? ak - bk : a.localeCompare(b); });
-  return ordem.map(function(k) {
-    return ahSerie((isMarcaChave(k, linha) ? '★ ' : '') + k, 100, meses, function(m) {
+  // por produto: atingimento (com cota e realizado presos à linha, para o gráfico), cota R$ e realizado R$
+  var out = [];
+  ordem.forEach(function(k) {
+    var grupo = (isMarcaChave(k, linha) ? '★ ' : '') + k, cota = {}, real = {};
+    meses.forEach(function(m) { var p = prods[k][m]; if (!p) return; var c = ahNum(p.cota), r = ahNum(p.realizado); if (c !== null) cota[m] = c; if (r !== null) real[m] = r; });
+    out.push(ahSerie('Ating. cota', 100, meses, function(m) {
       var p = prods[k][m]; if (!p) return null;
       var a = ahNum(p.ating_pct), c = ahNum(p.cota), r = ahNum(p.realizado);
       if (a === null && c && r !== null) a = r / c * 100;
       return { v: a, t: c !== null ? 'cota R$ ' + ahRS(c) + ' · realizado R$ ' + ahRS(r || 0) : '' };
-    }, { chave: k, sub: 'atingimento da cota' });
+    }, { chave: k, grupo: grupo, sub: 'realizado ÷ cota', cota: cota, real: real }));
+    out.push(ahSerie('Cota R$', null, meses, function(m) { return cota[m] !== undefined ? { v: cota[m] } : null; }, { chave: k + '|cota', grupo: grupo, tipo: 'rs' }));
+    out.push(ahSerie('Realizado R$', null, meses, function(m) { return real[m] !== undefined ? { v: real[m], t: ahVar(real, meses, m) } : null; }, { chave: k + '|real', grupo: grupo, tipo: 'rs' }));
   });
+  return out;
+}
+// variação do realizado contra o mês anterior lido (texto do tooltip)
+function ahVar(serie, meses, m) {
+  var i = meses.indexOf(m); while (--i >= 0 && serie[meses[i]] === undefined) {}
+  if (i < 0 || !serie[meses[i]]) return '';
+  var d = (serie[m] / serie[meses[i]] - 1) * 100;
+  return (d >= 0 ? '+' : '') + ahP1(d) + '% vs ' + meses[i];
 }
 
 // Marcas-chave por setor: ating. cota, mercado, marca, market share e presc. share (tabela de prescrição: só presc. share)
@@ -3787,7 +3801,9 @@ function ahLinhasMks(rep, meses, linha, so, rx) {
     var grupo = '★ ' + marca;
     if (!rx) {
       var ct = cota.filter(function(c) { return c.chave === normProd(marca); })[0];
-      out.push(ahSerie('Ating. cota', 100, meses, function(m) { return ct && ct.v[m] !== undefined ? { v: ct.v[m], t: ct.extra[m] } : null; }, { chave: marca + '|ating', grupo: grupo }));
+      out.push(ahSerie('Ating. cota', 100, meses, function(m) { return ct && ct.v[m] !== undefined ? { v: ct.v[m], t: ct.extra[m] } : null; }, { chave: marca + '|ating', grupo: grupo, sub: 'realizado ÷ cota', cota: ct ? ct.cota : {}, real: ct ? ct.real : {} }));
+      out.push(ahSerie('Cota R$', null, meses, function(m) { return ct && ct.cota[m] !== undefined ? { v: ct.cota[m] } : null; }, { chave: marca + '|cota', grupo: grupo, tipo: 'rs' }));
+      out.push(ahSerie('Realizado R$', null, meses, function(m) { return ct && ct.real[m] !== undefined ? { v: ct.real[m], t: ahVar(ct.real, meses, m) } : null; }, { chave: marca + '|real', grupo: grupo, tipo: 'rs' }));
       out.push(ahSerie('Mercado R$', null, meses, function(m) { return dem[m] ? { v: dem[m].total } : null; }, { chave: marca + '|mercado', grupo: grupo, tipo: 'rs', sub: 'preço fábrica' }));
       out.push(ahSerie('Marca R$', null, meses, function(m) { return dem[m] ? { v: dem[m].marcaValor } : null; }, { chave: marca + '|marca', grupo: grupo, tipo: 'rs', sub: 'preço fábrica' }));
       out.push(ahSerie('Market share', null, meses, function(m) { return dem[m] && dem[m].share !== null ? { v: dem[m].share, t: pen(dem[m].pen), pen: dem[m].pen } : null; }, { chave: marca + '|ms', grupo: grupo, tipo: 'share' }));
@@ -3903,9 +3919,22 @@ function ahGrafico() {
   var meses = APRES_HIST.meses, cor = APRES_HIST.linha === 'VITAL' ? '#C8102E' : '#12735A', un = ahUnidade(l);
   var dados = meses.map(function(m) { return l.v[m] === undefined ? null : l.v[m]; });
   var pontos = dados.map(function(v) { return v === null ? cor : (ahCorHex(ahCor(v, l.meta, l.menor)) || cor); });
-  var ds = [{ label: (l.grupo ? l.grupo.replace(/^★\s*/, '') + ' · ' : '') + l.nome, data: dados, borderColor: cor, backgroundColor: cor, tension: .3, spanGaps: true, pointRadius: 5, pointHoverRadius: 7, pointBackgroundColor: pontos, pointBorderColor: pontos, borderWidth: 2.5 }];
-  if (l.meta !== null && l.meta !== undefined) ds.push({ label: 'Meta ' + (l.menor ? '≤ ' : '≥ ') + l.meta + '%', data: meses.map(function() { return l.meta; }), borderColor: '#9ca3af', borderDash: [6, 4], pointRadius: 0, borderWidth: 1.5, fill: false });
-  function fmtV(v) { return v === null || v === undefined ? '—' : un === 'R$' ? 'R$ ' + ahRS(v) : un === 'pts' ? ahP1(v) + ' pts' : ahP1(v) + '%'; }
+  var rotulo = (l.grupo ? l.grupo.replace(/^★\s*/, '') + ' · ' : '') + l.nome;
+  var ds = [{ type: 'line', label: rotulo, data: dados, borderColor: cor, backgroundColor: cor, tension: .3, spanGaps: true, pointRadius: 5, pointHoverRadius: 7, pointBackgroundColor: pontos, pointBorderColor: pontos, borderWidth: 2.5, order: 0 }];
+  if (l.meta !== null && l.meta !== undefined) ds.push({ type: 'line', label: 'Meta ' + (l.menor ? '≤ ' : '≥ ') + l.meta + '%', data: meses.map(function() { return l.meta; }), borderColor: '#9ca3af', borderDash: [6, 4], pointRadius: 0, borderWidth: 1.5, fill: false, order: 0 });
+  // atingimento de produto: cota e realizado em barras (eixo da direita, R$), para ver o que move o %
+  var comRS = !!(l.cota && l.real && Object.keys(l.real).length);
+  if (comRS) {
+    ds[0].yAxisID = 'y'; if (ds[1]) ds[1].yAxisID = 'y';
+    ds.push({ type: 'bar', label: 'Cota R$', data: meses.map(function(m) { return l.cota[m] === undefined ? null : l.cota[m]; }), backgroundColor: 'rgba(148,163,184,.45)', borderColor: '#94a3b8', borderWidth: 1, yAxisID: 'y2', order: 2 });
+    ds.push({ type: 'bar', label: 'Realizado R$', data: meses.map(function(m) { return l.real[m] === undefined ? null : l.real[m]; }), backgroundColor: cor === '#C8102E' ? 'rgba(200,16,46,.35)' : 'rgba(18,115,90,.35)', borderColor: cor, borderWidth: 1, yAxisID: 'y2', order: 1 });
+  }
+  function fmtV(v, rs) { return v === null || v === undefined ? '—' : (rs || un === 'R$') ? 'R$ ' + ahRS(v) : un === 'pts' ? ahP1(v) + ' pts' : ahP1(v) + '%'; }
+  var escalas = {
+    x: { grid: { display: false }, ticks: { font: { size: 11, weight: '700' } } },
+    y: { position: 'left', ticks: { font: { size: 10.5 }, callback: function(v) { return un === 'R$' ? ahRS(v) : v + (un === 'pts' ? '' : '%'); } }, grid: { color: '#e5e7eb' } }
+  };
+  if (comRS) escalas.y2 = { position: 'right', beginAtZero: true, grid: { drawOnChartArea: false }, ticks: { font: { size: 10.5 }, callback: function(v) { return ahRS(v); } } };
   APRES_HIST.chart = new Chart(cv.getContext('2d'), {
     type: 'line',
     data: { labels: meses, datasets: ds },
@@ -3913,12 +3942,9 @@ function ahGrafico() {
       responsive: true, maintainAspectRatio: false, animation: false,
       plugins: {
         legend: { display: true, position: 'bottom', labels: { boxWidth: 14, font: { size: 11 } } },
-        tooltip: { callbacks: { label: function(c) { var m = meses[c.dataIndex]; return c.dataset.label + ': ' + fmtV(c.parsed.y) + (c.datasetIndex === 0 && l.extra[m] ? ' · ' + l.extra[m] : ''); } } }
+        tooltip: { callbacks: { label: function(c) { var m = meses[c.dataIndex]; return c.dataset.label + ': ' + fmtV(c.parsed.y, c.dataset.yAxisID === 'y2') + (c.datasetIndex === 0 && l.extra[m] ? ' · ' + l.extra[m] : ''); } } }
       },
-      scales: {
-        x: { grid: { display: false }, ticks: { font: { size: 11, weight: '700' } } },
-        y: { ticks: { font: { size: 10.5 }, callback: function(v) { return un === 'R$' ? ahRS(v) : v + (un === 'pts' ? '' : '%'); } }, grid: { color: '#e5e7eb' } }
-      }
+      scales: escalas
     }
   });
 }
