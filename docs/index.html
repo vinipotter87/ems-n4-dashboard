@@ -4971,7 +4971,8 @@ function renderCycleBar(meses, mesAtual) {
   var gestao =
     '<button class="cycle-btn budget-btn" onclick="window.location.href=\'budget.html\'">💰 Budget</button>' +
     '<button class="cycle-btn budget-btn" onclick="window.location.href=\'budget-glempa.html\'">🎯 Budget Glempa Consultor</button>' +
-    '<button class="cycle-btn gov-btn" onclick="window.location.href=\'governanca-spi.html\'">🏛️ Governança</button>';
+    '<button class="cycle-btn gov-btn" onclick="window.location.href=\'governanca-spi.html\'">🏛️ Governança</button>' +
+    '<button class="cycle-btn gov-btn" onclick="window.location.href=\'fomed-spi/\'" title="Montagem de setores por UTC, por eixo: médicos, mercado e geografia">🗺️ FOMED SPI</button>';
   bar.innerHTML = faixa('Mês', btns) + faixa('Análises', analises) +
     '<div class="cb-row">' + grupo('N4', 'g-n4', n4) + grupo('RPS', 'g-rps', rps) + grupo('Gestão', 'g-ges', gestao) + '</div>';
   atualizarVisibilidadeFiltroDistrito();

@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FOMED SPI</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#1F2D44; --navy-2:#1C2D46; --azul:#B6E4FA; --azul-txt:#BFE3F8; --gelo:#DFF1FB; --aco:#5787A2;
+  --red:#C8102E; --red-d:#8B0B1F; --red-l:#fce8ec; --nexus:#12735A; --nexus-d:#0B5241; --nexus-l:#E3F4EE; --vital:#C8102E; --vital-l:#fce8ec;
+  --blue:#1F2D44; --blue2:#5787A2; --sky:#EEF6FB; --bg:#F3F9FD; --card:#ffffff;
+  --text:#1F2D44; --muted:#4E7A94; --line:#D6E6F0;
+  --ok:#15693A; --ok-bg:#E8F5EE; --warn:#E87722; --warn-bg:#FFF3E0; --bad:#C8102E; --bad-bg:#fce8ec; --pool:#5787A2; --pool-bg:#EEF6FB; --orange:#E87722;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Sora',system-ui,-apple-system,'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--text);font-size:13px}
+header{background:var(--navy);color:#fff;padding:14px 28px;display:flex;align-items:center;gap:18px;flex-wrap:wrap;box-shadow:0 2px 14px rgba(31,45,68,.28);position:relative;overflow:hidden}
+header::before,header::after{content:"";position:absolute;border-radius:50%;background:var(--navy-2);filter:brightness(1.35);opacity:.55;pointer-events:none}
+header::before{width:260px;height:260px;right:-60px;top:-150px}
+header::after{width:150px;height:150px;right:150px;top:-30px}
+header>*{position:relative;z-index:1}
+header .logo{height:20px;display:block}
+header .hsep{width:1px;height:38px;background:var(--aco);flex-shrink:0}
+header h1{font-size:17px;margin:0;font-weight:700;letter-spacing:-.2px}
+header .sub{font-size:11px;color:var(--gelo);font-weight:300;margin-top:2px}
+.params{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-left:auto}
+.params label{font-size:10px;display:flex;flex-direction:column;gap:3px;color:var(--azul-txt);letter-spacing:.6px;text-transform:uppercase;font-weight:600}
+.params input,.params select{width:78px;padding:5px 10px;border-radius:999px;border:1px solid var(--aco);background:transparent;color:var(--azul-txt);font-family:inherit;font-size:12px;font-weight:600}
+.params input:focus,.params select:focus{border-color:var(--azul);outline:none}
+.params select option{color:var(--text)}
+.params select{width:130px}
+.params .targets{font-size:11px;background:var(--azul);color:var(--navy);padding:6px 14px;border-radius:14px;line-height:1.5;font-weight:600}
+.params .targets select{color:var(--navy);border-color:var(--aco)}
+nav{display:flex;gap:4px;padding:10px 22px 0;background:#fff;border-bottom:1px solid var(--line)}
+nav{gap:6px;padding:10px 28px;align-items:center}
+nav button{border:1px solid var(--line);background:#fff;padding:6px 14px;font-family:inherit;font-size:11.5px;color:var(--aco);cursor:pointer;border-radius:999px;font-weight:600}
+nav button:hover{border-color:var(--aco);color:var(--navy)}
+nav button.active{background:var(--navy);border-color:var(--navy);color:#fff}
+main{padding:18px 22px 60px}
+.view{display:none}.view.active{display:block}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+.tile{background:var(--card);border-radius:14px;padding:14px 16px;box-shadow:0 1px 3px rgba(31,45,68,.05);border:1px solid var(--line);border-top:4px solid var(--azul)}
+.tile.ok{border-top-color:var(--ok)}.tile.bad{border-top-color:var(--bad)}.tile.warn{border-top-color:var(--warn)}
+.tile .k{font-size:10px;color:var(--aco);text-transform:uppercase;letter-spacing:1px;font-weight:700}.tile .v{font-size:24px;font-weight:700;margin-top:4px;line-height:1;font-variant-numeric:tabular-nums}
+.tile .v small{font-size:12px;color:var(--muted);font-weight:400;margin-left:4px}
+.tile.ok .v{color:var(--ok)}.tile.bad .v{color:var(--bad)}.tile.warn .v{color:var(--warn)}
+h2{font-size:11px;margin:20px 0 10px;color:var(--navy);display:flex;align-items:center;gap:10px;text-transform:uppercase;letter-spacing:1.4px;font-weight:700}
+h2 .count{font-size:11px;color:var(--muted);font-weight:400}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+.sec{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px;cursor:pointer;border-top:4px solid var(--azul);box-shadow:0 1px 3px rgba(31,45,68,.05);transition:border-color .15s,box-shadow .15s}
+.sec:hover{border-color:var(--aco);box-shadow:0 8px 22px rgba(31,45,68,.12)}
+.sec.ok{border-top-color:var(--ok)}.sec.warn{border-top-color:var(--warn)}.sec.bad{border-top-color:var(--bad)}.sec.pool{border-top-color:var(--pool)}
+.sec .name{font-weight:600;font-size:12.5px;line-height:1.25}
+.sec .code{font-size:10.5px;color:var(--muted)}
+.sec .meds{font-size:22px;font-weight:700;margin-top:6px;line-height:1.1;font-variant-numeric:tabular-nums}
+.sec .meds small{font-size:11px;color:var(--muted);font-weight:400}
+.sec .meds .delta{font-size:12px;margin-left:6px}
+.bar{height:6px;background:var(--gelo);border-radius:4px;margin:6px 0;overflow:hidden;position:relative}
+.bar i{display:block;height:100%;border-radius:4px;background:var(--aco)}
+.bar .mark{position:absolute;top:-2px;width:2px;height:10px;background:var(--navy)}
+.sec .meta{font-size:11px;color:var(--muted);display:grid;grid-template-columns:1fr 1fr;gap:2px 8px;margin-top:4px}
+.badge{display:inline-block;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:700;letter-spacing:.3px}
+.badge.ok{background:var(--ok-bg);color:var(--ok)}.badge.warn{background:var(--warn-bg);color:var(--warn)}.badge.bad{background:var(--bad-bg);color:var(--bad)}.badge.pool{background:var(--pool-bg);color:var(--pool)}.badge.geo{background:#FFF7E0;color:#9C6D00}
+table{border-collapse:collapse;width:100%;background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;font-size:12px}
+th,td{padding:6px 8px;text-align:left;border-bottom:1px solid var(--line)}
+th{background:var(--navy);color:#fff;font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.6px;position:sticky;top:0}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:var(--sky)}
+.modal{position:fixed;inset:0;background:rgba(31,45,68,.45);display:none;align-items:center;justify-content:center;z-index:50}
+.modal.open{display:flex}
+.modal .box{background:#fff;border-radius:14px;width:min(900px,94vw);max-height:88vh;display:flex;flex-direction:column;overflow:hidden}
+.modal .head{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px}
+.modal .body{overflow:auto;padding:0}
+.btn{font-family:inherit;font-size:11.5px;padding:6px 13px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--aco);cursor:pointer;font-weight:600}
+.btn:hover{border-color:var(--aco);color:var(--navy);background:var(--gelo)}
+.btn.primary{background:var(--azul);border-color:var(--azul);color:var(--navy);font-weight:700}
+.btn.primary:hover{background:var(--azul-txt);border-color:var(--aco);color:var(--navy)}
+.btn.small{padding:4px 8px;font-size:11px}
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0 14px}
+.toolbar select,.toolbar input{font-family:inherit;font-size:12px;padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--navy);font-weight:600}
+.note{background:#fff;border:1px solid var(--line);border-left:5px solid var(--azul);border-radius:14px;padding:12px 16px;font-size:12px;color:var(--text);line-height:1.5;margin-bottom:12px;box-shadow:0 1px 3px rgba(31,45,68,.05)}
+/* montador */
+.board{display:flex;gap:10px;overflow-x:auto;padding-bottom:12px;align-items:flex-start;min-height:420px}
+.col{flex:0 0 250px;background:var(--card);border:1px solid var(--line);border-radius:14px;display:flex;flex-direction:column;max-height:70vh;border-top:4px solid var(--azul);box-shadow:0 1px 3px rgba(31,45,68,.05)}
+.col.ok{border-top-color:var(--ok)}.col.warn{border-top-color:var(--warn)}.col.bad{border-top-color:var(--bad)}.col.pool{border-top-color:var(--pool);flex-basis:280px}
+.col .ch{padding:10px 10px 6px;border-bottom:1px solid var(--line)}
+.col .ch .name{font-weight:600;font-size:12px;line-height:1.2}
+.col .ch .name input{font-family:inherit;font-weight:600;font-size:12px;border:none;border-bottom:1px dashed var(--line);width:100%;background:transparent;color:var(--navy)}
+.col .ch .m{font-size:11px;color:var(--muted);margin-top:4px;display:grid;grid-template-columns:1fr 1fr;gap:1px 6px}
+.col .ch .big{font-size:18px;font-weight:600}
+.col .ch .big small{font-size:11px;color:var(--muted);font-weight:400}
+.col .list{overflow-y:auto;padding:6px;flex:1;min-height:80px}
+.col.over .list{background:var(--sky)}
+.chip{background:#fff;border:1px solid var(--line);border-radius:8px;padding:5px 8px;margin-bottom:5px;cursor:grab;display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:11.5px}
+.chip:active{cursor:grabbing}
+.chip .cn{font-weight:500;line-height:1.2}.chip .cc{font-size:10px;color:var(--muted)}
+.chip .cm{font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.chip.far{border-color:#f0c58a;background:#fff8ec}
+.chip.moved{border-color:var(--azul);background:var(--gelo)}
+.chip.zero{opacity:.55}
+.col .search{padding:6px;border-bottom:1px solid var(--line)}
+.col .search input{width:100%;font-family:inherit;font-size:11px;padding:5px 7px;border:1px solid var(--line);border-radius:6px}
+textarea{width:100%;height:160px;font-family:ui-monospace,monospace;font-size:11px;border:1px solid var(--line);border-radius:8px;padding:8px}
+.method p{line-height:1.6;max-width:900px}
+.method code{background:var(--sky);padding:1px 5px;border-radius:4px}
+.linecfg{display:flex;gap:6px;flex-wrap:wrap}
+.linecfg label{font-size:11px;display:flex;align-items:center;gap:4px;background:#10367a;padding:3px 7px;border-radius:6px}
+.linecfg select{width:auto;padding:1px 3px}
+details{margin:6px 0}
+summary{cursor:pointer;font-size:12px;color:var(--navy);font-weight:700}
+
+.maplay{display:grid;grid-template-columns:310px 1fr;gap:12px;height:calc(100vh - 150px);min-height:520px}
+.maplay.three{grid-template-columns:290px 1fr minmax(260px,46%)}
+
+.mside{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 1px 3px rgba(31,45,68,.05);padding:10px;overflow:auto;display:flex;flex-direction:column;gap:8px}
+.mside select{font-family:inherit;font-size:12px;padding:6px 10px;border-radius:999px;border:1px solid var(--line);width:100%;color:var(--navy);font-weight:600;background:#fff}
+.modes{display:flex;gap:4px}.modes button{flex:1;font-family:inherit;font-size:11px;font-weight:600;padding:6px 4px;border-radius:999px;border:1px solid var(--line);background:#fff;cursor:pointer;color:var(--aco)}
+.modes button.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+.leg{display:flex;flex-direction:column;gap:3px}
+.leg .it{display:flex;align-items:center;gap:7px;padding:5px 6px;border-radius:8px;cursor:pointer;border:1px solid transparent;font-size:11.5px}
+.leg .it:hover{background:var(--sky)}.leg .it.sel{border-color:var(--navy);background:var(--gelo);box-shadow:0 0 0 2px var(--azul)}
+.leg .sw{width:14px;height:14px;border-radius:4px;flex:none}
+.leg .it .t{flex:1;line-height:1.2;min-width:0;overflow-wrap:anywhere}.leg .it .t small{display:block;color:var(--muted);font-size:10px}
+.leg .it .n{font-weight:600;font-variant-numeric:tabular-nums;flex:none;min-width:34px;text-align:right}
+.mapwrap{position:relative;background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 1px 3px rgba(31,45,68,.05)}
+.mapwrap svg{width:100%;height:100%;display:block}
+.tip{position:absolute;pointer-events:none;background:var(--navy);color:#fff;font-size:11px;padding:6px 9px;border-radius:8px;display:none;max-width:260px;line-height:1.4;z-index:5}
+.mapbtns{position:absolute;top:8px;right:8px;display:flex;gap:4px;z-index:4}
+.mhint{font-size:11px;color:var(--muted);line-height:1.4}
+.utc{cursor:pointer}
+.mun{stroke:#fff;stroke-width:.6}
+.ctx{fill:#E3EEF5;stroke:#fff;stroke-width:.4}
+.seclabel{font-size:11px;font-weight:700;fill:var(--navy);paint-order:stroke;stroke:#fff;stroke-width:3px;pointer-events:none}
+.flow{fill:none;stroke-width:1.8;opacity:.85}
+.pick{background:#fff;border:2px solid var(--navy);border-radius:10px;padding:8px 10px;font-size:11.5px}
+.pick h4{margin:0 0 6px;font-size:12px;color:var(--navy);display:flex;justify-content:space-between;align-items:center}
+.pick .pc{display:flex;justify-content:space-between;gap:6px;padding:3px 0;border-bottom:1px dashed var(--line)}
+.pick .pc b{font-variant-numeric:tabular-nums}
+.pick .pc .x{cursor:pointer;color:var(--bad);font-weight:600;padding:0 4px}
+.imp{margin-top:8px;background:var(--sky);border-radius:8px;padding:6px 8px}
+.imp .r{display:grid;grid-template-columns:62px 1fr;gap:2px 6px;font-size:11px;align-items:center}
+.imp .r .d{font-variant-numeric:tabular-nums}
+.imp .d .neg{color:var(--bad);font-weight:600}.imp .d .pos{color:var(--ok);font-weight:600}
+.leg .it .prev{font-size:10px;color:var(--navy);margin-top:2px;display:block}
+.leg .it.dest{border-color:var(--blue);background:#eef6ff}
+.leg .it.dest:hover{background:#dbeafe}
+.rside{background:var(--card);border:1px solid var(--line);border-radius:10px;display:flex;flex-direction:column;overflow:hidden}
+.rside .rh{padding:10px 12px;border-bottom:1px solid var(--line)}
+.rside .rh .name{font-weight:600;font-size:12.5px}
+.rside .rh .m{font-size:11px;color:var(--muted);display:grid;grid-template-columns:1fr 1fr;gap:1px 8px;margin-top:4px}
+.rside .rl{overflow:auto;flex:1}
+.rside table{border:none;border-radius:0}
+.rside td,.rside th{padding:4px 6px;font-size:11px}
+.rside tr.u{cursor:pointer}.rside tr.u:hover td{background:var(--sky)}
+.rside tr.u.picked td{background:#dbeafe}
+.rside .sort{cursor:pointer;user-select:none}
+.kb{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 1px 3px rgba(31,45,68,.05);display:flex;flex-direction:column;overflow:hidden}
+.kb .kbh{padding:8px 10px;border-bottom:1px solid var(--line);font-size:11px;color:var(--muted);display:flex;justify-content:space-between;align-items:center}
+.kb .kbb{display:flex;gap:8px;overflow-x:auto;padding:8px;flex:1;align-items:stretch}
+.kcol{flex:0 0 240px;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:14px;background:var(--sky);border-top:5px solid var(--muted);max-height:100%}
+.kcol.over{background:var(--gelo);box-shadow:0 0 0 2px var(--navy) inset}
+.kcol .kh{padding:8px 9px 6px;border-bottom:1px solid var(--line);background:#fff;border-radius:0 0 0 0}
+.kcol .kh .nm{font-weight:600;font-size:11.5px;line-height:1.2;display:flex;justify-content:space-between;gap:4px}
+.kcol .kh .nm .cl{cursor:pointer;color:var(--muted);font-weight:400}
+.kcol .kh .big{font-size:17px;font-weight:600;margin-top:2px}
+.kcol .kh .big small{font-size:10.5px;color:var(--muted);font-weight:400}
+.kcol .kh .mm{font-size:10.5px;color:var(--muted);display:grid;grid-template-columns:1fr 1fr;gap:0 6px}
+.kcol .kh .pv{font-size:10.5px;color:var(--navy);font-weight:700;min-height:14px;margin-top:3px}
+.kcol .kl{overflow-y:auto;padding:6px;flex:1;min-height:60px}
+.kcard{background:#fff;border:1px solid var(--line);border-radius:8px;padding:5px 7px;margin-bottom:5px;cursor:grab;font-size:11px;display:flex;justify-content:space-between;gap:6px;align-items:center}
+.kcard:active{cursor:grabbing}
+.kcard .kn{font-weight:500;line-height:1.2}.kcard .kc{font-size:10px;color:var(--muted)}
+.kcard .km{font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}.kcard .km small{display:block;font-weight:400;color:var(--muted);font-size:9.5px}
+.kcard.moved{border-color:var(--azul);background:var(--gelo)}.kcard.far{border-color:#f0c58a;background:#fff8ec}
+.kcard.hl{box-shadow:0 0 0 2px var(--navy)}
+.leg .it.over{background:var(--azul);border-color:var(--navy)}
+.dbox{margin-top:6px;border-radius:10px;padding:7px 9px;background:var(--gelo);border:1px solid var(--azul)}
+.dbox .dr{display:grid;grid-template-columns:auto 1fr auto;align-items:baseline;gap:6px;font-size:10px;color:var(--muted);white-space:nowrap;margin-top:2px}
+.dbox .dr b{font-size:14px;color:var(--navy);font-variant-numeric:tabular-nums;text-align:right}
+.dbox .dr .dv{font-weight:700;font-size:11px;padding:1px 7px;border-radius:999px;font-variant-numeric:tabular-nums}
+.dv.neg{background:var(--bad-bg);color:var(--bad)}.dv.pos{background:var(--ok-bg);color:var(--ok)}
+.dbox .ttl{font-size:9.5px;letter-spacing:1px;text-transform:uppercase;color:var(--aco);font-weight:700;margin-bottom:3px}
+.leg .it .ld{font-size:10px;font-weight:700;display:block}
+.btn:disabled{opacity:.4;cursor:default;pointer-events:none}
+.hist{display:flex;gap:4px;align-items:center}
+.strip{display:inline-flex;gap:2px;vertical-align:middle;margin-left:4px}
+.strip i{width:9px;height:9px;border-radius:50%;display:inline-block;border:1px solid #fff;box-shadow:0 0 0 1px var(--line)}
+.strip i.ok{background:var(--ok)}.strip i.warn{background:var(--warn)}.strip i.bad{background:var(--bad)}.strip i.pool{background:#fff}
+.note.ok{border-left-color:var(--ok)}.note.bad{border-left-color:var(--bad)}
+.eixo-tag{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:2px 8px;border-radius:999px;background:var(--azul);color:var(--navy)}
+.lv{display:flex;flex-wrap:wrap;gap:3px 8px;align-items:center;margin-top:5px;padding-top:5px;border-top:1px dashed var(--line);font-size:10.5px}
+.lv .lvk{color:var(--aco);font-size:9.5px;text-transform:uppercase;letter-spacing:.8px;font-weight:700;width:100%}
+.lv .lvi{display:inline-flex;align-items:center;gap:4px;color:var(--muted);white-space:nowrap}
+.lv .lvi b{color:var(--navy);font-variant-numeric:tabular-nums}
+.lv .lvi i{width:8px;height:8px;border-radius:50%;display:inline-block}
+.lv .lvi i.ok{background:var(--ok)}.lv .lvi i.warn{background:var(--warn)}.lv .lvi i.bad{background:var(--bad)}
+.lv.pl .lvi small{color:var(--muted);font-size:9.5px}
+.lv.pl .lvi em{font-style:normal;font-size:9px;font-weight:700;padding:1px 6px;border-radius:999px}
+.lv.pl .lvi em.bad{background:var(--bad-bg);color:var(--bad)}.lv.pl .lvi em.warn{background:var(--warn-bg);color:var(--warn)}.lv.pl .lvi em.pool{background:var(--pool-bg);color:var(--pool)}
+.lv .lvi i.pool{background:#fff;border:1px solid var(--pool)}
+.pbar{display:flex;height:26px;border-radius:8px;overflow:hidden;border:1px solid var(--line);background:#fff}
+.pbar i{display:block;height:100%;min-width:0}
+.plegend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11px;margin-top:6px}
+.plegend span{display:inline-flex;align-items:center;gap:5px}
+.plegend b{width:10px;height:10px;border-radius:3px;display:inline-block}
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:1000px){.pgrid{grid-template-columns:1fr}}
+.qcell{font-variant-numeric:tabular-nums;text-align:right}
+.rowsel td{background:var(--gelo)!important}
+.case{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 20px;margin-bottom:14px}
+.case h3{margin:0 0 8px;font-size:13px;color:var(--navy)}
+.case .lead{font-size:12.5px;line-height:1.6}
+.cmp{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.cmp .box{border:1px solid var(--line);border-radius:12px;padding:10px 12px;border-top:4px solid var(--azul)}
+.cmp .box.ok{border-top-color:var(--ok)}.cmp .box.bad{border-top-color:var(--bad)}.cmp .box.warn{border-top-color:var(--warn)}
+.cmp .box .ttl{font-weight:700;font-size:12px}
+.cmp .box .big{font-size:20px;font-weight:700;margin:4px 0}
+.cmp .box .big small{font-size:11px;color:var(--muted);font-weight:400}
+.spt{width:100%;font-size:11px}
+.spt td,.spt th{padding:3px 6px}
+.verdict{border-radius:12px;padding:12px 16px;font-size:12.5px;line-height:1.6;border-left:6px solid var(--ok);background:var(--ok-bg)}
+.verdict.bad{border-left-color:var(--bad);background:var(--bad-bg)}.verdict.warn{border-left-color:var(--warn);background:var(--warn-bg)}
+</style>
+</head>
+<body>
+<header>
+  <a href="../index.html" title="Voltar ao Dashboard N4" style="color:inherit;text-decoration:none;font-weight:700;font-size:13px;white-space:nowrap;border:1px solid currentColor;border-radius:8px;padding:5px 10px;opacity:.9">← Dashboard</a>
+  <img class="logo" src="logo.png" alt="Grupo EMS">
+  <div class="hsep"></div>
+  <div>
+    <h1>FOMED SPI</h1>
+    <div class="sub">Montagem de setores por UTC, por eixo (Ampliação e Segmentação): médicos, mercado e geografia. Fonte: Resumo por Equipe, filtro Eixo, UGN SPI.</div>
+  </div>
+  <div class="params">
+    <label>Eixo<select id="eixo" style="width:130px"></select></label>
+    <label>Linha em foco<select id="line"></select></label>
+    <label>Régua de médicos<select id="base" style="width:230px"><option value="painel">Regra: painel cadastrado (grade + clínicos)</option><option value="painelpot">Simulação: painel + não visit. POT>2 como clínicos</option><option value="nv">Referência: visit. + não visit. total</option></select></label>
+    <label>MDV ampliação<input id="mdvA" type="number" value="15" min="1"></label>
+    <label>MDV segmentação<input id="mdvS" type="number" value="12" min="1"></label>
+    <label>Dias úteis<input id="dias" type="number" value="23" min="1"></label>
+    <label>Tolerância %<input id="tol" type="number" value="8" min="0"></label>
+    <label>Raio km<input id="raio" type="number" value="60" min="1"></label>
+    <label>Teto clínicos % (setor novo)<input id="clgmax" type="number" value="30" min="0" max="100"></label>
+    <div class="targets" id="targets"></div>
+  </div>
+</header>
+<nav>
+  <button data-v="mapa" class="active">Mapa</button>
+  <button data-v="atual">Visão atual</button>
+  <button data-v="sug">Sugestão</button>
+  <button data-v="mont">Montador</button>
+  <button data-v="painel">Painel</button>
+  <button data-v="caso">Racional</button>
+  <button data-v="met">Metodologia</button>
+</nav>
+<main>
+  <section id="v-mapa" class="view active"></section>
+  <section id="v-atual" class="view"></section>
+  <section id="v-sug" class="view"></section>
+  <section id="v-mont" class="view"></section>
+  <section id="v-painel" class="view"></section>
+  <section id="v-caso" class="view"></section>
+  <section id="v-met" class="view method">
+    <h2>Como o artefato calcula</h2>
+    <p><b>Alvo de médicos por setor</b> = MDV × dias úteis do maior ciclo. Com os parâmetros padrão: ampliação 15 × 23 = 345 médicos, segmentação 12 × 23 = 276. A faixa "dentro do alvo" é o alvo ± tolerância (padrão 8%). Abaixo da faixa o setor fica vermelho, acima fica âmbar.</p>
+    <p><b>Médicos do setor</b> = soma por UTC, na linha selecionada, conforme a régua escolhida no cabeçalho: só Médicos Visitados; Visitados + não Visitados com POT maior que 2; ou Visitados + não Visitados (Total). [Não verificado] Qual das três réguas é a oficial para dimensionar setor não consta na base. Na Nexus, com alvo 345: só visitados deixa os 32 setores abaixo (média 246); visitados + POT maior que 2 deixa 29 abaixo (média 287); visitados + total deixa 30 acima (média 505). O alvo considera uma visita por médico no ciclo.</p>
+    <p><b>Eixos</b> (confirmados em conversa): Segmentação = Nexus, Vital, Sinapse e Focus (MDV 12, médicos qualificados, área menor); Ampliação = Clinica, Saúde, Fênix e Sirius (MDV 15, mais médicos, área maior). EMS CRDMET e EMS NEURO são outros eixos e ficam fora deste artefato. As quatro linhas de um eixo devem ter a mesma estrutura de UTC por setor; o artefato verifica isso ao carregar (sufixo do código do setor e nome, UTC a UTC) e sinaliza qualquer divergência no topo das visões, no mapa e na aba Consistência do Excel. A montagem é feita uma vez por eixo e vale para as quatro linhas; os números exibidos (médicos, mercado) são da linha em foco, e a faixa de quatro bolinhas em cada setor mostra o farol de cada linha do eixo.</p>
+    <p><b>Painel por especialidade</b> (arquivos data_44 e data_45, painel por médico das oito linhas dos dois eixos): cada médico do painel é ligado à UTC do cadastro e classificado, por linha, em três grupos: especialidade da grade promocional da linha (exceto CLG), clínico geral (CLG, que só compõe painel) e fora da grade. Médicos em Block List saem da contagem útil; Gold List é contado à parte. A grade usada, transcrita do Ciclo 9'2026 [transcrição de imagem, validar]: Clinica CLG/GOB/PED/GAS/PAT ADT/PAT PED; Saúde CLG/GOB/PED/GAS/ORL/URO/PAT ADT/PAT PED; Sirius CLG/CRD/PSQ/NEU/ORT/RMT/ANG; Fênix CLG/GOB/TRM/ORT/RMT/GER; Vital CLG/CRD/PSQ/END/NUT; Sinapse CLG/PSQ/NEU/NEU PED/CRD; Focus CLG/ORL/ORT/GAS/URO/RMT/CIR/TRM; Nexus CLG/CRD/END/NUT. <b>Regra única de criação de setor</b> (definida em conversa): um setor só existe se tiver médicos para compor o painel (MDV × dias úteis). Compõem o painel os especialistas da grade da linha e os clínicos; clínico é tanto o CLG de cadastro quanto o especialista fora da grade que o representante pode cadastrar como clínico geral. Em setores novos ou alterados pela proposta, os clínicos ficam limitados ao teto do cabeçalho (30%); em setores atuais intactos não há teto, e o percentual de clínicos aparece só como informação. Block List fica fora (médicos que não se consegue visitar). Não visitados não entram na regra; a opção "Simulação" do cabeçalho os conta como clínicos em potencial, dentro do mesmo teto, e deve ser lida como estimativa. A sugestão automática só desdobra ou funde quando cada setor resultante fecha o piso da faixa com essa régua. Os não visitados de oportunidade vieram só agregados por especialidade (6.572 na ampliação e 2.858 na segmentação da SPI), sem UTC; quando a lista detalhada chegar, serão ligados à UTC por CEP (85% de acerto medido), rua ou bairro.</p>
+    <p><b>Aba Painel</b>: simula o painel de um setor montado do zero com os médicos cadastrados nas UTCs do setor (cenário atual, sugestão ou montagem): entram primeiro as especialidades da grade da linha, do Q1 ao Q4, distribuídas entre as especialidades; depois clínicos até o teto de CLG; médicos fora da grade não entram. Mostra a composição por especialidade e quartil, o peso de cada especialidade no painel montado comparado ao peso médio dela no painel da linha em toda a SPI (desvio de 5 pontos ou mais é marcado), a lista nominal dos médicos que entram (dentro de cada especialidade e quartil, maior pontuação primeiro, Gold List desempata), quem sobra, quanto falta para MDV × dias úteis e o mesmo setor nas outras linhas do eixo. A lista nominal existe só para as linhas com painel por médico carregado.</p>
+    <p><b>Aba Racional</b>: monta o caso de criação de setor em três blocos. Situação atual: o setor com UTCs, cidades, raio, mercado, médicos pela régua e quantos painéis isso representa, mais o painel por especialidade em cada linha do eixo. Proposta: divisão em 2 ou 3 por corte geográfico, ou a sugestão automática, ou a sua montagem; cada setor resultante com geografia, mercado e o painel por especialidade por linha. Conclusão: se cada setor fecha o alvo em todas as linhas, com os casos que não fecham nomeados. O texto do racional pode ser copiado.</p>
+    <p><b>Mapa</b>: polígonos municipais da malha IBGE (via repositório público geodata-br), projeção Mercator, desenhados no próprio artefato sem serviço externo. Cada município é pintado com a cor do setor que concentra mais médicos ali; as UTCs de uma mesma cidade são espalhadas em espiral ao redor do centro do município apenas para leitura, a posição dentro da cidade não é real.</p>
+    <p><b>Geografia</b>: cada UTC recebe a coordenada do seu município (base pública IBGE de municípios, 1.012 cidades da SPI, 1 preenchida manualmente: Florínea SP). A distância entre UTCs é calculada entre os centros dos municípios (Haversine); UTCs da mesma cidade têm distância zero. O "raio" de um setor é a maior distância de uma UTC ao centroide do setor (centroide ponderado por médicos). UTC além do raio configurado é marcada como dispersa.</p>
+    <p><b>Setor 9999</b>: as UTCs que na base estão no setor 9999 (NAO_VISITADO), ou seja, fora de qualquer setor criado, aparecem como o setor Setor 9999. No quadro, a coluna Setor 9999 lista todas essas UTCs, as próximas do distrito primeiro, com filtro por nome, cidade ou código; no mapa aparecem as próximas do distrito, ou todas com o botão "Setor 9999 inteiro". Para criar um setor novo: Novo setor vazio, depois arrastar UTCs do Setor 9999 (ou de setores existentes) para ele. Na sugestão automática, uma UTC do Setor 9999 só entra em um setor se estiver dentro do raio do centroide do setor.</p>
+    <p><b>Algoritmo de sugestão</b> (guloso, por linha e por distrito, nunca cruza distrito):</p>
+    <p>1. Setores abaixo da faixa recebem UTCs, começando pelo mais deficitário. Candidatas: UTCs do pool ou de setores acima do alvo no mesmo distrito, dentro do raio do centroide do receptor, com pelo menos 1 médico. Prioridade: mesma cidade de alguma UTC do receptor, depois menor distância, depois mais médicos. O doador nunca cai abaixo do alvo.<br>
+    2. Setores acima da faixa cedem a UTC mais distante do próprio centroide a um setor vizinho que ainda caiba na faixa, dentro do raio.<br>
+    3. UTCs dispersas (além do raio do próprio setor) são realocadas ao setor do mesmo distrito cujo centroide esteja mais próximo, se ele continuar na faixa.<br>
+    4. Fusão e redivisão: para cada par de setores vizinhos no mesmo distrito (centroides dentro do raio, cidade em comum ou municípios limítrofes, pela malha IBGE), o algoritmo calcula quantos setores a soma dos médicos renderia (soma ÷ piso da faixa) e compara com o que os dois rendem separados. Se a soma rende pelo menos um setor a mais (por exemplo, dois setores que juntos viram três), funde os dois e recorta pelo mesmo critério geográfico do desdobramento: as pontas ficam com os códigos originais (cada uma com o setor cujo centroide está mais perto) e o meio nasce como setor novo "A + B 3". Cada setor participa de no máximo uma fusão; pares com maior ganho e menor distância têm prioridade.<br>
+    5. Desdobramento: um setor que, depois dos passos anteriores, ainda tem médicos para dois ou mais painéis (médicos ÷ piso da faixa ≥ 2) é dividido em tantas partes quantas couberem com pelo menos o piso cada. As UTCs são ordenadas ao longo do eixo geográfico de maior extensão do setor (análise de componente principal ponderada por médicos), mantendo cada cidade inteira e, dentro da cidade, agrupando por bairro, e cortadas em partes contíguas com médicos balanceados. A primeira parte mantém o código e o nome do setor; as demais nascem como setores novos (código NOVO, nome do setor original com sufixo 2, 3...). O corte é a partição contígua ótima (programação dinâmica) que minimiza o desvio de médicos entre as partes; UTCs hospitalares são blocos indivisíveis (um hospital com 200 médicos pode deixar uma parte acima e outra abaixo da média, e isso é limite do dado, não do corte). [Inferência] Dentro de uma mesma cidade a ordem por bairro é só uma aproximação de contiguidade, já que a base não traz coordenada por bairro; revise o corte no Montador.<br>
+    Cada movimento aparece na tabela com motivo e distância. O resultado é uma proposta para auditar, não uma decisão.</p>
+    <p><b>Limites conhecidos</b>: a distância é entre centros de município, não entre bairros; cidades grandes (Campinas, Ribeirão Preto) aparecem como um único ponto. O algoritmo não enxerga tempo de deslocamento real nem malha viária. Mercado e demanda EMS são exibidos e somados, mas não entram como restrição no algoritmo; servem para a decisão humana no Montador.</p>
+  </section>
+</main>
+
+<div class="modal" id="modal"><div class="box"><div class="head"><div id="mTitle"></div><button class="btn" onclick="closeModal()">Fechar</button></div><div class="body" id="mBody"></div></div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<script src="data.js"></script>
+<script src="geo.js"></script>
+<script src="adj.js"></script>
+<script src="panel.js"></script>
+<script src="doctors.js"></script>
+<script>
+const D = window.LEGO_DATA;
+const $ = s => document.querySelector(s);
+const fmtN = n => Math.round(n).toLocaleString('pt-BR');
+const fmtR = n => { const s=n<0?'-':''; const a=Math.abs(n); return a<1e6 ? s+'R$ ' + (a/1e3).toLocaleString('pt-BR',{maximumFractionDigits:0}) + ' mil' : s+'R$ ' + (a/1e6).toLocaleString('pt-BR',{maximumFractionDigits:1}) + ' mi'; };
+const fmtP = n => (n*100).toLocaleString('pt-BR',{maximumFractionDigits:1}) + '%';
+const lineTipo = {}; D.order.forEach(l => lineTipo[l] = D.lines[l].tipo);
+const ADJ=new Set((window.LEGO_ADJ||[]).map(p=>p[0]*100000+p[1]));
+function cityAdj(a,b){ return a===b || ADJ.has(Math.min(a,b)*100000+Math.max(a,b)); }
+// setores vizinhos: alguma cidade em comum ou municípios limítrofes
+function sectorsAdjacent(L,assign,a,b){ const ca=new Set(), cb=new Set(); for(let u=0;u<assign.length;u++){ if(assign[u]===a) ca.add(D.utcs[u].c); else if(assign[u]===b) cb.add(D.utcs[u].c); } for(const x of ca) for(const y of cb) if(cityAdj(x,y)) return true; return false; }
+const EIXO_OF = {}; Object.keys(D.eixos).forEach(e=>D.eixos[e].forEach(l=>EIXO_OF[l]=e));
+const eixoLines = () => D.eixos[$('#eixo').value];
+function eixoCheck(ex){ const ls=D.eixos[ex]; const L0=D.lines[ls[0]]; const out=[];
+  for(let u=0;u<L0.assign.length;u++){ const sufs=ls.map(l=>{ const L=D.lines[l]; return L.sectors[L.assign[u]].c.slice(4); }); if(new Set(sufs).size>1) out.push({u,sufs}); }
+  const secCount=ls.map(l=>D.lines[l].sectors.length); const names={}; ls.forEach(l=>D.lines[l].sectors.forEach(s=>{ (names[s.c.slice(4)]=names[s.c.slice(4)]||new Set()).add(s.n); }));
+  const nameDiv=Object.keys(names).filter(k=>names[k].size>1);
+  return {utcs:out, secCount, nameDiv, ok: out.length===0 && new Set(secCount).size===1 && nameDiv.length===0}; }
+const CHECK={}; Object.keys(D.eixos).forEach(e=>CHECK[e]=eixoCheck(e));
+function checkBanner(ex){ const c=CHECK[ex], ls=D.eixos[ex]; if(c.ok) return `<div class="note ok"><b>Estrutura do eixo ${ex} consistente.</b> ${ls.join(', ')}: ${fmtN(D.utcs.length)} UTCs no mesmo setor nas ${ls.length} linhas, ${c.secCount[0]-1} setores por linha, nomes idênticos. A montagem feita aqui vale para as ${ls.length} linhas.</div>`;
+  let t=`<div class="note bad"><b>Divergência de estrutura no eixo ${ex}.</b> `; if(new Set(c.secCount).size>1) t+=`Quantidade de setores difere por linha (${ls.map((l,i)=>l+': '+(c.secCount[i]-1)).join(', ')}). `; if(c.nameDiv.length) t+=`${c.nameDiv.length} setor(es) com nome diferente entre linhas (${c.nameDiv.slice(0,5).join(', ')}). `; if(c.utcs.length) t+=`${fmtN(c.utcs.length)} UTC(s) em setor diferente conforme a linha. <button class="btn small" onclick="openDiverg('${ex}')">Ver lista</button>`; return t+'</div>'; }
+function openDiverg(ex){ const c=CHECK[ex], ls=D.eixos[ex]; $('#mTitle').innerHTML=`<b>Divergências de estrutura · ${ex}</b> <span style="color:var(--muted);font-size:11px">${c.utcs.length} UTCs</span>`; let t=`<table><thead><tr><th>UTC</th><th>Cidade</th>${ls.map(l=>`<th>${l}</th>`).join('')}</tr></thead><tbody>`; c.utcs.forEach(d=>{ const u=D.utcs[d.u], ci=D.cities[u.c]; t+=`<tr><td>${u.id} ${u.n}</td><td>${ci.n}/${ci.uf}</td>${ls.map(l=>{ const L=D.lines[l]; const s=L.sectors[L.assign[d.u]]; return `<td>${s.c} ${s.n}</td>`; }).join('')}</tr>`; }); $('#mBody').innerHTML=t+'</tbody></table>'; $('#modal').classList.add('open'); }
+function panelStats(L,assign,si){ const Pn=PNL.lines[L.name]; let pg=0,pc=0,po=0,pb=0,gold=0,pot=0,vis=0; for(let u=0;u<assign.length;u++){ if(assign[u]!==si) continue; pot+=L.pot[u]; vis+=L.vis[u]; if(Pn){ pg+=Pn.pg[u]; pc+=Pn.pc[u]; po+=Pn.po[u]; pb+=Pn.pb[u]; gold+=Pn.gold[u]; } } let clin=pc+po+(BASE==='painelpot'?pot:0); const cappedSec=!!Pn&&isCapped(L,assign,si); const cap=clinCap(L); let clinOut=0; if(cappedSec&&clin>cap){ clinOut=clin-cap; clin=cap; } const util=pg+clin; return {has:!!Pn,pg,pc,po,pb,gold,pot,vis,util,clin,clinOut,cappedSec,clg:util?clin/util:0}; }
+function panelEval(L,assign,si){ const p=P(), T=target(L.name), lo=T*(1-p.tol); const s=panelStats(L,assign,si); if(!s.has) return {...s,flag:'sem painel',cls:'pool',txt:`sem painel carregado · ${fmtN(s.vis)} visitados · ${fmtN(s.pot)} não visitados POT>2 (especialidade não informada)`}; const enough=s.util>=lo; const clgHigh=!s.cappedSec&&s.clg>p.clgmax; const flag=!enough?'painel insuficiente':(s.clinOut>0?`teto: ${fmtN(s.clinOut)} clínicos não contam`:clgHigh?'clínicos acima de '+fmtP(p.clgmax)+' (atual)':'painel ok'); const cls=!enough?'bad':(s.clinOut>0||clgHigh)?'warn':'ok'; return {...s,enough,clgHigh,flag,cls,txt:`grade ${fmtN(s.pg)} · clínicos ${fmtN(s.clin)} (${fmtP(s.clg)}; CLG ${fmtN(s.pc)} + recadastráveis ${fmtN(s.po)}${BASE==='painelpot'?' + POT>2 '+fmtN(s.pot):''})${s.cappedSec?' · teto '+fmtP(p.clgmax)+' aplicado (setor novo/alterado)':''} · block ${fmtN(s.pb)} · gold ${fmtN(s.gold)} · não visitados POT>2 ${fmtN(s.pot)}`}; }
+function panelLine(si, assign){ const ls=eixoLines(); return `<div class="lv pl"><span class="lvk">Painel por linha (grade + clínicos, alvo ${fmtN(target(ls[0]))})</span>${ls.map(l=>{ const L=D.lines[l]; const e=panelEval(L,assign,si); return `<span class="lvi" title="${l}: ${e.txt}"><i class="${e.cls}"></i>${l.replace('Sinapse','Sinap.').replace('Clinica','Clin.')} <b>${e.has?fmtN(e.util):'s/ painel'}</b>${e.has?`<small>clín. ${fmtP(e.clg)}</small>`:''}${e.flag!=='painel ok'?`<em class="${e.cls}">${e.flag}</em>`:''}</span>`; }).join('')}</div>`; }
+function lineVis(si, assign){ const ls=eixoLines(); const p=P(); return `<div class="lv"><span class="lvk">Visitados por linha</span>${ls.map(l=>{ const L=D.lines[l]; let v=0,r=0; for(let u=0;u<assign.length;u++) if(assign[u]===si){ v+=L.vis[u]; r+=docs(L,u); } const c=status(r,target(l),p.tol); return `<span class="lvi" title="${l}: ${fmtN(v)} visitados · ${fmtN(r)} na régua · alvo ${fmtN(target(l))}"><i class="${c}"></i>${l.replace('Sinapse','Sinap.').replace('Clinica','Clin.')} <b>${fmtN(v)}</b></span>`; }).join('')}</div>`; }
+function lineStrip(si, assign){ const ls=eixoLines(); const p=P(); return `<span class="strip">${ls.map(l=>{ const L=D.lines[l]; const st=sectorStats(L,assign,si); const T=target(l); const c=status(st.meds,T,p.tol); return `<i class="${c}" title="${l}: ${fmtN(st.meds)} méd. / alvo ${fmtN(T)} · ${stLabel[c]}"></i>`; }).join('')}</span>`; }
+
+function P(){ return {mdvA:+$('#mdvA').value, mdvS:+$('#mdvS').value, dias:+$('#dias').value, tol:+$('#tol').value/100, raio:+$('#raio').value, clgmax:+$('#clgmax').value/100}; }
+const PNL=window.LEGO_PANEL||{grade:{},lines:{}}; const DOCS=window.LEGO_DOCS||{lines:{},mix:{}}; D.order.forEach(l=>D.lines[l].name=l);
+function hasPanel(L){ return !!PNL.lines[L.name]; }
+function target(line){ const p=P(); return (lineTipo[line]==='S'?p.mdvS:p.mdvA)*p.dias; }
+function km(a,b){ if(!a||!b) return 0; const R=6371,toR=x=>x*Math.PI/180; const dLa=toR(b.la-a.la),dLo=toR(b.lo-a.lo); const h=Math.sin(dLa/2)**2+Math.cos(toR(a.la))*Math.cos(toR(b.la))*Math.sin(dLo/2)**2; return 2*R*Math.asin(Math.sqrt(h)); }
+let BASE='painel';
+const isPanelBase=()=>BASE==='painel'||BASE==='painelpot';
+function docs(L,u){ if(isPanelBase()){ const Pn=PNL.lines[L.name]; const base=Pn? Pn.pg[u]+Pn.pc[u]+Pn.po[u] : L.vis[u]; return BASE==='painelpot'? base+L.pot[u] : base; } return BASE==='vis'?L.vis[u]:BASE==='pot'?L.vis[u]+L.pot[u]:L.vis[u]+L.nv[u]; }
+// setores "alterados" pela proposta (ou novos): recebem o teto de clínicos; setores atuais intactos não
+const CHG=new WeakMap();
+function changedSet(L,assign){ if(assign===L.assign) return null; let s=CHG.get(assign); if(s&&s.ref===L.assign&&s.ver===assign.length) return s.set; const set=new Set(); for(let u=0;u<assign.length;u++) if(assign[u]!==L.assign[u]){ set.add(assign[u]); set.add(L.assign[u]); } CHG.set(assign,{ref:L.assign,ver:assign.length,set}); return set; }
+function isCapped(L,assign,si){ if(si>=L.sectors.length) return true; const s=changedSet(L,assign); return !!(s&&s.has(si)); }
+function clinCap(L){ return Math.floor(P().clgmax*target(L.name)); }
+function isPoolSector(s){ return /NAO_VISITADO/.test(s.n) || /NAO_VISITADO/.test(s.c); }
+const POOL_NAME='Setor 9999';
+function secName(s){ return isPoolSector(s)?POOL_NAME:s.n; }
+
+// ---------- metrics ----------
+function sectorStats(L, assign, si, extraSectors){
+  const utcs=[]; for(let u=0;u<assign.length;u++) if(assign[u]===si) utcs.push(u);
+  let m=0,mk=0,em=0,la=0,lo=0,w=0,pg=0,clin=0; const cities=new Set(); const Pn=isPanelBase()?PNL.lines[L.name]:null;
+  utcs.forEach(u=>{ const d=docs(L,u); m+=d; if(Pn){ pg+=Pn.pg[u]; clin+=Pn.pc[u]+Pn.po[u]+(BASE==='painelpot'?L.pot[u]:0); } mk+=L.mkt[u]; em+=L.ems[u]; const c=D.cities[D.utcs[u].c]; cities.add(c.n+'/'+c.uf); const ww=d>0?d:0.01; la+=c.la*ww; lo+=c.lo*ww; w+=ww; });
+  let capped=false, clinOut=0; if(Pn&&isCapped(L,assign,si)){ const cap=clinCap(L); if(clin>cap){ clinOut=clin-cap; clin=cap; capped=true; } m=pg+clin; }
+  const cen = w? {la:la/w, lo:lo/w} : null;
+  let maxKm=0, far=[]; const p=P();
+  utcs.forEach(u=>{ const c=D.cities[D.utcs[u].c]; const k=km(cen,c); if(k>maxKm) maxKm=k; if(k>p.raio) far.push(u); });
+  return {utcs, meds:m, mkt:mk, ems:em, share: mk? em/mk:0, cen, maxKm, far, cities:[...cities], pg, clin, capped, clinOut};
+}
+function status(meds, T, tol){ if(meds<T*(1-tol)) return 'bad'; if(meds>T*(1+tol)) return 'warn'; return 'ok'; }
+const stLabel={ok:'Na faixa',warn:'Acima',bad:'Abaixo',pool:'Pool'};
+
+// ---------- suggestion ----------
+function suggest(line){
+  const L=D.lines[line], p=P(), T=target(line), lo=T*(1-p.tol), hi=T*(1+p.tol);
+  const assign=L.assign.slice(); const moves=[]; const sectors=L.sectors;
+  const poolIdx = sectors.findIndex(isPoolSector);
+  const byDist={}; sectors.forEach((s,i)=>{ if(isPoolSector(s)) return; (byDist[s.d]=byDist[s.d]||[]).push(i); });
+  const cityOf=u=>D.cities[D.utcs[u].c];
+  const stats=si=>sectorStats(L,assign,si);
+  const move=(u,from,to,reason,k)=>{ assign[u]=to; moves.push({u,from,to,reason,km:k,meds:docs(L,u)}); };
+  let guard=0;
+  for(const dcode in byDist){
+    const S=byDist[dcode]; const stuck=new Set();
+    // 1. fill deficits
+    while(guard++<5000){
+      const st={}; S.forEach(si=>st[si]=stats(si));
+      const def=S.filter(si=>!stuck.has(si)&&st[si].meds<lo).sort((a,b)=>st[a].meds-st[b].meds);
+      if(!def.length) break;
+      const r=def[0], rs=st[r]; const rc=new Set(rs.utcs.map(u=>cityOf(u).n+'/'+cityOf(u).uf));
+      let best=null;
+      for(let u=0;u<assign.length;u++){
+        const d=docs(L,u); if(d<=0) continue; const from=assign[u];
+        let okDonor=false;
+        if(from===poolIdx) okDonor=true;
+        else if(S.includes(from)&&from!==r&&st[from].meds>hi&&st[from].meds-d>=T) okDonor=true;
+        if(!okDonor) continue;
+        const c=cityOf(u); const k=rs.cen?km(rs.cen,c):0; if(rs.cen&&k>p.raio) continue;
+        const same=rc.has(c.n+'/'+c.uf)?0:1;
+        const over=Math.max(0,rs.meds+d-hi);
+        const score=[same,over>0?1:0,k,-d];
+        if(!best||cmp(score,best.score)<0) best={u,from,k,score};
+      }
+      if(!best){ stuck.add(r); continue; }
+      move(best.u,best.from,r,best.from===poolIdx?'pool':'equilibrio',best.k);
+    }
+    // 2. relieve surplus
+    let it=0;
+    while(it++<400){
+      const st={}; S.forEach(si=>st[si]=stats(si));
+      const sur=S.filter(si=>st[si].meds>hi).sort((a,b)=>st[b].meds-st[a].meds);
+      if(!sur.length) break;
+      let done=false;
+      for(const s of sur){
+        const ss=st[s]; const cand=ss.utcs.filter(u=>docs(L,u)>0).map(u=>({u,k:km(ss.cen,cityOf(u))})).sort((a,b)=>b.k-a.k);
+        for(const cu of cand){
+          const d=docs(L,cu.u); if(ss.meds-d<lo) continue;
+          let bestR=null;
+          S.forEach(r=>{ if(r===s) return; const rs=st[r]; if(rs.meds+d>hi) return; const k=rs.cen?km(rs.cen,cityOf(cu.u)):0; if(k>p.raio) return; if(!bestR||k<bestR.k) bestR={r,k}; });
+          if(bestR){ move(cu.u,s,bestR.r,'excedente',bestR.k); done=true; break; }
+        }
+        if(done) break;
+      }
+      if(!done) break;
+    }
+    // 3. geographic outliers
+    S.forEach(s=>{
+      const far0=stats(s).far;
+      far0.forEach(u=>{
+        const ss=stats(s); const d=docs(L,u); let bestR=null;
+        S.forEach(r=>{ if(r===s) return; const rs=stats(r); if(!rs.cen) return; const k=km(rs.cen,cityOf(u)); if(k>p.raio) return; if(rs.meds+d>hi) return; if(ss.meds-d<lo && d>0) return; if(!bestR||k<bestR.k) bestR={r,k}; });
+        if(bestR) move(u,s,bestR.r,'geografia',bestR.k);
+      });
+    });
+  }
+  // 4. fusão e redivisão: dois setores vizinhos cuja soma rende mais setores do que os dois separados
+  const custom=[]; const lo2=lo; const merged=new Set();
+  const parts0=m=>Math.max(1,Math.floor(m/lo2));
+  Object.keys(byDist).forEach(dcode=>{
+    const S=byDist[dcode]; const st0={}; S.forEach(s=>st0[s]=stats(s));
+    const pairs=[];
+    for(let i=0;i<S.length;i++) for(let j=i+1;j<S.length;j++){ const a=S[i],b=S[j]; const sa=st0[a],sb=st0[b]; if(!sa.cen||!sb.cen) continue;
+      const dist=km(sa.cen,sb.cen); if(dist>p.raio && !sectorsAdjacent(L,assign,a,b)) continue;
+      const n=parts0(sa.meds+sb.meds), gain=n-parts0(sa.meds)-parts0(sb.meds); if(gain<1||n<3) continue; pairs.push({a,b,n,gain,dist}); }
+    pairs.sort((x,y)=>y.gain-x.gain||x.dist-y.dist);
+    pairs.forEach(pr=>{ if(merged.has(pr.a)||merged.has(pr.b)) return; merged.add(pr.a); merged.add(pr.b);
+      const before=assign.slice(); const sa=st0[pr.a], sb=st0[pr.b];
+      for(let u=0;u<assign.length;u++) if(assign[u]===pr.b) assign[u]=pr.a;
+      const parts=splitSector(L,assign,pr.a,pr.n); const partsOk=parts.every(utcs=>{ const tmp=new Array(assign.length).fill(-1); utcs.forEach(u=>tmp[u]=L.sectors.length); return sectorStats(L,tmp,L.sectors.length).meds>=lo2; }); if(!partsOk){ for(let u=0;u<assign.length;u++) assign[u]=before[u]; merged.delete(pr.a); merged.delete(pr.b); return; }
+      // ponta mais próxima do centroide de A fica com A; a outra ponta fica com B; o meio vira setor novo
+      const cenOf=utcs=>{ let la=0,lo_=0,w=0; utcs.forEach(u=>{ const c=D.cities[D.utcs[u].c]; const ww=Math.max(docs(L,u),0.5); la+=c.la*ww; lo_+=c.lo*ww; w+=ww; }); return w?{la:la/w,lo:lo_/w}:null; };
+      const c0=cenOf(parts[0]), cl=cenOf(parts[parts.length-1]);
+      const firstIsA = (c0&&cl)? (km(c0,sa.cen)+km(cl,sb.cen) <= km(c0,sb.cen)+km(cl,sa.cen)) : true;
+      const targets=parts.map((_,k)=>{ if(k===0) return firstIsA?pr.a:pr.b; if(k===parts.length-1) return firstIsA?pr.b:pr.a; const ni=L.sectors.length+custom.length; custom.push({c:'NOVO'+(custom.length+1),n:sectors[pr.a].n+' + '+sectors[pr.b].n+' '+(k+1),d:dcode,origin:pr.a,origin2:pr.b,split:true,fusion:true}); return ni; });
+      parts.forEach((utcs,k)=>utcs.forEach(u=>{ assign[u]=targets[k]; if(before[u]!==targets[k]) moves.push({u,from:before[u],to:targets[k],reason:'fusão',km:0,meds:docs(L,u)}); }));
+    });
+  });
+  // 5. desdobramento: setores com médicos para 2+ painéis viram 2+ setores contíguos
+  Object.keys(byDist).forEach(dcode=>{ byDist[dcode].slice().forEach(s=>{
+    if(merged.has(s)) return; const ss=stats(s); const n=Math.floor(ss.meds/lo2); if(n<2) return;
+    const parts=splitSector(L,assign,s,n); const partsOk=parts.every(utcs=>{ const tmp=new Array(assign.length).fill(-1); utcs.forEach(u=>tmp[u]=L.sectors.length); return sectorStats(L,tmp,L.sectors.length).meds>=lo2; }); if(!partsOk) return;
+    parts.forEach((utcs,k)=>{ if(k===0) return; const ni=L.sectors.length+custom.length; custom.push({c:'NOVO'+(custom.length+1),n:sectors[s].n+' '+(k+1),d:dcode,origin:s,split:true}); utcs.forEach(u=>{ assign[u]=ni; moves.push({u,from:s,to:ni,reason:'desdobramento',km:0,meds:docs(L,u)}); }); });
+  }); });
+  return {assign,moves,custom};
+}
+// ordena as UTCs do setor ao longo do eixo principal (PCA ponderada por médicos); mesma cidade: por bairro; corta em n partes com médicos balanceados
+function splitSector(L,assign,s,n){
+  const utcs=[]; for(let u=0;u<assign.length;u++) if(assign[u]===s) utcs.push(u);
+  let W=0,mx=0,my=0; utcs.forEach(u=>{ const c=D.cities[D.utcs[u].c]; const w=Math.max(docs(L,u),0.5); W+=w; mx+=c.lo*w; my+=c.la*w; }); mx/=W; my/=W;
+  let sxx=0,sxy=0,syy=0; utcs.forEach(u=>{ const c=D.cities[D.utcs[u].c]; const w=Math.max(docs(L,u),0.5); const dx=(c.lo-mx)*Math.cos(my*Math.PI/180), dy=c.la-my; sxx+=w*dx*dx; sxy+=w*dx*dy; syy+=w*dy*dy; });
+  const ang=0.5*Math.atan2(2*sxy,sxx-syy); const ex=Math.cos(ang), ey=Math.sin(ang);
+  const keyed=utcs.map(u=>{ const c=D.cities[D.utcs[u].c]; const t=((c.lo-mx)*Math.cos(my*Math.PI/180))*ex+(c.la-my)*ey; return {u,t:Math.round(t*1000)/1000,city:c.n,b:D.utcs[u].b||'',nm:D.utcs[u].n,d:docs(L,u)}; });
+  // cidades inteiras ficam juntas: ordena por projeção média da cidade, depois bairro, depois nome
+  const cityT={}; keyed.forEach(k=>{ cityT[k.city]=k.t; });
+  keyed.sort((a,b)=> cityT[a.city]-cityT[b.city] || a.city.localeCompare(b.city) || a.b.localeCompare(b.b) || a.nm.localeCompare(b.nm));
+  // partição contígua ótima: escolhe os n-1 cortes que minimizam a soma dos desvios de cada parte em relação à média (programação dinâmica)
+  const total=keyed.reduce((a,k)=>a+k.d,0), avg=total/n, m=keyed.length; const pre=[0]; keyed.forEach(k=>pre.push(pre[pre.length-1]+k.d));
+  const INF=1e18; let f=new Array(m+1).fill(INF); f[0]=0; const cut=Array.from({length:n+1},()=>new Array(m+1).fill(0));
+  for(let k=1;k<=n;k++){ const g=new Array(m+1).fill(INF); for(let i=k;i<=m;i++){ let best=INF,bj=0; for(let j=k-1;j<i;j++){ if(f[j]>=INF) continue; const v=f[j]+Math.abs(pre[i]-pre[j]-avg); if(v<best){best=v;bj=j;} } g[i]=best; cut[k][i]=bj; } f=g; }
+  const parts=[]; let i=m; for(let k=n;k>=1;k--){ const j=cut[k][i]; parts.unshift(keyed.slice(j,i).map(x=>x.u)); i=j; }
+  return parts;
+}
+function cmp(a,b){ for(let i=0;i<a.length;i++){ if(a[i]<b[i]) return -1; if(a[i]>b[i]) return 1;} return 0; }
+
+// ---------- rendering ----------
+function sectorCard(L,line,si,assign,prevAssign,secs){
+  secs=secs||L.sectors; const s=secs[si], T=target(line), p=P(), st=sectorStats(L,assign,si);
+  const pool=isPoolSector(s); const cls=pool?'pool':status(st.meds,T,p.tol);
+  let delta=''; if(s.split) delta+=`<span class="badge pool" style="margin-left:6px">${s.fusion?`novo · fusão de ${secs[s.origin].n} + ${secs[s.origin2].n}`:`novo · desdobrado de ${secs[s.origin].n}`}</span>`; if(prevAssign){ const prev=sectorStats(L,prevAssign,si).meds; const d=st.meds-prev; if(d) delta=`<span class="delta" style="color:${d>0?'var(--ok)':'var(--bad)'}">${d>0?'+':''}${fmtN(d)}</span>`; }
+  const pct=Math.min(100,st.meds/(T*1.3)*100), mark=100/1.3;
+  return `<div class="sec ${cls}" onclick="openSector('${line}',${si},${prevAssign?1:0})">
+    <div class="name">${secName(s)}</div><div class="code">${s.c} · ${pool?'UTCs sem setor (origem 9999)':s.d}</div>
+    <div class="meds">${fmtN(st.meds)} <small>médicos / alvo ${fmtN(T)}</small>${delta}${pool?'':lineStrip(si,assign)}</div>
+    ${pool?'':`<div class="bar"><i style="width:${pct}%"></i><span class="mark" style="left:${mark}%"></span></div>`}
+    <div class="meta"><span>${st.utcs.length} UTCs</span><span>${st.cities.length} cidades</span><span>Mercado ${fmtR(st.mkt)}</span><span>Share ${fmtP(st.share)}</span><span>Raio ${fmtN(st.maxKm)} km</span><span>${st.far.length? `<span class="badge geo">${st.far.length} dispersa(s)</span>`:''} <span class="badge ${cls}">${stLabel[cls]}</span></span></div>
+    ${pool?'':lineVis(si,assign)+panelLine(si,assign)}
+  </div>`;
+}
+function summaryTiles(L,line,assign,secs){
+  secs=secs||L.sectors; const T=target(line),p=P(); let ok=0,bad=0,warn=0,pool=0,tot=0;
+  secs.forEach((s,si)=>{ const st=sectorStats(L,assign,si); if(isPoolSector(s)){pool=st.utcs.length;return;} tot++; const c=status(st.meds,T,p.tol); if(c==='ok')ok++; else if(c==='bad')bad++; else warn++; });
+  return `<div class="tiles"><div class="tile"><div class="k">Setores (sem pool)</div><div class="v">${tot}</div></div><div class="tile ok"><div class="k">Na faixa</div><div class="v">${ok}<small>${Math.round(ok/tot*100)}%</small></div></div><div class="tile bad"><div class="k">Abaixo do alvo</div><div class="v">${bad}</div></div><div class="tile warn"><div class="k">Acima do alvo</div><div class="v">${warn}</div></div><div class="tile"><div class="k">UTCs no Setor 9999 (sem setor)</div><div class="v">${fmtN(pool)}</div></div><div class="tile"><div class="k">Alvo da linha</div><div class="v">${fmtN(T)}<small>médicos</small></div></div></div>`;
+}
+function renderByDistrict(L,line,assign,prev,secs){
+  secs=secs||L.sectors; let html=''; const groups={}; secs.forEach((s,i)=>{(groups[s.d]=groups[s.d]||[]).push(i)});
+  Object.keys(groups).sort().forEach(d=>{ const isP=/9900$/.test(d); html+=`<h2>${isP?'Setor 9999 · UTCs sem setor':d+' · '+L.districts[d]} <span class="count">${isP?'origem 9999':groups[d].length+' setores'}</span></h2><div class="grid">${groups[d].map(si=>sectorCard(L,line,si,assign,prev,secs)).join('')}</div>`; });
+  return html;
+}
+let SUG=null;
+function renderAtual(){ const line=$('#line').value, L=D.lines[line]; $('#v-atual').innerHTML=checkBanner($('#eixo').value)+summaryTiles(L,line,L.assign)+renderByDistrict(L,line,L.assign,null); }
+function renderSug(){
+  const line=$('#line').value, L=D.lines[line]; SUG=suggest(line); SUG.line=line;
+  const moves=SUG.moves; const T=target(line),p=P(); const secs=L.sectors.concat(SUG.custom||[]);
+  let okB=0,okA=0,tot=0,totA=0; secs.forEach((s,si)=>{ if(isPoolSector(s))return; if(si<L.sectors.length){ tot++; if(status(sectorStats(L,L.assign,si).meds,T,p.tol)==='ok')okB++; } totA++; if(status(sectorStats(L,SUG.assign,si).meds,T,p.tol)==='ok')okA++; });
+  const reasons={pool:0,equilibrio:0,excedente:0,geografia:0,desdobramento:0,'fusão':0}; moves.forEach(m=>reasons[m.reason]++);
+  const ls=eixoLines(); let evalHtml=''; const evalRows=[]; secs.forEach((s,si)=>{ if(isPoolSector(s)) return; const es=ls.map(l=>({l,e:panelEval(D.lines[l],SUG.assign,si)})); const bad=es.filter(x=>x.e.has&&!x.e.enough), warn=es.filter(x=>x.e.has&&x.e.enough&&x.e.clgHigh); if(s.split||bad.length||warn.length) evalRows.push({s,si,es,bad,warn}); });
+  if(evalRows.length){ evalHtml=`<h2>Avaliação de painel por especialidade <span class="count">${evalRows.length} setores com atenção ou novos</span></h2><table><thead><tr><th>Setor</th><th>Situação</th>${ls.map(l=>`<th>${l}</th>`).join('')}</tr></thead><tbody>${evalRows.map(r=>`<tr><td><b>${r.s.n}</b>${r.s.split?' <span class="badge pool">novo</span>':''}</td><td>${r.bad.length?`<span class="badge bad">painel insuficiente: ${r.bad.map(x=>x.l).join(', ')}</span>`:''} ${r.warn.length?`<span class="badge warn">muito clínico: ${r.warn.map(x=>x.l).join(', ')}</span>`:''} ${!r.bad.length&&!r.warn.length?(r.es.every(x=>!x.e.has)?'<span class="badge pool">sem painel carregado</span>':'<span class="badge ok">painel ok</span>'):''}</td>${r.es.map(x=>`<td style="font-size:11px">${x.e.has?`<b>${fmtN(x.e.util)}</b> / ${fmtN(target(x.l))}<br>grade ${fmtN(x.e.pg)} · CLG ${fmtN(x.e.pc)} (${fmtP(x.e.clg)})<br>fora ${fmtN(x.e.po)} · POT>2 ${fmtN(x.e.pot)}`:`<span style="color:var(--muted)">s/ painel · vis ${fmtN(x.e.vis)} · POT>2 ${fmtN(x.e.pot)}</span>`}</td>`).join('')}</tr>`).join('')}</tbody></table>`; }
+  let html=`<div class="note">Proposta gerada no navegador com os parâmetros do cabeçalho, otimizando a linha em foco (${line}); a faixa de bolinhas em cada setor mostra o efeito nas ${eixoLines().length} linhas do eixo. Setores na faixa: ${okB} de ${tot} hoje, ${okA} de ${totA} na proposta${SUG.custom&&SUG.custom.length?` (<b>${SUG.custom.length} setor(es) novo(s)</b>: ${SUG.custom.map(c=>c.n).join(', ')})`:''}. ${moves.length} movimentos: ${reasons.pool} vindos do Setor 9999, ${reasons.equilibrio} de equilíbrio entre setores, ${reasons.excedente} alívio de excedente, ${reasons.geografia} por geografia, ${reasons.desdobramento} por desdobramento, ${reasons['fusão']} por fusão e redivisão. Clique em um setor para ver antes e depois. <button class="btn small primary" onclick="loadSugToMont()">Levar proposta para o Montador</button> <button class="btn small" onclick="copyMoves()">Copiar movimentos (CSV)</button></div>`;
+  html+=checkBanner($('#eixo').value)+summaryTiles(L,line,SUG.assign,secs)+evalHtml+renderByDistrict(L,line,SUG.assign,L.assign,secs);
+  html+=`<h2>Movimentos propostos <span class="count">${moves.length}</span></h2><div style="max-height:420px;overflow:auto"><table><thead><tr><th>UTC</th><th>Cidade</th><th>De</th><th>Para</th><th class="num">Médicos</th><th class="num">km ao centroide</th><th>Motivo</th></tr></thead><tbody>`;
+  moves.forEach(m=>{ const u=D.utcs[m.u],c=D.cities[u.c]; html+=`<tr><td>${u.id} ${u.n}</td><td>${c.n}/${c.uf}</td><td>${secName(secs[m.from])}</td><td>${secName(secs[m.to])}</td><td class="num">${m.meds}</td><td class="num">${m.km.toFixed(0)}</td><td>${m.reason}</td></tr>`; });
+  html+='</tbody></table></div>'; $('#v-sug').innerHTML=html;
+}
+function copyMoves(){ const L=D.lines[$('#line').value]; const rows=[['linha','utc','nome','cidade','uf','de_codigo','de_setor','para_codigo','para_setor','medicos','km','motivo']]; SUG.moves.forEach(m=>{const u=D.utcs[m.u],c=D.cities[u.c];const secs=L.sectors.concat(SUG.custom||[]); rows.push([$('#line').value,u.id,u.n,c.n,c.uf,secs[m.from].c,secs[m.from].n,secs[m.to].c,secs[m.to].n,m.meds,m.km.toFixed(0),m.reason]);}); copyText(rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(';')).join('\n')); }
+function copyText(t){ try{ navigator.clipboard.writeText(t).then(()=>toast('Copiado')).catch(()=>toast('Não foi possível copiar; use a caixa de texto do Montador')); }catch(e){ toast('Não foi possível copiar'); } }
+function toast(m){ let t=$('#toast'); if(!t){t=document.createElement('div');t.id='toast';t.style.cssText='position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:8px 14px;border-radius:999px;font-size:12px;z-index:99';document.body.appendChild(t);} t.textContent=m; t.style.display='block'; setTimeout(()=>t.style.display='none',1800); }
+
+function openSector(line,si,withPrev){
+  const L=D.lines[line]; const secs=withPrev?L.sectors.concat(SUG.custom||[]):L.sectors; const s=secs[si]; const assign=withPrev?SUG.assign:L.assign; const st=sectorStats(L,assign,si); const p=P();
+  $('#mTitle').innerHTML=`<b>${secName(s)}</b> <span style="color:var(--muted);font-size:11px">${s.c} · ${fmtN(st.meds)} médicos · ${st.utcs.length} UTCs · raio ${fmtN(st.maxKm)} km</span>${isPoolSector(s)?'':lineVis(si,assign)+panelLine(si,assign)}`;
+  const rows=st.utcs.map(u=>{const c=D.cities[D.utcs[u].c]; const k=st.cen?km(st.cen,c):0; const prev=withPrev&&L.assign[u]!==si; return {u,c,k,prev,d:docs(L,u)};}).sort((a,b)=>b.d-a.d);
+  const ls=eixoLines(); let h=`<table><thead><tr><th>UTC</th><th>Cidade</th><th>Bairro</th>${ls.map(l=>`<th class="num" title="Médicos visitados · ${l}">Vis. ${l.slice(0,6)}</th>`).join('')}<th class="num">NV POT>2</th><th class="num">NV total</th><th class="num">Médicos (régua)</th><th>Painel ${line} (esp.)</th><th class="num">Mercado</th><th class="num">Share</th><th class="num">km</th><th></th></tr></thead><tbody>`;
+  rows.forEach(r=>{ const u=D.utcs[r.u]; h+=`<tr style="${r.prev?'background:#eff6ff':''}"><td>${u.id} ${u.n}</td><td>${r.c.n}/${r.c.uf}</td><td>${u.b||''}</td>${ls.map(l=>`<td class="num" style="${l===line?'font-weight:700':''}">${D.lines[l].vis[r.u]}</td>`).join('')}<td class="num">${L.pot[r.u]}</td><td class="num">${L.nv[r.u]}</td><td class="num"><b>${r.d}</b></td><td style="font-size:10px;max-width:220px">${(PNL.lines[line]&&PNL.lines[line].spec[r.u])||''}</td><td class="num">${fmtR(L.mkt[r.u])}</td><td class="num">${fmtP(L.mkt[r.u]?L.ems[r.u]/L.mkt[r.u]:0)}</td><td class="num">${r.k.toFixed(0)}</td><td>${r.k>p.raio?'<span class="badge geo">dispersa</span>':''}${r.prev?`<span class="badge ok">vinda de ${secName(secs[L.assign[r.u]])}</span>`:''}</td></tr>`; });
+  if(withPrev){ const left=[]; for(let u=0;u<L.assign.length;u++) if(L.assign[u]===si&&assign[u]!==si) left.push(u); if(left.length){ h+=`<tr><td colspan="15" style="background:var(--sky);font-weight:600">Saíram deste setor na proposta (${left.length})</td></tr>`; left.forEach(u=>{const c=D.cities[D.utcs[u].c]; h+=`<tr style="background:#fff5f5"><td>${D.utcs[u].id} ${D.utcs[u].n}</td><td>${c.n}/${c.uf}</td><td>${D.utcs[u].b||''}</td>${ls.map(l=>`<td class="num">${D.lines[l].vis[u]}</td>`).join('')}<td class="num">${L.pot[u]}</td><td class="num">${L.nv[u]}</td><td class="num"><b>${docs(L,u)}</b></td><td style="font-size:10px">${(PNL.lines[line]&&PNL.lines[line].spec[u])||''}</td><td class="num">${fmtR(L.mkt[u])}</td><td></td><td></td><td><span class="badge bad">para ${secName(secs[assign[u]])}</span></td></tr>`;}); } }
+  $('#mBody').innerHTML=h+'</tbody></table>'; $('#modal').classList.add('open');
+}
+function closeModal(){ $('#modal').classList.remove('open'); }
+
+// ---------- montador ----------
+let M={line:null,dist:null,assign:null,custom:[],dragU:null};
+function montInit(){
+  const line=$('#line').value, L=D.lines[line];
+  const dists=Object.keys(L.districts).filter(d=>!/9900$/.test(d)).sort();
+  if(M.eixo!==EIXO_OF[line]){ M={line,eixo:EIXO_OF[line],dist:dists[0],assign:L.assign.slice(),custom:[],dragU:null,hist:[],redo:[]}; } M.line=line; { const same=M.dist&&dists.find(d=>d.slice(4)===M.dist.slice(4)); M.dist=same||dists[0]; M.custom.forEach(c=>{ const nd=dists.find(d=>d.slice(4)===c.d.slice(4)); if(nd) c.d=nd; }); }
+  const sel=`<div class="toolbar"><label>Distrito <select id="mDist">${dists.map(d=>`<option value="${d}" ${d===M.dist?'selected':''}>${d} · ${L.districts[d]}</option>`).join('')}</select></label>
+    <button class="btn" onclick="montNew()">Novo setor vazio</button>
+    <button class="btn" onclick="undoMove();montBoard()">Desfazer</button>
+    <button class="btn" onclick="redoMove();montBoard()">Refazer</button>
+    <button class="btn" onclick="montReset()">Resetar para o atual</button>
+    <button class="btn" onclick="loadSugToMont()">Carregar sugestão</button>
+    <button class="btn primary" onclick="exportXlsx()">Exportar Excel de-para</button>
+    <button class="btn" onclick="montExport()">Gerar CSV da montagem</button>
+    <span style="font-size:11px;color:var(--muted)">Arraste as UTCs entre colunas. Chips azuis mudaram de setor; chips âmbar estão além do raio do setor.</span></div>`;
+  $('#v-mont').innerHTML=sel+'<div class="board" id="board"></div><div id="mSummary"></div><details id="mCsv" style="display:none"><summary>CSV da montagem</summary><textarea id="csvBox" readonly></textarea><button class="btn small" onclick="copyText($(\'#csvBox\').value)">Copiar CSV</button></details>';
+  $('#mDist').onchange=e=>{M.dist=e.target.value;montBoard();};
+  montBoard();
+}
+function montNew(){ M.custom.push({c:'NOVO'+(M.custom.length+1),n:'NOVO SETOR '+(M.custom.length+1),d:M.dist}); montBoard(); }
+function montReset(){ M.assign=D.lines[M.line].assign.slice(); M.custom=[]; montBoard(); }
+function loadSugToMont(){ const line=$('#line').value; if(!SUG||SUG.line!==line){ SUG=suggest(line); SUG.line=line; } M={line,eixo:EIXO_OF[line],dist:M.dist||null,assign:SUG.assign.slice(),custom:(SUG.custom||[]).map(c=>({...c})),dragU:null,hist:[],redo:[]}; switchView('mont'); }
+function allSectors(){ return D.lines[M.line].sectors.concat(M.custom); }
+function montBoard(){ CHG.delete(M.assign);
+  const L=D.lines[M.line], T=target(M.line), p=P(), secs=allSectors();
+  const poolIdx=L.sectors.findIndex(isPoolSector);
+  const cols=secs.map((s,i)=>i).filter(i=>secs[i].d===M.dist);
+  // district centroid for pool filter
+  let la=0,lo=0,w=0; cols.forEach(si=>{ const st=sectorStats(L,M.assign,si); if(st.cen){la+=st.cen.la*(st.meds||1);lo+=st.cen.lo*(st.meds||1);w+=(st.meds||1);} });
+  const dcen=w?{la:la/w,lo:lo/w}:null;
+  const distCities=new Set(); cols.forEach(si=>sectorStats(L,M.assign,si).cities.forEach(c=>distCities.add(c)));
+  const q=(M.poolQ||'').toUpperCase();
+  const poolUtcs=[]; for(let u=0;u<M.assign.length;u++){ if(M.assign[u]!==poolIdx) continue; const c=D.cities[D.utcs[u].c]; const key=c.n+'/'+c.uf; const k=dcen?km(dcen,c):0; const near=distCities.has(key)||k<=p.raio; if(q&&!(D.utcs[u].n.toUpperCase().includes(q)||c.n.toUpperCase().includes(q)||D.utcs[u].id.includes(q))) continue; poolUtcs.push({u,k,near}); }
+  poolUtcs.sort((a,b)=>(b.near?1:0)-(a.near?1:0) || a.k-b.k || docs(L,b.u)-docs(L,a.u));
+  const chip=(u,k,si)=>{ const d=docs(L,u),c=D.cities[D.utcs[u].c]; const moved=L.assign[u]!==si&&si!==poolIdx; return `<div class="chip ${k>p.raio?'far':''} ${moved?'moved':''} ${d===0?'zero':''}" draggable="true" data-u="${u}" title="${D.utcs[u].id} · ${D.utcs[u].b||''} · mercado ${fmtR(L.mkt[u])}"><div><div class="cn">${D.utcs[u].n}</div><div class="cc">${c.n}/${c.uf} · ${k.toFixed(0)} km</div></div><div class="cm">${d}</div></div>`; };
+  let h=`<div class="col pool" data-si="${poolIdx}"><div class="ch"><div class="name">${POOL_NAME} · UTCs sem setor</div><div class="big">${fmtN(poolUtcs.length)} <small>UTCs · ${poolUtcs.filter(x=>x.near).length} perto do distrito</small></div><div class="m"><span>${fmtN(poolUtcs.reduce((a,x)=>a+docs(L,x.u),0))} médicos</span><span>${fmtR(poolUtcs.reduce((a,x)=>a+L.mkt[x.u],0))}</span></div></div><div class="search"><input placeholder="Filtrar por UTC ou cidade" value="${M.poolQ||''}" oninput="M.poolQ=this.value;montBoard()"></div><div class="list">${poolUtcs.slice(0,300).map(x=>chip(x.u,x.k,poolIdx)).join('')}${poolUtcs.length>300?`<div style="font-size:11px;color:var(--muted);padding:6px">Mostrando 300 de ${poolUtcs.length}; use o filtro.</div>`:''}</div></div>`;
+  cols.forEach(si=>{ const s=secs[si], st=sectorStats(L,M.assign,si); const cls=status(st.meds,T,p.tol);
+    const items=st.utcs.map(u=>({u,k:st.cen?km(st.cen,D.cities[D.utcs[u].c]):0})).sort((a,b)=>docs(L,b.u)-docs(L,a.u));
+    h+=`<div class="col ${cls}" data-si="${si}"><div class="ch"><div class="name">${si>=L.sectors.length?`<input value="${s.n}" onchange="M.custom[${si-L.sectors.length}].n=this.value"> <button class="btn small" style="color:var(--bad)" onclick="deleteCustom(${si})">Excluir</button>`:s.n}</div><div class="cc" style="font-size:10px;color:var(--muted)">${s.c}</div><div class="big" style="color:var(--${cls})">${fmtN(st.meds)} <small>/ ${fmtN(T)} · ${stLabel[cls]}</small></div><div class="m"><span>${st.utcs.length} UTCs</span><span>${st.cities.length} cidades</span><span>${fmtR(st.mkt)}</span><span>share ${fmtP(st.share)}</span><span>raio ${fmtN(st.maxKm)} km</span><span>${st.far.length} dispersas</span></div>${(()=>{ if(si>=L.sectors.length) return ''; const b=sectorStats(L,L.assign,si); const dm=st.meds-b.meds, dk=st.mkt-b.mkt; if(!dm&&!dk) return ''; return `<div class="dbox"><div class="ttl">Impacto da montagem</div><div class="dr"><span>Médicos ${fmtN(b.meds)} →</span><b>${fmtN(st.meds)}</b><span class="dv ${dm<0?'neg':'pos'}">${dm>0?'+':''}${fmtN(dm)}</span></div><div class="dr"><span>Mercado ${fmtR(b.mkt)} →</span><b>${fmtR(st.mkt)}</b><span class="dv ${dk<0?'neg':'pos'}">${dk>0?'+':''}${fmtR(dk)}</span></div></div>`; })()}</div><div class="list">${items.map(x=>chip(x.u,x.k,si)).join('')}</div></div>`; });
+  $('#board').innerHTML=h;
+  // dnd
+  document.querySelectorAll('#board .chip').forEach(el=>{ el.addEventListener('dragstart',e=>{M.dragU=+el.dataset.u; e.dataTransfer.effectAllowed='move';}); });
+  document.querySelectorAll('#board .col').forEach(col=>{ col.addEventListener('dragover',e=>{e.preventDefault();col.classList.add('over');}); col.addEventListener('dragleave',()=>col.classList.remove('over')); col.addEventListener('drop',e=>{e.preventDefault();col.classList.remove('over'); if(M.dragU==null) return; const to=+col.dataset.si; if(M.assign[M.dragU]!==to){ M.hist=M.hist||[]; M.redo=[]; M.hist.push({u:M.dragU,from:M.assign[M.dragU],to}); M.assign[M.dragU]=to; } M.dragU=null; montBoard();}); });
+  // summary
+  let sh=`<h2>Resumo da montagem · ${M.dist}</h2><table><thead><tr><th>Setor</th><th class="num">Médicos</th><th class="num">Alvo</th><th class="num">Dif.</th><th class="num">UTCs</th><th class="num">Cidades</th><th class="num">Mercado</th><th class="num">Share</th><th class="num">Raio km</th><th class="num">Dispersas</th><th class="num">Movidas</th><th>Status</th></tr></thead><tbody>`;
+  cols.forEach(si=>{ const st=sectorStats(L,M.assign,si); const cls=status(st.meds,T,p.tol); const moved=st.utcs.filter(u=>L.assign[u]!==si).length; sh+=`<tr><td>${secs[si].n}</td><td class="num"><b>${fmtN(st.meds)}</b></td><td class="num">${fmtN(T)}</td><td class="num" style="color:${st.meds-T<0?'var(--bad)':'var(--ok)'}">${st.meds-T>0?'+':''}${fmtN(st.meds-T)}</td><td class="num">${st.utcs.length}</td><td class="num">${st.cities.length}</td><td class="num">${fmtR(st.mkt)}</td><td class="num">${fmtP(st.share)}</td><td class="num">${fmtN(st.maxKm)}</td><td class="num">${st.far.length}</td><td class="num">${moved}</td><td><span class="badge ${cls}">${stLabel[cls]}</span></td></tr>`; });
+  $('#mSummary').innerHTML=sh+'</tbody></table>';
+}
+function montExport(){
+  const L=D.lines[M.line], secs=allSectors(); const rows=[['linha','distrito','setor_codigo','setor','utc','utc_nome','cidade','uf','bairro','visitados','nv_pot2','nv_total','medicos_regua','mercado','demanda_ems','setor_atual','mudou']];
+  for(let u=0;u<M.assign.length;u++){ const si=M.assign[u], s=secs[si]; if(s.d!==M.dist&&!(isPoolSector(s))) continue; if(isPoolSector(s)) continue; const c=D.cities[D.utcs[u].c]; rows.push([M.line,M.dist,s.c,s.n,D.utcs[u].id,D.utcs[u].n,c.n,c.uf,D.utcs[u].b||'',L.vis[u],L.pot[u],L.nv[u],docs(L,u),L.mkt[u],L.ems[u],L.sectors[L.assign[u]].n,L.assign[u]!==si?'sim':'nao']); }
+  $('#csvBox').value=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(';')).join('\n'); $('#mCsv').style.display='block'; $('#mCsv').open=true; toast('CSV gerado abaixo do resumo');
+}
+
+
+// ---------- mapa ----------
+const PAL=['#1f77b4','#ff7f0e','#2ca02c','#d62728','#9467bd','#8c564b','#e377c2','#17becf','#bcbd22','#0b2a5b','#f59e0b','#10b981'];
+let MAP={dist:null,mode:'atual',sel:null,onlyMoves:false,line:null,zoomT:null,pick:new Set(),open:[],drag:null,allPool:false};
+const feat=ci=>{ const g=window.LEGO_GEO[ci]; if(!g) return null; return {type:'Feature',id:ci,geometry:{type:g.t==='P'?'Polygon':'MultiPolygon',coordinates:g.c}}; };
+let CTX=null;
+function mapAssign(){ const L=D.lines[MAP.line]; if(M.custom){ const dk=Object.keys(L.districts); M.custom.forEach(c=>{ const nd=dk.find(d=>d.slice(4)===c.d.slice(4)); if(nd) c.d=nd; }); } if(MAP.mode==='sug'){ if(!SUG||SUG.line!==MAP.line){SUG=suggest(MAP.line);SUG.line=MAP.line;} return SUG.assign; } if(MAP.mode==='mont'){ if(M.eixo!==EIXO_OF[MAP.line]){M={line:MAP.line,eixo:EIXO_OF[MAP.line],dist:MAP.dist,assign:L.assign.slice(),custom:[],dragU:null,hist:[],redo:[]};} M.line=MAP.line; return M.assign; } return L.assign; }
+function mapInit(){
+  const line=$('#line').value, L=D.lines[line];
+  const dists=Object.keys(L.districts).filter(d=>!/9900$/.test(d)).sort();
+  if(MAP.line!==line){ const sameEixo=MAP.line&&EIXO_OF[MAP.line]===EIXO_OF[line]; MAP.line=line; const same=MAP.dist&&dists.find(d=>d.slice(4)===MAP.dist.slice(4)); if(sameEixo&&same){ MAP.dist=same; } else { MAP.dist=dists[0]; MAP.sel=null; MAP.open=[]; } }
+  $('#v-mapa').innerHTML=`<div class="maplay"><div class="mside">
+    <label style="font-size:11px;color:var(--muted)">Distrito<select id="mapDist">${dists.map(d=>`<option value="${d}" ${d===MAP.dist?'selected':''}>${d} · ${L.districts[d]}</option>`).join('')}</select></label>
+    <div class="modes"><button data-m="atual" class="${MAP.mode==='atual'?'active':''}">Atual</button><button data-m="sug" class="${MAP.mode==='sug'?'active':''}">Sugestão</button><button data-m="mont" class="${MAP.mode==='mont'?'active':''}">Montar</button></div>
+    <div class="mhint" id="mapCheck"></div>
+    <div class="mhint" id="mapHint"></div>
+    <div id="mapPick"></div>
+    <div class="leg" id="mapLeg"></div>
+    <div class="mhint">Bolha = UTC, tamanho pela quantidade de médicos. Município pintado pela cor do setor dominante. Bolha vazada cinza = UTC do Setor 9999 (sem setor). UTC movida: cor do novo setor com anel da cor de origem e seta saindo da origem. Roda do mouse para zoom, arraste o fundo para mover.</div>
+  </div><div class="mapwrap" id="mapWrap"><div class="mapbtns"><button class="btn small" id="mapFit">Enquadrar</button><button class="btn small" id="mapAllPool">Setor 9999 inteiro</button><button class="btn small" id="mapMoves" style="display:none">Só movimentos</button><span class="hist"><button class="btn small" id="mapUndo">Desfazer</button><button class="btn small" id="mapRedo">Refazer</button><button class="btn small" id="mapRevert">Reverter tudo</button></span><button class="btn small primary" id="mapXlsx">Exportar Excel de-para</button></div><svg id="mapSvg"></svg><div class="tip" id="tip"></div></div><div class="kb" id="rside" style="display:none"></div></div>`;
+  { const c=CHECK[$('#eixo').value]; $('#mapCheck').innerHTML = c.ok ? `<span class="eixo-tag">${$('#eixo').value}</span> estrutura consistente nas ${eixoLines().length} linhas; a montagem vale para todas.` : `<span class="eixo-tag" style="background:var(--bad-bg);color:var(--bad)">${$('#eixo').value}</span> <b style="color:var(--bad)">divergência de estrutura</b>: ${fmtN(c.utcs.length)} UTC(s) em setor diferente conforme a linha. <a href="#" onclick="openDiverg('${$('#eixo').value}');return false">Ver lista</a>`; }
+  $('#mapDist').onchange=e=>{MAP.dist=e.target.value;MAP.sel=null;MAP.pick.clear();MAP.open=[];MAP.zoomT=null;mapDraw();};
+  document.querySelectorAll('.modes button').forEach(b=>b.onclick=()=>{MAP.mode=b.dataset.m;MAP.sel=null;MAP.pick.clear();MAP.open=[];document.querySelectorAll('.modes button').forEach(x=>x.classList.toggle('active',x===b));mapDraw();});
+  $('#mapFit').onclick=()=>{MAP.zoomT=null;mapDraw();};
+  $('#mapXlsx').onclick=()=>exportXlsx();
+  $('#mapAllPool').onclick=()=>{ MAP.allPool=!MAP.allPool; if(!MAP.open.includes(D.lines[MAP.line].sectors.findIndex(isPoolSector))&&MAP.allPool) MAP.open.push(D.lines[MAP.line].sectors.findIndex(isPoolSector)); mapDraw(); };
+  $('#mapMoves').onclick=()=>{MAP.onlyMoves=!MAP.onlyMoves;mapDraw();};
+  $('#mapUndo').onclick=()=>undoMove(); $('#mapRedo').onclick=()=>redoMove(); $('#mapRevert').onclick=()=>revertAll();
+  mapDraw();
+}
+function mapDraw(){ CHG.delete(M.assign);
+  const line=MAP.line, L=D.lines[line], T=target(line), p=P(), assign=mapAssign(), secsAll=L.sectors.concat(MAP.mode==='mont'?M.custom:(MAP.mode==='sug'&&SUG&&SUG.custom)?SUG.custom:[]);
+  const poolIdx=L.sectors.findIndex(isPoolSector);
+  const cols=secsAll.map((s,i)=>i).filter(i=>secsAll[i].d===MAP.dist);
+  const color={}; cols.forEach((si,k)=>color[si]=PAL[k%PAL.length]);
+  const statsOf=si=>sectorStats(L,assign,si);
+  const st={}; cols.forEach(si=>st[si]=statsOf(si));
+  // utcs in district + pool near
+  const cityDocs={}, cityUtcs={};
+  const items=[];
+  const distCities=new Set(); cols.forEach(si=>st[si].cities.forEach(c=>distCities.add(c)));
+  let la=0,lo=0,w=0; cols.forEach(si=>{ if(st[si].cen){la+=st[si].cen.la*(st[si].meds||1);lo+=st[si].cen.lo*(st[si].meds||1);w+=(st[si].meds||1);} }); const dcen=w?{la:la/w,lo:lo/w}:null;
+  for(let u=0;u<assign.length;u++){ const si=assign[u]; const c=D.cities[D.utcs[u].c]; const key=c.n+'/'+c.uf; let inc=false;
+    if(cols.includes(si)) inc=true; else if(si===poolIdx){ const k=dcen?km(dcen,c):0; if(MAP.allPool||distCities.has(key)||k<=p.raio) inc=true; }
+    if(!inc) continue; items.push({u,si,c,d:docs(L,u)}); (cityUtcs[D.utcs[u].c]=cityUtcs[D.utcs[u].c]||[]).push(items.length-1);
+    if(si!==poolIdx){ cityDocs[D.utcs[u].c]=cityDocs[D.utcs[u].c]||{}; cityDocs[D.utcs[u].c][si]=(cityDocs[D.utcs[u].c][si]||0)+Math.max(docs(L,u),0.5); } }
+  const moves = MAP.mode==='sug' ? SUG.moves.filter(m=>cols.includes(m.to)||cols.includes(m.from)) : (MAP.mode==='mont'? items.filter(x=>L.assign[x.u]!==x.si&&x.si!==poolIdx).map(x=>({u:x.u,from:L.assign[x.u],to:x.si,km:0,reason:'manual'})) : []);
+  const movedSet=new Set(moves.map(m=>m.u));
+  $('#mapMoves').style.display=MAP.mode==='sug'?'':'none'; const nh=(MAP.mode==='mont'&&M.hist)?M.hist.length:0, nr=(MAP.mode==='mont'&&M.redo)?M.redo.length:0; $('#mapUndo').disabled=!nh; $('#mapUndo').textContent=nh?`Desfazer (${nh})`:'Desfazer'; $('#mapRedo').disabled=!nr; $('#mapRedo').textContent=nr?`Refazer (${nr})`:'Refazer'; $('#mapRevert').disabled=!(MAP.mode==='mont'&&M.assign&&M.assign.some((v,i)=>v!==L.assign[i]));
+  $('#mapMoves').textContent=MAP.onlyMoves?'Mostrar tudo':'Só movimentos'; $('#mapAllPool').textContent=MAP.allPool?'Setor 9999: só perto do distrito':'Setor 9999 inteiro'; $('#mapAllPool').classList.toggle('primary',MAP.allPool);
+  $('#mapHint').innerHTML = MAP.mode==='sug' ? `${moves.length} movimentos no distrito. Seta vai da UTC ao setor de destino, na cor do destino. Clique nos setores para abrir as colunas e ajustar por cima da proposta.` : 'Clique em um setor (legenda ou ponto no mapa) para abrir a coluna dele no quadro. Arraste a UTC para outra coluna ou para um setor da legenda. O mapa atualiza na hora.';
+  const hasPick=false, pickItems=[];
+  const simAssign=(to)=>assign;
+  // legend
+  let lg='';
+  cols.forEach(si=>{ const s=secsAll[si], x=st[si], cls=status(x.meds,T,p.tol); const inM=moves.filter(m=>m.to===si).length, outM=moves.filter(m=>m.from===si).length;
+    const prev='';
+    const b0=sectorStats(L,L.assign,si); const dm=x.meds-b0.meds, dk=x.mkt-b0.mkt; const ld=(dm||dk)?`<span class="ld" style="color:var(--${dm<0?'bad':'ok'})">${fmtN(b0.meds)} → ${fmtN(x.meds)} (${dm>0?'+':''}${fmtN(dm)}) · ${dk>0?'+':''}${fmtR(dk)}</span>`:'';
+    lg+=`<div class="it ${MAP.open.includes(si)?'sel':''}" data-si="${si}"><span class="sw" style="background:${color[si]}"></span><span class="t">${s.n}${si>=L.sectors.length?` <span class="badge pool">novo</span> <a href="#" style="color:var(--bad);font-size:10px" onclick="event.stopPropagation();deleteCustom(${si});return false">excluir</a>`:''} ${lineStrip(si,assign)}<small>${x.utcs.length} UTCs · ${x.cities.length} cid · raio ${fmtN(x.maxKm)} km${(inM||outM)?` · <b style="color:var(--ok)">+${inM}</b> / <b style="color:var(--bad)">-${outM}</b>`:''}</small>${ld}${prev}</span><span class="n" style="color:var(--${cls})">${fmtN(x.meds)}</span></div>`; });
+  const poolN=items.filter(x=>x.si===poolIdx).length; let poolAll=0; for(let u=0;u<assign.length;u++) if(assign[u]===poolIdx) poolAll++;
+  lg+=`<div class="it ${MAP.open.includes(poolIdx)?'sel':''}" data-si="${poolIdx}"><span class="sw" style="background:#fff;border:2px solid #9ca3af"></span><span class="t">${POOL_NAME} · UTCs sem setor<small>${MAP.allPool?`todas as ${fmtN(poolAll)} no mapa`:`${poolN} até ${p.raio} km · ${fmtN(poolAll)} no total`}</small></span><span class="n">${poolN}</span></div>`;
+  lg+=`<button class="btn small" id="mapNewSec">Novo setor vazio</button>`;
+  $('#mapLeg').innerHTML=lg;
+  const toggleOpen=si=>{ const i=MAP.open.indexOf(si); if(i>=0) MAP.open.splice(i,1); else MAP.open.push(si); MAP.sel=MAP.open.length?MAP.open[MAP.open.length-1]:null; mapDraw(); };
+  document.querySelectorAll('#mapLeg .it').forEach(el=>{ const si=+el.dataset.si; el.onclick=()=>toggleOpen(si);
+    el.addEventListener('dragover',e=>{ e.preventDefault(); el.classList.add('over'); }); el.addEventListener('dragleave',()=>el.classList.remove('over'));
+    el.addEventListener('drop',e=>{ e.preventDefault(); el.classList.remove('over'); dropUtc(si,assign); }); });
+  const nb=$('#mapNewSec'); if(nb) nb.onclick=()=>{ ensureMont(assign); M.custom.push({c:'NOVO'+(M.custom.length+1),n:'NOVO SETOR '+(M.custom.length+1),d:MAP.dist}); mapDraw(); };
+  // svg
+  const wrap=$('#mapWrap'), W=wrap.clientWidth||900, H=wrap.clientHeight||560;
+  const svg=d3.select('#mapSvg').attr('viewBox',`0 0 ${W} ${H}`); svg.selectAll('*').remove();
+  const cityIds=[...new Set(items.map(x=>D.utcs[x.u].c))];
+  const distFeats=cityIds.map(feat).filter(Boolean);
+  const proj=d3.geoMercator().fitExtent([[20,20],[W-20,H-20]],{type:'FeatureCollection',features:distFeats}); const path=d3.geoPath(proj);
+  if(!CTX){ CTX=D.cities.map((c,i)=>feat(i)).filter(Boolean); }
+  const g=svg.append('g');
+  g.append('g').selectAll('path').data(CTX).join('path').attr('class','ctx').attr('d',path);
+  const domC=ci=>{ const m=cityDocs[ci]; if(!m) return null; let b=null; for(const si in m) if(!b||m[si]>m[b]) b=si; return +b; };
+  g.append('g').selectAll('path').data(distFeats).join('path').attr('class','mun').attr('d',path)
+    .attr('fill',f=>{ const s=domC(f.id); if(s==null) return '#d7dce5'; const dim=MAP.open.length>0&&!MAP.open.includes(s); return dim? d3.color(color[s]).copy({opacity:.18}) : d3.color(color[s]).copy({opacity:.45}); })
+    .on('mousemove',(e,f)=>{ const c=D.cities[f.id]; const m=cityDocs[f.id]||{}; const parts=Object.keys(m).map(si=>`${secsAll[si].n}: ${fmtN(m[si])} méd.`); showTip(e,`<b>${c.n}/${c.uf}</b><br>${(cityUtcs[f.id]||[]).length} UTCs<br>${parts.join('<br>')||'só peças soltas'}`); }).on('mouseleave',hideTip);
+  // bubbles with per-city layout
+  const nodes=[]; for(const ci in cityUtcs){ const arr=cityUtcs[ci].map(i=>items[i]).sort((a,b)=>b.d-a.d); const [x,y]=proj([D.cities[ci].lo,D.cities[ci].la]); const n=arr.length;
+    arr.forEach((it,k)=>{ let dx=0,dy=0; if(n>1){ const ang=k*2.399963, r=3+1.7*Math.sqrt(k); dx=r*Math.cos(ang); dy=r*Math.sin(ang); } nodes.push({...it,x,y,dx,dy}); }); }
+  const rad=d=>d>0?Math.max(2.2,Math.sqrt(d)*1.1):1.8;
+  const centroids={}; cols.forEach(si=>{ if(st[si].cen) centroids[si]=proj([st[si].cen.lo,st[si].cen.la]); });
+  const posOf=u=>{ const nd=nodes.find(n=>n.u===u); return nd? [nd.x+nd.dx,nd.y+nd.dy] : null; };
+  svg.append('defs').selectAll('marker').data(cols).join('marker').attr('id',si=>'arr'+si).attr('viewBox','0 0 10 10').attr('refX',9).attr('refY',5).attr('markerWidth',6).attr('markerHeight',6).attr('orient','auto').append('path').attr('d','M0,0L10,5L0,10z').attr('fill',si=>color[si]);
+  const gf=g.append('g');
+  moves.forEach(m=>{ let a=posOf(m.u), b=centroids[m.to]; if(MAP.mode!=='sug'){ a=centroids[m.from]; b=posOf(m.u); } if(!a||!b) return; const mid=[(a[0]+b[0])/2+(b[1]-a[1])*0.15,(a[1]+b[1])/2-(b[0]-a[0])*0.15];
+    gf.append('path').attr('class','flow').attr('d',`M${a[0]},${a[1]} Q${mid[0]},${mid[1]} ${b[0]},${b[1]}`).attr('stroke',color[m.to]).attr('marker-end',`url(#arr${m.to})`).attr('stroke-dasharray',m.reason==='pool'?'4 3':null); });
+  const gb=g.append('g');
+  const vis=nodes.filter(n=>!(MAP.onlyMoves&&MAP.mode==='sug')||movedSet.has(n.u));
+  gb.selectAll('circle').data(vis).join('circle').attr('class','utc').attr('cx',n=>n.x+n.dx).attr('cy',n=>n.y+n.dy).attr('r',n=>rad(n.d))
+    .attr('fill',n=> n.si===poolIdx?'#fff': (movedSet.has(n.u)&&MAP.mode==='sug'? color[(moves.find(m=>m.u===n.u)||{}).from] || '#9ca3af' : color[n.si]))
+    .attr('stroke',n=> n.si===poolIdx?'#9ca3af': movedSet.has(n.u)? (MAP.mode==='sug'?color[n.si]:(color[(moves.find(m=>m.u===n.u)||{}).from]||'#9ca3af')) : '#fff').attr('stroke-width',n=>movedSet.has(n.u)?2.5:0.8)
+    .attr('opacity',n=> MAP.open.length && !MAP.open.includes(n.si) && !movedSet.has(n.u) ? .3 : .95)
+    .on('mousemove',(e,n)=>{ const u=D.utcs[n.u]; const mv=moves.find(m=>m.u===n.u); showTip(e,`<b>${u.n}</b> (${u.id})<br>${n.c.n}/${n.c.uf} · ${u.b||''}<br>Setor: ${secsAll[n.si].n}${mv?`<br>Vem de: ${secsAll[mv.from].n}${mv.km?` · ${mv.km.toFixed(0)} km`:''} · ${mv.reason}`:''}<br>Médicos: ${n.d} (vis ${L.vis[n.u]}, POT>2 ${L.pot[n.u]}, NV ${L.nv[n.u]})<br>Mercado ${fmtR(L.mkt[n.u])} · share ${fmtP(L.mkt[n.u]?L.ems[n.u]/L.mkt[n.u]:0)}`); }).on('mouseleave',hideTip)
+    .on('click',(e,n)=>{ toggleOpen(n.si); });
+  // labels
+  g.append('g').selectAll('text').data(cols.filter(si=>centroids[si])).join('text').attr('class','seclabel').attr('x',si=>centroids[si][0]).attr('y',si=>centroids[si][1]-6).attr('text-anchor','middle').text(si=>secsAll[si].n.replace(/^(SP|PR|MG|MS)_/,''));
+  g.append('g').selectAll('circle').data(cols.filter(si=>centroids[si])).join('circle').attr('cx',si=>centroids[si][0]).attr('cy',si=>centroids[si][1]).attr('r',6).attr('fill',si=>color[si]).attr('stroke','#fff').attr('stroke-width',2).style('cursor','pointer').on('click',(e,si)=>toggleOpen(si));
+  // kanban
+  const lay=document.querySelector('.maplay'), rs=$('#rside');
+  MAP.open=MAP.open.filter(si=>cols.includes(si)||si===poolIdx);
+  if(MAP.open.length){
+    const poolAllItems=[]; for(let u=0;u<assign.length;u++){ if(assign[u]!==poolIdx) continue; const c=D.cities[D.utcs[u].c]; poolAllItems.push({u,c,d:docs(L,u),k:dcen?km(dcen,c):0,near:distCities.has(c.n+'/'+c.uf)||(dcen?km(dcen,c):0)<=p.raio}); }
+    const pq=(MAP.poolQ||'').toUpperCase(); const poolItems=poolAllItems.filter(x=>!pq||D.utcs[x.u].n.toUpperCase().includes(pq)||x.c.n.toUpperCase().includes(pq)||D.utcs[x.u].id.includes(pq));
+    let kh=`<div class="kbh"><span><b>Quadro de montagem</b> · ${MAP.open.length} coluna(s) aberta(s)</span><span class="hist"><button class="btn small" id="kbUndo">Desfazer</button><button class="btn small" id="kbRedo">Refazer</button><button class="btn small" id="kbCloseAll">Fechar todas</button></span></div><div class="kbb">`;
+    MAP.open.forEach(si=>{
+      const isPool=si===poolIdx; const s=secsAll[si]; const x=isPool?null:st[si]; const cls=isPool?'pool':status(x.meds,T,p.tol);
+      let dbox=''; if(!isPool){ const b=sectorStats(L,L.assign,si); const dm=x.meds-b.meds, dk=x.mkt-b.mkt; if(dm||dk||x.utcs.length!==b.utcs.length){ const sg=v=>v>0?'+':''; dbox=`<div class="dbox"><div class="ttl">Impacto da montagem · ${x.utcs.length-b.utcs.length>0?'+':''}${x.utcs.length-b.utcs.length} UTCs</div><div class="dr"><span>Médicos ${fmtN(b.meds)} →</span><b>${fmtN(x.meds)}</b><span class="dv ${dm<0?'neg':'pos'}">${sg(dm)}${fmtN(dm)}</span></div><div class="dr"><span>Mercado ${fmtR(b.mkt)} →</span><b>${fmtR(x.mkt)}</b><span class="dv ${dk<0?'neg':'pos'}">${sg(dk)}${fmtR(dk)}</span></div></div>`; } }
+      const list=isPool? poolItems : x.utcs.map(u=>{ const c=D.cities[D.utcs[u].c]; return {u,c,d:docs(L,u),k:x.cen?km(x.cen,c):0}; });
+      if(isPool) list.sort((a,b)=>(b.near?1:0)-(a.near?1:0) || a.k-b.k || b.d-a.d); else list.sort((a,b)=>{ const ma=(L.assign[a.u]!==si)?1:0, mb=(L.assign[b.u]!==si)?1:0; return mb-ma || b.d-a.d; });
+      kh+=`<div class="kcol ${cls}" data-si="${si}" style="border-top-color:${isPool?'#9ca3af':color[si]}"><div class="kh"><div class="nm"><span>${isPool?POOL_NAME+' · UTCs sem setor':(si>=L.sectors.length?`<input value="${s.n}" onchange="M.custom[${si-L.sectors.length}].n=this.value;mapDraw()" title="Clique para renomear">`:s.n)}</span><span class="cl" data-close="${si}">×</span></div>${si>=L.sectors.length?`<button class="btn small" style="margin-top:4px;color:var(--bad)" onclick="deleteCustom(${si})">Excluir setor novo</button>`:''}
+        ${isPool?`<div class="big">${fmtN(poolAllItems.length)} <small>UTCs · ${poolAllItems.filter(x=>x.near).length} perto do distrito · ${fmtN(poolAllItems.reduce((a,x)=>a+x.d,0))} méd.</small></div><div class="search" style="padding:4px 0 0"><input placeholder="Filtrar por UTC, cidade ou código" value="${MAP.poolQ||''}" oninput="MAP.poolQ=this.value;mapDraw();this.focus()"></div>`:`<div class="big" style="color:var(--${cls})">${fmtN(x.meds)} <small>/ alvo ${fmtN(T)} · ${stLabel[cls]}</small>${lineStrip(si,assign)}</div><div class="mm"><span>${x.utcs.length} UTCs · ${x.cities.length} cid</span><span>${fmtR(x.mkt)}</span><span>share ${fmtP(x.share)}</span><span>raio ${fmtN(x.maxKm)} km</span></div>${lineVis(si,assign)}${panelLine(si,assign)}${dbox}`}<div class="pv"></div></div>
+        <div class="kl">${list.slice(0,isPool?400:9999).map(it=>`<div class="kcard ${(!isPool&&L.assign[it.u]!==si)?'moved':''} ${(!isPool&&it.k>p.raio)||(isPool&&!it.near)?'far':''}" draggable="true" data-u="${it.u}" title="${D.utcs[it.u].id} · ${D.utcs[it.u].b||''}"><div><div class="kn">${D.utcs[it.u].n}</div><div class="kc">${it.c.n}/${it.c.uf} · ${it.k.toFixed(0)} km${(!isPool&&L.assign[it.u]!==si)?' · veio de '+secName(secsAll[L.assign[it.u]]).replace(/^(SP|PR|MG|MS)_/,''):''}</div></div><div class="km">${it.d}<small>${fmtR(L.mkt[it.u])}</small></div></div>`).join('')}${isPool&&list.length>400?`<div class="mhint" style="padding:6px">Mostrando 400 de ${list.length}; use o filtro.</div>`:''}</div></div>`;
+    });
+    const hadFocus=document.activeElement&&document.activeElement.closest&&document.activeElement.closest('#rside .search'); rs.innerHTML=kh+'</div>'; rs.className='kb'; rs.style.display=''; lay.classList.add('three'); if(hadFocus){ const inp=rs.querySelector('.search input'); if(inp){ inp.focus(); inp.setSelectionRange(inp.value.length,inp.value.length);} }
+    $('#kbCloseAll').onclick=()=>{MAP.open=[];MAP.sel=null;mapDraw();};
+    $('#kbUndo').onclick=()=>undoMove(); $('#kbRedo').onclick=()=>redoMove(); $('#kbUndo').disabled=!nh; $('#kbRedo').disabled=!nr; if(nh) $('#kbUndo').textContent=`Desfazer (${nh})`; if(nr) $('#kbRedo').textContent=`Refazer (${nr})`;
+    rs.querySelectorAll('[data-close]').forEach(el=>el.onclick=()=>toggleOpen(+el.dataset.close));
+    rs.querySelectorAll('.kcard').forEach(el=>{ el.addEventListener('dragstart',e=>{ MAP.drag=+el.dataset.u; e.dataTransfer.effectAllowed='move'; });
+      el.addEventListener('mouseenter',()=>{ gb.selectAll('circle').filter(n=>n.u===+el.dataset.u).attr('stroke','#0b2a5b').attr('stroke-width',3).raise(); });
+      el.addEventListener('mouseleave',()=>{ gb.selectAll('circle').filter(n=>n.u===+el.dataset.u).attr('stroke',n=>n.si===poolIdx?'#9ca3af':movedSet.has(n.u)?color[n.si]:'#fff').attr('stroke-width',n=>movedSet.has(n.u)?2.5:0.8); }); });
+    rs.querySelectorAll('.kcol').forEach(col=>{ const si=+col.dataset.si; const pv=col.querySelector('.pv');
+      col.addEventListener('dragover',e=>{ e.preventDefault(); if(MAP.drag==null||assign[MAP.drag]===si) return; col.classList.add('over'); if(si!==poolIdx){ const a=assign.slice(); a[MAP.drag]=si; const r=sectorStats(L,a,si); const c2=status(r.meds,T,p.tol); const kk=st[si].cen?km(st[si].cen,D.cities[D.utcs[MAP.drag].c]):0; pv.innerHTML=`ficaria ${fmtN(r.meds)} méd. (<span class="badge ${c2}">${stLabel[c2]}</span>) · ${fmtR(r.mkt)} · raio ${fmtN(r.maxKm)} km${kk>p.raio?' · <span class="badge geo">além do raio</span>':''}`; } });
+      col.addEventListener('dragleave',e=>{ if(!col.contains(e.relatedTarget)){ col.classList.remove('over'); pv.innerHTML=''; } });
+      col.addEventListener('drop',e=>{ e.preventDefault(); col.classList.remove('over'); dropUtc(si,assign); }); });
+  } else { rs.style.display='none'; lay.classList.remove('three'); }
+  const zoom=d3.zoom().scaleExtent([0.7,14]).on('zoom',e=>{ MAP.zoomT=e.transform; g.attr('transform',e.transform); gb.selectAll('circle').attr('r',n=>rad(n.d)/Math.sqrt(e.transform.k)).attr('stroke-width',n=>(movedSet.has(n.u)?2.5:0.8)/Math.sqrt(e.transform.k)); gf.selectAll('path').attr('stroke-width',1.8/Math.sqrt(e.transform.k)); g.selectAll('.seclabel').attr('font-size',11/Math.sqrt(e.transform.k)); g.selectAll('.mun').attr('stroke-width',.6/e.transform.k); });
+  svg.call(zoom); if(MAP.zoomT) svg.call(zoom.transform,MAP.zoomT);
+}
+function ensureMont(assign){ if(MAP.mode!=='mont'){ M={line:MAP.line,eixo:EIXO_OF[MAP.line],dist:MAP.dist,assign:assign.slice(),custom:(MAP.mode==='sug'&&SUG&&SUG.custom)?SUG.custom.map(c=>({...c})):[],dragU:null,hist:[],redo:[]}; MAP.mode='mont'; document.querySelectorAll('.modes button').forEach(x=>x.classList.toggle('active',x.dataset.m==='mont')); } }
+function dropUtc(to,assign){ const u=MAP.drag; MAP.drag=null; if(u==null||assign[u]===to) return; ensureMont(assign); M.hist=M.hist||[]; M.redo=[]; M.hist.push({u,from:M.assign[u],to}); M.assign[u]=to; mapDraw(); }
+function deleteCustom(si){ const L=D.lines[M.line]; const k=si-L.sectors.length; if(k<0||!M.custom[k]) return; let n=0; for(let u=0;u<M.assign.length;u++){ if(M.assign[u]===si){ M.assign[u]=L.assign[u]; n++; } else if(M.assign[u]>si){ M.assign[u]--; } }
+  M.custom.splice(k,1); M.hist=[]; M.redo=[]; MAP.open=MAP.open.filter(x=>x!==si).map(x=>x>si?x-1:x); if(MAP.sel===si) MAP.sel=null; toast(`Setor novo excluído; ${n} UTC(s) voltaram ao setor de origem`); if($('#mapSvg')) mapDraw(); if($('#board')) montBoard(); }
+function undoMove(){ if(!M.hist||!M.hist.length) return; const h=M.hist.pop(); M.redo=M.redo||[]; M.redo.push(h); M.assign[h.u]=h.from; toast('Desfeito: '+D.utcs[h.u].n); if($('#mapSvg')) mapDraw(); }
+function redoMove(){ if(!M.redo||!M.redo.length) return; const h=M.redo.pop(); M.hist.push(h); M.assign[h.u]=h.to; toast('Refeito: '+D.utcs[h.u].n); if($('#mapSvg')) mapDraw(); }
+function revertAll(){ if(!M.assign) return; const L=D.lines[M.line]; M.assign=L.assign.slice(); M.hist=[]; M.redo=[]; M.custom=[]; MAP.open=MAP.open.filter(si=>si<L.sectors.length); toast('Montagem revertida ao cenário atual'); mapDraw(); }
+function showTip(e,html){ const t=$('#tip'); const r=$('#mapWrap').getBoundingClientRect(); t.innerHTML=html; t.style.display='block'; t.style.left=Math.min(e.clientX-r.left+12,r.width-270)+'px'; t.style.top=(e.clientY-r.top+12)+'px'; }
+function hideTip(){ $('#tip').style.display='none'; }
+
+
+// ---------- painel montado ----------
+let PV={src:'atual',dist:null,si:null};
+const SPCOL=['#1F2D44','#12735A','#C8102E','#E87722','#5787A2','#9C6D00','#7C3AED','#0891B2','#B45309','#15693A','#6B7280','#DB2777'];
+function painelInit(){
+  const line=$('#line').value, L=D.lines[line];
+  let assign=L.assign, custom=[], srcLbl='cenário atual';
+  if(PV.src==='sug'){ if(!SUG||SUG.line!==line){ SUG=suggest(line); SUG.line=line; } assign=SUG.assign; custom=SUG.custom||[]; srcLbl='sugestão'; }
+  if(PV.src==='mont'){ if(M.eixo===EIXO_OF[line]&&M.assign){ assign=M.assign; custom=M.custom||[]; srcLbl='montagem'; } else { PV.src='atual'; } }
+  const secs=L.sectors.concat(custom);
+  const dists=Object.keys(L.districts).filter(d=>!/9900$/.test(d)).sort(); if(!PV.dist||!dists.find(d=>d.slice(4)===PV.dist.slice(4))) PV.dist=dists[0]; else PV.dist=dists.find(d=>d.slice(4)===PV.dist.slice(4));
+  const cols=secs.map((s,i)=>i).filter(i=>secs[i].d===PV.dist&&!isPoolSector(secs[i])); if(PV.si==null||!cols.includes(PV.si)) PV.si=cols[0];
+  const p=P(), T=target(line);
+  $('#v-painel').innerHTML=`<div class="toolbar"><label>Cenário <select id="pvSrc"><option value="atual" ${PV.src==='atual'?'selected':''}>Atual</option><option value="sug" ${PV.src==='sug'?'selected':''}>Sugestão</option><option value="mont" ${PV.src==='mont'?'selected':''}>Montagem</option></select></label>
+    <label>Distrito <select id="pvDist">${dists.map(d=>`<option value="${d}" ${d===PV.dist?'selected':''}>${d} · ${L.districts[d]}</option>`).join('')}</select></label>
+    <label>Setor <select id="pvSec">${cols.map(si=>`<option value="${si}" ${si===PV.si?'selected':''}>${secs[si].c} · ${secs[si].n}</option>`).join('')}</select></label>
+    <span class="eixo-tag">${$('#eixo').value}</span><span style="font-size:11px;color:var(--muted)">Linha em foco: <b>${line}</b> · alvo ${fmtN(T)} médicos (MDV ${lineTipo[line]==='S'?p.mdvS:p.mdvA} × ${p.dias} dias) · fonte: ${srcLbl}</span></div><div id="pvBody"></div>`;
+  $('#pvSrc').onchange=e=>{PV.src=e.target.value;painelInit();}; $('#pvDist').onchange=e=>{PV.dist=e.target.value;PV.si=null;painelInit();}; $('#pvSec').onchange=e=>{PV.si=+e.target.value;painelInit();};
+  $('#pvBody').innerHTML=buildPanel(L,assign,secs,PV.si); const nq=$('#nomQ'); if(nq){ nq.oninput=()=>{ PV.nomQ=nq.value; const pos=nq.selectionStart; $('#pvBody').innerHTML=buildPanel(L,assign,secs,PV.si); const n2=$('#nomQ'); n2.focus(); n2.setSelectionRange(pos,pos); n2.oninput=nq.oninput; }; }
+}
+// monta o painel do setor: grade por quartil (Q1→Q4), depois CLG até o teto, até fechar o alvo
+function assemblePanel(L,assign,si){
+  const Pn=PNL.lines[L.name]; if(!Pn) return null; const p=P(), T=target(L.name), grade=new Set(PNL.grade[L.name]||[]);
+  const esp={}; for(let u=0;u<assign.length;u++){ if(assign[u]!==si) continue; const m=Pn.sq[u]; if(!m) continue; for(const e in m){ esp[e]=esp[e]||{avail:[0,0,0,0],sel:[0,0,0,0]}; for(let q=0;q<4;q++) esp[e].avail[q]+=m[e][q]; } }
+  let need=T; const cappedSec=isCapped(L,assign,si); const clgCap=cappedSec?Math.floor(T*p.clgmax):Infinity;
+  const gradeEsp=Object.keys(esp).filter(e=>grade.has(e)&&e!=='CLG'); const others=Object.keys(esp).filter(e=>!grade.has(e)&&e!=='CLG').sort((a,b)=>esp[b].avail.reduce((x,y)=>x+y,0)-esp[a].avail.reduce((x,y)=>x+y,0));
+  for(let q=0;q<4&&need>0;q++){ // por quartil, distribui entre as especialidades da grade
+    gradeEsp.forEach(e=>{ const take=Math.min(esp[e].avail[q],need); esp[e].sel[q]+=take; need-=take; }); }
+  let clgTaken=0; if(esp.CLG){ for(let q=0;q<4&&need>0;q++){ const take=Math.min(esp.CLG.avail[q],need,clgCap-clgTaken); esp.CLG.sel[q]+=take; need-=take; clgTaken+=take; } }
+  // especialistas fora da grade recadastrados como clínicos (avaliação do representante), dentro do mesmo teto
+  for(let q=0;q<4&&need>0;q++){ others.forEach(e=>{ const take=Math.min(esp[e].avail[q],need,clgCap-clgTaken); esp[e].sel[q]+=take; need-=take; clgTaken+=take; }); }
+  const sum=a=>a.reduce((x,y)=>x+y,0);
+  const rows=Object.keys(esp).map(e=>({e,grade:grade.has(e)&&e!=='CLG',clg:e==='CLG',out:!grade.has(e)&&e!=='CLG',avail:esp[e].avail,sel:esp[e].sel,availT:sum(esp[e].avail),selT:sum(esp[e].sel)})).sort((a,b)=>(b.grade-a.grade)||(b.clg-a.clg)||(b.selT-a.selT)||(b.availT-a.availT));
+  const selT=rows.reduce((a,r)=>a+r.selT,0), gradeSel=rows.filter(r=>r.grade).reduce((a,r)=>a+r.selT,0), clgSel=clgTaken, outAvail=rows.filter(r=>r.out).reduce((a,r)=>a+r.availT-r.selT,0);
+  let pot=0; for(let u=0;u<assign.length;u++) if(assign[u]===si) pot+=L.pot[u];
+  const clgLeft=rows0=>0; const clinAvail=Object.keys(esp).filter(e=>!grade.has(e)||e==='CLG').reduce((a,e)=>a+sum(esp[e].avail),0); const clgLeftN=clinAvail-clgTaken; const clgBlocked = need>0 && clgLeftN>0;
+  return {rows,T,selT,gap:need,gradeSel,clgSel,clgPct:selT?clgSel/selT:0,outAvail,pot,clgCap:isFinite(clgCap)?clgCap:null,cappedSec,clgBlocked,clgLeft:clgLeftN};
+}
+function copyNominal(){ const ch=PV.chosen||[]; const rows=[['#','Médico','CRM','Especialidade','Quartil','Pontuação','Gold','UTC','UTC nome','Bairro','Cidade','UF']]; ch.forEach((d,i)=>{ const u=D.utcs[d[0]], c=D.cities[u.c]; rows.push([i+1,d[1],d[2],d[3],'Q'+(d[4]+1),d[5],d[6]?'SIM':'',u.id,u.n,d[7],c.n,c.uf]); }); copyText(rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(';')).join('\n')); }
+function buildPanel(L,assign,secs,si){
+  const s=secs[si], line=L.name, ls=eixoLines(), p=P();
+  const st=sectorStats(L,assign,si);
+  let html=`<div class="note"><b>${s.n}</b> (${s.c}) · ${st.utcs.length} UTCs · ${st.cities.length} cidades · raio ${fmtN(st.maxKm)} km · mercado ${fmtR(st.mkt)} · visitados hoje na linha ${line}: ${fmtN(panelStats(L,assign,si).vis)}${lineVis(si,assign)}${panelLine(si,assign)}</div>`;
+  const A=assemblePanel(L,assign,si);
+  if(!A){ return html+`<div class="note bad"><b>Sem painel por médico carregado para ${line}.</b> A simulação precisa do painel no formato do data_44 (médico, CRM, especialidade, quartil, UTC). Para referência: ${fmtN(sectorStats(L,assign,si).meds)} médicos pela régua atual e ${fmtN(panelStats(L,assign,si).pot)} não visitados POT>2 nas UTCs do setor.</div>`; }
+  const cls=A.gap>0?'bad':((A.cappedSec?false:A.clgPct>p.clgmax)?'warn':'ok');
+  const tiles=`<div class="tiles"><div class="tile ${cls}"><div class="k">Painel montado</div><div class="v">${fmtN(A.selT)}<small>/ ${fmtN(A.T)}</small></div></div><div class="tile ok"><div class="k">Especialidades da grade</div><div class="v">${fmtN(A.gradeSel)}<small>${fmtP(A.selT?A.gradeSel/A.selT:0)}</small></div></div><div class="tile ${(!A.cappedSec&&A.clgPct>p.clgmax)?'warn':''}"><div class="k">Clínicos (CLG + recadastrados)</div><div class="v">${fmtN(A.clgSel)}<small>${fmtP(A.clgPct)}${A.cappedSec?' · teto '+fmtN(A.clgCap)+' (setor novo)':' · sem teto (setor atual)'}</small></div></div><div class="tile ${A.gap>0?'bad':'ok'}"><div class="k">Faltam para o alvo</div><div class="v">${fmtN(A.gap)}</div></div><div class="tile"><div class="k">Especialistas fora da grade não aproveitados</div><div class="v">${fmtN(A.outAvail)}</div></div><div class="tile"><div class="k">Potencial não visitado POT>2</div><div class="v">${fmtN(A.pot)}<small>esp. não informada</small></div></div></div>`;
+  let diag=''; if(A.gap>0){ diag=`<div class="note bad"><b>Painel insuficiente nas especialidades da linha.</b> Faltam ${fmtN(A.gap)} médicos para ${fmtN(A.T)}. ${A.clgBlocked?`Há ${fmtN(A.clgLeft)} clínicos ou recadastráveis disponíveis além do teto de ${fmtP(p.clgmax)} para setor novo.`:''} Alternativas: incorporar médicos não visitados POT>2 da área (${fmtN(A.pot)}, especialidade a confirmar), trazer UTCs vizinhas no Montador, ou aceitar painel menor.</div>`; } else if(!A.cappedSec&&A.clgPct>p.clgmax){ diag=`<div class="note" style="border-left-color:var(--warn)"><b>Painel atual com ${fmtP(A.clgPct)} de clínicos</b>, acima dos ${fmtP(p.clgmax)} exigidos para setor novo (para setores atuais não há teto; fica como informação).</div>`; } else diag=`<div class="note ok"><b>Painel fecha com as especialidades da linha</b>: ${fmtN(A.gradeSel)} de grade e ${fmtN(A.clgSel)} clínicos (${fmtP(A.clgPct)}).</div>`;
+  // stacked bar
+  const selRows=A.rows.filter(r=>r.selT>0); let bar='<div class="pbar">', leg='<div class="plegend">';
+  selRows.forEach((r,i)=>{ const c=r.clg?'#9CA3AF':SPCOL[i%SPCOL.length]; bar+=`<i style="width:${r.selT/A.T*100}%;background:${c}" title="${r.e}: ${r.selT}"></i>`; leg+=`<span><b style="background:${c}"></b>${r.e} ${fmtN(r.selT)} (${fmtP(r.selT/A.selT)})</span>`; });
+  if(A.gap>0){ bar+=`<i style="width:${A.gap/A.T*100}%;background:repeating-linear-gradient(45deg,#fde8e8,#fde8e8 4px,#fff 4px,#fff 8px)" title="faltam ${A.gap}"></i>`; leg+=`<span><b style="background:#fde8e8;border:1px solid var(--bad)"></b>faltam ${fmtN(A.gap)}</span>`; }
+  bar+='</div>'; leg+='</div>';
+  // table
+  const mix=DOCS.mix[line]||{}; let tb=`<table><thead><tr><th>Especialidade</th><th>Classe</th><th class="num" title="participação da especialidade no painel montado">Peso no painel</th><th class="num" title="participação média da especialidade no painel da linha em toda a SPI (referência)">Peso médio na linha (SPI)</th><th class="num">Q1 disp.</th><th class="num">Q1 sel.</th><th class="num">Q2 disp.</th><th class="num">Q2 sel.</th><th class="num">Q3 disp.</th><th class="num">Q3 sel.</th><th class="num">Q4 disp.</th><th class="num">Q4 sel.</th><th class="num">Disponíveis</th><th class="num">No painel</th><th class="num">Sobram</th></tr></thead><tbody>`;
+  A.rows.forEach(r=>{ const w=A.selT?r.selT/A.selT:0, wm=mix[r.e]||0; const dv=w-wm; tb+=`<tr style="${r.out?'color:var(--muted)':''}"><td><b>${r.e}</b></td><td>${r.grade?'<span class="badge ok">grade</span>':r.clg?'<span class="badge warn">CLG (compõe)</span>':(r.selT?'<span class="badge warn">recadastrado como clínico</span>':'<span class="badge pool">fora da grade</span>')}</td><td class="num"><b>${r.selT?fmtP(w):''}</b></td><td class="num">${wm?fmtP(wm):''}${r.selT&&wm&&Math.abs(dv)>=0.05?` <span class="badge ${dv>0?'warn':'bad'}" title="desvio em relação à média da linha">${dv>0?'+':''}${fmtP(dv)}</span>`:''}</td>${[0,1,2,3].map(q=>`<td class="qcell">${r.avail[q]||''}</td><td class="qcell"><b>${r.sel[q]||''}</b></td>`).join('')}<td class="num">${fmtN(r.availT)}</td><td class="num"><b>${fmtN(r.selT)}</b></td><td class="num">${fmtN(r.availT-r.selT)}</td></tr>`; });
+  tb+=`<tr style="background:var(--sky);font-weight:700"><td>Total</td><td></td><td class="num">100%</td><td></td>${[0,1,2,3].map(q=>`<td class="qcell">${fmtN(A.rows.reduce((a,r)=>a+r.avail[q],0))}</td><td class="qcell">${fmtN(A.rows.reduce((a,r)=>a+r.sel[q],0))}</td>`).join('')}<td class="num">${fmtN(A.rows.reduce((a,r)=>a+r.availT,0))}</td><td class="num">${fmtN(A.selT)}</td><td class="num">${fmtN(A.rows.reduce((a,r)=>a+r.availT-r.selT,0))}</td></tr></tbody></table>`;
+  // other lines of the eixo, compact
+  let oth=`<h2>Mesmo setor nas outras linhas do eixo</h2><div class="grid">`;
+  ls.filter(l=>l!==line).forEach(l=>{ const Ll=D.lines[l]; const B=assemblePanel(Ll,assign,si); if(!B){ oth+=`<div class="sec pool"><div class="name">${l}</div><div class="code">sem painel carregado</div></div>`; return; } const c=B.gap>0?'bad':(B.clgPct>p.clgmax?'warn':'ok'); oth+=`<div class="sec ${c}" onclick="$('#line').value='${l}';refresh();switchView('painel')"><div class="name">${l}</div><div class="meds">${fmtN(B.selT)} <small>/ ${fmtN(B.T)}</small></div><div class="meta"><span>grade ${fmtN(B.gradeSel)}</span><span>CLG ${fmtN(B.clgSel)} (${fmtP(B.clgPct)})</span><span>faltam ${fmtN(B.gap)}</span><span>fora da grade ${fmtN(B.outAvail)}</span></div><div style="margin-top:4px;font-size:10.5px;color:var(--muted)">${B.rows.filter(r=>r.selT).slice(0,6).map(r=>r.e+' '+r.selT).join(' · ')}</div></div>`; });
+  oth+='</div>';
+  // lista nominal: dentro de cada especialidade e quartil selecionados, entram os de maior pontuação
+  let nom=''; const DL=DOCS.lines[line]; if(DL){ const inSec=new Set(); for(let u=0;u<assign.length;u++) if(assign[u]===si) inSec.add(u); const cand=DL.filter(d=>inSec.has(d[0]));
+    const byKey={}; cand.forEach(d=>{ const k=d[3]+'|'+d[4]; (byKey[k]=byKey[k]||[]).push(d); }); Object.values(byKey).forEach(a=>a.sort((x,y)=>y[5]-x[5]||(y[6]-x[6])));
+    const chosen=[]; const left=[]; A.rows.forEach(r=>{ for(let q=0;q<4;q++){ const a=byKey[r.e+'|'+q]||[]; a.forEach((d,i)=>{ if(i<r.sel[q]) chosen.push(d); else left.push(d); }); } });
+    chosen.sort((x,y)=>x[4]-y[4]||y[5]-x[5]);
+    PV.nomQ=PV.nomQ||''; const q=PV.nomQ.toUpperCase(); const filt=chosen.filter(d=>!q||d[1].toUpperCase().includes(q)||d[3].includes(q)||d[2].includes(q)||(D.utcs[d[0]].n||'').toUpperCase().includes(q));
+    nom=`<h2>Painel montado, médico a médico · ${line} <span class="count">${fmtN(chosen.length)} médicos · ${fmtN(left.filter(d=>(PNL.grade[line]||[]).includes(d[3])).length)} da grade ficam de fora · ${fmtN(left.filter(d=>!(PNL.grade[line]||[]).includes(d[3])).length)} fora da grade</span></h2>
+      <div class="toolbar"><input id="nomQ" placeholder="Filtrar por nome, CRM, especialidade ou UTC" value="${PV.nomQ}" style="width:320px"><button class="btn small" onclick="copyNominal()">Copiar lista (CSV)</button><span class="mhint">Critério dentro de cada especialidade e quartil: maior pontuação primeiro; Gold List desempata.</span></div>
+      <div style="max-height:480px;overflow:auto"><table><thead><tr><th>#</th><th>Médico</th><th>CRM</th><th>Esp.</th><th>Quartil</th><th class="num">Pontuação</th><th>Gold</th><th>UTC</th><th>Bairro</th><th>Cidade</th></tr></thead><tbody>${filt.slice(0,600).map((d,i)=>{ const u=D.utcs[d[0]], c=D.cities[u.c]; return `<tr><td>${i+1}</td><td>${d[1]}</td><td>${d[2]}</td><td><b>${d[3]}</b></td><td>Q${d[4]+1}</td><td class="num">${d[5].toLocaleString('pt-BR')}</td><td>${d[6]?'<span class="badge ok">gold</span>':''}</td><td>${u.id} ${u.n}</td><td>${d[7]}</td><td>${c.n}</td></tr>`; }).join('')}</tbody></table>${filt.length>600?`<div class="mhint" style="padding:6px">Mostrando 600 de ${filt.length}; use o filtro.</div>`:''}</div>`;
+    PV.chosen=chosen; }
+  return html+tiles+diag+`<h2>Composição do painel montado · ${line}</h2>`+bar+leg+`<h2>Por especialidade e quartil <span class="count">disp. = cadastrados nas UTCs do setor (sem Block) · sel. = entram no painel</span></h2>`+tb+nom+oth+`<p class="mhint" style="margin-top:10px">Regra de montagem: especialidades da grade primeiro, do Q1 ao Q4, distribuídas entre as especialidades; depois clínicos (CLG) do Q1 ao Q4; depois especialistas fora da grade recadastrados como clínicos (avaliação do representante). Em setor novo ou alterado, clínicos limitados a ${fmtP(p.clgmax)} do alvo; em setor atual intacto, sem teto. Alvo = MDV × dias úteis. O quartil é o do cadastro no painel da linha; médicos em Block List foram excluídos.</p>`;
+}
+// ---------- racional (caso de criação de setor) ----------
+let CS={dist:null,si:null,si2:null,mode:'split2',text:''};
+function casoInit(){
+  const line=$('#line').value, L=D.lines[line];
+  const dists=Object.keys(L.districts).filter(d=>!/9900$/.test(d)).sort(); if(!CS.dist||!dists.find(d=>d.slice(4)===CS.dist.slice(4))) CS.dist=dists[0]; else CS.dist=dists.find(d=>d.slice(4)===CS.dist.slice(4));
+  const cols=L.sectors.map((s,i)=>i).filter(i=>L.sectors[i].d===CS.dist&&!isPoolSector(L.sectors[i])); if(CS.si==null||!cols.includes(CS.si)) CS.si=cols[0]; if(CS.si2!=null&&(!cols.includes(CS.si2)||CS.si2===CS.si)) CS.si2=null;
+  const hasSug=SUG&&SUG.line===line&&(SUG.custom||[]).some(c=>c.origin===CS.si||c.origin2===CS.si);
+  const hasMont=M.eixo===EIXO_OF[line]&&M.assign&&(M.custom||[]).length>0;
+  $('#v-caso').innerHTML=`<div class="toolbar"><label>Distrito <select id="csDist">${dists.map(d=>`<option value="${d}" ${d===CS.dist?'selected':''}>${d} · ${L.districts[d]}</option>`).join('')}</select></label>
+    <label>Setor atual <select id="csSec">${cols.map(si=>`<option value="${si}" ${si===CS.si?'selected':''}>${L.sectors[si].c} · ${L.sectors[si].n}</option>`).join('')}</select></label>
+    <label>Setor 2 (para juntar) <select id="csSec2"><option value="">nenhum</option>${cols.filter(si=>si!==CS.si).map(si=>`<option value="${si}" ${si===CS.si2?'selected':''}>${L.sectors[si].c} · ${L.sectors[si].n}</option>`).join('')}</select></label>
+    <label>Proposta <select id="csMode"><option value="split2" ${CS.mode==='split2'?'selected':''}>Dividir em 2 (corte geográfico)</option><option value="split3" ${CS.mode==='split3'?'selected':''}>Dividir em 3</option><option value="merge2" ${CS.mode==='merge2'?'selected':''} ${CS.si2!=null?'':'disabled'}>Juntar os 2 e redividir em 2</option><option value="merge3" ${CS.mode==='merge3'?'selected':''} ${CS.si2!=null?'':'disabled'}>Juntar os 2 e dividir em 3</option><option value="merge4" ${CS.mode==='merge4'?'selected':''} ${CS.si2!=null?'':'disabled'}>Juntar os 2 e dividir em 4</option><option value="sug" ${CS.mode==='sug'?'selected':''} ${hasSug?'':'disabled'}>Usar a sugestão automática</option><option value="mont" ${CS.mode==='mont'?'selected':''} ${hasMont?'':'disabled'}>Usar a minha montagem</option></select></label>
+    <button class="btn primary" onclick="copyText(CS.text)">Copiar racional (texto)</button><span class="eixo-tag">${$('#eixo').value}</span></div><div id="csBody"></div>`;
+  $('#csDist').onchange=e=>{CS.dist=e.target.value;CS.si=null;CS.si2=null;casoInit();}; $('#csSec').onchange=e=>{CS.si=+e.target.value; if(CS.si2===CS.si) CS.si2=null; casoInit();}; $('#csSec2').onchange=e=>{CS.si2=e.target.value===''?null:+e.target.value; if(CS.si2==null&&/^merge/.test(CS.mode)) CS.mode='split2'; if(CS.si2!=null&&!/^merge/.test(CS.mode)) CS.mode='merge3'; casoInit();}; $('#csMode').onchange=e=>{CS.mode=e.target.value;casoInit();};
+  $('#csBody').innerHTML=buildCase(L,CS.si);
+}
+// devolve {assign, secs, parts:[índices dos setores resultantes]} para a proposta escolhida
+function caseProposal(L,si){
+  const line=L.name;
+  if(CS.mode==='sug'&&SUG&&SUG.line===line){ const secs=L.sectors.concat(SUG.custom||[]); const parts=[si]; (SUG.custom||[]).forEach((c,k)=>{ if(c.origin===si||c.origin2===si){ parts.push(L.sectors.length+k); if(c.origin2===si&&!parts.includes(c.origin)) parts.push(c.origin); if(c.origin===si&&c.origin2!=null&&!parts.includes(c.origin2)) parts.push(c.origin2); } }); return {assign:SUG.assign,secs,parts:[...new Set(parts)],lbl:'sugestão automática'}; }
+  if(CS.mode==='mont'&&M.eixo===EIXO_OF[line]&&M.assign){ const secs=L.sectors.concat(M.custom||[]); const parts=new Set([si]); for(let u=0;u<M.assign.length;u++){ if(L.assign[u]===si&&M.assign[u]!==si) parts.add(M.assign[u]); } return {assign:M.assign,secs,parts:[...parts].filter(x=>!isPoolSector(secs[x])),lbl:'minha montagem'}; }
+  if(/^merge/.test(CS.mode)&&CS.si2!=null){ const n=+CS.mode.slice(5); const B=CS.si2; const assign=L.assign.slice(); for(let u=0;u<assign.length;u++) if(assign[u]===B) assign[u]=si;
+    const parts=splitSector(L,assign,si,n); const sa=sectorStats(L,L.assign,si), sb=sectorStats(L,L.assign,B);
+    const cenOf=utcs=>{ let la=0,lo_=0,w=0; utcs.forEach(u=>{ const c=D.cities[D.utcs[u].c]; const ww=Math.max(docs(L,u),0.5); la+=c.la*ww; lo_+=c.lo*ww; w+=ww; }); return w?{la:la/w,lo:lo_/w}:null; };
+    const c0=cenOf(parts[0]), cl=cenOf(parts[parts.length-1]); const firstIsA=(c0&&cl&&sa.cen&&sb.cen)?(km(c0,sa.cen)+km(cl,sb.cen)<=km(c0,sb.cen)+km(cl,sa.cen)):true;
+    const custom=[]; const idx=[]; parts.forEach((utcs,k)=>{ let tgt; if(k===0) tgt=firstIsA?si:B; else if(k===parts.length-1) tgt=firstIsA?B:si; else { tgt=L.sectors.length+custom.length; custom.push({c:'NOVO'+(custom.length+1),n:L.sectors[si].n+' + '+L.sectors[B].n+' '+(k+1),d:L.sectors[si].d,origin:si,origin2:B,split:true,fusion:true}); } idx.push(tgt); utcs.forEach(u=>assign[u]=tgt); });
+    return {assign,secs:L.sectors.concat(custom),parts:idx,lbl:`fusão de ${L.sectors[si].n} + ${L.sectors[B].n} e divisão em ${n} (corte geográfico)`,merged:B}; }
+  const n=CS.mode==='split3'?3:2; const assign=L.assign.slice(); const parts=splitSector(L,assign,si,n); const custom=[]; const idx=[si];
+  parts.forEach((utcs,k)=>{ if(k===0) return; const ni=L.sectors.length+custom.length; custom.push({c:'NOVO'+(k),n:L.sectors[si].n+' '+(k+1),d:L.sectors[si].d,origin:si,split:true}); idx.push(ni); utcs.forEach(u=>assign[u]=ni); });
+  return {assign,secs:L.sectors.concat(custom),parts:idx,lbl:`divisão em ${n} (corte geográfico)`};
+}
+function specTable(L,assign,si){ const A=assemblePanel(L,assign,si); const T=target(L.name); if(!A){ const ps=panelStats(L,assign,si); return {A:null,html:`<div class="mhint">Sem painel por médico para ${L.name}. Referência: <b>${fmtN(sectorStats(L,assign,si).meds)}</b> médicos pela régua, ${fmtN(ps.vis)} visitados, ${fmtN(ps.pot)} não visitados POT>2 (sem especialidade).</div>`}; }
+  const rows=A.rows.filter(r=>r.availT>0); return {A,html:`<table class="spt"><thead><tr><th>Esp.</th><th class="num">Cadastr.</th><th class="num">No painel</th><th class="num">Peso</th></tr></thead><tbody>${rows.map(r=>`<tr style="${r.out?'color:var(--muted)':''}"><td>${r.e}${r.clg?' <small>(CLG)</small>':r.out?(r.selT?' <small>(recad. clínico)</small>':' <small>(fora)</small>'):''}</td><td class="num">${r.availT}</td><td class="num"><b>${r.selT||''}</b></td><td class="num">${r.selT?fmtP(r.selT/A.selT):''}</td></tr>`).join('')}<tr style="background:var(--sky);font-weight:700"><td>Total</td><td class="num">${fmtN(rows.reduce((a,r)=>a+r.availT,0))}</td><td class="num">${fmtN(A.selT)} / ${fmtN(T)}</td><td class="num">${A.gap?`<span class="badge bad">faltam ${A.gap}</span>`:'<span class="badge ok">fecha</span>'}</td></tr></tbody></table>`}; }
+function buildCase(L,si){
+  const line=L.name, ls=eixoLines(), p=P(), T=target(line), s=L.sectors[si];
+  const prop=caseProposal(L,si); const secs=prop.secs; const curSecs=prop.merged!=null?[si,prop.merged]:[si]; const cur=sectorStats(L,L.assign,si);
+  const txt=[]; const push=t=>txt.push(t);
+  const reguaLbl={vis:'só visitados',pot:'visitados + NV POT>2',nv:'visitados + NV total',painel:'painel cadastrado: grade + clínicos',painelpot:'painel + POT>2 como clínicos (simulação)'}[BASE];
+  let html=''; curSecs.forEach((cs,ci)=>{ const sc=L.sectors[cs], st0=sectorStats(L,L.assign,cs);
+    html+=`<div class="case"><h3>1${curSecs.length>1?String.fromCharCode(97+ci):''}. Situação atual · ${sc.n} (${sc.c}) · ${CS.dist} ${L.districts[CS.dist]}</h3><div class="lead">${st0.utcs.length} UTCs em ${st0.cities.length} cidades, raio de ${fmtN(st0.maxKm)} km. Mercado ${fmtR(st0.mkt)}, demanda EMS ${fmtR(st0.ems)} (share ${fmtP(st0.share)}). Médicos pela régua atual (${reguaLbl}): <b>${fmtN(st0.meds)}</b> para um alvo de <b>${fmtN(T)}</b> por painel (MDV ${lineTipo[line]==='S'?p.mdvS:p.mdvA} × ${p.dias} dias úteis). Isso representa <b>${(st0.meds/T).toLocaleString('pt-BR',{maximumFractionDigits:1})} painéis</b>.</div>
+    <div class="cmp" style="margin-top:10px">${ls.map(l=>{ const Ll=D.lines[l]; const t=specTable(Ll,L.assign,cs); const ps=panelStats(Ll,L.assign,cs); const c=t.A?(t.A.gap?'bad':'ok'):''; return `<div class="box ${c}"><div class="ttl">${l}</div><div class="big">${t.A?fmtN(t.A.selT):fmtN(sectorStats(Ll,L.assign,cs).meds)} <small>${t.A?'painel montado / alvo '+fmtN(target(l)):'pela régua'} · ${fmtN(ps.vis)} visitados hoje</small></div>${t.html}</div>`; }).join('')}</div></div>`; });
+  if(curSecs.length>1){ const tot=curSecs.reduce((a,cs)=>a+sectorStats(L,L.assign,cs).meds,0); html+=`<div class="note"><b>Soma dos dois setores:</b> ${fmtN(tot)} médicos pela régua = ${(tot/T).toLocaleString('pt-BR',{maximumFractionDigits:1})} painéis de ${fmtN(T)}.</div>`; }
+  push(`RACIONAL PARA CRIAÇÃO DE SETOR · ${s.n} (${s.c}) · ${L.districts[CS.dist]} · eixo ${$('#eixo').value}`);
+  curSecs.forEach((cs,ci)=>{ const sc=L.sectors[cs], st0=sectorStats(L,L.assign,cs); push(`1${curSecs.length>1?String.fromCharCode(97+ci):''}. Situação atual · ${sc.n}: ${st0.utcs.length} UTCs, ${st0.cities.length} cidades, raio ${fmtN(st0.maxKm)} km, mercado ${fmtR(st0.mkt)}, share ${fmtP(st0.share)}. ${fmtN(st0.meds)} médicos pela régua para alvo de ${fmtN(T)} = ${(st0.meds/T).toFixed(1)} painéis.`);
+    ls.forEach(l=>{ const Ll=D.lines[l]; const A=assemblePanel(Ll,L.assign,cs); const ps=panelStats(Ll,L.assign,cs); if(A){ push(`   ${l}: painel montado ${A.selT}/${target(l)} (${A.rows.filter(r=>r.selT).map(r=>r.e+' '+r.selT).join(', ')}); ${A.outAvail} especialistas fora da grade não aproveitados; ${ps.vis} visitados hoje.`); } else push(`   ${l}: ${sectorStats(Ll,L.assign,cs).meds} médicos pela régua, ${ps.vis} visitados, ${ps.pot} não visitados POT>2 (sem painel por médico carregado).`); }); });
+  if(curSecs.length>1){ const tot=curSecs.reduce((a,cs)=>a+sectorStats(L,L.assign,cs).meds,0); push(`   Soma dos dois setores: ${fmtN(tot)} médicos = ${(tot/T).toFixed(1)} painéis de ${fmtN(T)}.`); }
+  // proposal
+  html+=`<div class="case"><h3>2. Proposta · ${prop.lbl}: ${prop.parts.length} setores</h3><div class="cmp">`;
+  push(`2. Proposta (${prop.lbl}): ${prop.parts.length} setores.`);
+  const verd=[];
+  prop.parts.forEach((pi,k)=>{ const ps=secs[pi]; const st=sectorStats(L,prop.assign,pi); const isNew=pi>=L.sectors.length;
+    html+=`<div class="box"><div class="ttl">${isNew?'<span class="badge pool">novo</span> ':''}${ps.n}</div><div class="mhint">${st.utcs.length} UTCs · ${st.cities.length} cidades · raio ${fmtN(st.maxKm)} km · ${fmtR(st.mkt)} · ${st.cities.slice(0,6).join(', ')}${st.cities.length>6?'…':''}</div>`;
+    push(`   Setor ${k+1}${isNew?' (novo)':''}: ${ps.n} · ${st.utcs.length} UTCs, ${st.cities.length} cidades (${st.cities.slice(0,5).join(', ')}), raio ${fmtN(st.maxKm)} km, mercado ${fmtR(st.mkt)}, ${fmtN(st.meds)} médicos pela régua.`);
+    ls.forEach(l=>{ const Ll=D.lines[l]; const t=specTable(Ll,prop.assign,pi); const c=t.A?(t.A.gap?'bad':'ok'):'pool'; html+=`<div style="margin-top:8px;font-weight:700;font-size:11.5px;display:flex;justify-content:space-between"><span>${l}</span><span class="badge ${c}">${t.A?(t.A.gap?'faltam '+t.A.gap:'fecha '+t.A.selT+'/'+target(l)+' · clín. '+fmtP(t.A.clgPct)):fmtN(sectorStats(Ll,prop.assign,pi).meds)+' régua'}</span></div>${t.html}`;
+      if(t.A){ verd.push({l,k,ok:!t.A.gap,gap:t.A.gap,sel:t.A.selT,T:target(l),clg:t.A.clgPct}); push(`      ${l}: ${t.A.selT}/${target(l)} ${t.A.gap?'(faltam '+t.A.gap+')':'(fecha)'} · ${t.A.rows.filter(r=>r.selT).map(r=>r.e+' '+r.selT).join(', ')}`); } else { const m=sectorStats(Ll,prop.assign,pi).meds; verd.push({l,k,ok:m>=target(l)*(1-p.tol),gap:Math.max(0,Math.round(target(l)-m)),sel:m,T:target(l),clg:0,noPanel:true}); push(`      ${l}: ${m} médicos pela régua (sem painel por médico).`); } });
+    html+='</div>'; });
+  html+='</div></div>';
+  // verdict
+  const lines=[...new Set(verd.map(v=>v.l))]; const allOk=verd.every(v=>v.ok); const anyNoPanel=verd.some(v=>v.noPanel);
+  let vh=`<div class="verdict ${allOk?'':'bad'}"><b>3. Conclusão.</b> `;
+  if(allOk) vh+=`Com a ${prop.merged!=null?'fusão e redivisão':'divisão'}, cada um dos ${prop.parts.length} setores fecha o painel de ${fmtN(T)} médicos em todas as linhas do eixo${anyNoPanel?' (nas linhas sem painel por médico, pela régua)':''}. Há médicos suficientes, nas especialidades da linha, para ${prop.parts.length} painéis onde hoje há um. ${prop.merged!=null?`Os dois setores atuais somam ${(curSecs.reduce((a,cs)=>a+sectorStats(L,L.assign,cs).meds,0)/T).toFixed(1)} painéis em dois representantes;`:`O setor atual concentra ${(cur.meds/T).toFixed(1)} painéis em um único representante;`} a criação do setor novo corrige a subcobertura respeitando o teto de ${fmtP(p.clgmax)} de clínicos em cada setor proposto.`;
+  else { const bad=verd.filter(v=>!v.ok); vh+=`A divisão não fecha em ${bad.length} caso(s): ${bad.map(v=>`${v.l} no setor ${v.k+1} (${fmtN(v.sel)}/${fmtN(v.T)}, faltam ${fmtN(v.gap)})`).join('; ')}. Antes de defender o headcount, complete esses painéis com não visitados POT>2 da área ou ajuste o corte no Montador; ou defenda a divisão apenas para as linhas que fecham.`; }
+
+  vh+='</div>';
+  push(`3. Conclusão: ${allOk?'cada setor fecha o painel em todas as linhas; há médicos suficientes nas especialidades da linha para '+prop.parts.length+' painéis.':'a divisão não fecha em: '+verd.filter(v=>!v.ok).map(v=>v.l+' setor '+(v.k+1)+' ('+v.sel+'/'+v.T+')').join('; ')+'.'}`);
+  push(`Premissas: alvo = MDV × ${p.dias} dias úteis; régua ${ {vis:'só visitados',pot:'visitados + NV POT>2',nv:'visitados + NV total',painel:'painel cadastrado: grade + clínicos',painelpot:'painel + POT>2 como clínicos (simulação)'}[BASE] }; painel montado com especialidades da grade (Q1→Q4), depois clínicos e especialistas recadastrados como clínicos, limitados a ${fmtP(p.clgmax)} nos setores novos ou alterados; grade transcrita do Ciclo 9'2026. Gerado em ${new Date().toLocaleString('pt-BR')}.`);
+  CS.text=txt.join('\n');
+  return html+vh+`<details style="margin-top:10px"><summary>Texto do racional (para copiar)</summary><textarea readonly style="height:260px">${CS.text}</textarea></details>`;
+}
+// ---------- excel de-para ----------
+async function exportXlsx(){
+  const line=$('#line').value; const L=D.lines[line]; const T=target(line), p=P();
+  let assign, custom=[], origem='montagem manual';
+  const ex=EIXO_OF[line], ls=D.eixos[ex];
+  if(M.eixo===ex && M.assign){ assign=M.assign; custom=M.custom||[]; }
+  else if(SUG && SUG.line===line){ assign=SUG.assign; custom=SUG.custom||[]; origem='sugestão automática'; }
+  else { toast('Nenhuma montagem ou sugestão desta linha ainda'); return; }
+  const secs=L.sectors.concat(custom); const poolIdx=L.sectors.findIndex(isPoolSector);
+  const stA={}, stB={}; secs.forEach((s,si)=>{ stB[si]=sectorStats(L,L.assign,si); stA[si]=sectorStats(L,assign,si); });
+  const baseLbl={vis:'Só visitados',pot:'Visitados + NV POT>2',nv:'Referência: visitados + NV total',painel:'Regra: painel cadastrado (grade + clínicos)',painelpot:'Simulação: painel + não visitados POT>2 como clínicos'}[BASE];
+  const rows=[]; for(let u=0;u<assign.length;u++){ const from=L.assign[u], to=assign[u]; if(from===to) continue; const c=D.cities[D.utcs[u].c]; const sv=SUG&&SUG.line===line? SUG.moves.find(m=>m.u===u):null;
+    const codesOf=si=> si<L.sectors.length ? ls.map(l=>D.lines[l].sectors[si].c).join(' / ') : secs[si].c; const medsOf=u=>Object.fromEntries([...ls.map(l=>['Médicos régua '+l, docs(D.lines[l],u)]),...ls.map(l=>['Visitados '+l, D.lines[l].vis[u]]),...ls.filter(l=>PNL.lines[l]).map(l=>['Painel '+l+' (esp.)', PNL.lines[l].spec[u]||''])]);
+    rows.push({'Eixo':ex,'Linha em foco':line,'Distrito DE':secs[from].d+' - '+(L.districts[secs[from].d]||''),'Setor DE (código)':secs[from].c,'Setor DE (nome)':secName(secs[from]),'Códigos DE nas 4 linhas':codesOf(from),'Setor PARA (código)':secs[to].c,'Setor PARA (nome)':secName(secs[to]),'Códigos PARA nas 4 linhas':codesOf(to),'Distrito PARA':secs[to].d+' - '+(L.districts[secs[to].d]||''),'UTC (número)':D.utcs[u].id,'UTC (nome)':D.utcs[u].n,'Cidade':c.n,'UF':c.uf,'Bairro':D.utcs[u].b||'','Médicos (régua, linha em foco)':docs(L,u),...medsOf(u),'Visitados':L.vis[u],'NV POT>2':L.pot[u],'NV total':L.nv[u],'Demanda Mercado (R$)':L.mkt[u],'Demanda EMS (R$)':L.ems[u],'Share':L.mkt[u]?L.ems[u]/L.mkt[u]:0,'km ao centro do destino':stA[to].cen?+km(stA[to].cen,c).toFixed(1):null,'Motivo':sv&&sv.to===to?sv.reason:'manual','Tipo':from===poolIdx?'entrada do Setor 9999':to===poolIdx?'devolvida ao Setor 9999':'transferência'}); }
+  rows.sort((a,b)=>a['Setor DE (código)'].localeCompare(b['Setor DE (código)'])||b['Médicos (régua)']-a['Médicos (régua)']);
+  const res=[]; secs.forEach((s,si)=>{ if(isPoolSector(s)) return; const b=stB[si],a=stA[si]; if(b.utcs.length===0&&a.utcs.length===0) return; const ent=rows.filter(r=>r['Setor PARA (código)']===s.c).length, sai=rows.filter(r=>r['Setor DE (código)']===s.c).length;
+    const perLine={}; ls.forEach(l=>{ const Ll=D.lines[l]; if(si>=Ll.sectors.length) return; const bb=sectorStats(Ll,Ll.assign,si).meds, aa=sectorStats(Ll,assign,si).meds; perLine[l+' antes']=bb; perLine[l+' depois']=aa; perLine[l+' status']=stLabel[status(aa,target(l),p.tol)]; let vb=0,va=0; for(let u=0;u<assign.length;u++){ if(Ll.assign[u]===si) vb+=Ll.vis[u]; if(assign[u]===si) va+=Ll.vis[u]; } perLine['Visitados '+l+' antes']=vb; perLine['Visitados '+l+' depois']=va; const pe=panelEval(Ll,assign,si); if(pe.has){ perLine['Painel grade '+l]=pe.pg; perLine['Painel CLG '+l]=pe.pc; perLine['% CLG '+l]=pe.clg; perLine['Fora da grade '+l]=pe.po; perLine['Block '+l]=pe.pb; perLine['Gold '+l]=pe.gold; } perLine['POT>2 '+l]=pe.pot; perLine['Painel status '+l]=pe.flag; });
+    res.push({'Eixo':ex,'Linha em foco':line,'Distrito':s.d+' - '+(L.districts[s.d]||''),'Setor (código)':s.c,'Setor (nome)':s.n,'Alvo médicos':T,'Médicos antes':b.meds,'Médicos depois':a.meds,'Diferença':a.meds-b.meds,'Status antes':stLabel[status(b.meds,T,p.tol)],'Status depois':stLabel[status(a.meds,T,p.tol)],...perLine,'UTCs antes':b.utcs.length,'UTCs depois':a.utcs.length,'UTCs que entram':ent,'UTCs que saem':sai,'Cidades antes':b.cities.length,'Cidades depois':a.cities.length,'Mercado antes (R$)':b.mkt,'Mercado depois (R$)':a.mkt,'Dem. EMS antes (R$)':b.ems,'Dem. EMS depois (R$)':a.ems,'Share antes':b.share,'Share depois':a.share,'Raio antes (km)':+b.maxKm.toFixed(0),'Raio depois (km)':+a.maxKm.toFixed(0)}); });
+  const si_codes=si=> si<L.sectors.length ? ls.map(l=>D.lines[l].sectors[si].c).join(' / ') : secs[si].c;
+  const full=[]; for(let u=0;u<assign.length;u++){ const to=assign[u]; if(to===poolIdx) continue; const c=D.cities[D.utcs[u].c]; full.push({'Eixo':ex,'Distrito':secs[to].d,'Códigos nas 4 linhas':si_codes(to),'Setor (código)':secs[to].c,'Setor (nome)':secs[to].n,'UTC (número)':D.utcs[u].id,'UTC (nome)':D.utcs[u].n,'Cidade':c.n,'UF':c.uf,'Bairro':D.utcs[u].b||'','Médicos (régua)':docs(L,u),...Object.fromEntries(ls.map(l=>['Visitados '+l, D.lines[l].vis[u]])),'NV POT>2':L.pot[u],'NV total':L.nv[u],'Demanda Mercado (R$)':L.mkt[u],'Demanda EMS (R$)':L.ems[u],'Setor anterior (código)':L.sectors[L.assign[u]].c,'Setor anterior (nome)':secName(L.sectors[L.assign[u]]),'Mudou':L.assign[u]!==to?'SIM':'NÃO'}); }
+  full.sort((a,b)=>a['Setor (código)'].localeCompare(b['Setor (código)'])||b['Médicos (régua)']-a['Médicos (régua)']);
+  const chk=CHECK[ex]; const cons=[{'Verificação':'Linhas do eixo','Resultado':ls.join(', ')},{'Verificação':'Setores por linha','Resultado':chk.secCount.map((n,i)=>ls[i]+': '+(n-1)).join(' · ')},{'Verificação':'UTCs em setor diferente entre linhas','Resultado':chk.utcs.length},{'Verificação':'Setores com nome diferente entre linhas','Resultado':chk.nameDiv.length},{'Verificação':'Estrutura consistente','Resultado':chk.ok?'SIM':'NÃO'}]; chk.utcs.forEach(d=>{ const u=D.utcs[d.u]; cons.push({'Verificação':'Divergência: '+u.id+' '+u.n,'Resultado':ls.map((l,i)=>l+'='+d.sufs[i]).join(' · ')}); });
+  const params=[{'Parâmetro':'Eixo','Valor':ex+' ('+ls.join(', ')+')'},{'Parâmetro':'Linha em foco (números exibidos)','Valor':line},{'Parâmetro':'MDV ampliação','Valor':p.mdvA},{'Parâmetro':'MDV segmentação','Valor':p.mdvS},{'Parâmetro':'Dias úteis (maior ciclo)','Valor':p.dias},{'Parâmetro':'Alvo de médicos por setor','Valor':T},{'Parâmetro':'Tolerância','Valor':(p.tol*100)+'%'},{'Parâmetro':'Raio (km)','Valor':p.raio},{'Parâmetro':'Régua de médicos','Valor':baseLbl},{'Parâmetro':'Teto de clínicos em setor novo/alterado','Valor':(p.clgmax*100)+'%'},{'Parâmetro':'Grade de especialidades','Valor':ls.map(l=>l+': '+(PNL.grade[l]||[]).join('/')).join(' · ')},{'Parâmetro':'Painel por médico carregado','Valor':ls.filter(l=>PNL.lines[l]).join(', ')||'nenhum'},{'Parâmetro':'Origem da montagem','Valor':origem},{'Parâmetro':'Fonte','Valor':D.meta.fonte+' ('+D.meta.filtro+')'},{'Parâmetro':'Gerado em','Valor':new Date().toLocaleString('pt-BR')}];
+  const NAVY='FF1F2D44', BLUE='FF5787A2', SKY='FFDFF1FB', WHITE='FFFFFFFF';
+  const STC={'Na faixa':{fg:'FFE8F5EE',fc:'FF15693A'},'Acima':{fg:'FFFFF3E0',fc:'FFE87722'},'Abaixo':{fg:'FFFCE8EC',fc:'FFC8102E'}};
+  const wb=new ExcelJS.Workbook(); wb.creator='Lego de Setores SPI'; wb.created=new Date();
+  const add=(name,data,widths,fmts,statusCols,title)=>{
+    const ws=wb.addWorksheet(name,{views:[{state:'frozen',ySplit:3}]});
+    const keys=data.length?Object.keys(data[0]):['(vazio)'];
+    ws.mergeCells(1,1,1,Math.max(keys.length,2)); const t=ws.getCell(1,1); t.value=title; t.font={name:'Calibri',size:14,bold:true,color:{argb:WHITE}}; t.fill={type:'pattern',pattern:'solid',fgColor:{argb:NAVY}}; t.alignment={vertical:'middle'}; ws.getRow(1).height=26;
+    ws.mergeCells(2,1,2,Math.max(keys.length,2)); const sub=ws.getCell(2,1); sub.value=`EMS Cardiometabólico · ${line} · régua ${baseLbl} · alvo ${T} médicos · gerado ${new Date().toLocaleString('pt-BR')}`; sub.font={name:'Calibri',size:9,italic:true,color:{argb:'FF1F2D44'}}; sub.fill={type:'pattern',pattern:'solid',fgColor:{argb:SKY}};
+    const hr=ws.getRow(3); keys.forEach((k,i)=>{ const c=hr.getCell(i+1); c.value=k; c.font={name:'Calibri',bold:true,color:{argb:WHITE},size:10}; c.fill={type:'pattern',pattern:'solid',fgColor:{argb:BLUE}}; c.alignment={vertical:'middle',horizontal:'center',wrapText:true}; c.border={bottom:{style:'thin',color:{argb:NAVY}}}; }); hr.height=30;
+    (data.length?data:[{'(vazio)':'nenhuma linha'}]).forEach((r,ri)=>{ const row=ws.getRow(4+ri); keys.forEach((k,i)=>{ const c=row.getCell(i+1); c.value=r[k]; c.font={name:'Calibri',size:10}; if(ri%2===1) c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFF3F9FD'}}; if(fmts&&fmts[i]&&typeof r[k]==='number') c.numFmt=fmts[i]; if(statusCols&&statusCols.includes(i)&&STC[r[k]]){ c.fill={type:'pattern',pattern:'solid',fgColor:{argb:STC[r[k]].fg}}; c.font={name:'Calibri',size:10,bold:true,color:{argb:STC[r[k]].fc}}; c.alignment={horizontal:'center'}; } if(k==='Mudou'&&r[k]==='SIM'){ c.font={name:'Calibri',size:10,bold:true,color:{argb:'FF1F2D44'}}; c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFDFF1FB'}}; } }); });
+    widths.forEach((w,i)=>{ ws.getColumn(i+1).width=w; });
+    ws.autoFilter={from:{row:3,column:1},to:{row:3+Math.max(data.length,1),column:keys.length}};
+  };
+  { const k0=rows.length?Object.keys(rows[0]):[]; const fm={}; k0.forEach((k,i)=>{ if(/\(R\$\)/.test(k)) fm[i]='#,##0'; if(k==='Share') fm[i]='0.0%'; if(/^km/.test(k)) fm[i]='0.0'; }); add('De-Para',rows,k0.map(k=>/nome|Distrito|Códigos|Cidade|Bairro/.test(k)?32:12),fm,null,`De-Para de UTCs · ${ex} · ${rows.length} movimentos`); }
+  { const k0=res.length?Object.keys(res[0]):[]; const statusIdx=[]; k0.forEach((k,i)=>{ if(/status/i.test(k)) statusIdx.push(i); }); const fm={}; k0.forEach((k,i)=>{ if(/\(R\$\)/.test(k)) fm[i]='#,##0'; if(/^Share|^% CLG/.test(k)) fm[i]='0.0%'; }); add('Resumo por setor',res,k0.map(k=>/Setor \(nome\)|Distrito/.test(k)?32:12),fm,statusIdx,`Resumo por setor · ${ex} · antes e depois`); }
+  { const k0=full.length?Object.keys(full[0]):[]; const fm={}; k0.forEach((k,i)=>{ if(/\(R\$\)/.test(k)) fm[i]='#,##0'; }); add('Setores completos',full,k0.map(k=>/nome|Códigos|Cidade|Bairro/.test(k)?32:12),fm,null,`Composição final dos setores · ${ex} · UTC a UTC`); }
+  add('Consistência do eixo',cons,[44,70],null,null,`Consistência de estrutura · ${ex}`);
+  add('Parâmetros',params,[30,60],null,null,'Parâmetros da montagem');
+  const out=await wb.xlsx.writeBuffer(); const blob=new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const fname=`DePara_FOMED_${ex.normalize('NFD').replace(/[^a-zA-Z]/g,'')}_${new Date().toISOString().slice(0,10)}.xlsx`;
+  try{ const dl=await claude.use('downloads'); if(!dl){ toast('Download indisponível neste visualizador'); return; } await dl.save({filename:fname,data:blob}); toast(`${rows.length} movimentos exportados`); }catch(e){ toast('Download não concluído: '+(e&&e.message?e.message:e)); }
+}
+
+// ---------- wiring ----------
+function switchView(v){ document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.v===v)); document.querySelectorAll('.view').forEach(s=>s.classList.toggle('active',s.id==='v-'+v)); if(v==='mapa') mapInit(); if(v==='atual') renderAtual(); if(v==='sug') renderSug(); if(v==='mont') montInit(); if(v==='painel') painelInit(); if(v==='caso') casoInit(); }
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>switchView(b.dataset.v));
+function updTargets(){ const p=P(); const ex=$('#eixo').value; $('#targets').innerHTML=`<b>${ex}</b>: ${eixoLines().join(', ')}<br>Alvo por setor: <b>${target($('#line').value)}</b> médicos (MDV ${lineTipo[$('#line').value]==='S'?p.mdvS:p.mdvA} x ${p.dias} dias)`; }
+function refresh(){ SUG=null; MAP.zoomT=null; updTargets(); const v=document.querySelector('nav button.active').dataset.v; switchView(v); }
+$('#eixo').innerHTML=Object.keys(D.eixos).map(e=>`<option>${e}</option>`).join('');
+function fillLines(){ const ls=eixoLines(); const cur=$('#line').value; $('#line').innerHTML=ls.map(l=>`<option>${l}</option>`).join(''); if(ls.includes(cur)) $('#line').value=cur; }
+fillLines(); $('#eixo').addEventListener('change',()=>{ fillLines(); MAP.line=null; MAP.open=[]; MAP.zoomT=null; refresh(); });
+['#line','#base','#mdvA','#mdvS','#dias','#tol','#raio'].forEach(s=>$(s).addEventListener('change',refresh));
+$('#base').addEventListener('change',e=>{BASE=e.target.value; M.line=null; SUG=null;});
+refresh();
+</script>
+</body>
+</html>
