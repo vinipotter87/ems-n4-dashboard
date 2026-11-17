@@ -926,6 +926,9 @@ def processar_pex(xlsx_bytes: bytes, mes: str, regional: str = "SPI") -> list:
     col_nome   = detect_col(df.columns, ["nome"])        or df.columns[1]
     col_pts    = detect_col(df.columns, ["pontuacao pex", "pt.", "pontos", "score", "pts"])
     col_medal  = detect_col(df.columns, ["medal"])
+    # PTS. MAX: em meses com componente fora (ex.: OUT/2026, máximo 90) o PT. vem na escala do máximo;
+    # converte para 0-100 (PT. ÷ PTS. MAX × 100) para manter a comparação entre meses. A medalha segue o ícone oficial.
+    col_max    = next((c for c in df.columns if "max" in str(c).lower()), None)
 
     registros = []
     for _, row in df.iterrows():
@@ -937,6 +940,9 @@ def processar_pex(xlsx_bytes: bytes, mes: str, regional: str = "SPI") -> list:
         pts    = parse_float(row.get(col_pts)) if col_pts else None
         if pts is None:
             continue
+        pts_max = parse_float(row.get(col_max)) if col_max else None
+        if pts_max and pts_max > 0 and abs(pts_max - 100) > 1e-9:
+            pts = pts / pts_max * 100
 
         # Medalha: URL do ícone → fallback score
         url_val  = str(row.get(col_medal, "")).strip() if col_medal else ""
